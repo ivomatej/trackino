@@ -5,7 +5,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { WorkspaceProvider, useWorkspace } from '@/contexts/WorkspaceContext';
 import WorkspaceSelector from '@/components/WorkspaceSelector';
 import DashboardLayout from '@/components/DashboardLayout';
-import TimerBar from '@/components/TimerBar';
 import TimeEntryList from '@/components/TimeEntryList';
 import ManualTimeEntry from '@/components/ManualTimeEntry';
 import { useRouter } from 'next/navigation';
@@ -64,34 +63,28 @@ function DashboardContent() {
   }
 
   return (
-    <DashboardLayout>
+    <DashboardLayout showTimer onTimerEntryChanged={() => setRefreshKey(k => k + 1)}>
       <div className="max-w-4xl">
+        {/* Hlavička stránky */}
         <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>
-              Time Tracker
-            </h1>
-            <p style={{ color: 'var(--text-secondary)' }}>
-              Sledování odpracovaného času
-            </p>
-          </div>
+          <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
+            Záznamy
+          </h1>
           <button
             onClick={() => setShowManual(!showManual)}
-            className="px-4 py-2 rounded-lg border text-sm font-medium transition-colors flex items-center gap-2"
+            className="px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors flex items-center gap-1.5"
             style={{
               borderColor: showManual ? 'var(--primary)' : 'var(--border)',
               color: showManual ? 'var(--primary)' : 'var(--text-secondary)',
               background: showManual ? 'var(--bg-active)' : 'transparent',
             }}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
             </svg>
-            Manuální
+            Manuální zadání
           </button>
         </div>
-
-        <TimerBar onEntryChanged={() => setRefreshKey(k => k + 1)} />
 
         {showManual && (
           <ManualTimeEntry
