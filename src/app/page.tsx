@@ -6,7 +6,7 @@ import { WorkspaceProvider, useWorkspace } from '@/contexts/WorkspaceContext';
 import WorkspaceSelector from '@/components/WorkspaceSelector';
 import DashboardLayout from '@/components/DashboardLayout';
 import TimeEntryList from '@/components/TimeEntryList';
-import ManualTimeEntry from '@/components/ManualTimeEntry';
+// ManualTimeEntry is now integrated directly into TimerBar
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
@@ -48,7 +48,6 @@ function AppContent() {
 function DashboardContent() {
   const { currentWorkspace, loading } = useWorkspace();
   const [refreshKey, setRefreshKey] = useState(0);
-  const [showManual, setShowManual] = useState(false);
 
   if (loading) {
     return (
@@ -70,28 +69,7 @@ function DashboardContent() {
           <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
             Záznamy
           </h1>
-          <button
-            onClick={() => setShowManual(!showManual)}
-            className="px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors flex items-center gap-1.5"
-            style={{
-              borderColor: showManual ? 'var(--primary)' : 'var(--border)',
-              color: showManual ? 'var(--primary)' : 'var(--text-secondary)',
-              background: showManual ? 'var(--bg-active)' : 'transparent',
-            }}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-            Manuální zadání
-          </button>
         </div>
-
-        {showManual && (
-          <ManualTimeEntry
-            onSaved={() => { setShowManual(false); setRefreshKey(k => k + 1); }}
-            onCancel={() => setShowManual(false)}
-          />
-        )}
 
         <TimeEntryList refreshKey={refreshKey} />
       </div>
