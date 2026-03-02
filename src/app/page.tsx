@@ -1,9 +1,13 @@
 'use client';
 
+import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { WorkspaceProvider, useWorkspace } from '@/contexts/WorkspaceContext';
 import WorkspaceSelector from '@/components/WorkspaceSelector';
 import DashboardLayout from '@/components/DashboardLayout';
+import TimerBar from '@/components/TimerBar';
+import TimeEntryList from '@/components/TimeEntryList';
+import ManualTimeEntry from '@/components/ManualTimeEntry';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
@@ -11,7 +15,6 @@ function AppContent() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
 
-  // Přesměrování na login pokud není přihlášen
   useEffect(() => {
     if (!authLoading && !user) {
       router.push('/login');
@@ -45,6 +48,8 @@ function AppContent() {
 
 function DashboardContent() {
   const { currentWorkspace, loading } = useWorkspace();
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [showManual, setShowManual] = useState(false);
 
   if (loading) {
     return (
@@ -61,59 +66,41 @@ function DashboardContent() {
   return (
     <DashboardLayout>
       <div className="max-w-4xl">
-        <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>
-          Time Tracker
-        </h1>
-        <p className="mb-8" style={{ color: 'var(--text-secondary)' }}>
-          Sledování odpracovaného času
-        </p>
-
-        {/* Placeholder pro timer */}
-        <div
-          className="rounded-xl border p-6 mb-6"
-          style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}
-        >
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <input
-              type="text"
-              placeholder="Na čem pracuješ?"
-              className="flex-1 w-full px-4 py-3 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
-              style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
-            />
-            <button
-              className="px-6 py-3 rounded-lg text-white font-medium text-sm transition-colors whitespace-nowrap"
-              style={{ background: 'var(--primary)' }}
-              onMouseEnter={(e) => e.currentTarget.style.background = 'var(--primary-hover)'}
-              onMouseLeave={(e) => e.currentTarget.style.background = 'var(--primary)'}
-            >
-              <span className="flex items-center gap-2">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <polygon points="5 3 19 12 5 21 5 3" />
-                </svg>
-                Spustit
-              </span>
-            </button>
-          </div>
-        </div>
-
-        {/* Placeholder pro dnešní záznamy */}
-        <div className="rounded-xl border" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
-          <div className="px-6 py-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--border)' }}>
-            <h2 className="font-semibold" style={{ color: 'var(--text-primary)' }}>Dnes</h2>
-            <span className="text-sm font-mono" style={{ color: 'var(--text-muted)' }}>0:00:00</span>
-          </div>
-          <div className="px-6 py-12 text-center">
-            <div className="mb-2" style={{ color: 'var(--text-muted)' }}>
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mx-auto mb-3" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <polyline points="12 6 12 12 16 14" />
-              </svg>
-            </div>
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-              Zatím žádné záznamy. Spusťte timer a začněte trackovat.
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>
+              Time Tracker
+            </h1>
+            <p style={{ color: 'var(--text-secondary)' }}>
+              Sledování odpracovaného času
             </p>
           </div>
+          <button
+            onClick={() => setShowManual(!showManual)}
+            className="px-4 py-2 rounded-lg border text-sm font-medium transition-colors flex items-center gap-2"
+            style={{
+              borderColor: showManual ? 'var(--primary)' : 'var(--border)',
+              color: showManual ? 'var(--primary)' : 'var(--text-secondary)',
+              background: showManual ? 'var(--bg-active)' : 'transparent',
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            Manuální
+          </button>
         </div>
+
+        <TimerBar onEntryChanged={() => setRefreshKey(k => k + 1)} />
+
+        {showManual && (
+          <ManualTimeEntry
+            onSaved={() => { setShowManual(false); setRefreshKey(k => k + 1); }}
+            onCancel={() => setShowManual(false)}
+          />
+        )}
+
+        <TimeEntryList refreshKey={refreshKey} />
       </div>
     </DashboardLayout>
   );
