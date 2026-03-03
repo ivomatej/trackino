@@ -319,9 +319,15 @@ function InvoicesContent() {
             </span>
           )}
         </div>
-        <div className="flex items-center gap-3 mt-0.5">
+        <div className="flex items-center gap-3 mt-0.5 flex-wrap">
           <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
             VS: {invoice.variable_symbol}
+          </span>
+          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+            Vystaveno: {fmtDate(invoice.issue_date)}
+          </span>
+          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+            Splatnost: {fmtDate(invoice.due_date)}
           </span>
           {invoice.amount !== null && (
             <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
