@@ -108,24 +108,18 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
       trackingItems.push({ label: 'Dovolená', href: '/vacation', icon: ICONS.vacation });
     }
 
-    // Poznámky – viditelné jen pro managery a adminy
-    if (isManagerOrAdmin) {
-      trackingItems.push(
-        { label: 'Poznámky', href: '/notes', icon: ICONS.notes },
-      );
-    }
-
     // Fakturace – viditelné pro uživatele s can_invoice, can_manage_billing nebo managery/adminy
     if (canInvoice || canManageBilling || isManagerOrAdmin) {
       trackingItems.push({ label: 'Fakturace', href: '/invoices', icon: ICONS.invoice });
     }
 
-    // ANALÝZA – Reporty + Podřízení (jen pro managery a adminy)
+    // ANALÝZA – Reporty + Podřízení + Poznámky (jen pro managery a adminy)
     const analyzeItems: NavItem[] = [
       { label: 'Reporty', href: '/reports', icon: ICONS.reports },
     ];
     if (isManagerOrAdmin) {
       analyzeItems.push({ label: 'Podřízení', href: '/subordinates', icon: ICONS.subordinates });
+      analyzeItems.push({ label: 'Poznámky', href: '/notes', icon: ICONS.notes });
     }
 
     const spravaManagedItems: NavItem[] = [

@@ -133,8 +133,17 @@ function ProjectsContent() {
     fetchProjects();
   };
 
+  const [projectSearch, setProjectSearch] = useState('');
+
   const activeProjects = projects.filter(p => !p.archived);
   const archivedProjects = projects.filter(p => p.archived);
+
+  const filteredActive = projectSearch.trim()
+    ? activeProjects.filter(p => p.name.toLowerCase().includes(projectSearch.toLowerCase()))
+    : activeProjects;
+  const filteredArchived = projectSearch.trim()
+    ? archivedProjects.filter(p => p.name.toLowerCase().includes(projectSearch.toLowerCase()))
+    : archivedProjects;
 
   if (!currentWorkspace) return null;
 
@@ -296,6 +305,40 @@ function ProjectsContent() {
           </div>
         )}
 
+        {/* Vyhledávání */}
+        {!loading && projects.length > 0 && (
+          <div className="relative mb-4">
+            <svg
+              className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+              width="15" height="15" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+              style={{ color: 'var(--text-muted)' }}
+            >
+              <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              type="text"
+              placeholder="Hledat projekt..."
+              value={projectSearch}
+              onChange={e => setProjectSearch(e.target.value)}
+              className="w-full pl-9 pr-8 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+              style={{ background: 'var(--bg-input)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+            />
+            {projectSearch && (
+              <button
+                onClick={() => setProjectSearch('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded transition-colors hover:bg-[var(--bg-hover)]"
+                style={{ color: 'var(--text-muted)' }}
+                title="Vymazat hledání"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Seznam projektů */}
         {loading ? (
           <div className="text-center py-12">
@@ -303,7 +346,7 @@ function ProjectsContent() {
           </div>
         ) : (
           <>
-            {activeProjects.length === 0 && !showForm ? (
+            {filteredActive.length === 0 && !showForm ? (
               <div
                 className="rounded-xl border px-6 py-12 text-center"
                 style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}
@@ -311,7 +354,7 @@ function ProjectsContent() {
                 <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mx-auto mb-3" style={{ color: 'var(--text-muted)' }}>
                   <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
                 </svg>
-                <p className="text-sm mb-3" style={{ color: 'var(--text-muted)' }}>Zatím žádné projekty</p>
+                <p className="text-sm mb-3" style={{ color: 'var(--text-muted)' }}>{projectSearch ? 'Žádné výsledky hledání' : 'Zatím žádné projekty'}</p>
                 {isAdmin && (
                   <button
                     onClick={() => setShowForm(true)}
@@ -324,7 +367,7 @@ function ProjectsContent() {
               </div>
             ) : (
               <div className="rounded-xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
-                {activeProjects.map(project => (
+                {filteredActive.map(project => (
                   <div
                     key={project.id}
                     className="px-4 sm:px-6 py-4 flex items-center gap-4 border-b last:border-b-0 group transition-colors"
@@ -402,13 +445,13 @@ function ProjectsContent() {
             )}
 
             {/* Archivované projekty */}
-            {archivedProjects.length > 0 && (
+            {filteredArchived.length > 0 && (
               <div className="mt-6">
                 <h3 className="text-sm font-medium mb-3" style={{ color: 'var(--text-muted)' }}>
-                  Archivované ({archivedProjects.length})
+                  Archivované ({filteredArchived.length})
                 </h3>
                 <div className="rounded-xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', opacity: 0.7 }}>
-                  {archivedProjects.map(project => (
+                  {filteredArchived.map(project => (
                     <div
                       key={project.id}
                       className="px-4 sm:px-6 py-3 flex items-center gap-4 border-b last:border-b-0 group"
