@@ -11,6 +11,16 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v1.4.0 – 3. 3. 2026</h3>
+<ul>
+  <li><strong>Více fakturačních profilů</strong> – v Nastavení → Fakturační údaje lze nyní vytvářet více profilů (různé právní subjekty, IČO, DIČ, adresy); jeden profil lze označit jako výchozí; správa přes přehledné karty s editačním modálem</li>
+  <li><strong>Přiřazení profilu členovi</strong> – v Tým → editace člena → sekce Fakturace přibyl výběr fakturačního profilu; pokud není přiřazen, použije se výchozí profil workspace</li>
+  <li><strong>Fakturační panel při podání faktury</strong> – při žádosti o fakturaci se vpravo zobrazí fakturační údaje přiřazeného profilu (název, společnost, IČO, DIČ, adresa, kontakty)</li>
+  <li><strong>Vrácení faktury k opravě</strong> – admin může fakturu „Vrátit k opravě" s textovou poznámkou; uživateli se zobrazí červený odznak na položce Fakturace v bočním panelu a může podat fakturu znovu</li>
+  <li><strong>Název PDF při stahování</strong> – stažený soubor faktury má formát YYYYMM-faktura-jmeno-prijmeni.pdf (diakritika automaticky odstraněna)</li>
+  <li><strong>Předvyplnění hodin při schvalování</strong> – při otevření schvalovacího modálu se automaticky načtou odpracované hodiny z Reportů za dané fakturační období; částka se dopočítá dle aktivní hodinové sazby člena; oboje lze ručně upravit</li>
+</ul>
+
 <h3>v1.3.0 – 3. 3. 2026</h3>
 <ul>
   <li><strong>Fakturace členů (nová stránka)</strong> – uživatelé s oprávněním „Může fakturovat" mohou od 1. dne měsíce podat žádost o proplacení za předchozí měsíc: nahrají PDF faktury, vyplní datum vystavení, splatnosti, variabilní symbol a příznak plátce DPH</li>

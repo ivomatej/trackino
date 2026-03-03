@@ -78,6 +78,7 @@ export interface WorkspaceMember {
   cooperation_type_id: string | null;
   can_invoice: boolean;
   can_manage_billing: boolean;
+  billing_profile_id: string | null; // přiřazený fakturační profil
 }
 
 export interface ManagerAssignment {
@@ -91,6 +92,8 @@ export interface ManagerAssignment {
 export interface WorkspaceBilling {
   id: string;
   workspace_id: string;
+  name: string;       // název profilu, např. "Hlavní s.r.o."
+  is_default: boolean; // výchozí profil pro workspace
   company_name: string;
   representative_name: string;
   address: string;

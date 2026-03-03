@@ -7,7 +7,7 @@ import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import DashboardLayout from '@/components/DashboardLayout';
 import { WorkspaceProvider } from '@/contexts/WorkspaceContext';
-import type { Department, Category, Task, WorkspaceMember, Profile, UserRole, MemberRate, CooperationType } from '@/types/database';
+import type { Department, Category, Task, WorkspaceMember, Profile, UserRole, MemberRate, CooperationType, WorkspaceBilling } from '@/types/database';
 
 type Tab = 'members' | 'departments' | 'categories' | 'tasks' | 'managers';
 
@@ -75,7 +75,11 @@ function TeamContent() {
   const [editCanInvoice, setEditCanInvoice] = useState(false);
   const [editCanManageBilling, setEditCanManageBilling] = useState(false);
   const [editCooperationTypeId, setEditCooperationTypeId] = useState<string>('');
+  const [editBillingProfileId, setEditBillingProfileId] = useState<string>('');
   const [editSaving, setEditSaving] = useState(false);
+
+  // Fakturační profily
+  const [billingProfiles, setBillingProfiles] = useState<WorkspaceBilling[]>([]);
 
   // Cooperation types
   const [cooperationTypes, setCooperationTypes] = useState<CooperationType[]>([]);
@@ -107,7 +111,7 @@ function TeamContent() {
   const fetchData = useCallback(async () => {
     if (!currentWorkspace) return;
 
-    const [deptRes, catRes, taskRes, projRes, memRes, coopRes, mgrRes] = await Promise.all([
+    const [deptRes, catRes, taskRes, projRes, memRes, coopRes, mgrRes, billingRes] = await Promise.all([
       supabase.from('trackino_departments').select('*').eq('workspace_id', currentWorkspace.id).order('name'),
       supabase.from('trackino_categories').select('*').eq('workspace_id', currentWorkspace.id).order('name'),
       supabase.from('trackino_tasks').select('*').eq('workspace_id', currentWorkspace.id).order('name'),
@@ -115,6 +119,7 @@ function TeamContent() {
       supabase.from('trackino_workspace_members').select('*').eq('workspace_id', currentWorkspace.id),
       supabase.from('trackino_cooperation_types').select('*').eq('workspace_id', currentWorkspace.id).order('sort_order', { ascending: true }),
       supabase.from('trackino_manager_assignments').select('id, member_user_id, manager_user_id').eq('workspace_id', currentWorkspace.id),
+      supabase.from('trackino_workspace_billing').select('*').eq('workspace_id', currentWorkspace.id).order('is_default', { ascending: false }),
     ]);
 
     setDepartments((deptRes.data ?? []) as Department[]);
@@ -123,6 +128,7 @@ function TeamContent() {
     setProjects((projRes.data ?? []) as { id: string; name: string }[]);
     setCooperationTypes((coopRes.data ?? []) as CooperationType[]);
     setWsManagerAssignments((mgrRes.data ?? []) as ManagerAssignmentRow[]);
+    setBillingProfiles((billingRes.data ?? []) as WorkspaceBilling[]);
 
     const memberData = (memRes.data ?? []) as WorkspaceMember[];
     if (memberData.length > 0) {
@@ -252,6 +258,7 @@ function TeamContent() {
     setEditCanInvoice(member.can_invoice ?? false);
     setEditCanManageBilling(member.can_manage_billing ?? false);
     setEditCooperationTypeId(member.cooperation_type_id ?? '');
+    setEditBillingProfileId(member.billing_profile_id ?? '');
     setMemberRates([]);
     setShowAddRate(false);
     setNewRateAmount('');
@@ -282,6 +289,7 @@ function TeamContent() {
         can_invoice: editCanInvoice,
         can_manage_billing: editCanManageBilling,
         cooperation_type_id: editCooperationTypeId || null,
+        billing_profile_id: editBillingProfileId || null,
       }).eq('id', editingMember.id),
     ]);
     setEditSaving(false);
@@ -955,6 +963,32 @@ function TeamContent() {
                     <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Může stahovat faktury a označovat je jako proplacené</span>
                   </div>
                 </label>
+
+                {/* Fakturační profil */}
+                {billingProfiles.length > 0 && (
+                  <div className="mt-3">
+                    <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
+                      Fakturační profil
+                    </label>
+                    <select
+                      value={editBillingProfileId}
+                      onChange={(e) => setEditBillingProfileId(e.target.value)}
+                      className={inputCls}
+                      style={inputStyle}
+                    >
+                      <option value="">— Výchozí profil workspace —</option>
+                      {billingProfiles.map(bp => (
+                        <option key={bp.id} value={bp.id}>
+                          {bp.name}{bp.is_default ? ' (výchozí)' : ''}
+                          {bp.company_name ? ` – ${bp.company_name}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-[11px] mt-1" style={{ color: 'var(--text-muted)' }}>
+                      Fakturační profil se uživateli zobrazí při žádosti o fakturaci.
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Hodinové sazby */}

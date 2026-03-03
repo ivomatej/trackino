@@ -61,13 +61,18 @@ const DEFAULT_HELP_CONTENT = `
 <p>Team Manažeři a Admini mají přístup ke stránce <strong>Podřízení</strong> (v sekci Analýza). Zobrazuje záznamy přiřazených podřízených s možností filtrovat: Dnes, Týden, nebo Vlastní období (výběrem datumu od–do). Kliknutím na popis záznamu ho lze inline editovat; kliknutím na existující poznámku ji lze upravit.</p>
 
 <h3>Fakturace</h3>
-<p>Stránka <strong>Fakturace</strong> slouží k fakturaci odvedené práce. Workflow má tři fáze:</p>
+<p>Stránka <strong>Fakturace</strong> slouží k fakturaci odvedené práce. Workflow má čtyři fáze:</p>
 <ul>
-  <li><strong>Podání žádosti</strong> – uživatel s oprávněním „Může fakturovat" klikne na „Požádat o fakturaci" (dostupné od 1. dne měsíce za předchozí měsíc), nahraje PDF faktury a vyplní: datum vystavení, datum splatnosti, variabilní symbol a příznak plátce DPH</li>
-  <li><strong>Schválení</strong> – Team Manažer nebo Admin vidí záložku „Ke schválení"; kliknutím na fakturu ji zkontroluje, doplní odpracované hodiny a výši částky a schválí (nebo stornuje)</li>
-  <li><strong>Proplacení</strong> – uživatel s rolí „Správce fakturace" vidí záložku „Přehled faktur"; může stáhnout PDF a označit schválenou fakturu jako proplacentou</li>
+  <li><strong>Podání žádosti</strong> – uživatel s oprávněním „Může fakturovat" klikne na „Požádat o fakturaci", nahraje PDF faktury a vyplní: datum vystavení, datum splatnosti, variabilní symbol a příznak plátce DPH. Při podání se vpravo zobrazí fakturační profil přiřazený k uživateli.</li>
+  <li><strong>Schválení</strong> – Team Manažer nebo Admin vidí záložku „Ke schválení"; kliknutím na fakturu ji zkontroluje (hodiny jsou předvyplněny z Reportů za dané období), doplní výši částky a schválí nebo vrátí k opravě</li>
+  <li><strong>Vrácení k opravě</strong> – admin může fakturu „Vrátit k opravě" s poznámkou (např. „uprav fakturační údaje"); uživateli se zobrazí červený odznak na položce Fakturace v bočním panelu a může podat fakturu znovu</li>
+  <li><strong>Proplacení</strong> – uživatel s rolí „Správce fakturace" vidí záložku „Přehled faktur"; může stáhnout PDF (název souboru: YYYYMM-faktura-jmeno-prijmeni.pdf) a označit schválenou fakturu jako proplacentou</li>
 </ul>
 <p>Oprávnění se nastavují v Tým → editace člena → sekce Fakturace.</p>
+
+<h3>Fakturační profily workspace</h3>
+<p>V <strong>Nastavení → Fakturační údaje</strong> lze vytvořit více fakturačních profilů (např. pro různé právní subjekty). Každý profil obsahuje název společnosti, IČO, DIČ, adresu, kontaktní údaje a poznámku k fakturaci. Jeden profil lze označit jako výchozí.</p>
+<p>V <strong>Tým → editace člena → sekce Fakturace</strong> lze každému členovi přiřadit konkrétní fakturační profil. Pokud není přiřazen žádný, použije se výchozí profil workspace. Přiřazený profil se uživateli zobrazí při podání žádosti o fakturaci v pravém panelu formuláře.</p>
 
 <h3>Půlnoční split</h3>
 <p>Pokud timer běží přes půlnoc, záznam se automaticky rozdělí na dva – jeden za předchozí den, druhý za nový den. Kontrola probíhá každých 30 sekund na pozadí.</p>
