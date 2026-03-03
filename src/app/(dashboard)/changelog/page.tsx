@@ -11,9 +11,14 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v1.7.1 – 3. 3. 2026</h3>
+<ul>
+  <li><strong>Fakturace – vyhledávání skryto pro běžné uživatele</strong> – vyhledávací pole ve fakturách se zobrazuje pouze Adminům, Master Adminům a Správcům fakturace; běžní uživatelé (záložka Moje faktury) pole nevidí</li>
+</ul>
+
 <h3>v1.7.0 – 3. 3. 2026</h3>
 <ul>
-  <li><strong>Fakturace – vyhledávání</strong> – v záložkách Ke schválení a Přehled faktur přidáno vyhledávací pole pro filtrování faktur podle jména uživatele, variabilního symbolu nebo měsíce/roku</li>
+  <li><strong>Fakturace – vyhledávání</strong> – v záložkách Ke schválení a Přehled faktur přidáno vyhledávací pole pro filtrování faktur podle jména uživatele, variabilního symbolu nebo měsíce/roku; pole zobrazují pouze Admini, Master Admini a Správci fakturace</li>
   <li><strong>Audit log – rozšíření oprávnění</strong> – přístup k audit logu již nevyžaduje tarif Max; oprávnění lze udělit libovolnému členovi workspace (Tým → editace člena → zaškrtávátko „Audit log"); Workspace Admini a Master Admini mají přístup vždy</li>
   <li><strong>Audit log – logování úprav podřízených</strong> – při editaci popisu záznamu nebo přidání manažerské poznámky k záznamu podřízeného se automaticky zapíše záznam do audit logu (kdo, kdy, co, pro koho, jakou dobu a jaký popis)</li>
   <li><strong>Timer – offline provoz</strong> – timer stále běží i bez připojení k internetu (zobrazuje se indikátor „Offline"); zastavení offline uloží čekající data do lokální paměti prohlížeče a automaticky je odešle do databáze při obnovení připojení (zobrazuje se indikátor „Čeká na uložení")</li>

@@ -1036,8 +1036,8 @@ function InvoicesContent() {
               ))}
             </div>
           )}
-          {/* Vyhledávání – pouze pro záložky Ke schválení a Přehled faktur */}
-          {(activeTab === 'approve' || activeTab === 'billing') && (
+          {/* Vyhledávání – pouze pro adminy/managery/správce fakturace, ne pro běžné uživatele */}
+          {(activeTab === 'approve' || activeTab === 'billing') && (canApprove || canManageBilling) && (
             <div className="relative">
               <svg className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)' }}>
                 <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />

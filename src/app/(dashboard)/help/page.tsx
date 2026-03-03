@@ -62,7 +62,7 @@ const DEFAULT_HELP_CONTENT = `
 <p>Team Manažeři a Admini mají přístup ke stránce <strong>Podřízení</strong> (v sekci Analýza). Zobrazuje záznamy přiřazených podřízených s možností filtrovat: Dnes, Týden, nebo Vlastní období (výběrem datumu od–do). Kliknutím na popis záznamu ho lze inline editovat; kliknutím na existující poznámku ji lze upravit.</p>
 
 <h3>Fakturace – vyhledávání (admin)</h3>
-<p>V záložkách <strong>Ke schválení</strong> a <strong>Přehled faktur</strong> je nad seznamem vyhledávací pole. Faktury lze filtrovat podle jména uživatele, variabilního symbolu nebo měsíce/roku (např. „Únor 2026").</p>
+<p>V záložkách <strong>Ke schválení</strong> a <strong>Přehled faktur</strong> je nad seznamem vyhledávací pole. Faktury lze filtrovat podle jména uživatele, variabilního symbolu nebo měsíce/roku (např. „Únor 2026"). Vyhledávací pole je viditelné pouze pro Adminy, Master Adminy a Správce fakturace – běžní uživatelé ho nevidí.</p>
 
 <h3>Fakturace</h3>
 <p>Stránka <strong>Fakturace</strong> slouží k fakturaci odvedené práce. Workflow má čtyři fáze:</p>
