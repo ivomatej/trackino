@@ -19,7 +19,7 @@ const AVATAR_COLORS = [
 ];
 
 const ROLE_LABELS: Record<string, string> = {
-  owner: 'Owner',
+  owner: 'Vlastník',
   admin: 'Admin',
   manager: 'Team Manager',
   member: 'Člen',
@@ -29,9 +29,20 @@ interface MemberWithProfile extends WorkspaceMember {
   profile?: Profile;
 }
 
+function TrashIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+      <path d="M10 11v6M14 11v6" />
+      <path d="M9 6V4h6v2" />
+    </svg>
+  );
+}
+
 function TeamContent() {
   const { user } = useAuth();
-  const { currentWorkspace, userRole, refreshWorkspace } = useWorkspace();
+  const { currentWorkspace, refreshWorkspace } = useWorkspace();
   const { isWorkspaceAdmin } = usePermissions();
   const [activeTab, setActiveTab] = useState<Tab>('members');
 
@@ -43,7 +54,15 @@ function TeamContent() {
   const [codeCopied, setCodeCopied] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
 
-  // Formulářové stavy
+  // Edit member stav
+  const [editingMember, setEditingMember] = useState<MemberWithProfile | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editColor, setEditColor] = useState(AVATAR_COLORS[0]);
+  const [editHourlyRate, setEditHourlyRate] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
+
+  // Formulářové stavy (oddělení/kategorie/úkoly)
   const [showForm, setShowForm] = useState(false);
   const [formName, setFormName] = useState('');
   const [formDepartment, setFormDepartment] = useState('');
@@ -69,7 +88,6 @@ function TeamContent() {
     setTasks((taskRes.data ?? []) as Task[]);
     setProjects((projRes.data ?? []) as { id: string; name: string }[]);
 
-    // Fetch profiles for members
     const memberData = (memRes.data ?? []) as WorkspaceMember[];
     if (memberData.length > 0) {
       const userIds = memberData.map(m => m.user_id);
@@ -121,7 +139,6 @@ function TeamContent() {
       setCodeCopied(true);
       setTimeout(() => setCodeCopied(false), 2000);
     } catch {
-      // Fallback pro starší prohlížeče
       const el = document.createElement('textarea');
       el.value = currentWorkspace.join_code;
       document.body.appendChild(el);
@@ -147,9 +164,7 @@ function TeamContent() {
         .from('trackino_workspaces')
         .update({ join_code: newCode })
         .eq('id', currentWorkspace.id);
-      if (!error) {
-        await refreshWorkspace();
-      }
+      if (!error) await refreshWorkspace();
     } catch (err) {
       console.warn('Chyba při generování kódu:', err);
     }
@@ -178,6 +193,35 @@ function TeamContent() {
     fetchData();
   };
 
+  const openEditMember = (member: MemberWithProfile) => {
+    setEditingMember(member);
+    setEditName(member.profile?.display_name ?? '');
+    setEditEmail(member.profile?.email ?? '');
+    setEditColor(member.profile?.avatar_color ?? AVATAR_COLORS[0]);
+    setEditHourlyRate(member.hourly_rate !== null ? String(member.hourly_rate) : '');
+  };
+
+  const saveMemberEdit = async () => {
+    if (!editingMember) return;
+    setEditSaving(true);
+
+    await supabase.from('trackino_profiles').update({
+      display_name: editName.trim(),
+      email: editEmail.trim(),
+      avatar_color: editColor,
+    }).eq('id', editingMember.user_id);
+
+    const rateRaw = editHourlyRate.trim();
+    const rateVal = rateRaw !== '' ? parseFloat(rateRaw) : null;
+    await supabase.from('trackino_workspace_members').update({
+      hourly_rate: rateVal !== null && !isNaN(rateVal) ? rateVal : null,
+    }).eq('id', editingMember.id);
+
+    setEditSaving(false);
+    setEditingMember(null);
+    fetchData();
+  };
+
   const tabs: { key: Tab; label: string; count: number }[] = [
     { key: 'members', label: 'Členové', count: members.length },
     { key: 'departments', label: 'Oddělení', count: departments.length },
@@ -193,11 +237,12 @@ function TeamContent() {
 
   if (!currentWorkspace) return null;
 
-  // Počet aktivních uživatelů (měřil čas za posledních 30 dní)
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-
+  const currencySymbol = currentWorkspace.currency === 'EUR' ? '€' : currentWorkspace.currency === 'USD' ? '$' : 'Kč';
   const inputCls = "w-full px-3 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]";
   const inputStyle = { borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' };
+  const editInitials = editName.trim()
+    ? editName.trim().split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+    : '?';
 
   return (
     <DashboardLayout>
@@ -236,19 +281,16 @@ function TeamContent() {
             {/* Kód pro připojení */}
             {isWorkspaceAdmin && currentWorkspace.join_code && (
               <div className="mb-6 p-4 rounded-xl border" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Kód pro připojení</h3>
-                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                      Sdílejte tento kód s novými členy. Zadají ho při registraci.
-                    </p>
-                  </div>
+                <div className="mb-3">
+                  <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Kód pro připojení</h3>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                    Sdílejte tento kód s novými členy. Zadají ho při registraci.
+                  </p>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  {/* Kód */}
                   <div
-                    className="flex-1 px-4 py-3 rounded-lg border font-mono text-2xl font-bold tracking-[0.3em] text-center select-all"
+                    className="flex-1 px-4 py-3 rounded-lg border font-mono text-2xl font-bold text-center select-all"
                     style={{
                       background: 'var(--bg-hover)',
                       borderColor: 'var(--border)',
@@ -259,7 +301,6 @@ function TeamContent() {
                     {currentWorkspace.join_code}
                   </div>
 
-                  {/* Kopírovat */}
                   <button
                     onClick={copyJoinCode}
                     className="flex items-center gap-2 px-4 py-3 rounded-lg border text-sm font-medium transition-colors whitespace-nowrap"
@@ -268,7 +309,6 @@ function TeamContent() {
                       background: codeCopied ? 'var(--bg-hover)' : 'var(--bg-input)',
                       color: codeCopied ? 'var(--success)' : 'var(--text-secondary)',
                     }}
-                    title="Kopírovat kód"
                   >
                     {codeCopied ? (
                       <>
@@ -289,11 +329,10 @@ function TeamContent() {
                   </button>
                 </div>
 
-                {/* Jak to funguje */}
                 <div className="mt-3 pt-3 border-t" style={{ borderColor: 'var(--border)' }}>
                   <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
                     <strong style={{ color: 'var(--text-secondary)' }}>Jak to funguje:</strong>{' '}
-                    Nový člen se zaregistruje a zadá tento kód do pole „Kód workspace". Po registraci se objeví níže jako čekající – admin ho schválí.
+                    Nový člen se zaregistruje a zadá tento kód. Po registraci se objeví níže jako čekající – admin ho schválí.
                   </p>
                   <button
                     onClick={regenerateJoinCode}
@@ -316,7 +355,7 @@ function TeamContent() {
               </div>
             ) : (
               <>
-                {/* Čekající schválení */}
+                {/* Čekající na schválení */}
                 {isWorkspaceAdmin && members.some(m => !m.approved) && (
                   <div className="mb-4 rounded-xl border overflow-hidden" style={{ borderColor: '#f59e0b' }}>
                     <div className="flex items-center gap-2 px-4 py-2.5" style={{ background: '#fffbeb', borderBottom: '1px solid #f59e0b' }}>
@@ -331,7 +370,9 @@ function TeamContent() {
                     <div style={{ background: 'var(--bg-card)' }}>
                       {members.filter(m => !m.approved).map(member => {
                         const p = member.profile;
-                        const initials = p?.display_name ? p.display_name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) : '?';
+                        const initials = p?.display_name
+                          ? p.display_name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+                          : '?';
                         return (
                           <div
                             key={member.id}
@@ -350,7 +391,6 @@ function TeamContent() {
                               </div>
                               <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{p?.email}</div>
                             </div>
-                            {/* Schválit / Zamítnout */}
                             <div className="flex items-center gap-2">
                               <button
                                 onClick={() => approveMember(member.id)}
@@ -388,13 +428,15 @@ function TeamContent() {
                 <div className="space-y-2">
                   {members.filter(m => m.approved).map(member => {
                     const p = member.profile;
-                    const initials = p?.display_name ? p.display_name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) : '?';
+                    const initials = p?.display_name
+                      ? p.display_name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+                      : '?';
                     const isCurrentUser = member.user_id === user?.id;
 
                     return (
                       <div
                         key={member.id}
-                        className="flex items-center gap-3 px-4 py-3 rounded-lg border group"
+                        className="flex items-center gap-3 px-4 py-3 rounded-lg border"
                         style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}
                       >
                         {/* Avatar */}
@@ -408,53 +450,84 @@ function TeamContent() {
                         {/* Info */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                            <span className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
                               {p?.display_name ?? 'Neznámý'}
                             </span>
-                            {isCurrentUser && <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'var(--primary-light)', color: 'var(--primary)' }}>Ty</span>}
+                            {isCurrentUser && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: 'var(--primary-light)', color: 'var(--primary)' }}>
+                                Ty
+                              </span>
+                            )}
                           </div>
-                          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{p?.email}</div>
+                          <div className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{p?.email}</div>
                         </div>
 
-                        {/* Role */}
-                        {isWorkspaceAdmin && !isCurrentUser ? (
-                          <select
-                            value={member.role}
-                            onChange={(e) => updateMemberRole(member.id, e.target.value as UserRole)}
-                            className="px-2 py-1 rounded-md border text-xs"
-                            style={inputStyle}
-                          >
-                            <option value="admin">Admin</option>
-                            <option value="manager">Team Manager</option>
-                            <option value="member">Člen</option>
-                          </select>
+                        {/* Sazba */}
+                        {member.hourly_rate !== null && (
+                          <span className="text-xs hidden sm:inline flex-shrink-0" style={{ color: 'var(--text-muted)' }}>
+                            {member.hourly_rate} {currencySymbol}/h
+                          </span>
+                        )}
+
+                        {/* Role dropdown nebo label */}
+                        {isWorkspaceAdmin && !isCurrentUser && member.role !== 'owner' ? (
+                          <div className="relative flex-shrink-0">
+                            <select
+                              value={member.role}
+                              onChange={(e) => updateMemberRole(member.id, e.target.value as UserRole)}
+                              className="px-2 py-1 pr-6 rounded-md border text-xs appearance-none cursor-pointer"
+                              style={inputStyle}
+                            >
+                              <option value="admin">Admin</option>
+                              <option value="manager">Team Manager</option>
+                              <option value="member">Člen</option>
+                            </select>
+                            <svg
+                              className="absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                              width="10" height="10" viewBox="0 0 24 24" fill="none"
+                              stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                              style={{ color: 'var(--text-muted)' }}
+                            >
+                              <polyline points="6 9 12 15 18 9" />
+                            </svg>
+                          </div>
                         ) : (
                           <span
-                            className="text-xs px-2 py-1 rounded-md"
+                            className="text-xs px-2 py-1 rounded-md flex-shrink-0"
                             style={{ background: 'var(--bg-hover)', color: 'var(--text-secondary)' }}
                           >
                             {ROLE_LABELS[member.role] ?? member.role}
                           </span>
                         )}
 
-                        {/* Sazba */}
-                        {member.hourly_rate !== null && (
-                          <span className="text-xs hidden sm:inline" style={{ color: 'var(--text-muted)' }}>
-                            {member.hourly_rate} Kč/h
-                          </span>
+                        {/* Tlačítko: Upravit */}
+                        {isWorkspaceAdmin && !isCurrentUser && (
+                          <button
+                            onClick={() => openEditMember(member)}
+                            className="p-1.5 rounded transition-colors flex-shrink-0"
+                            style={{ color: 'var(--text-muted)' }}
+                            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-primary)'}
+                            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+                            title="Upravit uživatele"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                            </svg>
+                          </button>
                         )}
 
-                        {/* Odebrat */}
+                        {/* Tlačítko: Odebrat */}
                         {isWorkspaceAdmin && !isCurrentUser && member.role !== 'owner' && (
                           <button
                             onClick={() => removeMember(member.id, p?.display_name ?? '')}
-                            className="opacity-0 group-hover:opacity-100 p-1.5 rounded transition-all"
+                            className="p-1.5 rounded transition-colors flex-shrink-0"
                             style={{ color: 'var(--text-muted)' }}
                             onMouseEnter={(e) => e.currentTarget.style.color = 'var(--danger)'}
                             onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
                             title="Odebrat z workspace"
                           >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                            <TrashIcon />
                           </button>
                         )}
                       </div>
@@ -469,7 +542,6 @@ function TeamContent() {
         {/* ========== TAB: ODDĚLENÍ / KATEGORIE / ÚKOLY ========== */}
         {activeTab !== 'members' && (
           <>
-            {/* Přidat nový */}
             {isWorkspaceAdmin && !showForm && (
               <button
                 onClick={() => setShowForm(true)}
@@ -482,9 +554,8 @@ function TeamContent() {
               </button>
             )}
 
-            {/* Formulář */}
             {showForm && (
-              <div className="rounded-xl border p-5 mb-4 animate-fade-in" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+              <div className="rounded-xl border p-5 mb-4" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
                 <div className="space-y-3">
                   <input
                     type="text" value={formName} onChange={(e) => setFormName(e.target.value)}
@@ -520,7 +591,6 @@ function TeamContent() {
               </div>
             )}
 
-            {/* Seznam */}
             {loading ? (
               <div className="text-center py-12">
                 <div className="w-6 h-6 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin mx-auto" />
@@ -528,15 +598,23 @@ function TeamContent() {
             ) : (
               <div className="rounded-xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
                 {activeTab === 'departments' && departments.map(item => (
-                  <div key={item.id} className="px-4 sm:px-6 py-3 flex items-center justify-between border-b last:border-b-0 group transition-colors" style={{ borderColor: 'var(--border)' }}
+                  <div
+                    key={item.id}
+                    className="px-4 sm:px-6 py-3 flex items-center justify-between border-b last:border-b-0 transition-colors"
+                    style={{ borderColor: 'var(--border)' }}
                     onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
                     onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                   >
                     <span className="text-sm" style={{ color: 'var(--text-primary)' }}>{item.name}</span>
                     {isWorkspaceAdmin && (
-                      <button onClick={() => deleteItem('trackino_departments', item.id, item.name)} className="opacity-0 group-hover:opacity-100 p-1 rounded transition-all" style={{ color: 'var(--text-muted)' }}
-                        onMouseEnter={(e) => e.currentTarget.style.color = 'var(--danger)'} onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                      <button
+                        onClick={() => deleteItem('trackino_departments', item.id, item.name)}
+                        className="p-1.5 rounded transition-colors"
+                        style={{ color: 'var(--text-muted)' }}
+                        onMouseEnter={(e) => e.currentTarget.style.color = 'var(--danger)'}
+                        onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+                      >
+                        <TrashIcon />
                       </button>
                     )}
                   </div>
@@ -545,16 +623,26 @@ function TeamContent() {
                 {activeTab === 'categories' && categories.map(item => {
                   const dept = departments.find(d => d.id === item.department_id);
                   return (
-                    <div key={item.id} className="px-4 sm:px-6 py-3 flex items-center justify-between border-b last:border-b-0 group transition-colors" style={{ borderColor: 'var(--border)' }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+                    <div
+                      key={item.id}
+                      className="px-4 sm:px-6 py-3 flex items-center justify-between border-b last:border-b-0 transition-colors"
+                      style={{ borderColor: 'var(--border)' }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                    >
                       <div>
                         <span className="text-sm" style={{ color: 'var(--text-primary)' }}>{item.name}</span>
                         {dept && <span className="text-xs ml-2" style={{ color: 'var(--text-muted)' }}>({dept.name})</span>}
                       </div>
                       {isWorkspaceAdmin && (
-                        <button onClick={() => deleteItem('trackino_categories', item.id, item.name)} className="opacity-0 group-hover:opacity-100 p-1 rounded transition-all" style={{ color: 'var(--text-muted)' }}
-                          onMouseEnter={(e) => e.currentTarget.style.color = 'var(--danger)'} onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                        <button
+                          onClick={() => deleteItem('trackino_categories', item.id, item.name)}
+                          className="p-1.5 rounded transition-colors"
+                          style={{ color: 'var(--text-muted)' }}
+                          onMouseEnter={(e) => e.currentTarget.style.color = 'var(--danger)'}
+                          onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+                        >
+                          <TrashIcon />
                         </button>
                       )}
                     </div>
@@ -565,8 +653,13 @@ function TeamContent() {
                   const proj = projects.find(p => p.id === item.project_id);
                   const cat = categories.find(c => c.id === item.category_id);
                   return (
-                    <div key={item.id} className="px-4 sm:px-6 py-3 flex items-center justify-between border-b last:border-b-0 group transition-colors" style={{ borderColor: 'var(--border)' }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+                    <div
+                      key={item.id}
+                      className="px-4 sm:px-6 py-3 flex items-center justify-between border-b last:border-b-0 transition-colors"
+                      style={{ borderColor: 'var(--border)' }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                    >
                       <div>
                         <span className="text-sm" style={{ color: 'var(--text-primary)' }}>{item.name}</span>
                         <div className="flex gap-2 mt-0.5">
@@ -575,9 +668,14 @@ function TeamContent() {
                         </div>
                       </div>
                       {isWorkspaceAdmin && (
-                        <button onClick={() => deleteItem('trackino_tasks', item.id, item.name)} className="opacity-0 group-hover:opacity-100 p-1 rounded transition-all" style={{ color: 'var(--text-muted)' }}
-                          onMouseEnter={(e) => e.currentTarget.style.color = 'var(--danger)'} onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                        <button
+                          onClick={() => deleteItem('trackino_tasks', item.id, item.name)}
+                          className="p-1.5 rounded transition-colors"
+                          style={{ color: 'var(--text-muted)' }}
+                          onMouseEnter={(e) => e.currentTarget.style.color = 'var(--danger)'}
+                          onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+                        >
+                          <TrashIcon />
                         </button>
                       )}
                     </div>
@@ -598,6 +696,148 @@ function TeamContent() {
           </>
         )}
       </div>
+
+      {/* ========== EDIT MEMBER MODAL ========== */}
+      {editingMember && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Overlay */}
+          <div
+            className="absolute inset-0"
+            style={{ background: 'rgba(0,0,0,0.5)' }}
+            onClick={() => setEditingMember(null)}
+          />
+
+          {/* Panel */}
+          <div
+            className="relative w-full max-w-sm rounded-2xl shadow-2xl p-6 z-10"
+            style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+          >
+            {/* Hlavička */}
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>
+                Upravit uživatele
+              </h3>
+              <button
+                onClick={() => setEditingMember(null)}
+                className="p-1.5 rounded-lg transition-colors"
+                style={{ color: 'var(--text-muted)' }}
+                onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-primary)'}
+                onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Avatar náhled + výběr barvy */}
+            <div className="flex items-start gap-4 mb-4">
+              <div
+                className="w-12 h-12 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0 transition-colors"
+                style={{ background: editColor }}
+              >
+                {editInitials}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                  Barva avatara
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {AVATAR_COLORS.map(c => (
+                    <button
+                      key={c}
+                      onClick={() => setEditColor(c)}
+                      className="w-5 h-5 rounded-full transition-all flex-shrink-0"
+                      style={{
+                        background: c,
+                        transform: editColor === c ? 'scale(1.35)' : 'scale(1)',
+                        outline: editColor === c ? '2px solid var(--text-primary)' : '2px solid transparent',
+                        outlineOffset: '1px',
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Jméno */}
+            <div className="mb-3">
+              <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                Jméno
+              </label>
+              <input
+                type="text"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="Jan Novák"
+                className={inputCls}
+                style={inputStyle}
+              />
+            </div>
+
+            {/* E-mail */}
+            <div className="mb-3">
+              <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                E-mail
+              </label>
+              <input
+                type="email"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+                placeholder="jan@firma.cz"
+                className={inputCls}
+                style={inputStyle}
+              />
+            </div>
+
+            {/* Hodinová sazba */}
+            <div className="mb-5">
+              <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                Hodinová sazba
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  value={editHourlyRate}
+                  onChange={(e) => setEditHourlyRate(e.target.value)}
+                  placeholder="např. 250"
+                  min="0"
+                  step="1"
+                  className={inputCls + ' pr-14'}
+                  style={inputStyle}
+                />
+                <span
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs pointer-events-none"
+                  style={{ color: 'var(--text-muted)' }}
+                >
+                  {currencySymbol}/h
+                </span>
+              </div>
+            </div>
+
+            {/* Akce */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setEditingMember(null)}
+                className="flex-1 py-2.5 rounded-lg border text-sm font-medium transition-colors"
+                style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)', background: 'transparent' }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              >
+                Zrušit
+              </button>
+              <button
+                onClick={saveMemberEdit}
+                disabled={editSaving || !editName.trim()}
+                className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium disabled:opacity-50 transition-opacity"
+                style={{ background: 'var(--primary)' }}
+              >
+                {editSaving ? 'Ukládám...' : 'Uložit'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }
