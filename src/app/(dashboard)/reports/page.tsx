@@ -81,7 +81,7 @@ interface MemberProfile {
 function ReportsContent() {
   const { user } = useAuth();
   const { currentWorkspace, isManagerOf } = useWorkspace();
-  const { isWorkspaceAdmin, isManager, canManualEntry } = usePermissions();
+  const { isWorkspaceAdmin, isManager, isMasterAdmin, canManualEntry } = usePermissions();
 
   // Filtry
   const [preset, setPreset] = useState<DatePreset>('week');
@@ -111,7 +111,13 @@ function ReportsContent() {
   const [manualSaving, setManualSaving] = useState(false);
   const [manualError, setManualError] = useState('');
 
+  // Poznámky
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [noteText, setNoteText] = useState('');
+  const [savingNoteId, setSavingNoteId] = useState<string | null>(null);
+
   const canSeeOthers = isWorkspaceAdmin || isManager;
+  const canManageNotes = isMasterAdmin || isWorkspaceAdmin || isManager;
 
   const { from, to } = preset === 'custom'
     ? { from: customFrom, to: customTo }
@@ -261,6 +267,19 @@ function ReportsContent() {
     if (!confirm('Smazat záznam?')) return;
     await supabase.from('trackino_time_entries').delete().eq('id', id);
     fetchEntries();
+  };
+
+  const saveNote = async (entryId: string) => {
+    setSavingNoteId(entryId);
+    await supabase
+      .from('trackino_time_entries')
+      .update({ manager_note: noteText.trim() })
+      .eq('id', entryId);
+    setEntries(prev => prev.map(e =>
+      e.id === entryId ? { ...e, manager_note: noteText.trim() } : e
+    ));
+    setSavingNoteId(null);
+    setEditingNoteId(null);
   };
 
   const projectName = (id: string | null) => projects.find(p => p.id === id)?.name ?? '—';
@@ -584,58 +603,139 @@ function ReportsContent() {
                       const task = taskName(entry.task_id);
                       const proj = projects.find(p => p.id === entry.project_id);
                       return (
-                        <div key={entry.id} className="flex items-center gap-3 px-4 py-3">
-                          {/* Barva projektu */}
-                          <div
-                            className="w-1 self-stretch rounded-full flex-shrink-0"
-                            style={{ background: proj?.color ?? 'var(--border)', minHeight: '24px' }}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              {entry.description && (
-                                <span className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
-                                  {entry.description}
-                                </span>
-                              )}
-                              {proj && (
-                                <span className="text-xs px-1.5 py-0.5 rounded-md font-medium" style={{ background: proj.color + '22', color: proj.color }}>
-                                  {proj.name}
-                                </span>
-                              )}
-                              {cat && (
-                                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{cat}{task ? ` / ${task}` : ''}</span>
-                              )}
-                            </div>
-                            {canSeeOthers && userFilter !== 'me' && (
-                              <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                                {memberName(entry.user_id)}
+                        <div key={entry.id} className="flex flex-col px-4 py-3 gap-1.5">
+                          {/* Hlavní řádek */}
+                          <div className="flex items-center gap-3">
+                            {/* Barva projektu */}
+                            <div
+                              className="w-1 self-stretch rounded-full flex-shrink-0"
+                              style={{ background: proj?.color ?? 'var(--border)', minHeight: '24px' }}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {entry.description && (
+                                  <span className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
+                                    {entry.description}
+                                  </span>
+                                )}
+                                {proj && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded-md font-medium" style={{ background: proj.color + '22', color: proj.color }}>
+                                    {proj.name}
+                                  </span>
+                                )}
+                                {cat && (
+                                  <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{cat}{task ? ` / ${task}` : ''}</span>
+                                )}
                               </div>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-3 flex-shrink-0">
-                            <div className="text-xs tabular-nums text-right" style={{ color: 'var(--text-muted)' }}>
-                              {fmtTime(entry.start_time)} – {entry.end_time ? fmtTime(entry.end_time) : '—'}
+                              {canSeeOthers && userFilter !== 'me' && (
+                                <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                                  {memberName(entry.user_id)}
+                                </div>
+                              )}
                             </div>
-                            <div className="text-sm font-semibold tabular-nums w-16 text-right" style={{ color: 'var(--text-primary)' }}>
-                              {fmtDuration(entry.duration ?? 0)}
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <div className="text-xs tabular-nums text-right" style={{ color: 'var(--text-muted)' }}>
+                                {fmtTime(entry.start_time)} – {entry.end_time ? fmtTime(entry.end_time) : '—'}
+                              </div>
+                              <div className="text-sm font-semibold tabular-nums w-16 text-right" style={{ color: 'var(--text-primary)' }}>
+                                {fmtDuration(entry.duration ?? 0)}
+                              </div>
+
+                              {/* Poznámka – jen pro manažery/adminy */}
+                              {canManageNotes && (
+                                <button
+                                  onClick={() => {
+                                    if (editingNoteId === entry.id) {
+                                      setEditingNoteId(null);
+                                    } else {
+                                      setEditingNoteId(entry.id);
+                                      setNoteText(entry.manager_note || '');
+                                    }
+                                  }}
+                                  title={entry.manager_note ? 'Upravit poznámku' : 'Přidat poznámku'}
+                                  className="p-1 rounded transition-colors"
+                                  style={{ color: entry.manager_note ? '#d97706' : 'var(--text-secondary)' }}
+                                  onMouseEnter={(e) => { e.currentTarget.style.color = '#d97706'; }}
+                                  onMouseLeave={(e) => { e.currentTarget.style.color = entry.manager_note ? '#d97706' : 'var(--text-secondary)'; }}
+                                >
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                  </svg>
+                                </button>
+                              )}
+
+                              {/* Smazat – vždy viditelné */}
+                              {(canManageNotes || entry.user_id === user?.id) && (
+                                <button
+                                  onClick={() => deleteEntry(entry.id)}
+                                  className="p-1 rounded transition-colors"
+                                  style={{ color: 'var(--text-secondary)' }}
+                                  onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--danger)'; }}
+                                  onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                                  title="Smazat"
+                                >
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <polyline points="3 6 5 6 21 6" />
+                                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                                    <path d="M10 11v6" /><path d="M14 11v6" />
+                                    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                                  </svg>
+                                </button>
+                              )}
                             </div>
-                            {(isWorkspaceAdmin || entry.user_id === user?.id) && (
-                              <button
-                                onClick={() => deleteEntry(entry.id)}
-                                className="p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                                style={{ color: 'var(--text-muted)' }}
-                                onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--danger)'; e.currentTarget.style.opacity = '1'; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.opacity = '0.4'; }}
-                              >
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                  <polyline points="3 6 5 6 21 6" />
-                                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                                  <path d="M10 11v6" /><path d="M14 11v6" />
-                                  <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-                                </svg>
-                              </button>
-                            )}
                           </div>
+
+                          {/* Zobrazení existující poznámky (mimo editaci) */}
+                          {canManageNotes && entry.manager_note && editingNoteId !== entry.id && (
+                            <div
+                              className="text-xs px-2.5 py-1.5 rounded-md cursor-pointer flex items-start gap-1.5 ml-4"
+                              style={{ background: '#f59e0b18', color: '#b45309' }}
+                              onClick={() => { setEditingNoteId(entry.id); setNoteText(entry.manager_note || ''); }}
+                            >
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 flex-shrink-0">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                              </svg>
+                              <span>{entry.manager_note}</span>
+                            </div>
+                          )}
+
+                          {/* Editace poznámky */}
+                          {canManageNotes && editingNoteId === entry.id && (
+                            <div className="flex gap-2 ml-4">
+                              <textarea
+                                value={noteText}
+                                onChange={(e) => setNoteText(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveNote(entry.id); }
+                                  if (e.key === 'Escape') setEditingNoteId(null);
+                                }}
+                                autoFocus
+                                placeholder="Interní poznámka manažera… (Enter = uložit, Shift+Enter = nový řádek)"
+                                rows={2}
+                                className="flex-1 px-2.5 py-1.5 rounded-md border text-xs resize-none focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
+                                style={{ borderColor: '#f59e0b50', background: '#f59e0b08', color: 'var(--text-primary)' }}
+                              />
+                              <div className="flex flex-col gap-1">
+                                <button
+                                  onClick={() => saveNote(entry.id)}
+                                  disabled={savingNoteId === entry.id}
+                                  className="px-2.5 py-1 rounded-md text-xs font-medium text-white disabled:opacity-50"
+                                  style={{ background: 'var(--primary)' }}
+                                >
+                                  {savingNoteId === entry.id ? '…' : '✓'}
+                                </button>
+                                <button
+                                  onClick={() => setEditingNoteId(null)}
+                                  className="px-2.5 py-1 rounded-md text-xs"
+                                  style={{ color: 'var(--text-muted)', background: 'var(--bg-hover)' }}
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       );
                     })}

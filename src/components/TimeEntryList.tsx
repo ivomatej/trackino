@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
+import { usePermissions } from '@/hooks/usePermissions';
 import type { Project, TimeEntry, Tag } from '@/types/database';
 
 interface TimeEntryListProps {
@@ -25,6 +26,7 @@ interface DayGroup {
 export default function TimeEntryList({ refreshKey }: TimeEntryListProps) {
   const { user } = useAuth();
   const { currentWorkspace } = useWorkspace();
+  const { isWorkspaceAdmin, isManager, isMasterAdmin } = usePermissions();
   const [days, setDays] = useState<DayGroup[]>([]);
   const [projects, setProjects] = useState<Record<string, Project>>({});
   const [allTags, setAllTags] = useState<Record<string, Tag>>({});
@@ -32,6 +34,11 @@ export default function TimeEntryList({ refreshKey }: TimeEntryListProps) {
   const [loading, setLoading] = useState(true);
   const [editingEntry, setEditingEntry] = useState<string | null>(null);
   const [editDescription, setEditDescription] = useState('');
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [noteText, setNoteText] = useState('');
+  const [savingNoteId, setSavingNoteId] = useState<string | null>(null);
+
+  const canManageNotes = isMasterAdmin || isWorkspaceAdmin || isManager;
 
   const fetchEntries = useCallback(async () => {
     if (!user || !currentWorkspace) return;
@@ -145,6 +152,23 @@ export default function TimeEntryList({ refreshKey }: TimeEntryListProps) {
     fetchEntries();
   };
 
+  const saveNote = async (entryId: string) => {
+    setSavingNoteId(entryId);
+    await supabase
+      .from('trackino_time_entries')
+      .update({ manager_note: noteText.trim() })
+      .eq('id', entryId);
+    // Aktualizace lokálního stavu bez refetch
+    setDays(prev => prev.map(day => ({
+      ...day,
+      entries: day.entries.map(e =>
+        e.id === entryId ? { ...e, manager_note: noteText.trim() } : e
+      ),
+    })));
+    setSavingNoteId(null);
+    setEditingNoteId(null);
+  };
+
   if (loading) {
     return (
       <div className="rounded-xl border p-8 text-center" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
@@ -158,7 +182,7 @@ export default function TimeEntryList({ refreshKey }: TimeEntryListProps) {
       <div className="rounded-xl border" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
         <div className="px-6 py-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--border)' }}>
           <h2 className="font-semibold" style={{ color: 'var(--text-primary)' }}>Dnes</h2>
-          <span className="text-sm font-mono" style={{ color: 'var(--text-muted)' }}>0:00:00</span>
+          <span className="text-sm tabular-nums" style={{ color: 'var(--text-muted)' }}>0:00:00</span>
         </div>
         <div className="px-6 py-12 text-center">
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mx-auto mb-3" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)' }}>
@@ -190,91 +214,172 @@ export default function TimeEntryList({ refreshKey }: TimeEntryListProps) {
             {day.entries.map(entry => (
               <div
                 key={entry.id}
-                className="px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 group transition-colors"
+                className="px-4 sm:px-6 py-3 flex flex-col gap-2 transition-colors"
                 onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               >
-                {/* Popis + projekt */}
-                <div className="flex-1 min-w-0">
-                  {editingEntry === entry.id ? (
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={editDescription}
-                        onChange={(e) => setEditDescription(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(entry.id); if (e.key === 'Escape') setEditingEntry(null); }}
-                        autoFocus
-                        className="flex-1 px-2 py-1 rounded border text-sm focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
-                        style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
-                      />
-                      <button
-                        onClick={() => saveEdit(entry.id)}
-                        className="px-2 py-1 rounded text-xs font-medium text-white"
-                        style={{ background: 'var(--primary)' }}
-                      >
-                        ✓
-                      </button>
-                    </div>
-                  ) : (
-                    <div
-                      className="text-sm cursor-pointer"
-                      style={{ color: entry.description ? 'var(--text-primary)' : 'var(--text-muted)' }}
-                      onClick={() => { setEditingEntry(entry.id); setEditDescription(entry.description || ''); }}
-                    >
-                      {entry.description || '(bez popisu)'}
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2 mt-1 flex-wrap">
-                    {entry.project && (
-                      <span className="inline-flex items-center gap-1">
-                        <span
-                          className="w-2 h-2 rounded-full inline-block"
-                          style={{ background: entry.project.color }}
+                {/* Hlavní řádek: popis + čas + akce */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                  {/* Popis + projekt + tagy */}
+                  <div className="flex-1 min-w-0">
+                    {editingEntry === entry.id ? (
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={editDescription}
+                          onChange={(e) => setEditDescription(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(entry.id); if (e.key === 'Escape') setEditingEntry(null); }}
+                          autoFocus
+                          className="flex-1 px-2 py-1 rounded border text-sm focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
+                          style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
                         />
-                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                          {entry.project.name}
-                        </span>
-                      </span>
-                    )}
-                    {(entryTagMap[entry.id]?.length > 0) && entryTagMap[entry.id].map(tagId => {
-                      const tag = allTags[tagId];
-                      if (!tag) return null;
-                      return (
-                        <span
-                          key={tagId}
-                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium"
-                          style={{ background: tag.color + '20', color: tag.color }}
+                        <button
+                          onClick={() => saveEdit(entry.id)}
+                          className="px-2 py-1 rounded text-xs font-medium text-white"
+                          style={{ background: 'var(--primary)' }}
                         >
-                          {tag.name}
+                          ✓
+                        </button>
+                      </div>
+                    ) : (
+                      <div
+                        className="text-sm cursor-pointer"
+                        style={{ color: entry.description ? 'var(--text-primary)' : 'var(--text-muted)' }}
+                        onClick={() => { setEditingEntry(entry.id); setEditDescription(entry.description || ''); }}
+                      >
+                        {entry.description || '(bez popisu)'}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      {entry.project && (
+                        <span className="inline-flex items-center gap-1">
+                          <span
+                            className="w-2 h-2 rounded-full inline-block"
+                            style={{ background: entry.project.color }}
+                          />
+                          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                            {entry.project.name}
+                          </span>
                         </span>
-                      );
-                    })}
+                      )}
+                      {(entryTagMap[entry.id]?.length > 0) && entryTagMap[entry.id].map(tagId => {
+                        const tag = allTags[tagId];
+                        if (!tag) return null;
+                        return (
+                          <span
+                            key={tagId}
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium"
+                            style={{ background: tag.color + '20', color: tag.color }}
+                          >
+                            {tag.name}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Čas + akce */}
+                  <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                      {formatTimeRange(entry.start_time, entry.end_time)}
+                    </span>
+                    <span className="text-sm tabular-nums font-medium min-w-[70px] text-right" style={{ color: 'var(--text-primary)' }}>
+                      {formatDuration(entry.duration || 0)}
+                    </span>
+
+                    {/* Poznámka – jen pro manažery/adminy */}
+                    {canManageNotes && (
+                      <button
+                        onClick={() => {
+                          if (editingNoteId === entry.id) {
+                            setEditingNoteId(null);
+                          } else {
+                            setEditingNoteId(entry.id);
+                            setNoteText(entry.manager_note || '');
+                          }
+                        }}
+                        title={entry.manager_note ? 'Upravit poznámku' : 'Přidat poznámku'}
+                        className="p-1 rounded transition-colors"
+                        style={{ color: entry.manager_note ? '#d97706' : 'var(--text-secondary)' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = '#d97706'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = entry.manager_note ? '#d97706' : 'var(--text-secondary)'; }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                        </svg>
+                      </button>
+                    )}
+
+                    {/* Smazat – vždy viditelné */}
+                    <button
+                      onClick={() => deleteEntry(entry.id)}
+                      className="p-1 rounded transition-colors"
+                      style={{ color: 'var(--text-secondary)' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--danger)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                      title="Smazat"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                        <path d="M10 11v6" /><path d="M14 11v6" />
+                        <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                      </svg>
+                    </button>
                   </div>
                 </div>
 
-                {/* Čas */}
-                <div className="flex items-center gap-3 sm:gap-4">
-                  <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                    {formatTimeRange(entry.start_time, entry.end_time)}
-                  </span>
-                  <span className="text-sm tabular-nums font-medium min-w-[70px] text-right" style={{ color: 'var(--text-primary)' }}>
-                    {formatDuration(entry.duration || 0)}
-                  </span>
-
-                  {/* Smazat */}
-                  <button
-                    onClick={() => deleteEntry(entry.id)}
-                    className="opacity-0 group-hover:opacity-100 p-1 rounded transition-all"
-                    style={{ color: 'var(--text-muted)' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--danger)'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
-                    title="Smazat"
+                {/* Zobrazení existující poznámky (mimo editaci) */}
+                {canManageNotes && entry.manager_note && editingNoteId !== entry.id && (
+                  <div
+                    className="text-xs px-2.5 py-1.5 rounded-md cursor-pointer flex items-start gap-1.5"
+                    style={{ background: '#f59e0b18', color: '#b45309' }}
+                    onClick={() => { setEditingNoteId(entry.id); setNoteText(entry.manager_note || ''); }}
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 flex-shrink-0">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                     </svg>
-                  </button>
-                </div>
+                    <span>{entry.manager_note}</span>
+                  </div>
+                )}
+
+                {/* Editace poznámky */}
+                {canManageNotes && editingNoteId === entry.id && (
+                  <div className="flex gap-2">
+                    <textarea
+                      value={noteText}
+                      onChange={(e) => setNoteText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveNote(entry.id); }
+                        if (e.key === 'Escape') setEditingNoteId(null);
+                      }}
+                      autoFocus
+                      placeholder="Interní poznámka manažera… (Enter = uložit, Shift+Enter = nový řádek)"
+                      rows={2}
+                      className="flex-1 px-2.5 py-1.5 rounded-md border text-xs resize-none focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
+                      style={{ borderColor: '#f59e0b50', background: '#f59e0b08', color: 'var(--text-primary)' }}
+                    />
+                    <div className="flex flex-col gap-1">
+                      <button
+                        onClick={() => saveNote(entry.id)}
+                        disabled={savingNoteId === entry.id}
+                        className="px-2.5 py-1 rounded-md text-xs font-medium text-white disabled:opacity-50"
+                        style={{ background: 'var(--primary)' }}
+                      >
+                        {savingNoteId === entry.id ? '…' : '✓'}
+                      </button>
+                      <button
+                        onClick={() => setEditingNoteId(null)}
+                        className="px-2.5 py-1 rounded-md text-xs"
+                        style={{ color: 'var(--text-muted)', background: 'var(--bg-hover)' }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
