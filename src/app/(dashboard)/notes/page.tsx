@@ -301,10 +301,8 @@ function NotesContent() {
                 </div>
               </div>
             )}
-          </div>
 
-          {/* Filtr jen s poznámkou */}
-          <div className="flex items-end">
+            {/* Jen s poznámkou */}
             <button
               onClick={() => setOnlyWithNotes(v => !v)}
               className="flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-colors"
