@@ -654,9 +654,9 @@ function ReportsContent() {
                                   }}
                                   title={entry.manager_note ? 'Upravit poznámku' : 'Přidat poznámku'}
                                   className="p-1 rounded transition-colors"
-                                  style={{ color: entry.manager_note ? '#d97706' : 'var(--text-secondary)' }}
+                                  style={{ color: entry.manager_note ? '#d97706' : 'var(--text-muted)' }}
                                   onMouseEnter={(e) => { e.currentTarget.style.color = '#d97706'; }}
-                                  onMouseLeave={(e) => { e.currentTarget.style.color = entry.manager_note ? '#d97706' : 'var(--text-secondary)'; }}
+                                  onMouseLeave={(e) => { e.currentTarget.style.color = entry.manager_note ? '#d97706' : 'var(--text-muted)'; }}
                                 >
                                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -670,9 +670,9 @@ function ReportsContent() {
                                 <button
                                   onClick={() => deleteEntry(entry.id)}
                                   className="p-1 rounded transition-colors"
-                                  style={{ color: 'var(--text-secondary)' }}
+                                  style={{ color: 'var(--text-muted)' }}
                                   onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--danger)'; }}
-                                  onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                                  onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
                                   title="Smazat"
                                 >
                                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

@@ -66,6 +66,9 @@ function NotesContent() {
   const [members, setMembers] = useState<MemberProfile[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Filtr jen s poznámkou
+  const [onlyWithNotes, setOnlyWithNotes] = useState(false);
+
   // Inline editing
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [noteText, setNoteText] = useState('');
@@ -300,6 +303,25 @@ function NotesContent() {
             )}
           </div>
 
+          {/* Filtr jen s poznámkou */}
+          <div className="flex items-end">
+            <button
+              onClick={() => setOnlyWithNotes(v => !v)}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-colors"
+              style={{
+                borderColor: onlyWithNotes ? 'var(--primary)' : 'var(--border)',
+                background: onlyWithNotes ? 'var(--bg-active)' : 'var(--bg-input)',
+                color: onlyWithNotes ? 'var(--primary)' : 'var(--text-secondary)',
+              }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+              </svg>
+              Jen s poznámkou
+            </button>
+          </div>
+
           {/* Statistiky */}
           {!loading && (
             <div className="flex gap-5 mt-3 pt-3 border-t" style={{ borderColor: 'var(--border)' }}>
@@ -320,7 +342,7 @@ function NotesContent() {
           <div className="flex justify-center py-12">
             <div className="w-6 h-6 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
           </div>
-        ) : entries.length === 0 ? (
+        ) : (onlyWithNotes ? withNotes : entries).length === 0 ? (
           <div
             className="rounded-xl border px-6 py-16 text-center"
             style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}
@@ -331,12 +353,14 @@ function NotesContent() {
               <line x1="16" y1="13" x2="8" y2="13" />
               <line x1="16" y1="17" x2="8" y2="17" />
             </svg>
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Žádné záznamy pro vybrané období.</p>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+              {onlyWithNotes ? 'Žádné záznamy s poznámkou pro vybrané období.' : 'Žádné záznamy pro vybrané období.'}
+            </p>
           </div>
         ) : (
           <div className="rounded-xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
             <div className="entry-divider">
-              {entries.map(entry => {
+              {(onlyWithNotes ? withNotes : entries).map(entry => {
                 const profile = profiles[entry.user_id];
                 const project = entry.project_id ? projects[entry.project_id] : undefined;
                 const hasNote = !!(entry.manager_note && entry.manager_note.trim());
