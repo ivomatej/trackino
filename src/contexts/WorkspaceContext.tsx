@@ -1,9 +1,9 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './AuthContext';
-import type { Workspace, WorkspaceMember, UserRole } from '@/types/database';
+import type { Workspace, WorkspaceMember, UserRole, ManagerAssignment } from '@/types/database';
 
 interface WorkspaceContextType {
   workspaces: Workspace[];
@@ -13,6 +13,12 @@ interface WorkspaceContextType {
   selectWorkspace: (workspace: Workspace) => void;
   createWorkspace: (name: string) => Promise<{ error: string | null }>;
   userRole: UserRole | null;
+  /** Manager assignments pro aktuální workspace (kde je current user managerem) */
+  managerAssignments: ManagerAssignment[];
+  /** Kontroluje, zda je aktuální uživatel managerem daného uživatele */
+  isManagerOf: (userId: string) => boolean;
+  /** Znovu načíst workspace data (po uložení nastavení apod.) */
+  refreshWorkspace: () => Promise<void>;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
@@ -24,10 +30,27 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [currentWorkspace, setCurrentWorkspace] = useState<Workspace | null>(null);
   const [currentMembership, setCurrentMembership] = useState<WorkspaceMember | null>(null);
+  const [managerAssignments, setManagerAssignments] = useState<ManagerAssignment[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Načtení manager assignments pro aktuální workspace
+  const fetchManagerAssignments = useCallback(async (workspaceId: string) => {
+    if (!user) return;
+    try {
+      const { data } = await supabase
+        .from('trackino_manager_assignments')
+        .select('*')
+        .eq('workspace_id', workspaceId)
+        .eq('manager_user_id', user.id);
+
+      setManagerAssignments((data ?? []) as ManagerAssignment[]);
+    } catch {
+      setManagerAssignments([]);
+    }
+  }, [user]);
+
   // Načtení workspaces uživatele
-  async function fetchWorkspaces() {
+  const fetchWorkspaces = useCallback(async () => {
     if (!user) {
       setWorkspaces([]);
       setCurrentWorkspace(null);
@@ -73,7 +96,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     }
 
     setLoading(false);
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   async function selectWorkspaceInternal(workspace: Workspace) {
     setCurrentWorkspace(workspace);
@@ -92,11 +116,33 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       } catch (err) {
         console.warn('Chyba při načítání členství:', err);
       }
+
+      // Načíst manager assignments
+      await fetchManagerAssignments(workspace.id);
     }
   }
 
   const selectWorkspace = (workspace: Workspace) => {
     selectWorkspaceInternal(workspace);
+  };
+
+  const refreshWorkspace = async () => {
+    if (!currentWorkspace) return;
+    try {
+      const { data } = await supabase
+        .from('trackino_workspaces')
+        .select('*')
+        .eq('id', currentWorkspace.id)
+        .single();
+
+      if (data) {
+        setCurrentWorkspace(data as Workspace);
+        // Aktualizovat i v seznamu
+        setWorkspaces(prev => prev.map(w => w.id === data.id ? data as Workspace : w));
+      }
+    } catch {
+      // ignorovat
+    }
   };
 
   const createWorkspace = async (name: string) => {
@@ -130,6 +176,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
       if (memberError) return { error: memberError.message };
 
+      // Vytvořit prázdný billing záznam
+      await supabase
+        .from('trackino_workspace_billing')
+        .insert({ workspace_id: ws.id });
+
       // Načtení dat a výběr workspace
       await fetchWorkspaces();
       await selectWorkspaceInternal(ws as Workspace);
@@ -141,10 +192,13 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const isManagerOf = useCallback((userId: string): boolean => {
+    return managerAssignments.some(a => a.member_user_id === userId);
+  }, [managerAssignments]);
+
   useEffect(() => {
     fetchWorkspaces();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [fetchWorkspaces]);
 
   return (
     <WorkspaceContext.Provider
@@ -156,6 +210,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         selectWorkspace,
         createWorkspace,
         userRole: currentMembership?.role ?? null,
+        managerAssignments,
+        isManagerOf,
+        refreshWorkspace,
       }}
     >
       {children}

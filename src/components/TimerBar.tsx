@@ -4,7 +4,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
-import type { Project, Category, Task, TimeEntry } from '@/types/database';
+import { canManualEntry } from '@/lib/permissions';
+import type { Project, Category, Task, TimeEntry, RequiredFields } from '@/types/database';
 
 interface TimerBarProps {
   onEntryChanged?: () => void;
@@ -14,8 +15,9 @@ type EntryMode = 'timer' | 'manual';
 
 export default function TimerBar({ onEntryChanged }: TimerBarProps) {
   const { user } = useAuth();
-  const { currentWorkspace } = useWorkspace();
+  const { currentWorkspace, userRole } = useWorkspace();
 
+  const allowManual = canManualEntry(userRole);
   const [mode, setMode] = useState<EntryMode>('timer');
   const [description, setDescription] = useState('');
   const [selectedProject, setSelectedProject] = useState<string>('');
@@ -115,8 +117,25 @@ export default function TimerBar({ onEntryChanged }: TimerBarProps) {
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   };
 
+  // Validace povinných polí
+  const validateRequiredFields = (): string | null => {
+    const rf = currentWorkspace?.required_fields as RequiredFields | undefined;
+    if (!rf) return null;
+    if (rf.description && !description.trim()) return 'Popisek je povinný';
+    if (rf.project && !selectedProject) return 'Projekt je povinný';
+    if (rf.category && !selectedCategory) return 'Kategorie je povinná';
+    if (rf.task && !selectedTask) return 'Úkol je povinný';
+    // Štítek se bude validovat až po přidání TagPicker (Fáze 2)
+    return null;
+  };
+
+  const [validationError, setValidationError] = useState('');
+
   const startTimer = async () => {
     if (!user || !currentWorkspace) return;
+    const vErr = validateRequiredFields();
+    if (vErr) { setValidationError(vErr); setTimeout(() => setValidationError(''), 3000); return; }
+    setValidationError('');
     const { data, error } = await supabase
       .from('trackino_time_entries')
       .insert({
@@ -152,6 +171,10 @@ export default function TimerBar({ onEntryChanged }: TimerBarProps) {
   // Manual entry save
   const saveManualEntry = async () => {
     if (!user || !currentWorkspace) return;
+    if (!allowManual) return; // Bezpečnostní check
+    const vErr = validateRequiredFields();
+    if (vErr) { setValidationError(vErr); setTimeout(() => setValidationError(''), 3000); return; }
+    setValidationError('');
     const start = new Date(`${manualDate}T${manualStart}:00`);
     const end = new Date(`${manualDate}T${manualEnd}:00`);
     const duration = Math.floor((end.getTime() - start.getTime()) / 1000);
@@ -445,6 +468,13 @@ export default function TimerBar({ onEntryChanged }: TimerBarProps) {
         )}
       </div>
 
+      {/* Validační chyba */}
+      {validationError && (
+        <span className="text-xs whitespace-nowrap hidden sm:inline" style={{ color: 'var(--danger)' }}>
+          {validationError}
+        </span>
+      )}
+
       {/* Oddělovač */}
       <div className="hidden sm:block w-px h-6" style={{ background: 'var(--border)' }} />
 
@@ -559,8 +589,8 @@ export default function TimerBar({ onEntryChanged }: TimerBarProps) {
         </>
       )}
 
-      {/* Přepínač timer/manual – ikonka */}
-      {!isRunning && (
+      {/* Přepínač timer/manual – ikonka (jen pro role s oprávněním) */}
+      {!isRunning && allowManual && (
         <button
           onClick={() => setMode(mode === 'timer' ? 'manual' : 'timer')}
           className="p-2 rounded-lg transition-colors flex-shrink-0"

@@ -2,13 +2,18 @@
 
 import { useState } from 'react';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { isMasterAdmin } from '@/lib/permissions';
 
 export default function WorkspaceSelector() {
   const { workspaces, selectWorkspace, createWorkspace, loading } = useWorkspace();
+  const { profile } = useAuth();
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
   const [error, setError] = useState('');
   const [creating, setCreating] = useState(false);
+
+  const canCreate = isMasterAdmin(profile);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,61 +84,74 @@ export default function WorkspaceSelector() {
           </div>
         )}
 
-        {/* Vytvoření nového workspace */}
-        {!showCreate ? (
-          <button
-            onClick={() => setShowCreate(true)}
-            className="w-full py-3 rounded-xl border-2 border-dashed text-sm font-medium transition-colors"
-            style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = 'var(--primary)';
-              e.currentTarget.style.color = 'var(--primary)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = 'var(--border)';
-              e.currentTarget.style.color = 'var(--text-secondary)';
-            }}
-          >
-            + Vytvořit nový pracovní prostor
-          </button>
-        ) : (
-          <form onSubmit={handleCreate} className="rounded-xl border p-4" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
-            {error && (
-              <div className="mb-3 p-3 rounded-lg text-sm" style={{ background: 'var(--danger-light)', color: 'var(--danger)' }}>
-                {error}
-              </div>
-            )}
-            <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-primary)' }}>
-              Název pracovního prostoru
-            </label>
-            <input
-              type="text"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              placeholder="např. Four Crowns"
-              autoFocus
-              className="w-full px-3 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent transition-shadow mb-3"
-              style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
-            />
-            <div className="flex gap-2">
+        {/* Vytvoření nového workspace – jen Master Admin */}
+        {canCreate && (
+          <>
+            {!showCreate ? (
               <button
-                type="button"
-                onClick={() => { setShowCreate(false); setNewName(''); setError(''); }}
-                className="flex-1 py-2 rounded-lg border text-sm font-medium transition-colors"
+                onClick={() => setShowCreate(true)}
+                className="w-full py-3 rounded-xl border-2 border-dashed text-sm font-medium transition-colors"
                 style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--primary)';
+                  e.currentTarget.style.color = 'var(--primary)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--border)';
+                  e.currentTarget.style.color = 'var(--text-secondary)';
+                }}
               >
-                Zrušit
+                + Vytvořit nový pracovní prostor
               </button>
-              <button
-                type="submit"
-                disabled={creating || !newName.trim()}
-                className="flex-1 py-2 rounded-lg text-white text-sm font-medium transition-colors disabled:opacity-50"
-                style={{ background: 'var(--primary)' }}
-              >
-                {creating ? 'Vytvářím...' : 'Vytvořit'}
-              </button>
-            </div>
-          </form>
+            ) : (
+              <form onSubmit={handleCreate} className="rounded-xl border p-4" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+                {error && (
+                  <div className="mb-3 p-3 rounded-lg text-sm" style={{ background: 'var(--danger-light)', color: 'var(--danger)' }}>
+                    {error}
+                  </div>
+                )}
+                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-primary)' }}>
+                  Název pracovního prostoru
+                </label>
+                <input
+                  type="text"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="např. Four Crowns"
+                  autoFocus
+                  className="w-full px-3 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent transition-shadow mb-3"
+                  style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                />
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setShowCreate(false); setNewName(''); setError(''); }}
+                    className="flex-1 py-2 rounded-lg border text-sm font-medium transition-colors"
+                    style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
+                  >
+                    Zrušit
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={creating || !newName.trim()}
+                    className="flex-1 py-2 rounded-lg text-white text-sm font-medium transition-colors disabled:opacity-50"
+                    style={{ background: 'var(--primary)' }}
+                  >
+                    {creating ? 'Vytvářím...' : 'Vytvořit'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </>
+        )}
+
+        {/* Pokud uživatel nemá žádný workspace a nemůže vytvořit */}
+        {workspaces.length === 0 && !canCreate && (
+          <div className="text-center py-8">
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+              Nejste členem žádného pracovního prostoru. Kontaktujte administrátora.
+            </p>
+          </div>
         )}
       </div>
     </div>
