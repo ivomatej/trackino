@@ -27,6 +27,7 @@ export interface Workspace {
   required_fields: RequiredFields;
   hide_tags_globally: boolean;
   locked: boolean;
+  color: string | null;
   created_at: string;
 }
 
@@ -73,6 +74,8 @@ export interface WorkspaceMember {
   hide_tags: boolean;
   approved: boolean;
   joined_at: string;
+  can_use_vacation: boolean;
+  cooperation_type_id: string | null;
 }
 
 export interface ManagerAssignment {
@@ -208,5 +211,21 @@ export interface MemberRate {
   hourly_rate: number;
   valid_from: string; // YYYY-MM-DD
   valid_to: string | null;
+  created_at: string;
+}
+
+export interface VacationAllowance {
+  id: string;
+  workspace_id: string;
+  year: number;
+  days_per_year: number;
+  created_at: string;
+}
+
+export interface CooperationType {
+  id: string;
+  workspace_id: string;
+  name: string;
+  sort_order: number;
   created_at: string;
 }

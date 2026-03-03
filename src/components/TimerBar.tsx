@@ -467,7 +467,11 @@ export default function TimerBar({ onEntryChanged }: TimerBarProps) {
           style={{ color: selectedTask || selectedCategory ? 'var(--primary)' : 'var(--text-muted)' }}
           onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
           onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-          title="Kategorie / Úkol"
+          title={
+            selectedCategoryObj && selectedTaskObj
+              ? `${selectedCategoryObj.name} · ${selectedTaskObj.name}`
+              : selectedCategoryObj?.name ?? selectedTaskObj?.name ?? 'Kategorie / Úkol'
+          }
         >
           {selectedCategory || selectedTask ? (
             <>

@@ -11,6 +11,14 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v1.1.0 – 3. 3. 2026</h3>
+<ul>
+  <li><strong>Barva workspace</strong> – každý workspace může mít vlastní barvu ikonky; barva je viditelná v přepínači workspace v horní liště; nastavení v sekci Správa workspace (Master Admin)</li>
+  <li><strong>Dovolená</strong> – nová sekce v Nastavení pro správu dnů dovolené po letech (2025, 2026…); v editaci člena v Týmu lze zapnout příznak „Může čerpat dovolenou" pro zaměstnance s nárokem</li>
+  <li><strong>Typy spolupráce</strong> – definujte vlastní formy spolupráce (HPP, DPP, OSVČ, s.r.o.…) v Nastavení → Spolupráce; každému členovi lze přiřadit typ v editačním modálu</li>
+  <li><strong>Tooltip kategorie/úkolu</strong> – při najetí myší na vybranou kategorii či úkol v Time Trackeru se nyní zobrazí jejich plný název místo generického textu</li>
+</ul>
+
 <h3>v1.0.0 – 3. 3. 2026</h3>
 <ul>
   <li><strong>Dashboard</strong> – nová úvodní stránka: personalizovaný pozdrav dle části dne, souhrn výdělku a odpracovaných hodin za aktuální měsíc, zbývající kalendářní a pracovní dny, přehled měsíce s progress barem, dnešní svátek, státní svátky ČR v daném měsíci</li>

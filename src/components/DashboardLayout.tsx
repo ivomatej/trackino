@@ -124,7 +124,7 @@ function WorkspaceSwitcher() {
       >
         <div
           className="w-5 h-5 rounded flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0"
-          style={{ background: 'var(--primary)' }}
+          style={{ background: currentWorkspace?.color ?? 'var(--primary)' }}
         >
           {currentWorkspace?.name.charAt(0).toUpperCase()}
         </div>
@@ -156,7 +156,7 @@ function WorkspaceSwitcher() {
             >
               <div
                 className="w-6 h-6 rounded flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0"
-                style={{ background: 'var(--primary)' }}
+                style={{ background: ws.color ?? 'var(--primary)' }}
               >
                 {ws.name.charAt(0).toUpperCase()}
               </div>

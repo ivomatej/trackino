@@ -7,7 +7,7 @@ import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import DashboardLayout from '@/components/DashboardLayout';
 import { WorkspaceProvider } from '@/contexts/WorkspaceContext';
-import type { Department, Category, Task, WorkspaceMember, Profile, UserRole, MemberRate } from '@/types/database';
+import type { Department, Category, Task, WorkspaceMember, Profile, UserRole, MemberRate, CooperationType } from '@/types/database';
 
 type Tab = 'members' | 'departments' | 'categories' | 'tasks';
 
@@ -65,7 +65,12 @@ function TeamContent() {
   const [editName, setEditName] = useState('');
   const [editEmail, setEditEmail] = useState('');
   const [editColor, setEditColor] = useState(AVATAR_COLORS[0]);
+  const [editCanUseVacation, setEditCanUseVacation] = useState(false);
+  const [editCooperationTypeId, setEditCooperationTypeId] = useState<string>('');
   const [editSaving, setEditSaving] = useState(false);
+
+  // Cooperation types
+  const [cooperationTypes, setCooperationTypes] = useState<CooperationType[]>([]);
 
   // Edit member – hodinové sazby
   const [memberRates, setMemberRates] = useState<MemberRate[]>([]);
@@ -90,18 +95,20 @@ function TeamContent() {
   const fetchData = useCallback(async () => {
     if (!currentWorkspace) return;
 
-    const [deptRes, catRes, taskRes, projRes, memRes] = await Promise.all([
+    const [deptRes, catRes, taskRes, projRes, memRes, coopRes] = await Promise.all([
       supabase.from('trackino_departments').select('*').eq('workspace_id', currentWorkspace.id).order('name'),
       supabase.from('trackino_categories').select('*').eq('workspace_id', currentWorkspace.id).order('name'),
       supabase.from('trackino_tasks').select('*').eq('workspace_id', currentWorkspace.id).order('name'),
       supabase.from('trackino_projects').select('id, name').eq('workspace_id', currentWorkspace.id).eq('archived', false).order('name'),
       supabase.from('trackino_workspace_members').select('*').eq('workspace_id', currentWorkspace.id),
+      supabase.from('trackino_cooperation_types').select('*').eq('workspace_id', currentWorkspace.id).order('sort_order', { ascending: true }),
     ]);
 
     setDepartments((deptRes.data ?? []) as Department[]);
     setCategories((catRes.data ?? []) as Category[]);
     setTasks((taskRes.data ?? []) as Task[]);
     setProjects((projRes.data ?? []) as { id: string; name: string }[]);
+    setCooperationTypes((coopRes.data ?? []) as CooperationType[]);
 
     const memberData = (memRes.data ?? []) as WorkspaceMember[];
     if (memberData.length > 0) {
@@ -227,6 +234,8 @@ function TeamContent() {
     setEditName(member.profile?.display_name ?? '');
     setEditEmail(member.profile?.email ?? '');
     setEditColor(member.profile?.avatar_color ?? AVATAR_COLORS[0]);
+    setEditCanUseVacation(member.can_use_vacation ?? false);
+    setEditCooperationTypeId(member.cooperation_type_id ?? '');
     setMemberRates([]);
     setShowAddRate(false);
     setNewRateAmount('');
@@ -246,11 +255,17 @@ function TeamContent() {
   const saveMemberEdit = async () => {
     if (!editingMember) return;
     setEditSaving(true);
-    await supabase.from('trackino_profiles').update({
-      display_name: editName.trim(),
-      email: editEmail.trim(),
-      avatar_color: editColor,
-    }).eq('id', editingMember.user_id);
+    await Promise.all([
+      supabase.from('trackino_profiles').update({
+        display_name: editName.trim(),
+        email: editEmail.trim(),
+        avatar_color: editColor,
+      }).eq('id', editingMember.user_id),
+      supabase.from('trackino_workspace_members').update({
+        can_use_vacation: editCanUseVacation,
+        cooperation_type_id: editCooperationTypeId || null,
+      }).eq('id', editingMember.id),
+    ]);
     setEditSaving(false);
     setEditingMember(null);
     fetchData();
@@ -505,6 +520,15 @@ function TeamContent() {
                           </span>
                         )}
 
+                        {isWorkspaceAdmin && member.cooperation_type_id && (() => {
+                          const ct = cooperationTypes.find(c => c.id === member.cooperation_type_id);
+                          return ct ? (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full hidden sm:inline-block flex-shrink-0" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>
+                              {ct.name}
+                            </span>
+                          ) : null;
+                        })()}
+
                         {isWorkspaceAdmin && !isCurrentUser && member.role !== 'owner' ? (
                           <div className="relative flex-shrink-0">
                             <select
@@ -704,6 +728,49 @@ function TeamContent() {
               <div className="mb-4">
                 <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>E-mail</label>
                 <input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} placeholder="jan@firma.cz" className={inputCls} style={inputStyle} />
+              </div>
+
+              {/* Typ spolupráce */}
+              {cooperationTypes.length > 0 && (
+                <div className="mb-3">
+                  <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Typ spolupráce</label>
+                  <div className="relative">
+                    <select
+                      value={editCooperationTypeId}
+                      onChange={(e) => setEditCooperationTypeId(e.target.value)}
+                      className={inputCls + ' pr-8 appearance-none cursor-pointer'}
+                      style={inputStyle}
+                    >
+                      <option value="">— Nevybráno —</option>
+                      {cooperationTypes.map(ct => (
+                        <option key={ct.id} value={ct.id}>{ct.name}</option>
+                      ))}
+                    </select>
+                    <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: 'var(--text-muted)' }}><polyline points="6 9 12 15 18 9" /></svg>
+                  </div>
+                </div>
+              )}
+
+              {/* Dovolená */}
+              <div className="mb-4">
+                <label
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors"
+                  style={{ background: editCanUseVacation ? 'var(--bg-active)' : 'var(--bg-hover)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = editCanUseVacation ? 'var(--bg-active)' : 'var(--bg-hover)'}
+                >
+                  <input
+                    type="checkbox"
+                    checked={editCanUseVacation}
+                    onChange={(e) => setEditCanUseVacation(e.target.checked)}
+                    className="w-4 h-4 rounded flex-shrink-0"
+                    style={{ accentColor: 'var(--primary)' }}
+                  />
+                  <div>
+                    <span className="text-sm block" style={{ color: 'var(--text-primary)' }}>Může čerpat dovolenou</span>
+                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Zaměstnanec s nárokem na dovolenou (HPP apod.)</span>
+                  </div>
+                </label>
               </div>
 
               {/* Hodinové sazby */}
