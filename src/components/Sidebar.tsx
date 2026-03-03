@@ -55,7 +55,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
   const { theme, setTheme } = useTheme();
   const [showUserPanel, setShowUserPanel] = useState(false);
 
-  // Červená tečka u Fakturace – vrácené faktury k opravě
+  // Červená tečka u Fakturace – vrácené faktury k opravě (bez těch, které už byly znovu podány)
   const canInvoice = currentMembership?.can_invoice ?? false;
   const [returnedInvoiceCount, setReturnedInvoiceCount] = useState(0);
 
@@ -66,11 +66,24 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
     }
     supabase
       .from('trackino_invoices')
-      .select('id', { count: 'exact', head: true })
+      .select('id, billing_period_year, billing_period_month, status')
       .eq('workspace_id', currentWorkspace.id)
       .eq('user_id', user.id)
-      .eq('status', 'returned')
-      .then(({ count }) => setReturnedInvoiceCount(count ?? 0));
+      .then(({ data }) => {
+        const list = (data ?? []) as Array<{ id: string; billing_period_year: number; billing_period_month: number; status: string }>;
+        // Počítáme jen vrácené faktury, pro které uživatel NEPODAL novou (non-returned, non-cancelled)
+        const count = list.filter(inv => {
+          if (inv.status !== 'returned') return false;
+          return !list.some(
+            other => other.id !== inv.id &&
+              other.billing_period_year === inv.billing_period_year &&
+              other.billing_period_month === inv.billing_period_month &&
+              other.status !== 'returned' &&
+              other.status !== 'cancelled'
+          );
+        }).length;
+        setReturnedInvoiceCount(count);
+      });
   }, [user, currentWorkspace, canInvoice]);
 
   // Dynamicky sestavit navigaci dle oprávnění

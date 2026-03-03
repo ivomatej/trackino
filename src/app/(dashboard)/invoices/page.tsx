@@ -125,6 +125,15 @@ function InvoicesContent() {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
 
+  // Editace detailu faktury (jen admin)
+  const [editingDetailId, setEditingDetailId] = useState<string | null>(null);
+  const [editDetailIssueDate, setEditDetailIssueDate] = useState('');
+  const [editDetailDueDate, setEditDetailDueDate] = useState('');
+  const [editDetailHours, setEditDetailHours] = useState('');
+  const [editDetailAmount, setEditDetailAmount] = useState('');
+  const [savingDetail, setSavingDetail] = useState(false);
+  const [changingStatusId, setChangingStatusId] = useState<string | null>(null);
+
   const { year: prevYear, month: prevMonth } = getPreviousMonthPeriod();
 
   const fetchInvoices = useCallback(async () => {
@@ -401,6 +410,7 @@ function InvoicesContent() {
 
   const openDetail = async (invoice: InvoiceWithUser) => {
     setDetailInvoice(invoice);
+    setEditingDetailId(null);
     setPdfUrl(null);
     if (invoice.pdf_url) {
       setPdfLoading(true);
@@ -410,6 +420,42 @@ function InvoicesContent() {
       setPdfUrl(data?.signedUrl ?? null);
       setPdfLoading(false);
     }
+  };
+
+  const startDetailEdit = (invoice: InvoiceWithUser) => {
+    setEditingDetailId(invoice.id);
+    setEditDetailIssueDate(invoice.issue_date);
+    setEditDetailDueDate(invoice.due_date);
+    setEditDetailHours(invoice.total_hours !== null ? String(invoice.total_hours) : '');
+    setEditDetailAmount(invoice.amount !== null ? String(invoice.amount) : '');
+  };
+
+  const saveDetailEdit = async () => {
+    if (!editingDetailId || !detailInvoice) return;
+    setSavingDetail(true);
+    const updates: Partial<Invoice> = {
+      issue_date: editDetailIssueDate,
+      due_date: editDetailDueDate,
+      total_hours: editDetailHours ? parseFloat(editDetailHours) : null,
+      amount: editDetailAmount ? parseFloat(editDetailAmount) : null,
+    };
+    await supabase.from('trackino_invoices').update(updates).eq('id', editingDetailId);
+    const updated = { ...detailInvoice, ...updates };
+    setDetailInvoice(updated as InvoiceWithUser);
+    setSavingDetail(false);
+    setEditingDetailId(null);
+    fetchInvoices();
+  };
+
+  const changeDetailStatus = async (invoiceId: string, newStatus: InvoiceStatus) => {
+    setChangingStatusId(invoiceId);
+    const updates: Partial<Invoice> = { status: newStatus };
+    if (newStatus !== 'paid') { updates.paid_at = null; updates.paid_by = null; }
+    if (newStatus !== 'approved' && newStatus !== 'paid') { updates.approved_at = null; updates.approved_by = null; }
+    await supabase.from('trackino_invoices').update(updates).eq('id', invoiceId);
+    if (detailInvoice) setDetailInvoice({ ...detailInvoice, ...updates } as InvoiceWithUser);
+    setChangingStatusId(null);
+    fetchInvoices();
   };
 
   const currencySymbol = currentWorkspace?.currency === 'EUR' ? '€' : currentWorkspace?.currency === 'USD' ? '$' : 'Kč';
@@ -1084,8 +1130,10 @@ function InvoicesContent() {
       {/* ═══ MODAL: Detail faktury ═══ */}
       {detailInvoice && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={() => setDetailInvoice(null)} />
+          <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={() => { setDetailInvoice(null); setEditingDetailId(null); }} />
           <div className="relative w-full max-w-lg rounded-2xl shadow-2xl z-10" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', maxHeight: '90vh', overflowY: 'auto' }}>
+
+            {/* Hlavička */}
             <div className="flex items-center justify-between px-6 pt-6 pb-4 sticky top-0" style={{ background: 'var(--bg-card)', borderBottom: '1px solid var(--border)' }}>
               <div>
                 <div className="flex items-center gap-2">
@@ -1100,31 +1148,135 @@ function InvoicesContent() {
                   </p>
                 )}
               </div>
-              <button onClick={() => setDetailInvoice(null)} className="p-1.5 rounded-lg" style={{ color: 'var(--text-muted)' }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
-            </div>
-            <div className="px-6 py-5">
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                {[
-                  { label: 'Datum vystavení', value: fmtDate(detailInvoice.issue_date) },
-                  { label: 'Datum splatnosti', value: fmtDate(detailInvoice.due_date) },
-                  { label: 'Variabilní symbol', value: detailInvoice.variable_symbol },
-                  { label: 'Plátce DPH', value: detailInvoice.is_vat_payer ? 'Ano' : 'Ne' },
-                  ...(detailInvoice.total_hours !== null ? [{ label: 'Hodiny', value: `${detailInvoice.total_hours} h` }] : []),
-                  ...(detailInvoice.amount !== null ? [{ label: 'Částka', value: `${detailInvoice.amount.toLocaleString('cs-CZ')} ${currencySymbol}` }] : []),
-                  ...(detailInvoice.approved_at ? [{ label: 'Schváleno', value: fmtDate(detailInvoice.approved_at.split('T')[0]) }] : []),
-                  ...(detailInvoice.paid_at ? [{ label: 'Proplaceno', value: fmtDate(detailInvoice.paid_at.split('T')[0]) }] : []),
-                ].map(item => (
-                  <div key={item.label} className="p-3 rounded-xl" style={{ background: 'var(--bg-hover)' }}>
-                    <div className="text-xs mb-0.5" style={{ color: 'var(--text-muted)' }}>{item.label}</div>
-                    <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{item.value}</div>
-                  </div>
-                ))}
+              <div className="flex items-center gap-2">
+                {/* Tlačítko Upravit – pouze pro adminy, pokud není storno */}
+                {(canApprove || canManageBilling) && detailInvoice.status !== 'cancelled' && editingDetailId !== detailInvoice.id && (
+                  <button
+                    onClick={() => startDetailEdit(detailInvoice)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border"
+                    style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)', background: 'var(--bg-hover)' }}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                    </svg>
+                    Upravit
+                  </button>
+                )}
+                <button onClick={() => { setDetailInvoice(null); setEditingDetailId(null); }} className="p-1.5 rounded-lg" style={{ color: 'var(--text-muted)' }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
               </div>
+            </div>
 
+            <div className="px-6 py-5">
+
+              {/* ── EDIT MODE ── */}
+              {editingDetailId === detailInvoice.id ? (
+                <div className="space-y-3 mb-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Datum vystavení</label>
+                      <input
+                        type="date"
+                        value={editDetailIssueDate}
+                        onChange={(e) => setEditDetailIssueDate(e.target.value)}
+                        className={inputCls}
+                        style={inputStyle}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Datum splatnosti</label>
+                      <input
+                        type="date"
+                        value={editDetailDueDate}
+                        onChange={(e) => setEditDetailDueDate(e.target.value)}
+                        className={inputCls}
+                        style={inputStyle}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Hodiny</label>
+                      <input
+                        type="number"
+                        value={editDetailHours}
+                        onChange={(e) => setEditDetailHours(e.target.value)}
+                        placeholder="0"
+                        min="0"
+                        step="0.5"
+                        className={inputCls}
+                        style={inputStyle}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Částka ({currencySymbol})</label>
+                      <input
+                        type="number"
+                        value={editDetailAmount}
+                        onChange={(e) => setEditDetailAmount(e.target.value)}
+                        placeholder="0"
+                        min="0"
+                        step="1"
+                        className={inputCls}
+                        style={inputStyle}
+                      />
+                    </div>
+                  </div>
+                  {/* Statické pole jen pro čtení */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 rounded-xl" style={{ background: 'var(--bg-hover)' }}>
+                      <div className="text-xs mb-0.5" style={{ color: 'var(--text-muted)' }}>Variabilní symbol</div>
+                      <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{detailInvoice.variable_symbol}</div>
+                    </div>
+                    <div className="p-3 rounded-xl" style={{ background: 'var(--bg-hover)' }}>
+                      <div className="text-xs mb-0.5" style={{ color: 'var(--text-muted)' }}>Plátce DPH</div>
+                      <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{detailInvoice.is_vat_payer ? 'Ano' : 'Ne'}</div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={() => setEditingDetailId(null)}
+                      className="flex-1 py-2 rounded-xl border text-sm font-medium"
+                      style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
+                    >
+                      Zrušit
+                    </button>
+                    <button
+                      onClick={saveDetailEdit}
+                      disabled={savingDetail}
+                      className="flex-1 py-2 rounded-xl text-white text-sm font-medium disabled:opacity-50"
+                      style={{ background: 'var(--primary)' }}
+                    >
+                      {savingDetail ? 'Ukládám...' : 'Uložit změny'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* ── VIEW MODE ── */
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  {[
+                    { label: 'Datum vystavení', value: fmtDate(detailInvoice.issue_date) },
+                    { label: 'Datum splatnosti', value: fmtDate(detailInvoice.due_date) },
+                    { label: 'Variabilní symbol', value: detailInvoice.variable_symbol },
+                    { label: 'Plátce DPH', value: detailInvoice.is_vat_payer ? 'Ano' : 'Ne' },
+                    ...(detailInvoice.total_hours !== null ? [{ label: 'Hodiny', value: `${detailInvoice.total_hours} h` }] : []),
+                    ...(detailInvoice.amount !== null ? [{ label: 'Částka', value: `${detailInvoice.amount.toLocaleString('cs-CZ')} ${currencySymbol}` }] : []),
+                    ...(detailInvoice.approved_at ? [{ label: 'Schváleno', value: fmtDate(detailInvoice.approved_at.split('T')[0]) }] : []),
+                    ...(detailInvoice.paid_at ? [{ label: 'Proplaceno', value: fmtDate(detailInvoice.paid_at.split('T')[0]) }] : []),
+                  ].map(item => (
+                    <div key={item.label} className="p-3 rounded-xl" style={{ background: 'var(--bg-hover)' }}>
+                      <div className="text-xs mb-0.5" style={{ color: 'var(--text-muted)' }}>{item.label}</div>
+                      <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{item.value}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Poznámka */}
               {detailInvoice.note && (
                 <div className="mb-4 p-3 rounded-xl text-sm" style={{ background: 'var(--bg-hover)', color: 'var(--text-secondary)' }}>
                   <div className="text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Poznámka</div>
@@ -1155,6 +1307,43 @@ function InvoicesContent() {
                   )}
                 </div>
               )}
+
+              {/* ── Změna stavu (jen admin, jen ve view mode) ── */}
+              {(canApprove || canManageBilling) && editingDetailId !== detailInvoice.id && (
+                (() => {
+                  const s = detailInvoice.status;
+                  const btns: { label: string; status: InvoiceStatus; color: string }[] = [];
+                  if (s === 'paid') {
+                    btns.push({ label: 'Vrátit na Schváleno', status: 'approved', color: '#6366f1' });
+                    btns.push({ label: 'Stornovat', status: 'cancelled', color: '#ef4444' });
+                  } else if (s === 'approved') {
+                    btns.push({ label: 'Vrátit na Čekající', status: 'pending', color: '#d97706' });
+                    btns.push({ label: 'Stornovat', status: 'cancelled', color: '#ef4444' });
+                  } else if (s === 'pending') {
+                    btns.push({ label: 'Stornovat', status: 'cancelled', color: '#ef4444' });
+                  }
+                  if (btns.length === 0) return null;
+                  return (
+                    <div className="border-t pt-4 mt-2" style={{ borderColor: 'var(--border)' }}>
+                      <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>Změna stavu faktury</p>
+                      <div className="flex gap-2 flex-wrap">
+                        {btns.map(btn => (
+                          <button
+                            key={btn.status}
+                            onClick={() => changeDetailStatus(detailInvoice.id, btn.status)}
+                            disabled={!!changingStatusId}
+                            className="px-3 py-1.5 rounded-lg text-xs font-medium text-white disabled:opacity-50"
+                            style={{ background: btn.color }}
+                          >
+                            {changingStatusId === detailInvoice.id ? '...' : btn.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()
+              )}
+
             </div>
           </div>
         </div>
