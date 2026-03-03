@@ -46,6 +46,8 @@ const ICONS = {
   invoice: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="12" y1="18" x2="12" y2="12" /><line x1="9" y1="15" x2="15" y2="15" /></svg>,
   admin: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>,
   profile: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" /></svg>,
+  attendance: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18" /><path d="M3 15h18" /><path d="M9 3v18" /><path d="M15 3v18" /></svg>,
+  categoryReport: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83" /><path d="M22 12A10 10 0 0 0 12 2v10z" /></svg>,
 };
 
 export default function Sidebar({ open, onClose }: SidebarProps) {
@@ -121,6 +123,8 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
       analyzeItems.push({ label: 'Podřízení', href: '/subordinates', icon: ICONS.subordinates });
       analyzeItems.push({ label: 'Poznámky', href: '/notes', icon: ICONS.notes });
     }
+    analyzeItems.push({ label: 'Přehled hodin', href: '/attendance', icon: ICONS.attendance });
+    analyzeItems.push({ label: 'Analýza kategorií', href: '/category-report', icon: ICONS.categoryReport });
 
     const spravaManagedItems: NavItem[] = [
       { label: 'Projekty', href: '/projects', icon: ICONS.projects },

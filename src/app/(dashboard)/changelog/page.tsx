@@ -11,6 +11,13 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v1.9.0 – 3. 3. 2026</h3>
+<ul>
+  <li><strong>Přehled hodin (nová stránka)</strong> – týdenní tabulka odpracovaných hodin pro celý tým; každý člen tvoří jeden řádek, každý den sloupec s barevným podbarvením dle avataru; víkendy jsou vizuálně odlišeny; spodní řádek zobrazuje součet za den a celkový týdenní součet; řádky se řadí šipkami ↑↓ s persistencí pořadí v prohlížeči</li>
+  <li><strong>Analýza kategorií (nová stránka)</strong> – přehled odpracovaného času rozdělený po kategoriích za vybrané období (Dnes / Týden / Měsíc / Vlastní); koláčový graf s legendou, horizontální sloupcový graf a detailní tabulka s podíly a progress bary; záznamy bez kategorie se zobrazují jako „Bez kategorie"</li>
+  <li><strong>Sidebar – nové položky</strong> – v sekci Analýza přibyly „Přehled hodin" (ikona tabulky) a „Analýza kategorií" (ikona koláče); obě položky jsou viditelné všem přihlášeným uživatelům</li>
+</ul>
+
 <h3>v1.8.2 – 3. 3. 2026</h3>
 <ul>
   <li><strong>Vyhledávání v Projektech</strong> – nad seznam projektů přidáno vyhledávací pole pro rychlé filtrování aktivních i archivovaných projektů; křížek pole vymaže</li>

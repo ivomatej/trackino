@@ -24,6 +24,8 @@ const DEFAULT_HELP_CONTENT = `
   <li><strong>Dovolená</strong> – evidence termínů dovolené s automatickým výpočtem pracovních dnů a přehledem zbývajícího nároku</li>
   <li><strong>Fakturace</strong> – fakturace odvedené práce: podání žádosti, schvalování manažerem, proplacení správcem fakturace</li>
   <li><strong>Tým</strong> – spravujte členy workspace, přidávejte je kódem, nastavujte manažery a oprávnění fakturace; e-mail a telefon každého člena lze rychle zkopírovat kliknutím na ikonku vedle kontaktu; seznam členů lze vyhledávat podle jména nebo e-mailu</li>
+  <li><strong>Přehled hodin</strong> – týdenní mřížka odpracovaných hodin pro celý tým; navigace mezi týdny, řazení řádků šipkami, součet za den i za týden</li>
+  <li><strong>Analýza kategorií</strong> – přehled odpracovaného času rozdělený po kategoriích za vybrané období; koláčový graf, sloupcový graf a detailní tabulka s podíly</li>
   <li><strong>Detailní nastavení</strong> – osobní profil: jméno, e-mail, telefon, pozice (nastavuje admin) a barevný režim</li>
 </ul>
 
@@ -110,6 +112,28 @@ const DEFAULT_HELP_CONTENT = `
   <li><strong>Viditelnost</strong> – Admin/Master Admin vidí všechny členy; Team Manager vidí sebe a svůj tým; Member vidí sebe a spoluhráče se stejným manažerem</li>
 </ul>
 <p><strong>SQL migrace (nutno spustit v Supabase):</strong> Plánovač vyžaduje 3 nové tabulky: <code>trackino_availability_statuses</code>, <code>trackino_availability</code> a <code>trackino_planner_pins</code>.</p>
+
+<h3>Přehled hodin</h3>
+<p>Stránka <strong>Přehled hodin</strong> (sekce Analýza) zobrazuje týdenní tabulku odpracovaných hodin za celý viditelný tým. Každý člen tvoří jeden řádek, každý den týdne (Po–Ne) jeden sloupec.</p>
+<ul>
+  <li><strong>Buňky</strong> – zobrazují součet odpracovaných hodin za daný den (formát H:MM); do součtu vstupují pouze uzavřené záznamy (timer je zastaven)</li>
+  <li><strong>Víkendy</strong> – sloupce So a Ne jsou podbarveny šedě pro rychlou orientaci</li>
+  <li><strong>Navigace</strong> – šipkami přecházíte na předchozí nebo následující týden; tlačítko „Dnes" skočí na aktuální týden</li>
+  <li><strong>Řazení řádků</strong> – každý člen lze šipkami ↑ ↓ přesunout výše nebo níže; pořadí se uloží automaticky a zachová i po novém načtení stránky</li>
+  <li><strong>Součtový řádek</strong> – spodní řádek „Σ Celkem" zobrazuje součet všech členů pro každý den i celkový součet za týden</li>
+  <li><strong>Viditelnost</strong> – Admin/Master Admin vidí všechny; Team Manager vidí sebe a svůj tým; Member vidí pouze sebe</li>
+</ul>
+
+<h3>Analýza kategorií</h3>
+<p>Stránka <strong>Analýza kategorií</strong> (sekce Analýza) zobrazuje přehled odpracovaného času rozdělený podle kategorií za vybrané časové období.</p>
+<ul>
+  <li><strong>Výběr období</strong> – přepínač Dnes / Týden / Měsíc nebo vlastní datum Od–Do</li>
+  <li><strong>Koláčový graf</strong> – vizualizuje podíl jednotlivých kategorií na celkovém čase; najetím myší se zobrazí detail (hodiny, počet záznamů)</li>
+  <li><strong>Sloupcový graf</strong> – horizontální sloupce seřazené dle odpracovaného času, doplněné o tooltip s detailem</li>
+  <li><strong>Detailní tabulka</strong> – pro každou kategorii uvádí počet záznamů, odpracované hodiny a procentuální podíl s grafickým progress barem</li>
+  <li><strong>Bez kategorie</strong> – záznamy bez přiřazené kategorie se zobrazí jako samostatná položka „Bez kategorie"</li>
+  <li><strong>Viditelnost</strong> – Admin/Master Admin vidí záznamy celého workspace; Team Manager vidí záznamy svého týmu; Member vidí pouze své záznamy</li>
+</ul>
 `;
 
 function HelpContent() {
