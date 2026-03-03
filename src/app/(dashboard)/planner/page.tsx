@@ -7,9 +7,9 @@ import { usePermissions } from '@/hooks/usePermissions';
 import DashboardLayout from '@/components/DashboardLayout';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import type { AvailabilityStatus, AvailabilityEntry, PlannerPin, Profile } from '@/types/database';
+import type { AvailabilityStatus, AvailabilityEntry } from '@/types/database';
 
-// ─── Pomocné funkce ────────────────────────────────────────────────────────
+// ─── Helpers ───────────────────────────────────────────────────────────────
 
 function getMonday(date: Date): Date {
   const d = new Date(date);
@@ -39,11 +39,10 @@ function formatDayName(date: Date): string {
 }
 
 function isToday(date: Date): boolean {
-  const today = new Date();
-  return toDateStr(date) === toDateStr(today);
+  return toDateStr(date) === toDateStr(new Date());
 }
 
-// ─── Typy ─────────────────────────────────────────────────────────────────
+// ─── Types ─────────────────────────────────────────────────────────────────
 
 interface MemberRow {
   userId: string;
@@ -53,15 +52,185 @@ interface MemberRow {
   isSelf: boolean;
 }
 
+type Half = 'am' | 'pm' | 'full';
 type CellKey = string; // `${userId}|${dateStr}|${half}`
+type DayKey = string;  // `${userId}|${dateStr}`
 
 interface CellData {
   statusId: string | null;
   note: string;
-  entryId?: string;
 }
 
-// ─── Hlavní komponenta ────────────────────────────────────────────────────
+// ─── Icons ─────────────────────────────────────────────────────────────────
+
+/** Ikona rozdělení – dvě horizontální čáry */
+function IconSplit() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+      <line x1="1" y1="4" x2="11" y2="4" />
+      <line x1="1" y1="8" x2="11" y2="8" />
+    </svg>
+  );
+}
+
+/** Ikona sloučení – šipky sbíhající se k čáře */
+function IconMerge() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3,2 6,5 9,2" />
+      <line x1="6" y1="5" x2="6" y2="7" />
+      <polyline points="3,10 6,7 9,10" />
+    </svg>
+  );
+}
+
+// ─── Full-day cell ─────────────────────────────────────────────────────────
+
+function CellFull({
+  status,
+  note,
+  canEdit,
+  onClick,
+  cellKey,
+  hoveredCell,
+  setHoveredCell,
+  setTooltipPos,
+}: {
+  status: AvailabilityStatus | null;
+  note: string;
+  canEdit: boolean;
+  onClick: (e: React.MouseEvent) => void;
+  cellKey: CellKey;
+  hoveredCell: CellKey | null;
+  setHoveredCell: (k: CellKey | null) => void;
+  setTooltipPos: (p: { top: number; left: number } | null) => void;
+}) {
+  const hasStatus = status !== null;
+  const hasNote = !!note;
+  void hoveredCell; // používá se v rodiči pro tooltip
+
+  return (
+    <div
+      className={`flex items-center gap-2 px-2 rounded-lg text-xs font-medium transition-all select-none ${canEdit ? 'cursor-pointer hover:opacity-75' : 'cursor-default'}`}
+      style={{
+        background: hasStatus ? status!.color + '2a' : 'var(--bg-hover)',
+        color: hasStatus ? status!.color : 'var(--text-muted)',
+        border: `1px solid ${hasStatus ? status!.color + '60' : 'transparent'}`,
+        minHeight: 52,
+      }}
+      onClick={canEdit ? onClick : undefined}
+      onMouseEnter={e => {
+        if (hasNote) {
+          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+          setHoveredCell(cellKey);
+          setTooltipPos({ top: rect.top + window.scrollY, left: rect.left + window.scrollX });
+        }
+      }}
+      onMouseLeave={() => { setHoveredCell(null); setTooltipPos(null); }}
+    >
+      {hasStatus && (
+        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: status!.color }} />
+      )}
+      <span className="truncate leading-tight text-[11px]">
+        {hasStatus ? status!.name : ''}
+      </span>
+      {hasNote && (
+        <span className="ml-auto flex-shrink-0 opacity-50">
+          <svg width="9" height="9" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round">
+            <path d="M4 6h16M4 12h8M4 18h12" />
+          </svg>
+        </span>
+      )}
+    </div>
+  );
+}
+
+// ─── Half-day cell (DOP / ODP) ─────────────────────────────────────────────
+
+function CellHalf({
+  label,
+  status,
+  note,
+  canEdit,
+  onClick,
+  cellKey,
+  hoveredCell,
+  setHoveredCell,
+  setTooltipPos,
+}: {
+  label: string;
+  status: AvailabilityStatus | null;
+  note: string;
+  canEdit: boolean;
+  onClick: (e: React.MouseEvent) => void;
+  cellKey: CellKey;
+  hoveredCell: CellKey | null;
+  setHoveredCell: (k: CellKey | null) => void;
+  setTooltipPos: (p: { top: number; left: number } | null) => void;
+}) {
+  const hasStatus = status !== null;
+  const hasNote = !!note;
+  void hoveredCell;
+
+  return (
+    <div
+      className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium transition-all select-none ${canEdit ? 'cursor-pointer hover:opacity-75' : 'cursor-default'}`}
+      style={{
+        background: hasStatus ? status!.color + '2a' : 'var(--bg-hover)',
+        color: hasStatus ? status!.color : 'var(--text-muted)',
+        border: `1px solid ${hasStatus ? status!.color + '60' : 'transparent'}`,
+        minHeight: 24,
+      }}
+      onClick={canEdit ? onClick : undefined}
+      onMouseEnter={e => {
+        if (hasNote) {
+          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+          setHoveredCell(cellKey);
+          setTooltipPos({ top: rect.top + window.scrollY, left: rect.left + window.scrollX });
+        }
+      }}
+      onMouseLeave={() => { setHoveredCell(null); setTooltipPos(null); }}
+    >
+      <span className="opacity-55 text-[9px] w-6 flex-shrink-0">{label}</span>
+      {hasStatus && <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: status!.color }} />}
+      {hasNote && (
+        <span className="ml-auto opacity-50">
+          <svg width="8" height="8" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round">
+            <path d="M4 6h16M4 12h8M4 18h12" />
+          </svg>
+        </span>
+      )}
+    </div>
+  );
+}
+
+// ─── NoteInput ─────────────────────────────────────────────────────────────
+
+function NoteInput({ initialNote, onSave }: { initialNote: string; onSave: (note: string) => void }) {
+  const [note, setNote] = useState(initialNote);
+  return (
+    <div className="mt-2 border-t pt-2" style={{ borderColor: 'var(--border)' }}>
+      <p className="text-[10px] mb-1" style={{ color: 'var(--text-muted)' }}>Poznámka (zobrazí se při najetí myší)</p>
+      <textarea
+        rows={2}
+        value={note}
+        onChange={e => setNote(e.target.value)}
+        placeholder="Volitelná poznámka..."
+        className="w-full px-2 py-1.5 rounded-lg text-xs border outline-none resize-none"
+        style={{ background: 'var(--bg-input)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+      />
+      <button
+        onClick={() => onSave(note)}
+        className="mt-1.5 w-full py-1 rounded-lg text-xs font-medium text-white transition-colors"
+        style={{ background: 'var(--primary)' }}
+      >
+        Uložit poznámku
+      </button>
+    </div>
+  );
+}
+
+// ─── Main content ──────────────────────────────────────────────────────────
 
 function PlannerContent() {
   const { user } = useAuth();
@@ -69,23 +238,29 @@ function PlannerContent() {
   const { isWorkspaceAdmin, isMasterAdmin, isManager } = usePermissions();
   const [loading, setLoading] = useState(true);
 
-  // Týden
   const [weekStart, setWeekStart] = useState<Date>(() => getMonday(new Date()));
 
-  // Data
   const [statuses, setStatuses] = useState<AvailabilityStatus[]>([]);
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [cells, setCells] = useState<Record<CellKey, CellData>>({});
-  const [pins, setPins] = useState<string[]>([]); // pinned_user_id[]
+  const [pins, setPins] = useState<string[]>([]);
 
-  // UI
+  /**
+   * splitDays = Set of DayKeys (`${userId}|${date}`) zobrazených v rozděleném režimu (DOP+ODP).
+   * Výchozí stav je "celý den" – jedna buňka.
+   * Při expanzi se dayKey přidá; při sloučení odebere.
+   * Při načtení dat se dayKeys s am/pm záznamy automaticky přidají.
+   */
+  const [splitDays, setSplitDays] = useState<Set<DayKey>>(new Set());
+
+  // UI state
   const [showStatusManager, setShowStatusManager] = useState(false);
-  const [editingCell, setEditingCell] = useState<{ userId: string; date: string; half: 'am' | 'pm' } | null>(null);
+  const [editingCell, setEditingCell] = useState<{ userId: string; date: string; half: Half } | null>(null);
   const [cellPickerPos, setCellPickerPos] = useState<{ top: number; left: number } | null>(null);
   const [hoveredCell, setHoveredCell] = useState<CellKey | null>(null);
   const [tooltipPos, setTooltipPos] = useState<{ top: number; left: number } | null>(null);
 
-  // Status manager stav
+  // Status manager state
   const [newStatusName, setNewStatusName] = useState('');
   const [newStatusColor, setNewStatusColor] = useState('#6366f1');
   const [editingStatus, setEditingStatus] = useState<AvailabilityStatus | null>(null);
@@ -94,10 +269,9 @@ function PlannerContent() {
   const cellPickerRef = useRef<HTMLDivElement>(null);
 
   const canAdmin = isWorkspaceAdmin || isMasterAdmin;
-
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
-  // ── Načtení dat ────────────────────────────────────────────────────────
+  // ── Fetch ────────────────────────────────────────────────────────────────
 
   const fetchStatuses = useCallback(async () => {
     if (!currentWorkspace) return;
@@ -112,16 +286,14 @@ function PlannerContent() {
   const fetchMembers = useCallback(async () => {
     if (!currentWorkspace || !user) return;
 
-    // Načíst všechny schválené členy
     const { data: memberData } = await supabase
       .from('trackino_workspace_members')
-      .select('user_id, approved')
+      .select('user_id')
       .eq('workspace_id', currentWorkspace.id)
       .eq('approved', true);
 
     if (!memberData) return;
-
-    const userIds = memberData.map((m: { user_id: string; approved: boolean }) => m.user_id);
+    const userIds = memberData.map((m: { user_id: string }) => m.user_id);
 
     const { data: profileData } = await supabase
       .from('trackino_profiles')
@@ -133,7 +305,6 @@ function PlannerContent() {
       profileMap[p.id] = p;
     });
 
-    // Načíst piny
     const { data: pinData } = await supabase
       .from('trackino_planner_pins')
       .select('pinned_user_id')
@@ -143,19 +314,13 @@ function PlannerContent() {
     const pinnedIds = (pinData ?? []).map((p: { pinned_user_id: string }) => p.pinned_user_id);
     setPins(pinnedIds);
 
-    // Filtrovat dle viditelnosti
     let visibleIds: string[] = [];
-
     if (canAdmin) {
-      // Admin vidí všechny
       visibleIds = userIds;
     } else if (isManager) {
-      // Manager vidí sebe + svůj tým
       const teamIds = managerAssignments.map(a => a.member_user_id);
       visibleIds = [...new Set([user.id, ...teamIds])];
     } else {
-      // Member vidí sebe + členy se stejným manažerem
-      // Načíst, kdo jsou manažeři aktuálního uživatele
       const { data: myManagers } = await supabase
         .from('trackino_manager_assignments')
         .select('manager_user_id')
@@ -163,9 +328,7 @@ function PlannerContent() {
         .eq('member_user_id', user.id);
 
       const myManagerIds = (myManagers ?? []).map((m: { manager_user_id: string }) => m.manager_user_id);
-
       if (myManagerIds.length > 0) {
-        // Spoluhráči = ostatní členové se stejným manažerem
         const { data: teammates } = await supabase
           .from('trackino_manager_assignments')
           .select('member_user_id')
@@ -187,23 +350,20 @@ function PlannerContent() {
         avatarColor: profileMap[id]?.avatar_color ?? '#6366f1',
         isPinned: pinnedIds.includes(id),
         isSelf: id === user.id,
-      }));
-
-    // Řazení: self první, pak pinnovaní, pak ostatní dle jména
-    rows.sort((a, b) => {
-      if (a.isSelf && !b.isSelf) return -1;
-      if (!a.isSelf && b.isSelf) return 1;
-      if (a.isPinned && !b.isPinned) return -1;
-      if (!a.isPinned && b.isPinned) return 1;
-      return a.displayName.localeCompare(b.displayName, 'cs');
-    });
+      }))
+      .sort((a, b) => {
+        if (a.isSelf && !b.isSelf) return -1;
+        if (!a.isSelf && b.isSelf) return 1;
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+        return a.displayName.localeCompare(b.displayName, 'cs');
+      });
 
     setMembers(rows);
   }, [currentWorkspace, user, canAdmin, isManager, managerAssignments]);
 
   const fetchAvailability = useCallback(async () => {
     if (!currentWorkspace) return;
-
     const from = toDateStr(weekStart);
     const to = toDateStr(addDays(weekStart, 6));
 
@@ -215,15 +375,18 @@ function PlannerContent() {
       .lte('date', to);
 
     const map: Record<CellKey, CellData> = {};
+    const autoSplit = new Set<DayKey>();
+
     (data ?? []).forEach((e: AvailabilityEntry) => {
-      if (e.half === 'full') {
-        map[`${e.user_id}|${e.date}|am`] = { statusId: e.status_id, note: e.note, entryId: e.id };
-        map[`${e.user_id}|${e.date}|pm`] = { statusId: e.status_id, note: e.note, entryId: e.id };
-      } else {
-        map[`${e.user_id}|${e.date}|${e.half}`] = { statusId: e.status_id, note: e.note, entryId: e.id };
+      map[`${e.user_id}|${e.date}|${e.half}`] = { statusId: e.status_id, note: e.note };
+      // Dny s am/pm záznamy automaticky zobrazit v rozděleném režimu
+      if (e.half === 'am' || e.half === 'pm') {
+        autoSplit.add(`${e.user_id}|${e.date}`);
       }
     });
+
     setCells(map);
+    setSplitDays(autoSplit);
   }, [currentWorkspace, weekStart]);
 
   useEffect(() => {
@@ -244,26 +407,166 @@ function PlannerContent() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  // ── Pin/Unpin ──────────────────────────────────────────────────────────
+  // ── Expand (celý den → DOP+ODP) ──────────────────────────────────────────
+
+  const handleExpand = async (userId: string, date: string) => {
+    if (!currentWorkspace) return;
+
+    // Okamžitě zobrazit v rozděleném režimu (optimistická aktualizace)
+    setSplitDays(prev => new Set([...prev, `${userId}|${date}`]));
+
+    const fullKey = `${userId}|${date}|full`;
+    const fullCell = cells[fullKey];
+
+    if (fullCell?.statusId) {
+      // Zkopírovat stav celého dne do DOP i ODP
+      await supabase.from('trackino_availability').upsert([
+        { workspace_id: currentWorkspace.id, user_id: userId, date, half: 'am', status_id: fullCell.statusId, note: fullCell.note },
+        { workspace_id: currentWorkspace.id, user_id: userId, date, half: 'pm', status_id: fullCell.statusId, note: fullCell.note },
+      ], { onConflict: 'workspace_id,user_id,date,half' });
+
+      // Smazat záznam celého dne
+      await supabase.from('trackino_availability').delete()
+        .eq('workspace_id', currentWorkspace.id)
+        .eq('user_id', userId)
+        .eq('date', date)
+        .eq('half', 'full');
+
+      setCells(prev => {
+        const next = { ...prev };
+        delete next[fullKey];
+        next[`${userId}|${date}|am`] = { statusId: fullCell.statusId, note: fullCell.note };
+        next[`${userId}|${date}|pm`] = { statusId: fullCell.statusId, note: fullCell.note };
+        return next;
+      });
+    }
+  };
+
+  // ── Merge (DOP+ODP → celý den) ────────────────────────────────────────────
+
+  const handleMerge = async (userId: string, date: string) => {
+    if (!currentWorkspace) return;
+
+    const amKey = `${userId}|${date}|am`;
+    const pmKey = `${userId}|${date}|pm`;
+    const amCell = cells[amKey];
+    const pmCell = cells[pmKey];
+
+    // Použít stav DOP (nebo ODP pokud DOP je prázdné) jako stav celého dne
+    const fullStatusId = amCell?.statusId ?? pmCell?.statusId ?? null;
+    const fullNote = amCell?.note || pmCell?.note || '';
+
+    // Okamžitě skrýt split (optimistická aktualizace)
+    setSplitDays(prev => {
+      const next = new Set(prev);
+      next.delete(`${userId}|${date}`);
+      return next;
+    });
+
+    // Smazat am a pm záznamy
+    await supabase.from('trackino_availability').delete()
+      .eq('workspace_id', currentWorkspace.id)
+      .eq('user_id', userId)
+      .eq('date', date)
+      .in('half', ['am', 'pm']);
+
+    // Uložit jako "full" pokud byl nastaven nějaký stav
+    if (fullStatusId) {
+      await supabase.from('trackino_availability').upsert({
+        workspace_id: currentWorkspace.id,
+        user_id: userId,
+        date,
+        half: 'full',
+        status_id: fullStatusId,
+        note: fullNote,
+      }, { onConflict: 'workspace_id,user_id,date,half' });
+    }
+
+    setCells(prev => {
+      const next = { ...prev };
+      delete next[amKey];
+      delete next[pmKey];
+      if (fullStatusId) {
+        next[`${userId}|${date}|full`] = { statusId: fullStatusId, note: fullNote };
+      }
+      return next;
+    });
+  };
+
+  // ── Kliknutí na buňku ─────────────────────────────────────────────────────
+
+  const handleCellClick = (userId: string, date: string, half: Half, e: React.MouseEvent) => {
+    if (!user) return;
+    const canEdit = userId === user.id || canAdmin ||
+      (isManager && managerAssignments.some(a => a.member_user_id === userId));
+    if (!canEdit) return;
+
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setCellPickerPos({ top: rect.bottom + window.scrollY + 4, left: rect.left + window.scrollX });
+    setEditingCell({ userId, date, half });
+  };
+
+  // ── Nastavení stavu dostupnosti ───────────────────────────────────────────
+
+  const setAvailability = async (statusId: string | null, note?: string) => {
+    if (!editingCell || !currentWorkspace) return;
+    const { userId, date, half } = editingCell;
+    const key = `${userId}|${date}|${half}`;
+    const existing = cells[key];
+
+    if (statusId === null) {
+      await supabase.from('trackino_availability').delete()
+        .eq('workspace_id', currentWorkspace.id)
+        .eq('user_id', userId)
+        .eq('date', date)
+        .eq('half', half);
+
+      setCells(prev => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    } else {
+      await supabase.from('trackino_availability').upsert({
+        workspace_id: currentWorkspace.id,
+        user_id: userId,
+        date,
+        half,
+        status_id: statusId,
+        note: note ?? existing?.note ?? '',
+      }, { onConflict: 'workspace_id,user_id,date,half' });
+
+      setCells(prev => ({
+        ...prev,
+        [key]: { statusId, note: note ?? existing?.note ?? '' },
+      }));
+    }
+
+    setEditingCell(null);
+    setCellPickerPos(null);
+  };
+
+  // ── Pin / Unpin ───────────────────────────────────────────────────────────
 
   const togglePin = async (targetUserId: string) => {
     if (!currentWorkspace || !user) return;
     const isPinned = pins.includes(targetUserId);
+
     if (isPinned) {
-      await supabase
-        .from('trackino_planner_pins')
-        .delete()
+      await supabase.from('trackino_planner_pins').delete()
         .eq('workspace_id', currentWorkspace.id)
         .eq('user_id', user.id)
         .eq('pinned_user_id', targetUserId);
       setPins(prev => prev.filter(id => id !== targetUserId));
     } else {
-      await supabase
-        .from('trackino_planner_pins')
-        .insert({ workspace_id: currentWorkspace.id, user_id: user.id, pinned_user_id: targetUserId });
+      await supabase.from('trackino_planner_pins').insert({
+        workspace_id: currentWorkspace.id,
+        user_id: user.id,
+        pinned_user_id: targetUserId,
+      });
       setPins(prev => [...prev, targetUserId]);
     }
-    // Přeseřadit members
+
     setMembers(prev =>
       [...prev.map(m => ({ ...m, isPinned: m.userId === targetUserId ? !isPinned : m.isPinned }))]
         .sort((a, b) => {
@@ -276,83 +579,14 @@ function PlannerContent() {
     );
   };
 
-  // ── Kliknutí na buňku ─────────────────────────────────────────────────
-
-  const handleCellClick = (userId: string, date: string, half: 'am' | 'pm', e: React.MouseEvent) => {
-    if (!user) return;
-    const canEdit = userId === user.id || canAdmin || (isManager && managerAssignments.some(a => a.member_user_id === userId));
-    if (!canEdit) return;
-
-    const rect = (e.target as HTMLElement).getBoundingClientRect();
-    setCellPickerPos({ top: rect.bottom + window.scrollY + 4, left: rect.left + window.scrollX });
-    setEditingCell({ userId, date, half });
-  };
-
-  // ── Nastavení availability ────────────────────────────────────────────
-
-  const setAvailability = async (statusId: string | null, note?: string) => {
-    if (!editingCell || !currentWorkspace) return;
-    const { userId, date, half } = editingCell;
-
-    const key = `${userId}|${date}|${half}`;
-    const existing = cells[key];
-
-    if (statusId === null && !existing) {
-      setEditingCell(null);
-      setCellPickerPos(null);
-      return;
-    }
-
-    if (statusId === null) {
-      // Smazat
-      await supabase
-        .from('trackino_availability')
-        .delete()
-        .eq('workspace_id', currentWorkspace.id)
-        .eq('user_id', userId)
-        .eq('date', date)
-        .eq('half', half);
-
-      setCells(prev => {
-        const next = { ...prev };
-        delete next[key];
-        return next;
-      });
-    } else {
-      // Upsert
-      await supabase
-        .from('trackino_availability')
-        .upsert(
-          {
-            workspace_id: currentWorkspace.id,
-            user_id: userId,
-            date,
-            half,
-            status_id: statusId,
-            note: note ?? existing?.note ?? '',
-          },
-          { onConflict: 'workspace_id,user_id,date,half' }
-        );
-
-      setCells(prev => ({
-        ...prev,
-        [key]: { statusId, note: note ?? existing?.note ?? '' },
-      }));
-    }
-
-    setEditingCell(null);
-    setCellPickerPos(null);
-  };
-
-  // ── Status manager ────────────────────────────────────────────────────
+  // ── Správa stavů ─────────────────────────────────────────────────────────
 
   const saveStatus = async () => {
     if (!currentWorkspace || !newStatusName.trim()) return;
     setSavingStatus(true);
 
     if (editingStatus) {
-      await supabase
-        .from('trackino_availability_statuses')
+      await supabase.from('trackino_availability_statuses')
         .update({ name: newStatusName.trim(), color: newStatusColor })
         .eq('id', editingStatus.id);
     } else {
@@ -373,18 +607,15 @@ function PlannerContent() {
 
   const deleteStatus = async (id: string) => {
     await supabase.from('trackino_availability_statuses').delete().eq('id', id);
-    // Vyčistit buňky s tímto statusem
     setCells(prev => {
       const next = { ...prev };
-      Object.keys(next).forEach(k => {
-        if (next[k].statusId === id) delete next[k];
-      });
+      Object.keys(next).forEach(k => { if (next[k].statusId === id) delete next[k]; });
       return next;
     });
     await fetchStatuses();
   };
 
-  // ── Render ─────────────────────────────────────────────────────────────
+  // ── Render ────────────────────────────────────────────────────────────────
 
   if (loading) {
     return (
@@ -397,6 +628,7 @@ function PlannerContent() {
   return (
     <DashboardLayout>
       <div style={{ minWidth: 0 }}>
+
         {/* Hlavička */}
         <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
           <div>
@@ -405,20 +637,22 @@ function PlannerContent() {
               Přehled dostupnosti týmu na aktuální týden
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            {canAdmin && (
-              <button
-                onClick={() => setShowStatusManager(v => !v)}
-                className="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-                style={{ background: showStatusManager ? 'var(--primary)' : 'var(--bg-hover)', color: showStatusManager ? '#fff' : 'var(--text-primary)', border: '1px solid var(--border)' }}
-              >
-                Spravovat stavy
-              </button>
-            )}
-          </div>
+          {canAdmin && (
+            <button
+              onClick={() => setShowStatusManager(v => !v)}
+              className="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+              style={{
+                background: showStatusManager ? 'var(--primary)' : 'var(--bg-hover)',
+                color: showStatusManager ? '#fff' : 'var(--text-primary)',
+                border: '1px solid var(--border)',
+              }}
+            >
+              Spravovat stavy
+            </button>
+          )}
         </div>
 
-        {/* Status manager (jen admin) */}
+        {/* Správa stavů */}
         {showStatusManager && canAdmin && (
           <div className="rounded-2xl border p-4 mb-5" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
             <h2 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>Správa stavů dostupnosti</h2>
@@ -429,25 +663,18 @@ function PlannerContent() {
                   className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
                   style={{ background: s.color + '22', color: s.color, border: `1px solid ${s.color}55` }}
                 >
-                  <span
-                    className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                    style={{ background: s.color }}
-                  />
+                  <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: s.color }} />
                   {s.name}
                   <button
                     className="ml-1 opacity-60 hover:opacity-100"
                     onClick={() => { setEditingStatus(s); setNewStatusName(s.name); setNewStatusColor(s.color); }}
                     title="Upravit"
-                  >
-                    ✎
-                  </button>
+                  >✎</button>
                   <button
                     className="opacity-60 hover:opacity-100 text-red-500"
                     onClick={() => deleteStatus(s.id)}
                     title="Smazat"
-                  >
-                    ×
-                  </button>
+                  >×</button>
                 </div>
               ))}
               {statuses.length === 0 && (
@@ -460,6 +687,7 @@ function PlannerContent() {
                 placeholder="Název stavu (např. Home office)"
                 value={newStatusName}
                 onChange={e => setNewStatusName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') saveStatus(); }}
                 className="flex-1 min-w-[180px] px-3 py-1.5 rounded-lg text-sm border outline-none"
                 style={{ background: 'var(--bg-input)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
               />
@@ -484,9 +712,7 @@ function PlannerContent() {
                   onClick={() => { setEditingStatus(null); setNewStatusName(''); setNewStatusColor('#6366f1'); }}
                   className="px-3 py-1.5 rounded-lg text-sm border"
                   style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
-                >
-                  Zrušit
-                </button>
+                >Zrušit</button>
               )}
             </div>
           </div>
@@ -498,9 +724,7 @@ function PlannerContent() {
             onClick={() => setWeekStart(d => addDays(d, -7))}
             className="w-8 h-8 rounded-lg flex items-center justify-center border transition-colors hover:bg-[var(--bg-hover)]"
             style={{ borderColor: 'var(--border)', color: 'var(--text-primary)' }}
-          >
-            ‹
-          </button>
+          >‹</button>
           <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
             {formatDateShort(weekStart)} – {formatDateShort(addDays(weekStart, 6))} {weekStart.getFullYear()}
           </span>
@@ -508,16 +732,12 @@ function PlannerContent() {
             onClick={() => setWeekStart(d => addDays(d, 7))}
             className="w-8 h-8 rounded-lg flex items-center justify-center border transition-colors hover:bg-[var(--bg-hover)]"
             style={{ borderColor: 'var(--border)', color: 'var(--text-primary)' }}
-          >
-            ›
-          </button>
+          >›</button>
           <button
             onClick={() => setWeekStart(getMonday(new Date()))}
             className="px-3 py-1 rounded-lg text-xs border transition-colors hover:bg-[var(--bg-hover)]"
             style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
-          >
-            Dnes
-          </button>
+          >Dnes</button>
         </div>
 
         {/* Tabulka */}
@@ -525,7 +745,6 @@ function PlannerContent() {
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 640 }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                {/* Jméno sloupec */}
                 <th
                   className="text-left px-4 py-2.5 text-xs font-semibold"
                   style={{ color: 'var(--text-muted)', width: 160, background: 'var(--bg-card)' }}
@@ -538,8 +757,10 @@ function PlannerContent() {
                     className="px-1 py-2.5 text-center text-xs font-semibold"
                     style={{
                       color: isToday(day) ? 'var(--primary)' : 'var(--text-muted)',
-                      background: isToday(day) ? 'var(--primary-subtle, var(--bg-hover))' : 'var(--bg-card)',
-                      minWidth: 88,
+                      background: isToday(day)
+                        ? 'color-mix(in srgb, var(--primary) 8%, transparent)'
+                        : 'var(--bg-card)',
+                      minWidth: 90,
                     }}
                   >
                     <div>{formatDayName(day)}</div>
@@ -557,14 +778,16 @@ function PlannerContent() {
                 </tr>
               )}
               {members.map((member, rowIdx) => {
-                const canEdit = member.userId === user?.id || canAdmin || (isManager && managerAssignments.some(a => a.member_user_id === member.userId));
+                const canEdit = member.userId === user?.id || canAdmin ||
+                  (isManager && managerAssignments.some(a => a.member_user_id === member.userId));
+
                 return (
                   <tr
                     key={member.userId}
                     style={{ borderBottom: rowIdx < members.length - 1 ? '1px solid var(--border)' : 'none' }}
                   >
                     {/* Jméno */}
-                    <td className="px-3 py-2" style={{ background: 'var(--bg-card)' }}>
+                    <td className="px-3 py-2" style={{ background: 'var(--bg-card)', verticalAlign: 'middle' }}>
                       <div className="flex items-center gap-2">
                         <div
                           className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white flex-shrink-0"
@@ -582,7 +805,10 @@ function PlannerContent() {
                             className="opacity-40 hover:opacity-100 transition-opacity flex-shrink-0"
                             style={{ color: member.isPinned ? 'var(--primary)' : 'var(--text-muted)' }}
                           >
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill={member.isPinned ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
+                            <svg width="13" height="13" viewBox="0 0 24 24"
+                              fill={member.isPinned ? 'currentColor' : 'none'}
+                              stroke="currentColor" strokeWidth="2"
+                            >
                               <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                             </svg>
                           </button>
@@ -590,50 +816,109 @@ function PlannerContent() {
                       </div>
                     </td>
 
-                    {/* Dny */}
+                    {/* Buňky dní */}
                     {weekDays.map(day => {
                       const dateStr = toDateStr(day);
+                      const dayKey: DayKey = `${member.userId}|${dateStr}`;
+                      const isSplit = splitDays.has(dayKey);
+                      const isTodayCol = isToday(day);
+
                       const amKey: CellKey = `${member.userId}|${dateStr}|am`;
                       const pmKey: CellKey = `${member.userId}|${dateStr}|pm`;
+                      const fullKey: CellKey = `${member.userId}|${dateStr}|full`;
+
                       const amCell = cells[amKey];
                       const pmCell = cells[pmKey];
-                      const amStatus = amCell ? statuses.find(s => s.id === amCell.statusId) : null;
-                      const pmStatus = pmCell ? statuses.find(s => s.id === pmCell.statusId) : null;
-                      const isTodayCol = isToday(day);
+                      const fullCell = cells[fullKey];
+
+                      const amStatus = amCell?.statusId
+                        ? statuses.find(s => s.id === amCell.statusId) ?? null : null;
+                      const pmStatus = pmCell?.statusId
+                        ? statuses.find(s => s.id === pmCell.statusId) ?? null : null;
+                      const fullStatus = fullCell?.statusId
+                        ? statuses.find(s => s.id === fullCell.statusId) ?? null : null;
 
                       return (
                         <td
                           key={dateStr}
-                          className="px-1 py-1.5 align-top"
-                          style={{ background: isTodayCol ? 'var(--primary-subtle, rgba(99,102,241,0.04))' : 'transparent' }}
+                          className="px-1.5 py-1.5"
+                          style={{
+                            background: isTodayCol
+                              ? 'color-mix(in srgb, var(--primary) 5%, transparent)'
+                              : 'transparent',
+                            verticalAlign: 'middle',
+                          }}
                         >
-                          <div className="flex flex-col gap-0.5">
-                            {/* AM */}
-                            <CellHalf
-                              label="DOP"
-                              statusColor={amStatus?.color ?? null}
-                              statusName={amStatus?.name ?? null}
-                              note={amCell?.note ?? ''}
-                              canEdit={canEdit}
-                              onClick={e => handleCellClick(member.userId, dateStr, 'am', e)}
-                              cellKey={amKey}
-                              hoveredCell={hoveredCell}
-                              setHoveredCell={setHoveredCell}
-                              setTooltipPos={setTooltipPos}
-                            />
-                            {/* PM */}
-                            <CellHalf
-                              label="ODP"
-                              statusColor={pmStatus?.color ?? null}
-                              statusName={pmStatus?.name ?? null}
-                              note={pmCell?.note ?? ''}
-                              canEdit={canEdit}
-                              onClick={e => handleCellClick(member.userId, dateStr, 'pm', e)}
-                              cellKey={pmKey}
-                              hoveredCell={hoveredCell}
-                              setHoveredCell={setHoveredCell}
-                              setTooltipPos={setTooltipPos}
-                            />
+                          {/*
+                           * Relativní kontejner pro overlay tlačítka (split/merge).
+                           * group: aktivuje group-hover třídy na child elementech.
+                           */}
+                          <div className="relative group">
+                            {isSplit ? (
+                              /* ── Rozdělený režim (DOP + ODP) ── */
+                              <>
+                                <div className="flex flex-col gap-0.5">
+                                  <CellHalf
+                                    label="DOP"
+                                    status={amStatus}
+                                    note={amCell?.note ?? ''}
+                                    canEdit={canEdit}
+                                    onClick={e => handleCellClick(member.userId, dateStr, 'am', e)}
+                                    cellKey={amKey}
+                                    hoveredCell={hoveredCell}
+                                    setHoveredCell={setHoveredCell}
+                                    setTooltipPos={setTooltipPos}
+                                  />
+                                  <CellHalf
+                                    label="ODP"
+                                    status={pmStatus}
+                                    note={pmCell?.note ?? ''}
+                                    canEdit={canEdit}
+                                    onClick={e => handleCellClick(member.userId, dateStr, 'pm', e)}
+                                    cellKey={pmKey}
+                                    hoveredCell={hoveredCell}
+                                    setHoveredCell={setHoveredCell}
+                                    setTooltipPos={setTooltipPos}
+                                  />
+                                </div>
+                                {/* Tlačítko sloučení – pravý horní roh, viditelné na hover */}
+                                {canEdit && (
+                                  <button
+                                    className="absolute top-0 right-0 p-0.5 rounded opacity-0 group-hover:opacity-50 hover:!opacity-100 transition-opacity"
+                                    onClick={e => { e.stopPropagation(); handleMerge(member.userId, dateStr); }}
+                                    title="Sloučit na celý den"
+                                    style={{ color: 'var(--text-muted)' }}
+                                  >
+                                    <IconMerge />
+                                  </button>
+                                )}
+                              </>
+                            ) : (
+                              /* ── Celý den (výchozí) ── */
+                              <>
+                                <CellFull
+                                  status={fullStatus}
+                                  note={fullCell?.note ?? ''}
+                                  canEdit={canEdit}
+                                  onClick={e => handleCellClick(member.userId, dateStr, 'full', e)}
+                                  cellKey={fullKey}
+                                  hoveredCell={hoveredCell}
+                                  setHoveredCell={setHoveredCell}
+                                  setTooltipPos={setTooltipPos}
+                                />
+                                {/* Tlačítko rozdělení – pravý horní roh, viditelné na hover */}
+                                {canEdit && (
+                                  <button
+                                    className="absolute top-1 right-1 p-0.5 rounded opacity-0 group-hover:opacity-50 hover:!opacity-100 transition-opacity"
+                                    onClick={e => { e.stopPropagation(); handleExpand(member.userId, dateStr); }}
+                                    title="Rozdělit na DOP / ODP"
+                                    style={{ color: 'var(--text-muted)' }}
+                                  >
+                                    <IconSplit />
+                                  </button>
+                                )}
+                              </>
+                            )}
                           </div>
                         </td>
                       );
@@ -645,7 +930,7 @@ function PlannerContent() {
           </table>
         </div>
 
-        {/* Legenda */}
+        {/* Legenda stavů */}
         {statuses.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-4">
             {statuses.map(s => (
@@ -662,32 +947,39 @@ function PlannerContent() {
         )}
       </div>
 
-      {/* Cell picker – floating */}
+      {/* Picker stavů – floating */}
       {editingCell && cellPickerPos && (
         <div
           ref={cellPickerRef}
           className="fixed z-50 rounded-xl border shadow-xl p-3"
           style={{
             top: cellPickerPos.top,
-            left: Math.min(cellPickerPos.left, window.innerWidth - 260),
+            left: Math.min(cellPickerPos.left, (typeof window !== 'undefined' ? window.innerWidth : 1200) - 260),
             background: 'var(--bg-card)',
             borderColor: 'var(--border)',
-            width: 240,
+            width: 244,
           }}
         >
           <p className="text-xs font-semibold mb-2" style={{ color: 'var(--text-muted)' }}>
-            Vyberte stav – {editingCell.half === 'am' ? 'dopoledne' : 'odpoledne'} {editingCell.date}
+            {editingCell.half === 'full'
+              ? `Celý den — ${editingCell.date}`
+              : `${editingCell.half === 'am' ? 'Dopoledne' : 'Odpoledne'} — ${editingCell.date}`}
           </p>
-          <div className="flex flex-col gap-1 mb-3">
-            {/* Vymazat */}
+
+          <div className="flex flex-col gap-1 mb-1">
+            {/* Vymazat stav */}
             <button
               onClick={() => setAvailability(null)}
               className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs hover:bg-[var(--bg-hover)] text-left transition-colors"
               style={{ color: 'var(--text-muted)' }}
             >
-              <span className="w-4 h-4 rounded-full border-2 border-dashed flex-shrink-0" style={{ borderColor: 'var(--border)' }} />
+              <span
+                className="w-4 h-4 rounded-full border-2 border-dashed flex-shrink-0"
+                style={{ borderColor: 'var(--border)' }}
+              />
               Bez stavu
             </button>
+
             {statuses.map(s => (
               <button
                 key={s.id}
@@ -699,20 +991,26 @@ function PlannerContent() {
                 {s.name}
               </button>
             ))}
+
             {statuses.length === 0 && (
-              <p className="text-xs px-2" style={{ color: 'var(--text-muted)' }}>Nejsou definovány žádné stavy.{canAdmin ? ' Přidejte je výše.' : ''}</p>
+              <p className="text-xs px-2" style={{ color: 'var(--text-muted)' }}>
+                Nejsou definovány žádné stavy.{canAdmin ? ' Přidejte je výše.' : ''}
+              </p>
             )}
           </div>
-          {/* Poznámka */}
-          <NoteInput
-            initialNote={cells[`${editingCell.userId}|${editingCell.date}|${editingCell.half}`]?.note ?? ''}
-            onSave={(note) => {
-              const key: CellKey = `${editingCell.userId}|${editingCell.date}|${editingCell.half}`;
-              const existing = cells[key];
-              if (!existing) return; // Bez stavu nelze přidat poznámku
-              setAvailability(existing.statusId, note);
-            }}
-          />
+
+          {/* Poznámka (jen pokud je buňka vyplněna) */}
+          {cells[`${editingCell.userId}|${editingCell.date}|${editingCell.half}`]?.statusId && (
+            <NoteInput
+              initialNote={cells[`${editingCell.userId}|${editingCell.date}|${editingCell.half}`]?.note ?? ''}
+              onSave={(note) => {
+                const key: CellKey = `${editingCell.userId}|${editingCell.date}|${editingCell.half}`;
+                const existing = cells[key];
+                if (!existing) return;
+                setAvailability(existing.statusId, note);
+              }}
+            />
+          )}
         </div>
       )}
 
@@ -721,7 +1019,7 @@ function PlannerContent() {
         <div
           className="fixed z-50 px-2.5 py-1.5 rounded-lg text-xs shadow-lg pointer-events-none"
           style={{
-            top: tooltipPos.top - 36,
+            top: tooltipPos.top - 40,
             left: tooltipPos.left,
             background: 'var(--bg-card)',
             border: '1px solid var(--border)',
@@ -736,102 +1034,7 @@ function PlannerContent() {
   );
 }
 
-// ─── CellHalf subkomponenta ────────────────────────────────────────────────
-
-function CellHalf({
-  label,
-  statusColor,
-  statusName,
-  note,
-  canEdit,
-  onClick,
-  cellKey,
-  hoveredCell,
-  setHoveredCell,
-  setTooltipPos,
-}: {
-  label: string;
-  statusColor: string | null;
-  statusName: string | null;
-  note: string;
-  canEdit: boolean;
-  onClick: (e: React.MouseEvent) => void;
-  cellKey: CellKey;
-  hoveredCell: CellKey | null;
-  setHoveredCell: (k: CellKey | null) => void;
-  setTooltipPos: (p: { top: number; left: number } | null) => void;
-}) {
-  const hasStatus = statusColor !== null;
-  const hasNote = !!note;
-
-  return (
-    <div
-      className={`relative flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium transition-all select-none ${canEdit ? 'cursor-pointer' : 'cursor-default'}`}
-      style={{
-        background: hasStatus ? statusColor + '28' : 'var(--bg-hover)',
-        color: hasStatus ? statusColor : 'var(--text-muted)',
-        border: `1px solid ${hasStatus ? statusColor + '55' : 'transparent'}`,
-        minHeight: 24,
-      }}
-      onClick={canEdit ? onClick : undefined}
-      onMouseEnter={e => {
-        if (hasNote) {
-          const rect = (e.target as HTMLElement).getBoundingClientRect();
-          setHoveredCell(cellKey);
-          setTooltipPos({ top: rect.top + window.scrollY, left: rect.left + window.scrollX });
-        }
-      }}
-      onMouseLeave={() => {
-        setHoveredCell(null);
-        setTooltipPos(null);
-      }}
-      title={statusName ?? label}
-    >
-      <span className="opacity-60 text-[9px] w-6 flex-shrink-0">{label}</span>
-      {hasStatus && (
-        <span
-          className="w-2 h-2 rounded-full flex-shrink-0"
-          style={{ background: statusColor }}
-        />
-      )}
-      {hasNote && (
-        <span className="ml-auto opacity-50">
-          <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M4 6h16M4 12h8M4 18h12" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" />
-          </svg>
-        </span>
-      )}
-    </div>
-  );
-}
-
-// ─── NoteInput subkomponenta ───────────────────────────────────────────────
-
-function NoteInput({ initialNote, onSave }: { initialNote: string; onSave: (note: string) => void }) {
-  const [note, setNote] = useState(initialNote);
-  return (
-    <div className="mt-1">
-      <p className="text-[10px] mb-1" style={{ color: 'var(--text-muted)' }}>Poznámka (zobrazí se při najetí)</p>
-      <textarea
-        rows={2}
-        value={note}
-        onChange={e => setNote(e.target.value)}
-        placeholder="Volitelná poznámka..."
-        className="w-full px-2 py-1.5 rounded-lg text-xs border outline-none resize-none"
-        style={{ background: 'var(--bg-input)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
-      />
-      <button
-        onClick={() => onSave(note)}
-        className="mt-1.5 w-full py-1 rounded-lg text-xs font-medium text-white transition-colors"
-        style={{ background: 'var(--primary)' }}
-      >
-        Uložit poznámku
-      </button>
-    </div>
-  );
-}
-
-// ─── Page wrapper ─────────────────────────────────────────────────────────
+// ─── Page wrapper ──────────────────────────────────────────────────────────
 
 function PlannerPage() {
   const { user, loading: authLoading } = useAuth();
