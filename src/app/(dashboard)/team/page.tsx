@@ -7,7 +7,7 @@ import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import DashboardLayout from '@/components/DashboardLayout';
 import { WorkspaceProvider } from '@/contexts/WorkspaceContext';
-import type { Department, Category, Task, WorkspaceMember, Profile, Invitation, UserRole } from '@/types/database';
+import type { Department, Category, Task, WorkspaceMember, Profile, UserRole } from '@/types/database';
 
 type Tab = 'members' | 'departments' | 'categories' | 'tasks';
 
@@ -31,7 +31,7 @@ interface MemberWithProfile extends WorkspaceMember {
 
 function TeamContent() {
   const { user } = useAuth();
-  const { currentWorkspace, userRole } = useWorkspace();
+  const { currentWorkspace, userRole, refreshWorkspace } = useWorkspace();
   const { isWorkspaceAdmin } = usePermissions();
   const [activeTab, setActiveTab] = useState<Tab>('members');
 
@@ -39,8 +39,9 @@ function TeamContent() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [members, setMembers] = useState<MemberWithProfile[]>([]);
-  const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [codeCopied, setCodeCopied] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
 
   // Formulářové stavy
   const [showForm, setShowForm] = useState(false);
@@ -50,30 +51,23 @@ function TeamContent() {
   const [formCategory, setFormCategory] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Invite form
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState<string>('member');
-  const [inviteMessage, setInviteMessage] = useState('');
-
   const [projects, setProjects] = useState<{ id: string; name: string }[]>([]);
 
   const fetchData = useCallback(async () => {
     if (!currentWorkspace) return;
 
-    const [deptRes, catRes, taskRes, projRes, memRes, invRes] = await Promise.all([
+    const [deptRes, catRes, taskRes, projRes, memRes] = await Promise.all([
       supabase.from('trackino_departments').select('*').eq('workspace_id', currentWorkspace.id).order('name'),
       supabase.from('trackino_categories').select('*').eq('workspace_id', currentWorkspace.id).order('name'),
       supabase.from('trackino_tasks').select('*').eq('workspace_id', currentWorkspace.id).order('name'),
       supabase.from('trackino_projects').select('id, name').eq('workspace_id', currentWorkspace.id).eq('archived', false).order('name'),
       supabase.from('trackino_workspace_members').select('*').eq('workspace_id', currentWorkspace.id),
-      supabase.from('trackino_invitations').select('*').eq('workspace_id', currentWorkspace.id).eq('accepted', false).order('created_at', { ascending: false }),
     ]);
 
     setDepartments((deptRes.data ?? []) as Department[]);
     setCategories((catRes.data ?? []) as Category[]);
     setTasks((taskRes.data ?? []) as Task[]);
     setProjects((projRes.data ?? []) as { id: string; name: string }[]);
-    setInvitations((invRes.data ?? []) as Invitation[]);
 
     // Fetch profiles for members
     const memberData = (memRes.data ?? []) as WorkspaceMember[];
@@ -120,37 +114,46 @@ function TeamContent() {
     fetchData();
   };
 
-  const sendInvite = async () => {
-    if (!currentWorkspace || !user || !inviteEmail.trim()) return;
-    setSaving(true);
-    setInviteMessage('');
-
-    const { error } = await supabase.from('trackino_invitations').insert({
-      workspace_id: currentWorkspace.id,
-      email: inviteEmail.trim().toLowerCase(),
-      role: inviteRole,
-      invited_by: user.id,
-    });
-
-    setSaving(false);
-    if (error) {
-      if (error.message.includes('duplicate')) {
-        setInviteMessage('Tento email již byl pozván.');
-      } else {
-        setInviteMessage('Chyba: ' + error.message);
-      }
-    } else {
-      setInviteMessage('Pozvánka vytvořena!');
-      setInviteEmail('');
-      setInviteRole('member');
-      fetchData();
-      setTimeout(() => setInviteMessage(''), 3000);
+  const copyJoinCode = async () => {
+    if (!currentWorkspace?.join_code) return;
+    try {
+      await navigator.clipboard.writeText(currentWorkspace.join_code);
+      setCodeCopied(true);
+      setTimeout(() => setCodeCopied(false), 2000);
+    } catch {
+      // Fallback pro starší prohlížeče
+      const el = document.createElement('textarea');
+      el.value = currentWorkspace.join_code;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      setCodeCopied(true);
+      setTimeout(() => setCodeCopied(false), 2000);
     }
   };
 
-  const cancelInvite = async (id: string) => {
-    await supabase.from('trackino_invitations').delete().eq('id', id);
-    fetchData();
+  function generateRandomCode(): string {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * 32)]).join('');
+  }
+
+  const regenerateJoinCode = async () => {
+    if (!currentWorkspace || !confirm('Opravdu vygenerovat nový kód? Starý kód přestane fungovat.')) return;
+    setRegenerating(true);
+    try {
+      const newCode = generateRandomCode();
+      const { error } = await supabase
+        .from('trackino_workspaces')
+        .update({ join_code: newCode })
+        .eq('id', currentWorkspace.id);
+      if (!error) {
+        await refreshWorkspace();
+      }
+    } catch (err) {
+      console.warn('Chyba při generování kódu:', err);
+    }
+    setRegenerating(false);
   };
 
   const updateMemberRole = async (memberId: string, newRole: UserRole) => {
@@ -219,62 +222,79 @@ function TeamContent() {
         {/* ========== TAB: ČLENOVÉ ========== */}
         {activeTab === 'members' && (
           <>
-            {/* Pozvánka */}
-            {isWorkspaceAdmin && (
+            {/* Kód pro připojení */}
+            {isWorkspaceAdmin && currentWorkspace.join_code && (
               <div className="mb-6 p-4 rounded-xl border" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
-                <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>Pozvat nového člena</h3>
-                <div className="flex gap-2">
-                  <input
-                    type="email"
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
-                    placeholder="email@example.com"
-                    className="flex-1 px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-                    style={inputStyle}
-                    onKeyDown={(e) => { if (e.key === 'Enter') sendInvite(); }}
-                  />
-                  <select
-                    value={inviteRole}
-                    onChange={(e) => setInviteRole(e.target.value)}
-                    className="px-3 py-2 rounded-lg border text-sm focus:outline-none"
-                    style={inputStyle}
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Kód pro připojení</h3>
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                      Sdílejte tento kód s novými členy. Zadají ho při registraci.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  {/* Kód */}
+                  <div
+                    className="flex-1 px-4 py-3 rounded-lg border font-mono text-2xl font-bold tracking-[0.3em] text-center select-all"
+                    style={{
+                      background: 'var(--bg-hover)',
+                      borderColor: 'var(--border)',
+                      color: 'var(--primary)',
+                      letterSpacing: '0.3em',
+                    }}
                   >
-                    <option value="member">Člen</option>
-                    <option value="manager">Team Manager</option>
-                    <option value="admin">Admin</option>
-                  </select>
+                    {currentWorkspace.join_code}
+                  </div>
+
+                  {/* Kopírovat */}
                   <button
-                    onClick={sendInvite}
-                    disabled={saving || !inviteEmail.trim()}
-                    className="px-4 py-2 rounded-lg text-white text-sm font-medium disabled:opacity-50 whitespace-nowrap"
-                    style={{ background: 'var(--primary)' }}
+                    onClick={copyJoinCode}
+                    className="flex items-center gap-2 px-4 py-3 rounded-lg border text-sm font-medium transition-colors whitespace-nowrap"
+                    style={{
+                      borderColor: codeCopied ? 'var(--success)' : 'var(--border)',
+                      background: codeCopied ? 'var(--bg-hover)' : 'var(--bg-input)',
+                      color: codeCopied ? 'var(--success)' : 'var(--text-secondary)',
+                    }}
+                    title="Kopírovat kód"
                   >
-                    Pozvat
+                    {codeCopied ? (
+                      <>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        Zkopírováno
+                      </>
+                    ) : (
+                      <>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                        </svg>
+                        Kopírovat
+                      </>
+                    )}
                   </button>
                 </div>
-                {inviteMessage && (
-                  <p className="mt-2 text-xs" style={{ color: inviteMessage.startsWith('Chyba') || inviteMessage.includes('již') ? 'var(--danger)' : 'var(--success)' }}>
-                    {inviteMessage}
-                  </p>
-                )}
 
-                {/* Čekající pozvánky */}
-                {invitations.length > 0 && (
-                  <div className="mt-3 pt-3 border-t" style={{ borderColor: 'var(--border)' }}>
-                    <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>Čekající pozvánky</p>
-                    {invitations.map(inv => (
-                      <div key={inv.id} className="flex items-center justify-between py-1.5">
-                        <div>
-                          <span className="text-xs" style={{ color: 'var(--text-primary)' }}>{inv.email}</span>
-                          <span className="text-[10px] ml-2 px-1.5 py-0.5 rounded" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>
-                            {ROLE_LABELS[inv.role] ?? inv.role}
-                          </span>
-                        </div>
-                        <button onClick={() => cancelInvite(inv.id)} className="text-xs" style={{ color: 'var(--danger)' }}>Zrušit</button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                {/* Jak to funguje */}
+                <div className="mt-3 pt-3 border-t" style={{ borderColor: 'var(--border)' }}>
+                  <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                    <strong style={{ color: 'var(--text-secondary)' }}>Jak to funguje:</strong>{' '}
+                    Nový člen se zaregistruje na přihlašovací stránce a zadá tento kód do pole „Kód workspace". Po ověření e-mailu bude automaticky přidán jako člen.
+                  </p>
+                  <button
+                    onClick={regenerateJoinCode}
+                    disabled={regenerating}
+                    className="mt-2 text-[11px] transition-colors disabled:opacity-50"
+                    style={{ color: 'var(--text-muted)' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--danger)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
+                  >
+                    {regenerating ? 'Generuji...' : '↻ Vygenerovat nový kód (zneplatní starý)'}
+                  </button>
+                </div>
               </div>
             )}
 

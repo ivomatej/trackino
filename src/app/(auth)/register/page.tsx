@@ -9,8 +9,10 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [password, setPassword] = useState('');
+  const [workspaceCode, setWorkspaceCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
   const { signUp } = useAuth();
   const router = useRouter();
 
@@ -23,16 +25,80 @@ export default function RegisterPage() {
       return;
     }
 
-    setLoading(true);
-    const { error } = await signUp(email, password, displayName);
+    const code = workspaceCode.trim().toUpperCase();
 
-    if (error) {
-      setError(error);
+    setLoading(true);
+
+    // Uložit kód před registrací, aby byl dostupný při SIGNED_IN eventu
+    if (code) {
+      localStorage.setItem('trackino_pending_join_code', code);
+    }
+
+    const { error: signUpError } = await signUp(email, password, displayName);
+
+    if (signUpError) {
+      // Při chybě odstranit uložený kód
+      localStorage.removeItem('trackino_pending_join_code');
+      setError(signUpError);
       setLoading(false);
     } else {
-      router.push('/');
+      // Zobrazit zprávu o ověření emailu
+      setSuccess(true);
+      setLoading(false);
     }
   };
+
+  if (success) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#f8fafc] px-4">
+        <div className="w-full max-w-[400px]">
+          {/* Logo */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-[#2563eb] mb-4">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+            </div>
+            <h1 className="text-2xl font-bold text-[#0f172a]">Trackino</h1>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1)] border border-[#e2e8f0] p-6 text-center">
+            {/* Zelená fajfka */}
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-[#dcfce7] mb-4">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </div>
+            <h2 className="text-lg font-bold text-[#0f172a] mb-2">Zkontrolujte svůj e-mail</h2>
+            <p className="text-sm text-[#475569] mb-1">
+              Odeslali jsme vám ověřovací odkaz na
+            </p>
+            <p className="text-sm font-medium text-[#0f172a] mb-4">{email}</p>
+            <p className="text-xs text-[#64748b]">
+              Klikněte na odkaz v e-mailu pro dokončení registrace a přihlášení do aplikace.
+            </p>
+            {workspaceCode.trim() && (
+              <div className="mt-4 p-3 rounded-lg bg-[#f0fdf4] border border-[#bbf7d0]">
+                <p className="text-xs text-[#15803d]">
+                  Po ověření e-mailu budete automaticky přidáni do workspace s kódem <strong>{workspaceCode.trim().toUpperCase()}</strong>.
+                </p>
+              </div>
+            )}
+            <p className="text-xs text-[#94a3b8] mt-4">
+              Nenašli jste e-mail? Zkontrolujte složku Spam.
+            </p>
+          </div>
+
+          <p className="text-center text-sm text-[#475569] mt-6">
+            <Link href="/login" className="text-[#2563eb] hover:underline font-medium">
+              Zpět na přihlášení
+            </Link>
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#f8fafc] px-4">
@@ -87,7 +153,7 @@ export default function RegisterPage() {
             />
           </div>
 
-          <div className="mb-6">
+          <div className="mb-4">
             <label htmlFor="password" className="block text-sm font-medium text-[#0f172a] mb-1.5">
               Heslo
             </label>
@@ -101,6 +167,25 @@ export default function RegisterPage() {
               className="w-full px-3 py-2.5 rounded-lg border border-[#e2e8f0] bg-white text-[#0f172a] text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:border-transparent placeholder:text-[#94a3b8] transition-shadow"
               placeholder="Minimálně 6 znaků"
             />
+          </div>
+
+          <div className="mb-6">
+            <label htmlFor="workspaceCode" className="block text-sm font-medium text-[#0f172a] mb-1.5">
+              Kód workspace
+              <span className="text-[#94a3b8] font-normal ml-1">(volitelné)</span>
+            </label>
+            <input
+              id="workspaceCode"
+              type="text"
+              value={workspaceCode}
+              onChange={(e) => setWorkspaceCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))}
+              className="w-full px-3 py-2.5 rounded-lg border border-[#e2e8f0] bg-white text-[#0f172a] text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:border-transparent placeholder:text-[#94a3b8] transition-shadow font-mono tracking-widest"
+              placeholder="ABC123"
+              maxLength={6}
+            />
+            <p className="mt-1 text-xs text-[#94a3b8]">
+              Zadejte kód, který vám poskytl správce workspace.
+            </p>
           </div>
 
           <button

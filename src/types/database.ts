@@ -17,6 +17,7 @@ export interface Workspace {
   name: string;
   slug: string;
   created_by: string;
+  join_code: string;
   logo_url: string | null;
   tariff: Tariff;
   week_start_day: number; // 0=Ne, 1=Po
