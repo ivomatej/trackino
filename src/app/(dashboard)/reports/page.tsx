@@ -649,7 +649,7 @@ function ReportsContent() {
           </div>
           {hasCosts && (
             <div className="rounded-xl border p-4" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
-              <div className="text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Náklady</div>
+              <div className="text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Výdělek</div>
               <div className="text-2xl font-bold tabular-nums" style={{ color: 'var(--primary)' }}>
                 {fmtCost(totalCost)} {currencySymbol}
               </div>

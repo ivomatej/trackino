@@ -320,15 +320,36 @@ export default function TimerBar({ onEntryChanged }: TimerBarProps) {
     return a.localeCompare(b, 'cs');
   });
 
-  // Filter categories/tasks by search
-  const filteredCategories = categories.filter(c => {
-    if (!taskSearch) return true;
-    return c.name.toLowerCase().includes(taskSearch.toLowerCase());
-  });
-  const filteredTasks = tasks.filter(t => {
-    if (!taskSearch) return true;
-    return t.name.toLowerCase().includes(taskSearch.toLowerCase());
-  });
+  // Grouped structure: categories + their tasks (pro kategorie-úkol linking)
+  const taskStructure = (() => {
+    const q = taskSearch.toLowerCase();
+    return categories
+      .filter(cat => {
+        if (!taskSearch) return true;
+        const catMatches = cat.name.toLowerCase().includes(q);
+        const hasMatchingTask = tasks.some(t => t.category_id === cat.id && t.name.toLowerCase().includes(q));
+        return catMatches || hasMatchingTask;
+      })
+      .map(cat => {
+        const catMatches = !taskSearch || cat.name.toLowerCase().includes(q);
+        return {
+          ...cat,
+          matchedTasks: tasks.filter(t => t.category_id === cat.id && (catMatches || t.name.toLowerCase().includes(q))),
+        };
+      });
+  })();
+
+  // Úkoly bez kategorie
+  const orphanTasks = tasks.filter(t =>
+    !t.category_id && (!taskSearch || t.name.toLowerCase().includes(taskSearch.toLowerCase()))
+  );
+
+  // Vybraná kategorie a úkol (jako objekty)
+  const selectedCategoryObj = categories.find(c => c.id === selectedCategory);
+  const selectedTaskObj = tasks.find(t => t.id === selectedTask);
+
+  // Klient pro vybraný projekt
+  const selectedProjectClientName = selectedProject ? (projectClientMap[selectedProject] ?? '') : '';
 
   return (
     <div className="flex items-center gap-2 sm:gap-3 w-full">
@@ -346,20 +367,26 @@ export default function TimerBar({ onEntryChanged }: TimerBarProps) {
       />
 
       {/* Projekt picker */}
-      <div className="relative hidden sm:block" ref={projectPickerRef}>
+      <div className="relative flex-shrink-0" ref={projectPickerRef}>
         <button
           onClick={() => { setShowProjectPicker(!showProjectPicker); setShowTaskPicker(false); setProjectSearch(''); }}
-          className="p-2 rounded-lg transition-colors relative"
-          style={{ color: selectedProject ? selectedProjectObj?.color ?? 'var(--primary)' : 'var(--text-muted)' }}
+          className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition-colors"
+          style={{ color: selectedProject ? 'var(--text-primary)' : 'var(--text-muted)' }}
           onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
           onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
           title={selectedProjectObj?.name ?? 'Projekt'}
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-          </svg>
-          {selectedProject && (
-            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full" style={{ background: selectedProjectObj?.color ?? 'var(--primary)' }} />
+          {selectedProject ? (
+            <>
+              <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: selectedProjectObj?.color ?? 'var(--primary)' }} />
+              <span className="hidden sm:block text-xs truncate max-w-[140px]">
+                {selectedProjectClientName ? `${selectedProjectClientName} · ` : ''}{selectedProjectObj?.name}
+              </span>
+            </>
+          ) : (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+            </svg>
           )}
         </button>
 
@@ -432,30 +459,41 @@ export default function TimerBar({ onEntryChanged }: TimerBarProps) {
         )}
       </div>
 
-      {/* Task/Category picker */}
-      <div className="relative hidden sm:block" ref={taskPickerRef}>
+      {/* Kategorie / Úkol picker */}
+      <div className="relative flex-shrink-0" ref={taskPickerRef}>
         <button
           onClick={() => { setShowTaskPicker(!showTaskPicker); setShowProjectPicker(false); setTaskSearch(''); }}
-          className="p-2 rounded-lg transition-colors"
+          className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition-colors"
           style={{ color: selectedTask || selectedCategory ? 'var(--primary)' : 'var(--text-muted)' }}
           onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
           onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
           title="Kategorie / Úkol"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="8" y1="6" x2="21" y2="6" />
-            <line x1="8" y1="12" x2="21" y2="12" />
-            <line x1="8" y1="18" x2="21" y2="18" />
-            <line x1="3" y1="6" x2="3.01" y2="6" />
-            <line x1="3" y1="12" x2="3.01" y2="12" />
-            <line x1="3" y1="18" x2="3.01" y2="18" />
-          </svg>
+          {selectedCategory || selectedTask ? (
+            <>
+              <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: 'var(--primary)' }} />
+              <span className="hidden sm:block text-xs truncate max-w-[140px]">
+                {selectedCategoryObj?.name ?? ''}
+                {selectedCategoryObj && selectedTaskObj ? ' · ' : ''}
+                {selectedTaskObj?.name ?? ''}
+              </span>
+            </>
+          ) : (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="8" y1="6" x2="21" y2="6" />
+              <line x1="8" y1="12" x2="21" y2="12" />
+              <line x1="8" y1="18" x2="21" y2="18" />
+              <line x1="3" y1="6" x2="3.01" y2="6" />
+              <line x1="3" y1="12" x2="3.01" y2="12" />
+              <line x1="3" y1="18" x2="3.01" y2="18" />
+            </svg>
+          )}
         </button>
 
         {showTaskPicker && (
           <div
             className="absolute top-full right-0 mt-1 rounded-lg border shadow-lg z-50 max-h-80 overflow-hidden flex flex-col"
-            style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', width: '320px' }}
+            style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', width: '280px' }}
           >
             {/* Vyhledávání */}
             <div className="p-2 border-b" style={{ borderColor: 'var(--border)' }}>
@@ -471,57 +509,98 @@ export default function TimerBar({ onEntryChanged }: TimerBarProps) {
             </div>
 
             <div className="overflow-y-auto py-1">
-              {/* Kategorie */}
-              {(filteredCategories.length > 0 || (!taskSearch && categories.length > 0)) && (
-                <>
-                  <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
-                    Kategorie
-                  </div>
-                  <button
-                    onClick={() => { setSelectedCategory(''); }}
-                    className="w-full text-left px-3 py-1.5 text-xs transition-colors"
-                    style={{ color: 'var(--text-muted)' }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                  >
-                    Žádná
-                  </button>
-                  {filteredCategories.map(c => (
-                    <button
-                      key={c.id}
-                      onClick={() => { setSelectedCategory(c.id); }}
-                      className="w-full text-left px-3 py-1.5 text-xs transition-colors truncate"
-                      style={{ color: 'var(--text-primary)', background: c.id === selectedCategory ? 'var(--bg-active)' : 'transparent' }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = c.id === selectedCategory ? 'var(--bg-active)' : 'transparent'}
-                    >
-                      {c.name}
-                    </button>
-                  ))}
-                </>
+              {/* Reset */}
+              {(selectedCategory || selectedTask) && (
+                <button
+                  onClick={() => { setSelectedCategory(''); setSelectedTask(''); }}
+                  className="w-full text-left px-3 py-1.5 text-xs transition-colors border-b mb-1"
+                  style={{ color: 'var(--text-muted)', borderColor: 'var(--border)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                >
+                  Zrušit výběr
+                </button>
               )}
 
-              {/* Úkoly */}
-              {(filteredTasks.length > 0 || (!taskSearch && tasks.length > 0)) && (
-                <>
-                  <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider mt-1 border-t" style={{ color: 'var(--text-muted)', borderColor: 'var(--border)' }}>
-                    Úkoly
-                  </div>
+              {/* Kategorie s úkoly (grouped) */}
+              {taskStructure.map(cat => (
+                <div key={cat.id}>
+                  {/* Kategorie řádek */}
                   <button
-                    onClick={() => { setSelectedTask(''); }}
-                    className="w-full text-left px-3 py-1.5 text-xs transition-colors"
-                    style={{ color: 'var(--text-muted)' }}
+                    onClick={() => {
+                      if (selectedCategory === cat.id) {
+                        setSelectedCategory('');
+                        setSelectedTask('');
+                      } else {
+                        setSelectedCategory(cat.id);
+                        // Pokud vybraný úkol nepatří do nové kategorie, smaž ho
+                        if (selectedTask) {
+                          const taskBelongs = tasks.find(t => t.id === selectedTask)?.category_id === cat.id;
+                          if (!taskBelongs) setSelectedTask('');
+                        }
+                      }
+                    }}
+                    className="w-full text-left px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-2"
+                    style={{
+                      color: cat.id === selectedCategory ? 'var(--primary)' : 'var(--text-primary)',
+                      background: cat.id === selectedCategory ? 'var(--bg-active)' : 'transparent',
+                    }}
                     onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = cat.id === selectedCategory ? 'var(--bg-active)' : 'transparent'}
                   >
-                    Žádný
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, opacity: 0.5 }}>
+                      <line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" />
+                      <line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" />
+                    </svg>
+                    <span className="truncate">{cat.name}</span>
                   </button>
-                  {filteredTasks.map(t => (
+
+                  {/* Úkoly pod kategorií */}
+                  {cat.matchedTasks.map(t => (
                     <button
                       key={t.id}
-                      onClick={() => { setSelectedTask(t.id); }}
+                      onClick={() => {
+                        setSelectedCategory(cat.id);
+                        setSelectedTask(t.id);
+                        setShowTaskPicker(false);
+                        setTaskSearch('');
+                      }}
+                      className="w-full text-left pl-7 pr-3 py-1.5 text-xs transition-colors truncate flex items-center gap-1.5"
+                      style={{
+                        color: t.id === selectedTask ? 'var(--primary)' : 'var(--text-secondary)',
+                        background: t.id === selectedTask ? 'var(--bg-active)' : 'transparent',
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = t.id === selectedTask ? 'var(--bg-active)' : 'transparent'}
+                    >
+                      <span className="w-1 h-1 rounded-full flex-shrink-0" style={{ background: 'currentColor', opacity: 0.4 }} />
+                      <span className="truncate">{t.name}</span>
+                    </button>
+                  ))}
+                </div>
+              ))}
+
+              {/* Úkoly bez kategorie */}
+              {orphanTasks.length > 0 && (
+                <>
+                  {taskStructure.length > 0 && <div className="border-t my-1" style={{ borderColor: 'var(--border)' }} />}
+                  <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                    Bez kategorie
+                  </div>
+                  {orphanTasks.map(t => (
+                    <button
+                      key={t.id}
+                      onClick={() => {
+                        setSelectedTask(t.id);
+                        setSelectedCategory('');
+                        setShowTaskPicker(false);
+                        setTaskSearch('');
+                      }}
                       className="w-full text-left px-3 py-1.5 text-xs transition-colors truncate"
-                      style={{ color: 'var(--text-primary)', background: t.id === selectedTask ? 'var(--bg-active)' : 'transparent' }}
+                      style={{
+                        color: t.id === selectedTask ? 'var(--primary)' : 'var(--text-primary)',
+                        background: t.id === selectedTask ? 'var(--bg-active)' : 'transparent',
+                      }}
                       onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
                       onMouseLeave={(e) => e.currentTarget.style.background = t.id === selectedTask ? 'var(--bg-active)' : 'transparent'}
                     >
@@ -531,14 +610,16 @@ export default function TimerBar({ onEntryChanged }: TimerBarProps) {
                 </>
               )}
 
-              {filteredCategories.length === 0 && filteredTasks.length === 0 && taskSearch && (
+              {taskStructure.length === 0 && orphanTasks.length === 0 && taskSearch && (
                 <div className="px-3 py-3 text-xs text-center" style={{ color: 'var(--text-muted)' }}>
                   Žádné výsledky pro &ldquo;{taskSearch}&rdquo;
                 </div>
               )}
 
               {categories.length === 0 && tasks.length === 0 && (
-                <div className="px-3 py-3 text-xs text-center" style={{ color: 'var(--text-muted)' }}>Vytvořte kategorie a úkoly v sekci Tým.</div>
+                <div className="px-3 py-3 text-xs text-center" style={{ color: 'var(--text-muted)' }}>
+                  Vytvořte kategorie a úkoly v sekci Tým.
+                </div>
               )}
             </div>
           </div>

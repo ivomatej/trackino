@@ -11,6 +11,14 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v0.9.0 – 3. 3. 2026</h3>
+<ul>
+  <li><strong>Přepínač workspace</strong> – uživatelé s přístupem do více workspace mohou přepínat přímo z horní lišty bez odhlášení</li>
+  <li><strong>Breadcrumb v Time Trackeru</strong> – po výběru projektu a kategorie/úkolu se zobrazí čitelný text (Klient · Projekt / Kategorie · Úkol) místo pouhých ikonek; funguje i na mobilu</li>
+  <li><strong>Propojení kategorie–úkol</strong> – výběr kategorie/úkolu nyní respektuje vazbu: úkoly jsou zobrazeny pod svou kategorií; výběr úkolu automaticky nastaví nadřazenou kategorii</li>
+  <li><strong>Výdělek v Reportech</strong> – karta přejmenována z „Náklady" na „Výdělek"</li>
+</ul>
+
 <h3>v0.8.0 – 3. 3. 2026</h3>
 <ul>
   <li><strong>Náklady v Reportech</strong> – karta „Náklady" vedle „Celkem odpracováno" zobrazuje hodiny × hodinová sazba; přepočítává se dle zvoleného období, uživatele a projektu; viditelné pro všechny uživatele (každý vidí své vlastní náklady)</li>

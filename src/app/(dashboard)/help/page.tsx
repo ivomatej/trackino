@@ -14,20 +14,26 @@ const DEFAULT_HELP_CONTENT = `
 
 <h3>Základní funkce</h3>
 <ul>
-  <li><strong>Time Tracker</strong> – spouštějte a zastavujte timer pro sledování odpracovaného času</li>
+  <li><strong>Time Tracker</strong> – spouštějte a zastavujte timer pro sledování odpracovaného času; po výběru projektu a kategorie/úkolu se zobrazuje čitelný breadcrumb místo ikonek</li>
   <li><strong>Projekty</strong> – organizujte záznamy do projektů a přiřazujte klienty</li>
   <li><strong>Klienti</strong> – spravujte klienty a propojujte je s projekty</li>
-  <li><strong>Štítky</strong> – označujte záznamy štítky pro lepší kategoriyaci</li>
-  <li><strong>Reporty</strong> – analyzujte odpracovaný čas a přidávejte záznamy ručně</li>
+  <li><strong>Štítky</strong> – označujte záznamy štítky pro lepší kategorizaci</li>
+  <li><strong>Reporty</strong> – analyzujte odpracovaný čas (včetně výdělku dle hodinové sazby) a přidávejte záznamy ručně</li>
   <li><strong>Tým</strong> – spravujte členy workspace a přidávejte nové pozvánkou</li>
 </ul>
+
+<h3>Výběr kategorie a úkolu v Time Trackeru</h3>
+<p>Kliknutím na ikonu seznamu (nebo na zobrazený text kategorie/úkolu) otevřete picker. Kategorie a jejich úkoly jsou provázané – výběrem úkolu se automaticky nastaví nadřazená kategorie. Vyhledávat lze jak podle kategorie, tak podle úkolu.</p>
+
+<h3>Přepínání workspace</h3>
+<p>Pokud máte přístup do více workspace, zobrazuje se v pravém rohu horní lišty přepínač. Kliknutím na něj vyberete jiný workspace bez nutnosti odhlásit se.</p>
 
 <h3>Role v systému</h3>
 <ul>
   <li><strong>Master Admin</strong> – správce celé platformy, může spravovat workspace</li>
-  <li><strong>Admin / Owner</strong> – správce workspace, přístup k nastavení</li>
-  <li><strong>Team Manager</strong> – správce podřízených, vidí jejich záznamy</li>
-  <li><strong>Member</strong> – běžný uživatel, sleduje čas pouze timerem</li>
+  <li><strong>Admin / Owner</strong> – správce workspace, přístup k nastavení a správě týmu</li>
+  <li><strong>Team Manager</strong> – správce podřízených, vidí a edituje jejich záznamy, přidává poznámky</li>
+  <li><strong>Member</strong> – běžný uživatel, sleduje čas timerem</li>
 </ul>
 
 <h3>Půlnoční split</h3>
