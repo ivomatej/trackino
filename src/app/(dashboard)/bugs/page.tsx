@@ -151,25 +151,28 @@ function BugsContent() {
   };
 
   const updateStatus = async (id: string, status: BugStatus) => {
-    await supabase.from('trackino_bug_reports')
-      .update({ status, updated_at: new Date().toISOString() })
+    const { error } = await supabase.from('trackino_bug_reports')
+      .update({ status })
       .eq('id', id);
+    if (error) { alert(`Chyba při změně stavu: ${error.message}`); return; }
     fetchBugs();
   };
 
   const saveNote = async (id: string) => {
-    await supabase.from('trackino_bug_reports')
-      .update({ master_note: noteText, updated_at: new Date().toISOString() })
+    const { error } = await supabase.from('trackino_bug_reports')
+      .update({ master_note: noteText })
       .eq('id', id);
+    if (error) { alert(`Chyba při ukládání poznámky: ${error.message}`); return; }
     setNoteEditId(null);
     fetchBugs();
   };
 
   const saveEdit = async (id: string) => {
     const content = editEditorRef.current?.innerHTML ?? '';
-    await supabase.from('trackino_bug_reports')
-      .update({ content, updated_at: new Date().toISOString() })
+    const { error } = await supabase.from('trackino_bug_reports')
+      .update({ content })
       .eq('id', id);
+    if (error) { alert(`Chyba při ukládání: ${error.message}`); return; }
     setEditingId(null);
     fetchBugs();
   };
