@@ -180,13 +180,13 @@ export default function TimeEntryList({ refreshKey }: TimeEntryListProps) {
           {/* Header dne */}
           <div className="px-4 sm:px-6 py-3 border-b flex items-center justify-between" style={{ borderColor: 'var(--border)' }}>
             <h2 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>{day.label}</h2>
-            <span className="text-sm font-mono font-medium" style={{ color: 'var(--text-secondary)' }}>
+            <span className="text-sm tabular-nums font-medium" style={{ color: 'var(--text-secondary)' }}>
               {formatDuration(day.totalSeconds)}
             </span>
           </div>
 
           {/* Záznamy – subtilní oddělovače */}
-          <div className="divide-y" style={{ borderColor: 'color-mix(in srgb, var(--border) 30%, transparent)' }}>
+          <div className="entry-divider">
             {day.entries.map(entry => (
               <div
                 key={entry.id}
@@ -257,7 +257,7 @@ export default function TimeEntryList({ refreshKey }: TimeEntryListProps) {
                   <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
                     {formatTimeRange(entry.start_time, entry.end_time)}
                   </span>
-                  <span className="text-sm font-mono font-medium min-w-[70px] text-right" style={{ color: 'var(--text-primary)' }}>
+                  <span className="text-sm tabular-nums font-medium min-w-[70px] text-right" style={{ color: 'var(--text-primary)' }}>
                     {formatDuration(entry.duration || 0)}
                   </span>
 

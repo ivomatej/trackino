@@ -578,7 +578,7 @@ function ReportsContent() {
                       {fmtDuration(dayTotal)}
                     </span>
                   </div>
-                  <div className="divide-y" style={{ borderColor: 'color-mix(in srgb, var(--border) 30%, transparent)' }}>
+                  <div className="entry-divider">
                     {dayEntries.map(entry => {
                       const cat = categoryName(entry.category_id);
                       const task = taskName(entry.task_id);

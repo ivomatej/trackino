@@ -317,7 +317,7 @@ export default function TimerBar({ onEntryChanged }: TimerBarProps) {
         value={description}
         onChange={(e) => setDescription(e.target.value)}
         placeholder="Na čem pracuješ?"
-        className="flex-1 min-w-0 max-w-md px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
+        className="flex-1 min-w-0 px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
         style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
         onKeyDown={(e) => {
           if (e.key === 'Enter' && !isRunning) startTimer();

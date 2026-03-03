@@ -94,6 +94,11 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Subtle dividers between list entries – targets only immediate children */
+.entry-divider > * + * {
+  border-top: 1px solid color-mix(in srgb, var(--border) 35%, transparent);
+}
+
 /* Stylizovaný select wrapper */
 .select-wrapper {
   position: relative;
