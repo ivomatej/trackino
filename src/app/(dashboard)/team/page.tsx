@@ -55,6 +55,7 @@ function TeamContent() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [members, setMembers] = useState<MemberWithProfile[]>([]);
+  const [activeRates, setActiveRates] = useState<Record<string, number>>({}); // workspace_member.id → aktivní sazba
   const [loading, setLoading] = useState(true);
   const [codeCopied, setCodeCopied] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
@@ -114,8 +115,22 @@ function TeamContent() {
       (profiles ?? []).forEach((p: Profile) => { profileMap[p.id] = p; });
 
       setMembers(memberData.map(m => ({ ...m, profile: profileMap[m.user_id] })));
+
+      // Načíst aktivní sazby pro zobrazení v seznamu
+      const memberIds = memberData.map(m => m.id);
+      const { data: ratesData } = await supabase
+        .from('trackino_member_rates')
+        .select('workspace_member_id, hourly_rate')
+        .in('workspace_member_id', memberIds)
+        .is('valid_to', null);
+      const rMap: Record<string, number> = {};
+      (ratesData ?? []).forEach((r: { workspace_member_id: string; hourly_rate: number }) => {
+        rMap[r.workspace_member_id] = r.hourly_rate;
+      });
+      setActiveRates(rMap);
     } else {
       setMembers([]);
+      setActiveRates({});
     }
 
     setLoading(false);
@@ -483,9 +498,9 @@ function TeamContent() {
                           <div className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{p?.email}</div>
                         </div>
 
-                        {member.hourly_rate !== null && (
+                        {(activeRates[member.id] !== undefined || member.hourly_rate !== null) && (
                           <span className="text-xs hidden sm:inline flex-shrink-0" style={{ color: 'var(--text-muted)' }}>
-                            {member.hourly_rate} {currencySymbol}/h
+                            {activeRates[member.id] ?? member.hourly_rate} {currencySymbol}/h
                           </span>
                         )}
 
