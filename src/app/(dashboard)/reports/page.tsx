@@ -8,7 +8,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { splitAtMidnight } from '@/lib/midnight-split';
-import type { TimeEntry, Project, Category, Task } from '@/types/database';
+import type { TimeEntry, Project, Category, Task, MemberRate } from '@/types/database';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -73,6 +73,7 @@ function SelectWrap({ children }: { children: ReactNode }) {
 // ── ReportsContent ────────────────────────────────────────────────────────────
 
 interface MemberProfile {
+  member_id: string; // workspace_member id (pro párování sazeb)
   user_id: string;
   display_name: string;
   email: string;
@@ -97,6 +98,9 @@ function ReportsContent() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [members, setMembers] = useState<MemberProfile[]>([]);
   const [loading, setLoading] = useState(false);
+  // Sazby (klíč = workspace_member.id)
+  const [ratesByMemberId, setRatesByMemberId] = useState<Record<string, MemberRate[]>>({});
+  const [userToMemberId, setUserToMemberId] = useState<Record<string, string>>({});
 
   // Ruční zadání
   const [showManual, setShowManual] = useState(false);
@@ -123,15 +127,17 @@ function ReportsContent() {
     ? { from: customFrom, to: customTo }
     : getPresetRange(preset);
 
-  // Načtení členů workspace
+  // Načtení členů workspace + jejich sazeb
   const fetchMembers = useCallback(async () => {
     if (!currentWorkspace || !canSeeOthers) return;
-    const { data } = await supabase
+
+    const { data: memberRows } = await supabase
       .from('trackino_workspace_members')
-      .select('user_id')
+      .select('id, user_id')
       .eq('workspace_id', currentWorkspace.id);
 
-    const userIds = (data ?? []).map((m: { user_id: string }) => m.user_id);
+    const rawMembers = (memberRows ?? []) as { id: string; user_id: string }[];
+    const userIds = rawMembers.map(m => m.user_id);
     if (userIds.length === 0) return;
 
     const { data: profiles } = await supabase
@@ -139,18 +145,42 @@ function ReportsContent() {
       .select('id, display_name, email')
       .in('id', userIds);
 
-    const memberList: MemberProfile[] = (profiles ?? []).map((p: { id: string; display_name: string; email: string }) => ({
-      user_id: p.id,
-      display_name: p.display_name || p.email,
-      email: p.email,
-    }));
+    const memberList: MemberProfile[] = (profiles ?? []).map((p: { id: string; display_name: string; email: string }) => {
+      const row = rawMembers.find(r => r.user_id === p.id);
+      return {
+        member_id: row?.id ?? '',
+        user_id: p.id,
+        display_name: p.display_name || p.email,
+        email: p.email,
+      };
+    });
 
     // Manager vidí jen podřízené + sebe
-    if (isManager && !isWorkspaceAdmin) {
-      setMembers(memberList.filter(m => m.user_id === user?.id || isManagerOf(m.user_id)));
-    } else {
-      setMembers(memberList);
+    const filtered = (isManager && !isWorkspaceAdmin)
+      ? memberList.filter(m => m.user_id === user?.id || isManagerOf(m.user_id))
+      : memberList;
+
+    setMembers(filtered);
+
+    // Načíst sazby pro všechny členy
+    const memberDbIds = memberList.map(m => m.member_id).filter(Boolean);
+    if (memberDbIds.length > 0) {
+      const { data: rates } = await supabase
+        .from('trackino_member_rates')
+        .select('*')
+        .in('workspace_member_id', memberDbIds);
+
+      const rMap: Record<string, MemberRate[]> = {};
+      (rates ?? []).forEach((r: MemberRate) => {
+        if (!rMap[r.workspace_member_id]) rMap[r.workspace_member_id] = [];
+        rMap[r.workspace_member_id].push(r);
+      });
+      setRatesByMemberId(rMap);
     }
+
+    const idMap: Record<string, string> = {};
+    memberList.forEach(m => { if (m.member_id) idMap[m.user_id] = m.member_id; });
+    setUserToMemberId(idMap);
   }, [currentWorkspace, canSeeOthers, isManager, isWorkspaceAdmin, user, isManagerOf]);
 
   // Načtení projektů
@@ -215,6 +245,33 @@ function ReportsContent() {
   const sortedDays = Object.keys(groupedEntries).sort().reverse();
 
   const totalSeconds = entries.reduce((sum, e) => sum + (e.duration ?? 0), 0);
+
+  // Hodinová sazba platná k danému datu pro daného uživatele
+  const getRateForEntry = (userId: string, entryDate: string): number | null => {
+    const memberId = userToMemberId[userId];
+    if (!memberId) return null;
+    const rates = ratesByMemberId[memberId] ?? [];
+    const match = rates
+      .filter(r => r.valid_from <= entryDate && (r.valid_to === null || r.valid_to >= entryDate))
+      .sort((a, b) => b.valid_from.localeCompare(a.valid_from))[0];
+    return match?.hourly_rate ?? null;
+  };
+
+  const totalCost = canSeeOthers
+    ? entries.reduce((sum, e) => {
+        if (!e.duration) return sum;
+        const rate = getRateForEntry(e.user_id, e.start_time.split('T')[0]);
+        return rate !== null ? sum + (e.duration / 3600) * rate : sum;
+      }, 0)
+    : 0;
+
+  const hasCosts = canSeeOthers && totalCost > 0;
+
+  const currencySymbol = currentWorkspace?.currency === 'EUR' ? '€' : currentWorkspace?.currency === 'USD' ? '$' : 'Kč';
+
+  function fmtCost(amount: number): string {
+    return new Intl.NumberFormat('cs-CZ', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
+  }
 
   // Manuální zadání
   const saveManual = async () => {
@@ -549,7 +606,7 @@ function ReportsContent() {
         </div>
 
         {/* Souhrn */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <div className={`grid gap-4 ${hasCosts ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2 sm:grid-cols-3'}`}>
           <div className="rounded-xl border p-4" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
             <div className="text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Celkem odpracováno</div>
             <div className="text-2xl font-bold tabular-nums" style={{ color: 'var(--text-primary)' }}>
@@ -568,6 +625,14 @@ function ReportsContent() {
               {sortedDays.length > 0 ? fmtDuration(Math.round(totalSeconds / sortedDays.length)) : '0:00'}
             </div>
           </div>
+          {hasCosts && (
+            <div className="rounded-xl border p-4" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+              <div className="text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Celkové náklady</div>
+              <div className="text-2xl font-bold tabular-nums" style={{ color: 'var(--text-primary)' }}>
+                {fmtCost(totalCost)} {currencySymbol}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Záznamy */}
@@ -637,6 +702,17 @@ function ReportsContent() {
                               <div className="text-xs tabular-nums text-right" style={{ color: 'var(--text-muted)' }}>
                                 {fmtTime(entry.start_time)} – {entry.end_time ? fmtTime(entry.end_time) : '—'}
                               </div>
+                              {(() => {
+                                if (!canSeeOthers || !entry.duration) return null;
+                                const rate = getRateForEntry(entry.user_id, entry.start_time.split('T')[0]);
+                                if (rate === null) return null;
+                                const cost = (entry.duration / 3600) * rate;
+                                return (
+                                  <div className="text-xs tabular-nums text-right hidden sm:block" style={{ color: 'var(--text-muted)', minWidth: '64px' }}>
+                                    {fmtCost(cost)} {currencySymbol}
+                                  </div>
+                                );
+                              })()}
                               <div className="text-sm font-semibold tabular-nums w-16 text-right" style={{ color: 'var(--text-primary)' }}>
                                 {fmtDuration(entry.duration ?? 0)}
                               </div>

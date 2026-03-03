@@ -200,3 +200,12 @@ export interface TimeEntryTag {
   time_entry_id: string;
   tag_id: string;
 }
+
+export interface MemberRate {
+  id: string;
+  workspace_member_id: string;
+  hourly_rate: number;
+  valid_from: string; // YYYY-MM-DD
+  valid_to: string | null;
+  created_at: string;
+}
