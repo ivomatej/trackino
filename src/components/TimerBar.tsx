@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { canManualEntry } from '@/lib/permissions';
+import { splitAtMidnight, crossesMidnight } from '@/lib/midnight-split';
 import TagPicker from '@/components/TagPicker';
 import type { Project, Category, Task, TimeEntry, RequiredFields } from '@/types/database';
 
@@ -118,6 +119,66 @@ export default function TimerBar({ onEntryChanged }: TimerBarProps) {
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [isRunning]);
 
+  // Background midnight check – každých 30s kontroluje přechod přes půlnoc
+  const midnightCheckRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (isRunning && activeEntry && currentWorkspace && user) {
+      midnightCheckRef.current = setInterval(async () => {
+        const entryStart = new Date(activeEntry.start_time);
+        if (crossesMidnight(entryStart)) {
+          // Automatický split: zastavit starý záznam na půlnoci a spustit nový
+          const midnight = new Date();
+          midnight.setHours(0, 0, 0, 0);
+
+          const durationToMidnight = Math.floor((midnight.getTime() - entryStart.getTime()) / 1000);
+
+          // UPDATE starý záznam – konec = půlnoc
+          await supabase.from('trackino_time_entries').update({
+            end_time: midnight.toISOString(), duration: durationToMidnight, is_running: false,
+            description: description.trim(),
+            project_id: selectedProject || null, category_id: selectedCategory || null, task_id: selectedTask || null,
+          }).eq('id', activeEntry.id);
+
+          // Zkopírovat tagy na starý záznam (pokud ještě nemá)
+          await supabase.from('trackino_time_entry_tags').delete().eq('time_entry_id', activeEntry.id);
+          if (selectedTags.length > 0) {
+            await supabase.from('trackino_time_entry_tags').insert(
+              selectedTags.map(tagId => ({ time_entry_id: activeEntry.id, tag_id: tagId }))
+            );
+          }
+
+          // Vytvořit nový running záznam od půlnoci
+          const { data: newEntry } = await supabase.from('trackino_time_entries').insert({
+            workspace_id: currentWorkspace.id, user_id: user.id,
+            description: description.trim(),
+            project_id: selectedProject || null, category_id: selectedCategory || null, task_id: selectedTask || null,
+            start_time: midnight.toISOString(), is_running: true,
+          }).select().single();
+
+          if (newEntry) {
+            const entry = newEntry as TimeEntry;
+            setActiveEntry(entry);
+            setElapsed(Math.floor((Date.now() - midnight.getTime()) / 1000));
+
+            // Zkopírovat tagy
+            if (selectedTags.length > 0) {
+              await supabase.from('trackino_time_entry_tags').insert(
+                selectedTags.map(tagId => ({ time_entry_id: entry.id, tag_id: tagId }))
+              );
+            }
+          }
+
+          onEntryChanged?.();
+        }
+      }, 30000); // Kontrola každých 30s
+    } else {
+      if (midnightCheckRef.current) { clearInterval(midnightCheckRef.current); midnightCheckRef.current = null; }
+    }
+    return () => { if (midnightCheckRef.current) clearInterval(midnightCheckRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isRunning, activeEntry?.id, currentWorkspace?.id, user?.id]);
+
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
@@ -168,22 +229,58 @@ export default function TimerBar({ onEntryChanged }: TimerBarProps) {
   };
 
   const stopTimer = async () => {
-    if (!activeEntry) return;
-    const duration = Math.floor((Date.now() - new Date(activeEntry.start_time).getTime()) / 1000);
-    await supabase.from('trackino_time_entries').update({
-      end_time: new Date().toISOString(), duration, is_running: false,
-      description: description.trim(),
-      project_id: selectedProject || null, category_id: selectedCategory || null, task_id: selectedTask || null,
-    }).eq('id', activeEntry.id);
-    // Aktualizovat tagy – smazat staré, přidat nové
-    if (activeEntry) {
-      await supabase.from('trackino_time_entry_tags').delete().eq('time_entry_id', activeEntry.id);
-      if (selectedTags.length > 0) {
-        await supabase.from('trackino_time_entry_tags').insert(
-          selectedTags.map(tagId => ({ time_entry_id: activeEntry.id, tag_id: tagId }))
-        );
+    if (!activeEntry || !currentWorkspace || !user) return;
+    const now = new Date();
+    const startTime = new Date(activeEntry.start_time);
+    const segments = splitAtMidnight(startTime, now);
+
+    if (segments.length === 1) {
+      // Jednoduchý případ – nepřetéká přes půlnoc
+      const duration = Math.floor((now.getTime() - startTime.getTime()) / 1000);
+      await supabase.from('trackino_time_entries').update({
+        end_time: now.toISOString(), duration, is_running: false,
+        description: description.trim(),
+        project_id: selectedProject || null, category_id: selectedCategory || null, task_id: selectedTask || null,
+      }).eq('id', activeEntry.id);
+    } else {
+      // Půlnoční split – UPDATE první segment, INSERT dalších
+      const firstSeg = segments[0];
+      const firstDuration = Math.floor((firstSeg.end.getTime() - firstSeg.start.getTime()) / 1000);
+      await supabase.from('trackino_time_entries').update({
+        end_time: firstSeg.end.toISOString(), duration: firstDuration, is_running: false,
+        description: description.trim(),
+        project_id: selectedProject || null, category_id: selectedCategory || null, task_id: selectedTask || null,
+      }).eq('id', activeEntry.id);
+
+      // INSERT následujících segmentů
+      for (let i = 1; i < segments.length; i++) {
+        const seg = segments[i];
+        const segDuration = Math.floor((seg.end.getTime() - seg.start.getTime()) / 1000);
+        const { data: newEntry } = await supabase.from('trackino_time_entries').insert({
+          workspace_id: currentWorkspace.id, user_id: user.id,
+          description: description.trim(),
+          project_id: selectedProject || null, category_id: selectedCategory || null, task_id: selectedTask || null,
+          start_time: seg.start.toISOString(), end_time: seg.end.toISOString(),
+          duration: segDuration, is_running: false,
+        }).select().single();
+
+        // Zkopírovat tagy na nový segment
+        if (newEntry && selectedTags.length > 0) {
+          await supabase.from('trackino_time_entry_tags').insert(
+            selectedTags.map(tagId => ({ time_entry_id: newEntry.id, tag_id: tagId }))
+          );
+        }
       }
     }
+
+    // Aktualizovat tagy původního záznamu
+    await supabase.from('trackino_time_entry_tags').delete().eq('time_entry_id', activeEntry.id);
+    if (selectedTags.length > 0) {
+      await supabase.from('trackino_time_entry_tags').insert(
+        selectedTags.map(tagId => ({ time_entry_id: activeEntry.id, tag_id: tagId }))
+      );
+    }
+
     setIsRunning(false); setActiveEntry(null); setElapsed(0);
     setDescription(''); setSelectedProject(''); setSelectedCategory(''); setSelectedTask(''); setSelectedTags([]);
     onEntryChanged?.();
