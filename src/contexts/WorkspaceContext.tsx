@@ -81,12 +81,26 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
       if (!existing) {
         // Nový člen čeká na schválení adminem (approved = false)
-        await supabase.from('trackino_workspace_members').insert({
+        const { error: insertError } = await supabase.from('trackino_workspace_members').insert({
           workspace_id: ws.id,
           user_id: userId,
           role: 'member',
           approved: false,
         });
+
+        if (insertError) {
+          // Fallback: pokud sloupec approved ještě neexistuje v DB, přidat bez něj
+          console.warn('Insert s approved selhal, zkouším bez něj:', insertError.message);
+          const { error: fallbackError } = await supabase.from('trackino_workspace_members').insert({
+            workspace_id: ws.id,
+            user_id: userId,
+            role: 'member',
+          });
+          if (fallbackError) {
+            console.warn('Fallback insert také selhal:', fallbackError.message);
+            return false;
+          }
+        }
       }
 
       return true;
