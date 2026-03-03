@@ -64,51 +64,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  // Připojení uživatele k workspace přes join code
-  async function handlePendingWorkspaceJoin(userId: string) {
-    const pendingCode = localStorage.getItem('trackino_pending_join_code');
-    if (!pendingCode) return;
-
-    try {
-      // Najít workspace podle join_code
-      const { data: workspace, error: wsError } = await supabase
-        .from('trackino_workspaces')
-        .select('id, name')
-        .eq('join_code', pendingCode.trim().toUpperCase())
-        .single();
-
-      if (wsError || !workspace) {
-        console.warn('Workspace s kódem nenalezen:', pendingCode);
-        localStorage.removeItem('trackino_pending_join_code');
-        return;
-      }
-
-      // Zkontrolovat, zda uživatel již není členem
-      const { data: existingMember } = await supabase
-        .from('trackino_workspace_members')
-        .select('id')
-        .eq('workspace_id', workspace.id)
-        .eq('user_id', userId)
-        .single();
-
-      if (!existingMember) {
-        // Přidat uživatele jako member
-        await supabase
-          .from('trackino_workspace_members')
-          .insert({
-            workspace_id: workspace.id,
-            user_id: userId,
-            role: 'member',
-          });
-      }
-
-      console.log('Uživatel připojen k workspace:', workspace.name);
-    } catch (err) {
-      console.warn('Chyba při připojení k workspace:', err);
-    } finally {
-      localStorage.removeItem('trackino_pending_join_code');
-    }
-  }
 
   useEffect(() => {
     if (initialized.current) return;
@@ -124,13 +79,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (currentSession?.user) {
           // Použijeme setTimeout pro oddělení od auth callbacku
           // Tím zabráníme deadlocku na Navigator Lock
-          setTimeout(async () => {
-            await fetchProfile(currentSession.user.id);
-
-            // Po přihlášení zkontrolovat čekající join code (z registrace)
-            if (event === 'SIGNED_IN') {
-              await handlePendingWorkspaceJoin(currentSession.user.id);
-            }
+          setTimeout(() => {
+            fetchProfile(currentSession.user.id);
           }, 0);
         } else {
           setProfile(null);

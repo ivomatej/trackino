@@ -49,6 +49,49 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     }
   }, [user]);
 
+  // Připojení k workspace pomocí join kódu (z localStorage po registraci)
+  async function tryJoinWorkspaceByCode(userId: string): Promise<boolean> {
+    const pendingCode = localStorage.getItem('trackino_pending_join_code');
+    if (!pendingCode) return false;
+
+    // Vždy odstranit kód z localStorage (i při chybě)
+    localStorage.removeItem('trackino_pending_join_code');
+
+    try {
+      const { data: ws } = await supabase
+        .from('trackino_workspaces')
+        .select('id, name')
+        .eq('join_code', pendingCode.trim().toUpperCase())
+        .single();
+
+      if (!ws) {
+        console.warn('Workspace s kódem nenalezen:', pendingCode);
+        return false;
+      }
+
+      // Zkontrolovat, zda uživatel již není členem
+      const { data: existing } = await supabase
+        .from('trackino_workspace_members')
+        .select('id')
+        .eq('workspace_id', ws.id)
+        .eq('user_id', userId)
+        .single();
+
+      if (!existing) {
+        await supabase.from('trackino_workspace_members').insert({
+          workspace_id: ws.id,
+          user_id: userId,
+          role: 'member',
+        });
+      }
+
+      return true;
+    } catch (err) {
+      console.warn('Chyba při připojení k workspace:', err);
+      return false;
+    }
+  }
+
   // Načtení workspaces uživatele
   const fetchWorkspaces = useCallback(async () => {
     if (!user) {
@@ -66,6 +109,39 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         .eq('user_id', user.id);
 
       if (!members || members.length === 0) {
+        // Zkusit připojit k workspace pomocí čekajícího join kódu
+        const joined = await tryJoinWorkspaceByCode(user.id);
+
+        if (joined) {
+          // Znovu načíst workspaces po úspěšném připojení
+          const { data: newMembers } = await supabase
+            .from('trackino_workspace_members')
+            .select('workspace_id')
+            .eq('user_id', user.id);
+
+          if (newMembers && newMembers.length > 0) {
+            const newIds = newMembers.map(m => m.workspace_id);
+            const { data: wsData } = await supabase
+              .from('trackino_workspaces')
+              .select('*')
+              .in('id', newIds)
+              .order('name');
+
+            const ws = (wsData ?? []) as Workspace[];
+            setWorkspaces(ws);
+
+            const savedId = localStorage.getItem(WORKSPACE_STORAGE_KEY);
+            const saved = ws.find(w => w.id === savedId);
+            if (saved) {
+              await selectWorkspaceInternal(saved);
+            } else if (ws.length === 1) {
+              await selectWorkspaceInternal(ws[0]);
+            }
+            setLoading(false);
+            return;
+          }
+        }
+
         setWorkspaces([]);
         setCurrentWorkspace(null);
         setLoading(false);
