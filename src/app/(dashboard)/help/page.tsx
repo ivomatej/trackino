@@ -56,6 +56,7 @@ const DEFAULT_HELP_CONTENT = `
 
 <h3>Dovolená</h3>
 <p>Stránka <strong>Dovolená</strong> (v sekci Sledování) je dostupná uživatelům s příznakem „Může čerpat dovolenou" (nastavuje admin v Tým → editace člena). Záznamy se přidávají zadáním začátku a konce dovolené – počet pracovních dnů (pondělí–pátek) se vypočítá automaticky. Přehled kartiček zobrazuje čerpáno / zbývá / celkový nárok dle nastavení workspace (Nastavení → Dovolené). Admini vidí a spravují záznamy všech uživatelů.</p>
+<p><strong>Synchronizace s Plánovačem:</strong> Přidání záznamu dovolené automaticky nastaví stav „Dovolená" v Plánovači pro všechny dny v zadaném rozsahu (včetně víkendů, pokud jsou v rozsahu). Smazání záznamu stav v Plánovači odebere. Aby sync fungoval, musí v Plánovači existovat stav s přesným názvem <strong>„Dovolená"</strong> (velké D, háček nad A).</p>
 
 <h3>Přiřazení manažerů (Tým → Manažeři)</h3>
 <p>Admin workspace může v záložce <strong>Manažeři</strong> (v sekci Tým) definovat, kdo je čí Team Manažer. Kliknutím na tlačítko manažera se toto přiřazení okamžitě aktivuje nebo odebere. Každý člen může mít více manažerů. Přiřazení se promítá do stránky <strong>Podřízení</strong>, kde manažer vidí záznamy svých podřízených.</p>
@@ -110,6 +111,7 @@ const DEFAULT_HELP_CONTENT = `
   <li><strong>Navigace týdnem</strong> – šipky vlevo/vpravo přepínají mezi týdny; tlačítko „Dnes" skočí na aktuální týden</li>
   <li><strong>Připnutí kolegů</strong> – kliknutím na hvězdičku vedle jména lze kolegu „připnout" na začátek seznamu pro rychlý přístup</li>
   <li><strong>Viditelnost</strong> – Admin/Master Admin vidí všechny členy; Team Manager vidí sebe a svůj tým; Member vidí sebe a spoluhráče se stejným manažerem</li>
+  <li><strong>Synchronizace s Dovolená</strong> – nastavení stavu „Dovolená" (celý den, ne DOP/ODP) pro uživatele s příznakem „Může čerpat dovolenou" automaticky vytvoří 1denní záznam v Dovolené (pouze pracovní dny Po–Pá). Odebrání stavu nebo změna na jiný stav smaže odpovídající 1denní záznam z Dovolené. Vícedenní záznamy vytvořené ze stránky Dovolená se touto akcí nemažou. Aby sync fungoval, stav musí mít přesný název <strong>„Dovolená"</strong>.</li>
 </ul>
 <p><strong>SQL migrace (nutno spustit v Supabase):</strong> Plánovač vyžaduje 3 nové tabulky: <code>trackino_availability_statuses</code>, <code>trackino_availability</code> a <code>trackino_planner_pins</code>.</p>
 

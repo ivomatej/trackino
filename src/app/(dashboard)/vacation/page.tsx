@@ -53,6 +53,65 @@ function VacationContent() {
 
   const computedDays = formStartDate && formEndDate ? calcWorkDays(formStartDate, formEndDate) : 0;
 
+  // ─── Sync: Dovolená → Plánovač ─────────────────────────────────────────────
+
+  const syncVacationToPlanner = async (startDate: string, endDate: string, userId: string, workspaceId: string) => {
+    // Najdi stav "Dovolená" v Plánovači
+    const { data: statuses } = await supabase
+      .from('trackino_availability_statuses')
+      .select('id, name')
+      .eq('workspace_id', workspaceId);
+    const vs = (statuses ?? []).find((s: { id: string; name: string }) =>
+      s.name.trim().toLowerCase() === 'dovolená'
+    );
+    if (!vs) return; // Stav "Dovolená" v Plánovači neexistuje, přeskočit
+
+    // Sestav seznam všech dnů v rozsahu (včetně víkendů – Plánovač je zobrazuje)
+    const dates: string[] = [];
+    const cur = new Date(startDate);
+    const end = new Date(endDate);
+    while (cur <= end) {
+      dates.push(cur.toISOString().slice(0, 10));
+      cur.setDate(cur.getDate() + 1);
+    }
+    if (dates.length === 0) return;
+
+    // Upsert availability pro každý den
+    await supabase.from('trackino_availability').upsert(
+      dates.map(date => ({
+        workspace_id: workspaceId,
+        user_id: userId,
+        date,
+        half: 'full',
+        status_id: vs.id,
+        note: '',
+      })),
+      { onConflict: 'workspace_id,user_id,date,half' }
+    );
+  };
+
+  const removeVacationFromPlanner = async (startDate: string, endDate: string, userId: string, workspaceId: string) => {
+    // Najdi stav "Dovolená" v Plánovači
+    const { data: statuses } = await supabase
+      .from('trackino_availability_statuses')
+      .select('id, name')
+      .eq('workspace_id', workspaceId);
+    const vs = (statuses ?? []).find((s: { id: string; name: string }) =>
+      s.name.trim().toLowerCase() === 'dovolená'
+    );
+    if (!vs) return;
+
+    // Smaž availability záznamy kde status = Dovolená a half = full pro dané dny
+    await supabase.from('trackino_availability')
+      .delete()
+      .eq('workspace_id', workspaceId)
+      .eq('user_id', userId)
+      .eq('status_id', vs.id)
+      .eq('half', 'full')
+      .gte('date', startDate)
+      .lte('date', endDate);
+  };
+
   const fetchData = useCallback(async () => {
     if (!currentWorkspace || !user) return;
     setLoading(true);
@@ -122,7 +181,7 @@ function VacationContent() {
   const addEntry = async () => {
     if (!currentWorkspace || !user || !formStartDate || !formEndDate || computedDays === 0) return;
     setSaving(true);
-    const targetUserId = (isWorkspaceAdmin && selectedUserId !== 'me') ? selectedUserId : user.id;
+    const targetUserId = (isWorkspaceAdmin && formUserId && formUserId !== user.id) ? formUserId : user.id;
     await supabase.from('trackino_vacation_entries').insert({
       workspace_id: currentWorkspace.id,
       user_id: targetUserId,
@@ -131,6 +190,8 @@ function VacationContent() {
       days: computedDays,
       note: formNote.trim(),
     });
+    // Sync do Plánovače: nastav stav "Dovolená" pro všechny dny v rozsahu
+    await syncVacationToPlanner(formStartDate, formEndDate, targetUserId, currentWorkspace.id);
     setFormStartDate('');
     setFormEndDate('');
     setFormNote('');
@@ -141,7 +202,13 @@ function VacationContent() {
 
   const deleteEntry = async (id: string) => {
     if (!confirm('Opravdu smazat tento záznam dovolené?')) return;
+    // Najdi záznam před smazáním (potřebujeme start_date, end_date, user_id pro sync)
+    const entry = entries.find(e => e.id === id);
     await supabase.from('trackino_vacation_entries').delete().eq('id', id);
+    // Sync do Plánovače: odeber stav "Dovolená" pro dny záznamu
+    if (entry && currentWorkspace) {
+      await removeVacationFromPlanner(entry.start_date, entry.end_date, entry.user_id, currentWorkspace.id);
+    }
     fetchData();
   };
 

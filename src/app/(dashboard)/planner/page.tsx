@@ -244,6 +244,8 @@ function PlannerContent() {
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [cells, setCells] = useState<Record<CellKey, CellData>>({});
   const [pins, setPins] = useState<string[]>([]);
+  // Mapa userId → can_use_vacation (pro sync Plánovač → Dovolená)
+  const [canUseVacMap, setCanUseVacMap] = useState<Record<string, boolean>>({});
 
   /**
    * splitDays = Set of DayKeys (`${userId}|${date}`) zobrazených v rozděleném režimu (DOP+ODP).
@@ -288,12 +290,19 @@ function PlannerContent() {
 
     const { data: memberData } = await supabase
       .from('trackino_workspace_members')
-      .select('user_id')
+      .select('user_id, can_use_vacation')
       .eq('workspace_id', currentWorkspace.id)
       .eq('approved', true);
 
     if (!memberData) return;
-    const userIds = memberData.map((m: { user_id: string }) => m.user_id);
+    const userIds = (memberData as { user_id: string; can_use_vacation: boolean }[]).map(m => m.user_id);
+
+    // Sestavit mapu can_use_vacation
+    const vacMap: Record<string, boolean> = {};
+    (memberData as { user_id: string; can_use_vacation: boolean }[]).forEach(m => {
+      vacMap[m.user_id] = m.can_use_vacation ?? false;
+    });
+    setCanUseVacMap(vacMap);
 
     const { data: profileData } = await supabase
       .from('trackino_profiles')
@@ -506,6 +515,42 @@ function PlannerContent() {
     setEditingCell({ userId, date, half });
   };
 
+  // ── Sync Plánovač → Dovolená ─────────────────────────────────────────────
+
+  /** Vytvoří 1denní vacation záznam pro daný den, pokud ještě neexistuje. */
+  const syncPlannerDayToVacation = async (userId: string, date: string) => {
+    if (!currentWorkspace) return;
+    // Dedup: existuje vacation záznam pokrývající tento datum?
+    const { data: existing } = await supabase
+      .from('trackino_vacation_entries')
+      .select('id')
+      .eq('workspace_id', currentWorkspace.id)
+      .eq('user_id', userId)
+      .lte('start_date', date)
+      .gte('end_date', date);
+    if (existing && existing.length > 0) return;
+
+    await supabase.from('trackino_vacation_entries').insert({
+      workspace_id: currentWorkspace.id,
+      user_id: userId,
+      start_date: date,
+      end_date: date,
+      days: 1,
+      note: '',
+    });
+  };
+
+  /** Smaže 1denní vacation záznamy pro daný den (vícedenní záznamy nechá). */
+  const removePlannerDayFromVacation = async (userId: string, date: string) => {
+    if (!currentWorkspace) return;
+    await supabase.from('trackino_vacation_entries')
+      .delete()
+      .eq('workspace_id', currentWorkspace.id)
+      .eq('user_id', userId)
+      .eq('start_date', date)
+      .eq('end_date', date);
+  };
+
   // ── Nastavení stavu dostupnosti ───────────────────────────────────────────
 
   const setAvailability = async (statusId: string | null, note?: string) => {
@@ -513,6 +558,7 @@ function PlannerContent() {
     const { userId, date, half } = editingCell;
     const key = `${userId}|${date}|${half}`;
     const existing = cells[key];
+    const oldStatusId = existing?.statusId ?? null;
 
     if (statusId === null) {
       await supabase.from('trackino_availability').delete()
@@ -540,6 +586,22 @@ function PlannerContent() {
         ...prev,
         [key]: { statusId, note: note ?? existing?.note ?? '' },
       }));
+    }
+
+    // ── Sync Plánovač → Dovolená (pouze pro half='full') ──────────────────
+    const vacStatus = statuses.find(s => s.name.trim().toLowerCase() === 'dovolená');
+    if (vacStatus && half === 'full') {
+      // Použít T12:00:00 pro správné určení weekday bez timezone problémů
+      const isWeekday = ![0, 6].includes(new Date(date + 'T12:00:00').getDay());
+      if (statusId === vacStatus.id) {
+        // Nastavení stavu Dovolená → vytvoř vacation záznam (jen pracovní dny + can_use_vacation)
+        if (isWeekday && canUseVacMap[userId]) {
+          await syncPlannerDayToVacation(userId, date);
+        }
+      } else if (oldStatusId === vacStatus.id) {
+        // Odebrání stavu Dovolená (null nebo jiný stav) → smaž 1denní vacation záznam
+        await removePlannerDayFromVacation(userId, date);
+      }
     }
 
     setEditingCell(null);
