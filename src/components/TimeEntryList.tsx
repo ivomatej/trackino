@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
-import type { Project, TimeEntry } from '@/types/database';
+import type { Project, TimeEntry, Tag } from '@/types/database';
 
 interface TimeEntryListProps {
   refreshKey?: number;
@@ -12,6 +12,7 @@ interface TimeEntryListProps {
 
 interface EntryWithProject extends TimeEntry {
   project?: Project | null;
+  tags?: Tag[];
 }
 
 interface DayGroup {
@@ -26,6 +27,8 @@ export default function TimeEntryList({ refreshKey }: TimeEntryListProps) {
   const { currentWorkspace } = useWorkspace();
   const [days, setDays] = useState<DayGroup[]>([]);
   const [projects, setProjects] = useState<Record<string, Project>>({});
+  const [allTags, setAllTags] = useState<Record<string, Tag>>({});
+  const [entryTagMap, setEntryTagMap] = useState<Record<string, string[]>>({}); // entryId -> tagIds[]
   const [loading, setLoading] = useState(true);
   const [editingEntry, setEditingEntry] = useState<string | null>(null);
   const [editDescription, setEditDescription] = useState('');
@@ -37,7 +40,7 @@ export default function TimeEntryList({ refreshKey }: TimeEntryListProps) {
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
 
-    const [entriesRes, projectsRes] = await Promise.all([
+    const [entriesRes, projectsRes, tagsRes] = await Promise.all([
       supabase
         .from('trackino_time_entries')
         .select('*')
@@ -50,15 +53,40 @@ export default function TimeEntryList({ refreshKey }: TimeEntryListProps) {
         .from('trackino_projects')
         .select('*')
         .eq('workspace_id', currentWorkspace.id),
+      supabase
+        .from('trackino_tags')
+        .select('*')
+        .eq('workspace_id', currentWorkspace.id),
     ]);
 
     const entries = (entriesRes.data ?? []) as TimeEntry[];
     const projectsList = (projectsRes.data ?? []) as Project[];
+    const tagsList = (tagsRes.data ?? []) as Tag[];
 
     // Projekty do mapy
     const projectMap: Record<string, Project> = {};
     projectsList.forEach(p => { projectMap[p.id] = p; });
     setProjects(projectMap);
+
+    // Tagy do mapy
+    const tagMap: Record<string, Tag> = {};
+    tagsList.forEach(t => { tagMap[t.id] = t; });
+    setAllTags(tagMap);
+
+    // Načíst tag vazby pro všechny záznamy
+    const entryIds = entries.map(e => e.id);
+    const etMap: Record<string, string[]> = {};
+    if (entryIds.length > 0) {
+      const { data: etData } = await supabase
+        .from('trackino_time_entry_tags')
+        .select('time_entry_id, tag_id')
+        .in('time_entry_id', entryIds);
+      (etData ?? []).forEach((et: { time_entry_id: string; tag_id: string }) => {
+        if (!etMap[et.time_entry_id]) etMap[et.time_entry_id] = [];
+        etMap[et.time_entry_id].push(et.tag_id);
+      });
+    }
+    setEntryTagMap(etMap);
 
     // Seskupení podle dnů
     const grouped: Record<string, EntryWithProject[]> = {};
@@ -103,6 +131,7 @@ export default function TimeEntryList({ refreshKey }: TimeEntryListProps) {
   };
 
   const deleteEntry = async (id: string) => {
+    await supabase.from('trackino_time_entry_tags').delete().eq('time_entry_id', id);
     await supabase.from('trackino_time_entries').delete().eq('id', id);
     fetchEntries();
   };
@@ -195,17 +224,32 @@ export default function TimeEntryList({ refreshKey }: TimeEntryListProps) {
                       {entry.description || '(bez popisu)'}
                     </div>
                   )}
-                  {entry.project && (
-                    <div className="flex items-center gap-1.5 mt-1">
-                      <span
-                        className="w-2 h-2 rounded-full inline-block"
-                        style={{ background: entry.project.color }}
-                      />
-                      <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                        {entry.project.name}
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    {entry.project && (
+                      <span className="inline-flex items-center gap-1">
+                        <span
+                          className="w-2 h-2 rounded-full inline-block"
+                          style={{ background: entry.project.color }}
+                        />
+                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                          {entry.project.name}
+                        </span>
                       </span>
-                    </div>
-                  )}
+                    )}
+                    {(entryTagMap[entry.id]?.length > 0) && entryTagMap[entry.id].map(tagId => {
+                      const tag = allTags[tagId];
+                      if (!tag) return null;
+                      return (
+                        <span
+                          key={tagId}
+                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium"
+                          style={{ background: tag.color + '20', color: tag.color }}
+                        >
+                          {tag.name}
+                        </span>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 {/* Čas */}

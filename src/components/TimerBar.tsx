@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { canManualEntry } from '@/lib/permissions';
+import TagPicker from '@/components/TagPicker';
 import type { Project, Category, Task, TimeEntry, RequiredFields } from '@/types/database';
 
 interface TimerBarProps {
@@ -23,6 +24,7 @@ export default function TimerBar({ onEntryChanged }: TimerBarProps) {
   const [selectedProject, setSelectedProject] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedTask, setSelectedTask] = useState<string>('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -94,6 +96,12 @@ export default function TimerBar({ onEntryChanged }: TimerBarProps) {
       setSelectedProject(entry.project_id || '');
       setSelectedCategory(entry.category_id || '');
       setSelectedTask(entry.task_id || '');
+      // Načíst tagy aktivního záznamu
+      const { data: tagLinks } = await supabase
+        .from('trackino_time_entry_tags')
+        .select('tag_id')
+        .eq('time_entry_id', entry.id);
+      if (tagLinks) setSelectedTags(tagLinks.map((t: { tag_id: string }) => t.tag_id));
       const start = new Date(entry.start_time).getTime();
       setElapsed(Math.floor((Date.now() - start) / 1000));
     }
@@ -125,7 +133,7 @@ export default function TimerBar({ onEntryChanged }: TimerBarProps) {
     if (rf.project && !selectedProject) return 'Projekt je povinný';
     if (rf.category && !selectedCategory) return 'Kategorie je povinná';
     if (rf.task && !selectedTask) return 'Úkol je povinný';
-    // Štítek se bude validovat až po přidání TagPicker (Fáze 2)
+    if (rf.tag && selectedTags.length === 0) return 'Štítek je povinný';
     return null;
   };
 
@@ -145,7 +153,18 @@ export default function TimerBar({ onEntryChanged }: TimerBarProps) {
         start_time: new Date().toISOString(), is_running: true,
       })
       .select().single();
-    if (!error && data) { setActiveEntry(data as TimeEntry); setIsRunning(true); setElapsed(0); }
+    if (!error && data) {
+      const entry = data as TimeEntry;
+      setActiveEntry(entry);
+      setIsRunning(true);
+      setElapsed(0);
+      // Uložit tagy
+      if (selectedTags.length > 0) {
+        await supabase.from('trackino_time_entry_tags').insert(
+          selectedTags.map(tagId => ({ time_entry_id: entry.id, tag_id: tagId }))
+        );
+      }
+    }
   };
 
   const stopTimer = async () => {
@@ -156,16 +175,26 @@ export default function TimerBar({ onEntryChanged }: TimerBarProps) {
       description: description.trim(),
       project_id: selectedProject || null, category_id: selectedCategory || null, task_id: selectedTask || null,
     }).eq('id', activeEntry.id);
+    // Aktualizovat tagy – smazat staré, přidat nové
+    if (activeEntry) {
+      await supabase.from('trackino_time_entry_tags').delete().eq('time_entry_id', activeEntry.id);
+      if (selectedTags.length > 0) {
+        await supabase.from('trackino_time_entry_tags').insert(
+          selectedTags.map(tagId => ({ time_entry_id: activeEntry.id, tag_id: tagId }))
+        );
+      }
+    }
     setIsRunning(false); setActiveEntry(null); setElapsed(0);
-    setDescription(''); setSelectedProject(''); setSelectedCategory(''); setSelectedTask('');
+    setDescription(''); setSelectedProject(''); setSelectedCategory(''); setSelectedTask(''); setSelectedTags([]);
     onEntryChanged?.();
   };
 
   const discardTimer = async () => {
     if (!activeEntry) return;
+    await supabase.from('trackino_time_entry_tags').delete().eq('time_entry_id', activeEntry.id);
     await supabase.from('trackino_time_entries').delete().eq('id', activeEntry.id);
     setIsRunning(false); setActiveEntry(null); setElapsed(0);
-    setDescription(''); setSelectedProject(''); setSelectedCategory(''); setSelectedTask('');
+    setDescription(''); setSelectedProject(''); setSelectedCategory(''); setSelectedTask(''); setSelectedTags([]);
   };
 
   // Manual entry save
@@ -187,7 +216,7 @@ export default function TimerBar({ onEntryChanged }: TimerBarProps) {
     setManualError('');
     setManualSaving(true);
 
-    const { error: dbError } = await supabase
+    const { data: insertedEntry, error: dbError } = await supabase
       .from('trackino_time_entries')
       .insert({
         workspace_id: currentWorkspace.id,
@@ -200,17 +229,26 @@ export default function TimerBar({ onEntryChanged }: TimerBarProps) {
         end_time: end.toISOString(),
         duration,
         is_running: false,
-      });
+      })
+      .select()
+      .single();
 
     setManualSaving(false);
 
     if (dbError) {
       setManualError(dbError.message);
     } else {
+      // Uložit tagy
+      if (insertedEntry && selectedTags.length > 0) {
+        await supabase.from('trackino_time_entry_tags').insert(
+          selectedTags.map(tagId => ({ time_entry_id: insertedEntry.id, tag_id: tagId }))
+        );
+      }
       setDescription('');
       setSelectedProject('');
       setSelectedCategory('');
       setSelectedTask('');
+      setSelectedTags([]);
       setManualStart('09:00');
       setManualEnd('10:00');
       setManualDate(new Date().toISOString().split('T')[0]);
@@ -467,6 +505,9 @@ export default function TimerBar({ onEntryChanged }: TimerBarProps) {
           </div>
         )}
       </div>
+
+      {/* Tag picker */}
+      <TagPicker selectedTagIds={selectedTags} onChange={setSelectedTags} />
 
       {/* Validační chyba */}
       {validationError && (

@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import DashboardLayout from '@/components/DashboardLayout';
 import { WorkspaceProvider } from '@/contexts/WorkspaceContext';
-import type { Project } from '@/types/database';
+import type { Project, Client, ClientProject } from '@/types/database';
 
 const PROJECT_COLORS = [
   '#2563eb', '#dc2626', '#16a34a', '#ca8a04', '#9333ea',
@@ -17,28 +17,44 @@ function ProjectsContent() {
   const { user } = useAuth();
   const { currentWorkspace, userRole } = useWorkspace();
   const [projects, setProjects] = useState<Project[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [clientProjectMap, setClientProjectMap] = useState<Record<string, string[]>>({}); // projectId -> clientIds[]
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
 
   // Formulářové stavy
   const [name, setName] = useState('');
-  const [client, setClient] = useState('');
+  const [selectedClients, setSelectedClients] = useState<string[]>([]);
   const [color, setColor] = useState(PROJECT_COLORS[0]);
   const [saving, setSaving] = useState(false);
+  const [showClientPicker, setShowClientPicker] = useState(false);
 
   const isAdmin = userRole === 'owner' || userRole === 'admin' || userRole === 'manager';
 
   const fetchProjects = useCallback(async () => {
     if (!currentWorkspace) return;
-    const { data } = await supabase
-      .from('trackino_projects')
-      .select('*')
-      .eq('workspace_id', currentWorkspace.id)
-      .order('archived')
-      .order('name');
+    const [projectsRes, clientsRes, cpRes] = await Promise.all([
+      supabase.from('trackino_projects').select('*').eq('workspace_id', currentWorkspace.id).order('archived').order('name'),
+      supabase.from('trackino_clients').select('*').eq('workspace_id', currentWorkspace.id).order('name'),
+      supabase.from('trackino_client_projects').select('*'),
+    ]);
 
-    setProjects((data ?? []) as Project[]);
+    const allProjects = (projectsRes.data ?? []) as Project[];
+    const allClients = (clientsRes.data ?? []) as Client[];
+    const allCp = (cpRes.data ?? []) as ClientProject[];
+
+    setProjects(allProjects);
+    setClients(allClients);
+
+    // Sestavit mapu: projectId -> [clientId, ...]
+    const cpMap: Record<string, string[]> = {};
+    allCp.forEach(cp => {
+      if (!cpMap[cp.project_id]) cpMap[cp.project_id] = [];
+      cpMap[cp.project_id].push(cp.client_id);
+    });
+    setClientProjectMap(cpMap);
+
     setLoading(false);
   }, [currentWorkspace]);
 
@@ -48,16 +64,17 @@ function ProjectsContent() {
 
   const resetForm = () => {
     setName('');
-    setClient('');
+    setSelectedClients([]);
     setColor(PROJECT_COLORS[Math.floor(Math.random() * PROJECT_COLORS.length)]);
     setEditingProject(null);
     setShowForm(false);
+    setShowClientPicker(false);
   };
 
   const openEdit = (project: Project) => {
     setEditingProject(project);
     setName(project.name);
-    setClient(project.client || '');
+    setSelectedClients(clientProjectMap[project.id] ?? []);
     setColor(project.color);
     setShowForm(true);
   };
@@ -66,20 +83,35 @@ function ProjectsContent() {
     if (!currentWorkspace || !name.trim()) return;
     setSaving(true);
 
+    let projectId: string;
+
     if (editingProject) {
       await supabase
         .from('trackino_projects')
-        .update({ name: name.trim(), client: client.trim() || null, color })
+        .update({ name: name.trim(), color })
         .eq('id', editingProject.id);
+      projectId = editingProject.id;
+
+      // Smazat staré klientské vazby
+      await supabase.from('trackino_client_projects').delete().eq('project_id', projectId);
     } else {
-      await supabase
+      const { data } = await supabase
         .from('trackino_projects')
         .insert({
           workspace_id: currentWorkspace.id,
           name: name.trim(),
-          client: client.trim() || null,
           color,
-        });
+        })
+        .select()
+        .single();
+      projectId = data?.id;
+    }
+
+    // Uložit klientské vazby
+    if (projectId && selectedClients.length > 0) {
+      await supabase.from('trackino_client_projects').insert(
+        selectedClients.map(clientId => ({ client_id: clientId, project_id: projectId }))
+      );
     }
 
     setSaving(false);
@@ -157,18 +189,69 @@ function ProjectsContent() {
                   style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
                 />
               </div>
-              <div>
+              <div className="relative">
                 <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
                   Klient
                 </label>
-                <input
-                  type="text"
-                  value={client}
-                  onChange={(e) => setClient(e.target.value)}
-                  placeholder="např. Four Crowns"
-                  className="w-full px-3 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-                  style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
-                />
+                <button
+                  type="button"
+                  onClick={() => setShowClientPicker(!showClientPicker)}
+                  className="w-full px-3 py-2.5 rounded-lg border text-sm text-left focus:outline-none focus:ring-2 focus:ring-[var(--primary)] flex items-center justify-between"
+                  style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: selectedClients.length > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}
+                >
+                  <span className="truncate">
+                    {selectedClients.length > 0
+                      ? selectedClients.map(id => clients.find(c => c.id === id)?.name).filter(Boolean).join(', ')
+                      : 'Vyberte klienta...'}
+                  </span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="flex-shrink-0">
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+                {showClientPicker && (
+                  <div
+                    className="absolute top-full left-0 right-0 mt-1 rounded-lg border shadow-lg z-50 max-h-48 overflow-y-auto py-1"
+                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}
+                  >
+                    <button
+                      onClick={() => { setSelectedClients([]); setShowClientPicker(false); }}
+                      className="w-full text-left px-3 py-2 text-xs transition-colors"
+                      style={{ color: 'var(--text-muted)' }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                    >
+                      Bez klienta
+                    </button>
+                    {clients.map(c => {
+                      const isSelected = selectedClients.includes(c.id);
+                      return (
+                        <button
+                          key={c.id}
+                          onClick={() => {
+                            if (isSelected) {
+                              setSelectedClients(selectedClients.filter(id => id !== c.id));
+                            } else {
+                              setSelectedClients([...selectedClients, c.id]);
+                            }
+                          }}
+                          className="w-full text-left px-3 py-2 text-xs transition-colors flex items-center gap-2"
+                          style={{ color: 'var(--text-primary)', background: isSelected ? 'var(--bg-active)' : 'transparent' }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = isSelected ? 'var(--bg-active)' : 'transparent'}
+                        >
+                          <input type="checkbox" checked={isSelected} readOnly className="w-3.5 h-3.5 rounded" style={{ accentColor: c.color }} />
+                          <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: c.color }} />
+                          <span className="truncate">{c.name}</span>
+                        </button>
+                      );
+                    })}
+                    {clients.length === 0 && (
+                      <div className="px-3 py-3 text-xs text-center" style={{ color: 'var(--text-muted)' }}>
+                        Vytvořte klienty v sekci Klienti.
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -254,8 +337,19 @@ function ProjectsContent() {
                       <div className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>
                         {project.name}
                       </div>
-                      {project.client && (
-                        <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{project.client}</div>
+                      {(clientProjectMap[project.id]?.length > 0) && (
+                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                          {clientProjectMap[project.id].map(clientId => {
+                            const cl = clients.find(c => c.id === clientId);
+                            if (!cl) return null;
+                            return (
+                              <span key={cl.id} className="inline-flex items-center gap-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+                                <span className="w-2 h-2 rounded-full" style={{ background: cl.color }} />
+                                {cl.name}
+                              </span>
+                            );
+                          })}
+                        </div>
                       )}
                     </div>
                     {isAdmin && (

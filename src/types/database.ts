@@ -171,3 +171,33 @@ export interface ChangelogEntry {
   content: string;
   created_at: string;
 }
+
+// === Fáze 2: Klienti, Štítky ===
+
+export interface Client {
+  id: string;
+  workspace_id: string;
+  name: string;
+  color: string;
+  created_at: string;
+}
+
+export interface ClientProject {
+  id: string;
+  client_id: string;
+  project_id: string;
+}
+
+export interface Tag {
+  id: string;
+  workspace_id: string;
+  name: string;
+  color: string;
+  created_at: string;
+}
+
+export interface TimeEntryTag {
+  id: string;
+  time_entry_id: string;
+  tag_id: string;
+}
