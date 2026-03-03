@@ -94,6 +94,12 @@ function InvoicesContent() {
   // Proplacení
   const [payingId, setPayingId] = useState<string | null>(null);
 
+  // Stahování PDF
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  // Načítání dat z reportů při schvalování
+  const [approveLoading, setApproveLoading] = useState(false);
+
   // Detail faktury
   const [detailInvoice, setDetailInvoice] = useState<InvoiceWithUser | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -207,11 +213,63 @@ function InvoicesContent() {
     setSubmitting(false);
   };
 
-  const openApproveModal = (invoice: InvoiceWithUser) => {
+  const openApproveModal = async (invoice: InvoiceWithUser) => {
     setApproveModalInvoice(invoice);
     setApproveHours('');
     setApproveAmount('');
     setApproveNote('');
+    setApproveLoading(true);
+
+    try {
+      // Rozsah fakturačního měsíce
+      const periodStart = `${invoice.billing_period_year}-${String(invoice.billing_period_month).padStart(2, '0')}-01`;
+      const nextMonth = invoice.billing_period_month === 12 ? 1 : invoice.billing_period_month + 1;
+      const nextYear = invoice.billing_period_month === 12 ? invoice.billing_period_year + 1 : invoice.billing_period_year;
+      const periodEnd = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
+
+      // Hodiny z time entries
+      const { data: entries } = await supabase
+        .from('trackino_time_entries')
+        .select('duration')
+        .eq('workspace_id', currentWorkspace!.id)
+        .eq('user_id', invoice.user_id)
+        .gte('start_time', periodStart)
+        .lt('start_time', periodEnd)
+        .not('duration', 'is', null);
+
+      const totalSeconds = (entries ?? []).reduce((sum: number, e: { duration: number | null }) => sum + (e.duration ?? 0), 0);
+      const totalHours = Math.round((totalSeconds / 3600) * 100) / 100;
+
+      // Hodinová sazba z trackino_member_rates
+      const { data: memberData } = await supabase
+        .from('trackino_workspace_members')
+        .select('id')
+        .eq('workspace_id', currentWorkspace!.id)
+        .eq('user_id', invoice.user_id)
+        .single();
+
+      let rate = 0;
+      if (memberData) {
+        const { data: rateData } = await supabase
+          .from('trackino_member_rates')
+          .select('hourly_rate')
+          .eq('workspace_member_id', (memberData as { id: string }).id)
+          .lte('valid_from', `${invoice.billing_period_year}-${String(invoice.billing_period_month).padStart(2, '0')}-28`)
+          .or(`valid_to.is.null,valid_to.gte.${periodStart}`)
+          .order('valid_from', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (rateData) rate = (rateData as { hourly_rate: number }).hourly_rate;
+      }
+
+      if (totalHours > 0) setApproveHours(String(totalHours));
+      if (totalHours > 0 && rate > 0) setApproveAmount(String(Math.round(totalHours * rate)));
+    } catch (_e) {
+      // Chyba při načítání – pole zůstanou prázdná k ručnímu vyplnění
+    } finally {
+      setApproveLoading(false);
+    }
   };
 
   const approveInvoice = async () => {
@@ -249,6 +307,23 @@ function InvoicesContent() {
     }).eq('id', invoiceId);
     setPayingId(null);
     fetchInvoices();
+  };
+
+  const downloadPdf = async (invoice: InvoiceWithUser) => {
+    if (!invoice.pdf_url) return;
+    setDownloadingId(invoice.id);
+    try {
+      const { data } = await supabase.storage
+        .from('trackino-invoices')
+        .createSignedUrl(invoice.pdf_url, 3600, { download: `faktura-${fmtMonth(invoice.billing_period_year, invoice.billing_period_month)}.pdf` });
+      if (data?.signedUrl) {
+        const a = document.createElement('a');
+        a.href = data.signedUrl;
+        a.click();
+      }
+    } finally {
+      setDownloadingId(null);
+    }
   };
 
   const openDetail = async (invoice: InvoiceWithUser) => {
@@ -341,8 +416,48 @@ function InvoicesContent() {
           )}
         </div>
       </div>
-      <div className="flex items-center gap-2 flex-shrink-0">
+      <div className="flex items-center gap-1.5 flex-shrink-0">
         {renderStatusBadge(invoice.status)}
+
+        {/* Ikona: info – otevře detail */}
+        <button
+          onClick={(e) => { e.stopPropagation(); openDetail(invoice); }}
+          title="Zobrazit detail"
+          className="p-1.5 rounded-lg transition-colors"
+          style={{ color: 'var(--text-muted)' }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-secondary)')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="16" x2="12" y2="12" />
+            <line x1="12" y1="8" x2="12.01" y2="8" />
+          </svg>
+        </button>
+
+        {/* Ikona: stáhnout PDF */}
+        {invoice.pdf_url && (
+          <button
+            onClick={(e) => { e.stopPropagation(); downloadPdf(invoice); }}
+            title="Stáhnout PDF"
+            disabled={downloadingId === invoice.id}
+            className="p-1.5 rounded-lg transition-colors disabled:opacity-50"
+            style={{ color: 'var(--text-muted)' }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-secondary)')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
+          >
+            {downloadingId === invoice.id ? (
+              <div className="w-[15px] h-[15px] border border-current border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+            )}
+          </button>
+        )}
+
         {/* Tlačítka pro schvalování */}
         {activeTab === 'approve' && invoice.status === 'pending' && (
           <button
@@ -663,14 +778,30 @@ function InvoicesContent() {
                   </div>
                 )}
               </div>
+              {approveLoading && (
+                <div className="mb-3 flex items-center gap-2 px-3 py-2 rounded-lg text-xs" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>
+                  <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                  Načítám data z reportů…
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-3 mb-3">
                 <div>
-                  <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Odpracované hodiny</label>
-                  <input type="number" value={approveHours} onChange={(e) => setApproveHours(e.target.value)} placeholder="0" min="0" step="0.5" className={inputCls} style={inputStyle} />
+                  <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                    Odpracované hodiny
+                    {!approveLoading && approveHours && (
+                      <span className="ml-1 font-normal" style={{ color: 'var(--text-muted)' }}>(z reportů)</span>
+                    )}
+                  </label>
+                  <input type="number" value={approveHours} onChange={(e) => setApproveHours(e.target.value)} placeholder="0" min="0" step="0.5" disabled={approveLoading} className={inputCls} style={inputStyle} />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Částka ({currencySymbol})</label>
-                  <input type="number" value={approveAmount} onChange={(e) => setApproveAmount(e.target.value)} placeholder="0" min="0" step="1" className={inputCls} style={inputStyle} />
+                  <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                    Částka ({currencySymbol})
+                    {!approveLoading && approveAmount && (
+                      <span className="ml-1 font-normal" style={{ color: 'var(--text-muted)' }}>(z reportů)</span>
+                    )}
+                  </label>
+                  <input type="number" value={approveAmount} onChange={(e) => setApproveAmount(e.target.value)} placeholder="0" min="0" step="1" disabled={approveLoading} className={inputCls} style={inputStyle} />
                 </div>
               </div>
               <div className="mb-5">
