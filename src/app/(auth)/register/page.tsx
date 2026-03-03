@@ -42,7 +42,6 @@ export default function RegisterPage() {
       setError(signUpError);
       setLoading(false);
     } else {
-      // Zobrazit zprávu o ověření emailu
       setSuccess(true);
       setLoading(false);
     }
@@ -70,31 +69,24 @@ export default function RegisterPage() {
                 <polyline points="20 6 9 17 4 12" />
               </svg>
             </div>
-            <h2 className="text-lg font-bold text-[#0f172a] mb-2">Zkontrolujte svůj e-mail</h2>
-            <p className="text-sm text-[#475569] mb-1">
-              Odeslali jsme vám ověřovací odkaz na
-            </p>
-            <p className="text-sm font-medium text-[#0f172a] mb-4">{email}</p>
-            <p className="text-xs text-[#64748b]">
-              Klikněte na odkaz v e-mailu pro dokončení registrace a přihlášení do aplikace.
+            <h2 className="text-lg font-bold text-[#0f172a] mb-2">Registrace úspěšná!</h2>
+            <p className="text-sm text-[#475569] mb-4">
+              Účet byl vytvořen pro <strong>{email}</strong>.
             </p>
             {workspaceCode.trim() && (
-              <div className="mt-4 p-3 rounded-lg bg-[#f0fdf4] border border-[#bbf7d0]">
-                <p className="text-xs text-[#15803d]">
-                  Po ověření e-mailu budete automaticky přidáni do workspace s kódem <strong>{workspaceCode.trim().toUpperCase()}</strong>.
+              <div className="mb-4 p-3 rounded-lg bg-[#fffbeb] border border-[#fde68a]">
+                <p className="text-xs text-[#92400e]">
+                  <strong>Čeká na schválení:</strong> Správce workspace musí váš přístup schválit, než budete moci pracovat.
                 </p>
               </div>
             )}
-            <p className="text-xs text-[#94a3b8] mt-4">
-              Nenašli jste e-mail? Zkontrolujte složku Spam.
-            </p>
-          </div>
-
-          <p className="text-center text-sm text-[#475569] mt-6">
-            <Link href="/login" className="text-[#2563eb] hover:underline font-medium">
-              Zpět na přihlášení
+            <Link
+              href="/login"
+              className="inline-block w-full py-2.5 bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-medium rounded-lg text-sm transition-colors text-center"
+            >
+              Přihlásit se
             </Link>
-          </p>
+          </div>
         </div>
       </div>
     );

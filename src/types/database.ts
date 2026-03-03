@@ -70,6 +70,7 @@ export interface WorkspaceMember {
   monthly_hours_target: number | null;
   manager_id: string | null; // zpětná kompatibilita, preferovat manager_assignments
   hide_tags: boolean;
+  approved: boolean;
   joined_at: string;
 }
 

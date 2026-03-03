@@ -13,6 +13,8 @@ interface WorkspaceContextType {
   selectWorkspace: (workspace: Workspace) => void;
   createWorkspace: (name: string) => Promise<{ error: string | null }>;
   userRole: UserRole | null;
+  /** Čeká uživatel na schválení adminem? */
+  isPendingApproval: boolean;
   /** Manager assignments pro aktuální workspace (kde je current user managerem) */
   managerAssignments: ManagerAssignment[];
   /** Kontroluje, zda je aktuální uživatel managerem daného uživatele */
@@ -78,10 +80,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         .single();
 
       if (!existing) {
+        // Nový člen čeká na schválení adminem (approved = false)
         await supabase.from('trackino_workspace_members').insert({
           workspace_id: ws.id,
           user_id: userId,
           role: 'member',
+          approved: false,
         });
       }
 
@@ -286,6 +290,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         selectWorkspace,
         createWorkspace,
         userRole: currentMembership?.role ?? null,
+        isPendingApproval: currentMembership?.approved === false,
         managerAssignments,
         isManagerOf,
         refreshWorkspace,

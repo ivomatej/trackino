@@ -156,6 +156,17 @@ function TeamContent() {
     setRegenerating(false);
   };
 
+  const approveMember = async (memberId: string) => {
+    await supabase.from('trackino_workspace_members').update({ approved: true }).eq('id', memberId);
+    fetchData();
+  };
+
+  const rejectMember = async (memberId: string, name: string) => {
+    if (!confirm(`Zamítnout přístup pro "${name}"? Uživatel bude odebrán z workspace.`)) return;
+    await supabase.from('trackino_workspace_members').delete().eq('id', memberId);
+    fetchData();
+  };
+
   const updateMemberRole = async (memberId: string, newRole: UserRole) => {
     await supabase.from('trackino_workspace_members').update({ role: newRole }).eq('id', memberId);
     fetchData();
@@ -282,7 +293,7 @@ function TeamContent() {
                 <div className="mt-3 pt-3 border-t" style={{ borderColor: 'var(--border)' }}>
                   <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
                     <strong style={{ color: 'var(--text-secondary)' }}>Jak to funguje:</strong>{' '}
-                    Nový člen se zaregistruje na přihlašovací stránce a zadá tento kód do pole „Kód workspace". Po ověření e-mailu bude automaticky přidán jako člen.
+                    Nový člen se zaregistruje a zadá tento kód do pole „Kód workspace". Po registraci se objeví níže jako čekající – admin ho schválí.
                   </p>
                   <button
                     onClick={regenerateJoinCode}
@@ -304,82 +315,153 @@ function TeamContent() {
                 <div className="w-6 h-6 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin mx-auto" />
               </div>
             ) : (
-              <div className="space-y-2">
-                {members.map(member => {
-                  const p = member.profile;
-                  const initials = p?.display_name ? p.display_name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) : '?';
-                  const isCurrentUser = member.user_id === user?.id;
-
-                  return (
-                    <div
-                      key={member.id}
-                      className="flex items-center gap-3 px-4 py-3 rounded-lg border group"
-                      style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}
-                    >
-                      {/* Avatar */}
-                      <div
-                        className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-                        style={{ background: p?.avatar_color ?? 'var(--primary)' }}
-                      >
-                        {initials}
-                      </div>
-
-                      {/* Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                            {p?.display_name ?? 'Neznámý'}
-                          </span>
-                          {isCurrentUser && <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'var(--primary-light)', color: 'var(--primary)' }}>Ty</span>}
-                        </div>
-                        <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{p?.email}</div>
-                      </div>
-
-                      {/* Role */}
-                      {isWorkspaceAdmin && !isCurrentUser ? (
-                        <select
-                          value={member.role}
-                          onChange={(e) => updateMemberRole(member.id, e.target.value as UserRole)}
-                          className="px-2 py-1 rounded-md border text-xs"
-                          style={inputStyle}
-                        >
-                          <option value="admin">Admin</option>
-                          <option value="manager">Team Manager</option>
-                          <option value="member">Člen</option>
-                        </select>
-                      ) : (
-                        <span
-                          className="text-xs px-2 py-1 rounded-md"
-                          style={{ background: 'var(--bg-hover)', color: 'var(--text-secondary)' }}
-                        >
-                          {ROLE_LABELS[member.role] ?? member.role}
-                        </span>
-                      )}
-
-                      {/* Sazba */}
-                      {member.hourly_rate !== null && (
-                        <span className="text-xs hidden sm:inline" style={{ color: 'var(--text-muted)' }}>
-                          {member.hourly_rate} Kč/h
-                        </span>
-                      )}
-
-                      {/* Odebrat */}
-                      {isWorkspaceAdmin && !isCurrentUser && member.role !== 'owner' && (
-                        <button
-                          onClick={() => removeMember(member.id, p?.display_name ?? '')}
-                          className="opacity-0 group-hover:opacity-100 p-1.5 rounded transition-all"
-                          style={{ color: 'var(--text-muted)' }}
-                          onMouseEnter={(e) => e.currentTarget.style.color = 'var(--danger)'}
-                          onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
-                          title="Odebrat z workspace"
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-                        </button>
-                      )}
+              <>
+                {/* Čekající schválení */}
+                {isWorkspaceAdmin && members.some(m => !m.approved) && (
+                  <div className="mb-4 rounded-xl border overflow-hidden" style={{ borderColor: '#f59e0b' }}>
+                    <div className="flex items-center gap-2 px-4 py-2.5" style={{ background: '#fffbeb', borderBottom: '1px solid #f59e0b' }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="12 6 12 12 16 14" />
+                      </svg>
+                      <span className="text-xs font-semibold" style={{ color: '#92400e' }}>
+                        Čeká na schválení ({members.filter(m => !m.approved).length})
+                      </span>
                     </div>
-                  );
-                })}
-              </div>
+                    <div style={{ background: 'var(--bg-card)' }}>
+                      {members.filter(m => !m.approved).map(member => {
+                        const p = member.profile;
+                        const initials = p?.display_name ? p.display_name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) : '?';
+                        return (
+                          <div
+                            key={member.id}
+                            className="flex items-center gap-3 px-4 py-3 border-b last:border-b-0"
+                            style={{ borderColor: 'var(--border)' }}
+                          >
+                            <div
+                              className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 opacity-60"
+                              style={{ background: p?.avatar_color ?? '#94a3b8' }}
+                            >
+                              {initials}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                                {p?.display_name ?? 'Neznámý'}
+                              </div>
+                              <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{p?.email}</div>
+                            </div>
+                            {/* Schválit / Zamítnout */}
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => approveMember(member.id)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                                style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #86efac' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = '#bbf7d0'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = '#dcfce7'; }}
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                                Schválit
+                              </button>
+                              <button
+                                onClick={() => rejectMember(member.id, p?.display_name ?? '')}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                                style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = '#fecaca'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = '#fee2e2'; }}
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                                </svg>
+                                Zamítnout
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Aktivní členové */}
+                <div className="space-y-2">
+                  {members.filter(m => m.approved).map(member => {
+                    const p = member.profile;
+                    const initials = p?.display_name ? p.display_name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) : '?';
+                    const isCurrentUser = member.user_id === user?.id;
+
+                    return (
+                      <div
+                        key={member.id}
+                        className="flex items-center gap-3 px-4 py-3 rounded-lg border group"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}
+                      >
+                        {/* Avatar */}
+                        <div
+                          className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                          style={{ background: p?.avatar_color ?? 'var(--primary)' }}
+                        >
+                          {initials}
+                        </div>
+
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                              {p?.display_name ?? 'Neznámý'}
+                            </span>
+                            {isCurrentUser && <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'var(--primary-light)', color: 'var(--primary)' }}>Ty</span>}
+                          </div>
+                          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{p?.email}</div>
+                        </div>
+
+                        {/* Role */}
+                        {isWorkspaceAdmin && !isCurrentUser ? (
+                          <select
+                            value={member.role}
+                            onChange={(e) => updateMemberRole(member.id, e.target.value as UserRole)}
+                            className="px-2 py-1 rounded-md border text-xs"
+                            style={inputStyle}
+                          >
+                            <option value="admin">Admin</option>
+                            <option value="manager">Team Manager</option>
+                            <option value="member">Člen</option>
+                          </select>
+                        ) : (
+                          <span
+                            className="text-xs px-2 py-1 rounded-md"
+                            style={{ background: 'var(--bg-hover)', color: 'var(--text-secondary)' }}
+                          >
+                            {ROLE_LABELS[member.role] ?? member.role}
+                          </span>
+                        )}
+
+                        {/* Sazba */}
+                        {member.hourly_rate !== null && (
+                          <span className="text-xs hidden sm:inline" style={{ color: 'var(--text-muted)' }}>
+                            {member.hourly_rate} Kč/h
+                          </span>
+                        )}
+
+                        {/* Odebrat */}
+                        {isWorkspaceAdmin && !isCurrentUser && member.role !== 'owner' && (
+                          <button
+                            onClick={() => removeMember(member.id, p?.display_name ?? '')}
+                            className="opacity-0 group-hover:opacity-100 p-1.5 rounded transition-all"
+                            style={{ color: 'var(--text-muted)' }}
+                            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--danger)'}
+                            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+                            title="Odebrat z workspace"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
             )}
           </>
         )}
