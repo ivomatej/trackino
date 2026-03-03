@@ -374,7 +374,11 @@ export default function TimerBar({ onEntryChanged }: TimerBarProps) {
           style={{ color: selectedProject ? 'var(--text-primary)' : 'var(--text-muted)' }}
           onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
           onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-          title={selectedProjectObj?.name ?? 'Projekt'}
+          title={
+            selectedProjectClientName
+              ? `${selectedProjectClientName} · ${selectedProjectObj?.name}`
+              : selectedProjectObj?.name ?? 'Projekt'
+          }
         >
           {selectedProject ? (
             <>

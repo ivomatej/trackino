@@ -9,6 +9,8 @@ import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import type { TimeEntry, Project, Profile, Tag } from '@/types/database';
 
+type TimePeriod = 'today' | 'week' | 'custom';
+
 interface SubordinateEntry extends TimeEntry {
   profile?: Profile;
   project?: Project;
@@ -29,39 +31,67 @@ function SubordinatesContent() {
   const [editingEntry, setEditingEntry] = useState<string | null>(null);
   const [editDesc, setEditDesc] = useState('');
 
+  // Časový filtr
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>('week');
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
+
   // Pro adminy: vidí vše; pro managery: jen podřízení
   const getSubordinateIds = useCallback((): string[] => {
     if (isWorkspaceAdmin) {
-      // Admin vidí všechny mimo sebe
       return []; // prázdné = všichni
     }
-    // Manager vidí jen své podřízené
     return managerAssignments.map(a => a.member_user_id);
   }, [isWorkspaceAdmin, managerAssignments]);
+
+  const getDateRange = useCallback((): { from: string; to: string } => {
+    const now = new Date();
+    if (timePeriod === 'today') {
+      const todayStr = now.toISOString().split('T')[0];
+      return { from: `${todayStr}T00:00:00.000Z`, to: `${todayStr}T23:59:59.999Z` };
+    }
+    if (timePeriod === 'week') {
+      const weekAgo = new Date(now);
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      return { from: weekAgo.toISOString(), to: now.toISOString() };
+    }
+    // custom
+    const from = customFrom ? `${customFrom}T00:00:00.000Z` : '';
+    const to = customTo ? `${customTo}T23:59:59.999Z` : now.toISOString();
+    return { from, to };
+  }, [timePeriod, customFrom, customTo]);
 
   const fetchData = useCallback(async () => {
     if (!currentWorkspace || !user) return;
     setLoading(true);
 
     const subIds = getSubordinateIds();
+    const { from, to } = getDateRange();
 
-    // Načíst záznamy podřízených (posledních 7 dní)
-    const weekAgo = new Date();
-    weekAgo.setDate(weekAgo.getDate() - 7);
+    if (!from) {
+      setEntries([]);
+      setLoading(false);
+      return;
+    }
 
     let query = supabase
       .from('trackino_time_entries')
       .select('*')
       .eq('workspace_id', currentWorkspace.id)
       .eq('is_running', false)
-      .gte('start_time', weekAgo.toISOString())
+      .gte('start_time', from)
+      .lte('start_time', to)
       .neq('user_id', user.id) // Ne vlastní záznamy
       .order('start_time', { ascending: false })
-      .limit(200);
+      .limit(300);
 
     // Pokud nejsme admin, filtrovat jen podřízené
-    if (subIds.length > 0) {
+    if (!isWorkspaceAdmin && subIds.length > 0) {
       query = query.in('user_id', subIds);
+    } else if (!isWorkspaceAdmin && subIds.length === 0) {
+      setEntries([]);
+      setLoading(false);
+      return;
     }
 
     const { data: entriesData } = await query;
@@ -121,7 +151,7 @@ function SubordinatesContent() {
 
     setEntries(enriched);
     setLoading(false);
-  }, [currentWorkspace, user, getSubordinateIds]);
+  }, [currentWorkspace, user, getSubordinateIds, getDateRange, isWorkspaceAdmin]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -170,31 +200,79 @@ function SubordinatesContent() {
     fetchData();
   };
 
+  const periodLabel = timePeriod === 'today' ? 'za dnešek' : timePeriod === 'week' ? 'za posledních 7 dní' : 'za zvolené období';
+
+  const inputStyle = { borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' };
+
   return (
     <DashboardLayout>
       <div className="max-w-4xl">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Podřízení</h1>
             <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
-              Záznamy podřízených za posledních 7 dní
+              Záznamy podřízených {periodLabel}
             </p>
           </div>
 
-          {/* Filtr podle uživatele */}
-          {uniqueUsers.length > 1 && (
-            <select
-              value={selectedUser}
-              onChange={(e) => setSelectedUser(e.target.value)}
-              className="px-3 py-2 rounded-lg border text-sm"
-              style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
-            >
-              <option value="all">Všichni ({entries.length})</option>
-              {uniqueUsers.map(u => (
-                <option key={u.id} value={u.id}>{u.display_name}</option>
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Časový filtr */}
+            <div className="flex rounded-lg border overflow-hidden text-sm" style={{ borderColor: 'var(--border)' }}>
+              {(['today', 'week', 'custom'] as TimePeriod[]).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setTimePeriod(p)}
+                  className="px-3 py-1.5 transition-colors"
+                  style={{
+                    background: timePeriod === p ? 'var(--primary)' : 'var(--bg-input)',
+                    color: timePeriod === p ? '#fff' : 'var(--text-secondary)',
+                    borderRight: p !== 'custom' ? '1px solid var(--border)' : 'none',
+                  }}
+                >
+                  {p === 'today' ? 'Dnes' : p === 'week' ? 'Týden' : 'Vlastní'}
+                </button>
               ))}
-            </select>
-          )}
+            </div>
+
+            {/* Vlastní rozsah */}
+            {timePeriod === 'custom' && (
+              <>
+                <input
+                  type="date"
+                  value={customFrom}
+                  onChange={(e) => setCustomFrom(e.target.value)}
+                  className="px-2 py-1.5 rounded-lg border text-sm"
+                  style={inputStyle}
+                />
+                <span className="text-sm" style={{ color: 'var(--text-muted)' }}>–</span>
+                <input
+                  type="date"
+                  value={customTo}
+                  onChange={(e) => setCustomTo(e.target.value)}
+                  className="px-2 py-1.5 rounded-lg border text-sm"
+                  style={inputStyle}
+                />
+              </>
+            )}
+
+            {/* Filtr podle uživatele */}
+            {uniqueUsers.length > 1 && (
+              <div className="relative">
+                <select
+                  value={selectedUser}
+                  onChange={(e) => setSelectedUser(e.target.value)}
+                  className="pl-3 pr-8 py-1.5 rounded-lg border text-sm appearance-none cursor-pointer"
+                  style={inputStyle}
+                >
+                  <option value="all">Všichni ({entries.length})</option>
+                  {uniqueUsers.map(u => (
+                    <option key={u.id} value={u.id}>{u.display_name}</option>
+                  ))}
+                </select>
+                <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: 'var(--text-muted)' }}><polyline points="6 9 12 15 18 9" /></svg>
+              </div>
+            )}
+          </div>
         </div>
 
         {loading ? (
@@ -209,7 +287,7 @@ function SubordinatesContent() {
             <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
               {managerAssignments.length === 0 && !isWorkspaceAdmin
                 ? 'Nemáte přiřazené žádné podřízené. Kontaktujte administrátora.'
-                : 'Žádné záznamy podřízených za posledních 7 dní.'}
+                : `Žádné záznamy podřízených ${periodLabel}.`}
             </p>
           </div>
         ) : (

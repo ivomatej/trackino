@@ -41,13 +41,14 @@ const ICONS = {
   tags: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" /><path d="M6 6h.008v.008H6V6z" /></svg>,
   subordinates: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="19" y1="8" x2="19" y2="14" /><line x1="22" y1="11" x2="16" y2="11" /></svg>,
   notes: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>,
+  vacation: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" /></svg>,
   admin: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>,
 };
 
 export default function Sidebar({ open, onClose }: SidebarProps) {
   const pathname = usePathname();
   const { user, profile, signOut } = useAuth();
-  const { currentWorkspace, userRole } = useWorkspace();
+  const { currentWorkspace, userRole, currentMembership } = useWorkspace();
   const { theme, setTheme } = useTheme();
   const [showUserPanel, setShowUserPanel] = useState(false);
 
@@ -58,6 +59,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
     const showAudit = checkAuditAccess(userRole, profile ?? null, currentWorkspace?.tariff);
     const masterAdmin = checkMasterAdmin(profile ?? null);
     const hideTagsGlobally = currentWorkspace?.hide_tags_globally ?? false;
+    const canUseVacation = currentMembership?.can_use_vacation ?? false;
 
     const trackingItems: NavItem[] = [
       { label: 'Dashboard', href: '/dashboard', icon: ICONS.dashboard },
@@ -65,12 +67,24 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
       { label: 'Plánovač', href: '/planner', icon: ICONS.planner },
     ];
 
-    // Podřízení a Poznámky – viditelné jen pro managery a adminy
+    // Dovolená – viditelné pro uživatele s nárokem nebo adminy
+    if (canUseVacation || isAdmin) {
+      trackingItems.push({ label: 'Dovolená', href: '/vacation', icon: ICONS.vacation });
+    }
+
+    // Poznámky – viditelné jen pro managery a adminy
     if (isManagerOrAdmin) {
       trackingItems.push(
-        { label: 'Podřízení', href: '/subordinates', icon: ICONS.subordinates },
         { label: 'Poznámky', href: '/notes', icon: ICONS.notes },
       );
+    }
+
+    // ANALÝZA – Reporty + Podřízení (jen pro managery a adminy)
+    const analyzeItems: NavItem[] = [
+      { label: 'Reporty', href: '/reports', icon: ICONS.reports },
+    ];
+    if (isManagerOrAdmin) {
+      analyzeItems.push({ label: 'Podřízení', href: '/subordinates', icon: ICONS.subordinates });
     }
 
     const spravaManagedItems: NavItem[] = [
@@ -92,9 +106,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
       },
       {
         title: 'ANALÝZA',
-        items: [
-          { label: 'Reporty', href: '/reports', icon: ICONS.reports },
-        ],
+        items: analyzeItems,
       },
       {
         title: 'SPRÁVA',
@@ -127,7 +139,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
     }
 
     return groups;
-  }, [userRole, profile, currentWorkspace?.tariff, currentWorkspace?.hide_tags_globally]);
+  }, [userRole, profile, currentWorkspace?.tariff, currentWorkspace?.hide_tags_globally, currentMembership]);
 
   const initials = profile?.display_name
     ? profile.display_name.split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2)

@@ -20,7 +20,9 @@ const DEFAULT_HELP_CONTENT = `
   <li><strong>Klienti</strong> – spravujte klienty a propojujte je s projekty</li>
   <li><strong>Štítky</strong> – označujte záznamy štítky pro lepší kategorizaci</li>
   <li><strong>Reporty</strong> – analyzujte odpracovaný čas (včetně výdělku dle hodinové sazby) a přidávejte záznamy ručně</li>
-  <li><strong>Tým</strong> – spravujte členy workspace a přidávejte nové pozvánkou</li>
+  <li><strong>Podřízení</strong> – Team Manažeři a Admini vidí záznamy podřízených; dostupné filtry: Dnes / Týden / Vlastní období</li>
+  <li><strong>Dovolená</strong> – evidence termínů dovolené s automatickým výpočtem pracovních dnů a přehledem zbývajícího nároku</li>
+  <li><strong>Tým</strong> – spravujte členy workspace, přidávejte je kódem, nastavujte manažery</li>
 </ul>
 
 <h3>Dashboard</h3>
@@ -34,8 +36,8 @@ const DEFAULT_HELP_CONTENT = `
   <li><strong>Dnešní svátek</strong> – kdo dnes slaví svátek dle českého kalendáře</li>
 </ul>
 
-<h3>Výběr kategorie a úkolu v Time Trackeru</h3>
-<p>Kliknutím na ikonu seznamu (nebo na zobrazený text kategorie/úkolu) otevřete picker. Kategorie a jejich úkoly jsou provázané – výběrem úkolu se automaticky nastaví nadřazená kategorie. Vyhledávat lze jak podle kategorie, tak podle úkolu.</p>
+<h3>Výběr projektu a kategorie v Time Trackeru</h3>
+<p>Kliknutím na ikonu projektu otevřete picker projektů – při najetí myší se zobrazí tooltip „Klient · Projekt". Kliknutím na ikonu seznamu otevřete picker kategorie/úkolu – tooltip zobrazuje „Kategorie · Úkol".</p>
 
 <h3>Přepínání workspace</h3>
 <p>Pokud máte přístup do více workspace, zobrazuje se v pravém rohu horní lišty přepínač. Kliknutím na něj vyberete jiný workspace bez nutnosti odhlásit se.</p>
@@ -43,16 +45,25 @@ const DEFAULT_HELP_CONTENT = `
 <h3>Role v systému</h3>
 <ul>
   <li><strong>Master Admin</strong> – správce celé platformy, může spravovat workspace</li>
-  <li><strong>Admin / Owner</strong> – správce workspace, přístup k nastavení a správě týmu</li>
-  <li><strong>Team Manager</strong> – správce podřízených, vidí a edituje jejich záznamy, přidává poznámky</li>
-  <li><strong>Member</strong> – běžný uživatel, sleduje čas timerem</li>
+  <li><strong>Admin / Owner</strong> – správce workspace, přístup k nastavení a správě týmu; vidí záznamy a dovolenou všech</li>
+  <li><strong>Team Manager</strong> – správce podřízených, vidí a edituje jejich záznamy, přidává poznámky; vidí dovolenou svých podřízených</li>
+  <li><strong>Member</strong> – běžný uživatel, sleduje čas timerem; spravuje svoji dovolenou (pokud má nastaven nárok)</li>
 </ul>
+
+<h3>Dovolená</h3>
+<p>Stránka <strong>Dovolená</strong> (v sekci Sledování) je dostupná uživatelům s příznakem „Může čerpat dovolenou" (nastavuje admin v Tým → editace člena). Záznamy se přidávají zadáním začátku a konce dovolené – počet pracovních dnů (pondělí–pátek) se vypočítá automaticky. Přehled kartiček zobrazuje čerpáno / zbývá / celkový nárok dle nastavení workspace (Nastavení → Dovolené). Admini vidí a spravují záznamy všech uživatelů.</p>
+
+<h3>Přiřazení manažerů (Tým → Manažeři)</h3>
+<p>Admin workspace může v záložce <strong>Manažeři</strong> (v sekci Tým) definovat, kdo je čí Team Manažer. Kliknutím na tlačítko manažera se toto přiřazení okamžitě aktivuje nebo odebere. Každý člen může mít více manažerů. Přiřazení se promítá do stránky <strong>Podřízení</strong>, kde manažer vidí záznamy svých podřízených.</p>
+
+<h3>Podřízení</h3>
+<p>Team Manažeři a Admini mají přístup ke stránce <strong>Podřízení</strong> (v sekci Analýza). Zobrazuje záznamy přiřazených podřízených s možností filtrovat: Dnes, Týden, nebo Vlastní období (výběrem datumu od–do). Kliknutím na popis záznamu ho lze inline editovat; kliknutím na existující poznámku ji lze upravit.</p>
 
 <h3>Půlnoční split</h3>
 <p>Pokud timer běží přes půlnoc, záznam se automaticky rozdělí na dva – jeden za předchozí den, druhý za nový den.</p>
 
 <h3>Pozvánky</h3>
-<p>Nové členy workspace lze přidat v sekci <strong>Tým → Členové</strong> zadáním jejich e-mailové adresy. Dostanou pozvánkový odkaz.</p>
+<p>Nové členy workspace lze přidat v sekci <strong>Tým → Členové</strong>: sdílejte kód pro připojení, nový člen ho zadá při registraci a čeká na schválení adminem.</p>
 `;
 
 function HelpContent() {

@@ -229,3 +229,14 @@ export interface CooperationType {
   sort_order: number;
   created_at: string;
 }
+
+export interface VacationEntry {
+  id: string;
+  workspace_id: string;
+  user_id: string;
+  start_date: string; // YYYY-MM-DD
+  end_date: string;   // YYYY-MM-DD
+  days: number;
+  note: string;
+  created_at: string;
+}

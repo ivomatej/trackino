@@ -11,6 +11,14 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v1.2.0 – 3. 3. 2026</h3>
+<ul>
+  <li><strong>Dovolená (nová stránka)</strong> – každý uživatel si může evidovat termíny dovolené; automatický výpočet pracovních dnů; přehled čerpáno / zbývá / celkový nárok dle nastavení workspace; admini vidí záznamy všech uživatelů</li>
+  <li><strong>Přiřazení manažerů</strong> – nová záložka „Manažeři" v Týmu; admin přiřadí libovolnému členovi jednoho nebo více Team Manažerů kliknutím na tlačítko; přiřazení se okamžitě promítá do stránky Podřízení</li>
+  <li><strong>Podřízení – filtrace času</strong> – záznamy podřízených lze filtrovat: Dnes / Týden / Vlastní období; přesun záložky Podřízení ze sekce Sledování do sekce Analýza</li>
+  <li><strong>Tooltip projekt/klient v Time Trackeru</strong> – při najetí myší na ikonu projektu se nyní zobrazí „Klient · Projekt" stejně jako u kategorie/úkolu</li>
+</ul>
+
 <h3>v1.1.0 – 3. 3. 2026</h3>
 <ul>
   <li><strong>Barva workspace</strong> – každý workspace může mít vlastní barvu ikonky; barva je viditelná v přepínači workspace v horní liště; nastavení v sekci Správa workspace (Master Admin)</li>

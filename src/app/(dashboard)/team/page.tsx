@@ -9,7 +9,13 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { WorkspaceProvider } from '@/contexts/WorkspaceContext';
 import type { Department, Category, Task, WorkspaceMember, Profile, UserRole, MemberRate, CooperationType } from '@/types/database';
 
-type Tab = 'members' | 'departments' | 'categories' | 'tasks';
+type Tab = 'members' | 'departments' | 'categories' | 'tasks' | 'managers';
+
+interface ManagerAssignmentRow {
+  id: string;
+  member_user_id: string;
+  manager_user_id: string;
+}
 
 const AVATAR_COLORS = [
   '#2563eb', '#dc2626', '#16a34a', '#ca8a04', '#9333ea',
@@ -72,6 +78,10 @@ function TeamContent() {
   // Cooperation types
   const [cooperationTypes, setCooperationTypes] = useState<CooperationType[]>([]);
 
+  // Manager assignments (pro tab Manažeři)
+  const [wsManagerAssignments, setWsManagerAssignments] = useState<ManagerAssignmentRow[]>([]);
+  const [savingAssignment, setSavingAssignment] = useState(false);
+
   // Edit member – hodinové sazby
   const [memberRates, setMemberRates] = useState<MemberRate[]>([]);
   const [ratesLoading, setRatesLoading] = useState(false);
@@ -95,13 +105,14 @@ function TeamContent() {
   const fetchData = useCallback(async () => {
     if (!currentWorkspace) return;
 
-    const [deptRes, catRes, taskRes, projRes, memRes, coopRes] = await Promise.all([
+    const [deptRes, catRes, taskRes, projRes, memRes, coopRes, mgrRes] = await Promise.all([
       supabase.from('trackino_departments').select('*').eq('workspace_id', currentWorkspace.id).order('name'),
       supabase.from('trackino_categories').select('*').eq('workspace_id', currentWorkspace.id).order('name'),
       supabase.from('trackino_tasks').select('*').eq('workspace_id', currentWorkspace.id).order('name'),
       supabase.from('trackino_projects').select('id, name').eq('workspace_id', currentWorkspace.id).eq('archived', false).order('name'),
       supabase.from('trackino_workspace_members').select('*').eq('workspace_id', currentWorkspace.id),
       supabase.from('trackino_cooperation_types').select('*').eq('workspace_id', currentWorkspace.id).order('sort_order', { ascending: true }),
+      supabase.from('trackino_manager_assignments').select('id, member_user_id, manager_user_id').eq('workspace_id', currentWorkspace.id),
     ]);
 
     setDepartments((deptRes.data ?? []) as Department[]);
@@ -109,6 +120,7 @@ function TeamContent() {
     setTasks((taskRes.data ?? []) as Task[]);
     setProjects((projRes.data ?? []) as { id: string; name: string }[]);
     setCooperationTypes((coopRes.data ?? []) as CooperationType[]);
+    setWsManagerAssignments((mgrRes.data ?? []) as ManagerAssignmentRow[]);
 
     const memberData = (memRes.data ?? []) as WorkspaceMember[];
     if (memberData.length > 0) {
@@ -323,6 +335,7 @@ function TeamContent() {
     { key: 'departments', label: 'Oddělení', count: departments.length },
     { key: 'categories', label: 'Kategorie', count: categories.length },
     { key: 'tasks', label: 'Úkoly', count: tasks.length },
+    ...(isWorkspaceAdmin ? [{ key: 'managers' as Tab, label: 'Manažeři', count: wsManagerAssignments.length }] : []),
   ];
 
   const tabLabels: Record<string, { singular: string; placeholder: string }> = {
@@ -683,6 +696,132 @@ function TeamContent() {
           </>
         )}
       </div>
+
+      {/* ========== TAB: MANAŽEŘI ========== */}
+      {activeTab === 'managers' && isWorkspaceAdmin && (
+        <div>
+          <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
+            Nastavte, kdo je Team Manažerem kterého člena. Každý člen může mít více manažerů.
+          </p>
+
+          {loading ? (
+            <div className="text-center py-12"><div className="w-6 h-6 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin mx-auto" /></div>
+          ) : (
+            <div className="rounded-xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+              {/* Hlavička */}
+              <div className="grid grid-cols-2 px-4 py-2.5 border-b text-xs font-semibold" style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
+                <span>Člen</span>
+                <span>Přiřazení manažeři</span>
+              </div>
+
+              {members.filter(m => m.approved && m.role !== 'owner').map(member => {
+                const p = member.profile;
+                const initials = p?.display_name ? p.display_name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) : '?';
+                // Manažeři přiřazení k tomuto memberovi
+                const assignedManagerIds = wsManagerAssignments
+                  .filter(a => a.member_user_id === member.user_id)
+                  .map(a => a.manager_user_id);
+                // Dostupní manažeři (role manager nebo admin, ne sám sobě)
+                const availableManagers = members.filter(m2 =>
+                  m2.approved &&
+                  m2.user_id !== member.user_id &&
+                  (m2.role === 'manager' || m2.role === 'admin')
+                );
+
+                const toggleManager = async (managerUserId: string) => {
+                  if (!currentWorkspace) return;
+                  setSavingAssignment(true);
+                  const existing = wsManagerAssignments.find(
+                    a => a.member_user_id === member.user_id && a.manager_user_id === managerUserId
+                  );
+                  if (existing) {
+                    await supabase.from('trackino_manager_assignments').delete().eq('id', existing.id);
+                  } else {
+                    await supabase.from('trackino_manager_assignments').insert({
+                      workspace_id: currentWorkspace.id,
+                      member_user_id: member.user_id,
+                      manager_user_id: managerUserId,
+                    });
+                  }
+                  setSavingAssignment(false);
+                  fetchData();
+                };
+
+                return (
+                  <div
+                    key={member.id}
+                    className="grid grid-cols-2 px-4 py-3 border-b last:border-b-0 items-start gap-4"
+                    style={{ borderColor: 'var(--border)' }}
+                  >
+                    {/* Člen */}
+                    <div className="flex items-center gap-2.5">
+                      <div
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                        style={{ background: p?.avatar_color ?? 'var(--primary)' }}
+                      >
+                        {initials}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
+                          {p?.display_name ?? 'Neznámý'}
+                        </div>
+                        <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                          {ROLE_LABELS[member.role] ?? member.role}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Manažeři */}
+                    <div className="flex flex-wrap gap-2 items-center">
+                      {availableManagers.length === 0 ? (
+                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Žádní manažeři k dispozici</span>
+                      ) : (
+                        availableManagers.map(mgr => {
+                          const mgrProfile = mgr.profile;
+                          const isAssigned = assignedManagerIds.includes(mgr.user_id);
+                          return (
+                            <button
+                              key={mgr.user_id}
+                              onClick={() => toggleManager(mgr.user_id)}
+                              disabled={savingAssignment}
+                              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors disabled:opacity-50"
+                              style={{
+                                background: isAssigned ? 'var(--primary)' : 'var(--bg-hover)',
+                                borderColor: isAssigned ? 'var(--primary)' : 'var(--border)',
+                                color: isAssigned ? '#fff' : 'var(--text-secondary)',
+                              }}
+                              title={isAssigned ? 'Kliknutím odeberete' : 'Kliknutím přiřadíte'}
+                            >
+                              <div
+                                className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold flex-shrink-0"
+                                style={{ background: isAssigned ? 'rgba(255,255,255,0.3)' : (mgrProfile?.avatar_color ?? 'var(--primary)'), color: '#fff' }}
+                              >
+                                {mgrProfile?.display_name?.charAt(0).toUpperCase() ?? '?'}
+                              </div>
+                              {mgrProfile?.display_name ?? 'Neznámý'}
+                              {isAssigned && (
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                              )}
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {members.filter(m => m.approved && m.role !== 'owner').length === 0 && (
+                <div className="px-6 py-12 text-center">
+                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Zatím žádní členové.</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ========== EDIT MEMBER MODAL ========== */}
       {editingMember && (
