@@ -272,6 +272,40 @@ export interface MemberInvoiceSettings {
 
 export type InvoiceStatus = 'pending' | 'approved' | 'paid' | 'cancelled' | 'returned';
 
+// === Plánovač ===
+
+export interface AvailabilityStatus {
+  id: string;
+  workspace_id: string;
+  name: string;
+  color: string;
+  sort_order: number;
+  created_at: string;
+}
+
+export type AvailabilityHalf = 'am' | 'pm' | 'full';
+
+export interface AvailabilityEntry {
+  id: string;
+  workspace_id: string;
+  user_id: string;
+  date: string; // YYYY-MM-DD
+  half: AvailabilityHalf;
+  status_id: string | null;
+  note: string;
+  created_at: string;
+}
+
+export interface PlannerPin {
+  id: string;
+  workspace_id: string;
+  user_id: string;
+  pinned_user_id: string;
+  created_at: string;
+}
+
+// === Fakturace ===
+
 export interface Invoice {
   id: string;
   workspace_id: string;

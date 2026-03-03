@@ -11,6 +11,17 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v1.8.0 – 3. 3. 2026</h3>
+<ul>
+  <li><strong>Plánovač (nová stránka)</strong> – vizuální přehled dostupnosti celého týmu; každý člen má řádek, každý den dvě buňky (DOP / ODP) podbarvené dle vybraného stavu</li>
+  <li><strong>Stavy dostupnosti</strong> – admin může definovat vlastní stavy s libovolným názvem a barvou (V kanceláři, Home office, Dovolená, Nemocný...); správa přes tlačítko „Spravovat stavy"</li>
+  <li><strong>Nastavení dostupnosti</strong> – každý uživatel nastavuje svůj vlastní stav kliknutím na buňku; admin a manažer mohou nastavovat stav i za jiné uživatele</li>
+  <li><strong>Poznámka ke stavu</strong> – ke každé buňce lze přidat volitelnou poznámku zobrazenou při najetí myší</li>
+  <li><strong>Připnutí kolegů</strong> – hvězdičkou vedle jména lze kolegu připnout na začátek seznamu</li>
+  <li><strong>Viditelnost</strong> – Admin vidí všechny; Manager vidí svůj tým; Member vidí sebe a spoluhráče se stejným manažerem</li>
+  <li><strong>Navigace týdnem</strong> – šipky pro přepínání týdnů, tlačítko „Dnes" pro skok na aktuální týden</li>
+</ul>
+
 <h3>v1.7.1 – 3. 3. 2026</h3>
 <ul>
   <li><strong>Fakturace – vyhledávání skryto pro běžné uživatele</strong> – vyhledávací pole ve fakturách se zobrazuje pouze Adminům, Master Adminům a Správcům fakturace; běžní uživatelé (záložka Moje faktury) pole nevidí</li>

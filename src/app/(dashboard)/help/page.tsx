@@ -96,6 +96,18 @@ const DEFAULT_HELP_CONTENT = `
 
 <h3>Pozvánky</h3>
 <p>Nové členy workspace lze přidat v sekci <strong>Tým → Členové</strong>: sdílejte kód pro připojení, nový člen ho zadá při registraci a čeká na schválení adminem.</p>
+
+<h3>Plánovač</h3>
+<p>Stránka <strong>Plánovač</strong> (sekce Sledování) zobrazuje dostupnost celého týmu pro aktuální týden v přehledné tabulce. Každý člen má řádek, každý den má dvě buňky: <strong>DOP</strong> (dopoledne) a <strong>ODP</strong> (odpoledne). Buňka je podbarvena barvou vybraného stavu.</p>
+<ul>
+  <li><strong>Stavy dostupnosti</strong> – admin/Master Admin si definuje vlastní stavy (např. V kanceláři, Home office, Dovolená) s libovolnou barvou v sekci „Spravovat stavy"</li>
+  <li><strong>Nastavení dostupnosti</strong> – každý uživatel může kliknutím na buňku nastavit svůj vlastní stav; admin a manažer může nastavit stav i za jiné uživatele</li>
+  <li><strong>Poznámka</strong> – ke každé buňce lze přidat volitelnou poznámku, která se zobrazí při najetí myší na buňku</li>
+  <li><strong>Navigace týdnem</strong> – šipky vlevo/vpravo přepínají mezi týdny; tlačítko „Dnes" skočí na aktuální týden</li>
+  <li><strong>Připnutí kolegů</strong> – kliknutím na hvězdičku vedle jména lze kolegu „připnout" na začátek seznamu pro rychlý přístup</li>
+  <li><strong>Viditelnost</strong> – Admin/Master Admin vidí všechny členy; Team Manager vidí sebe a svůj tým; Member vidí sebe a spoluhráče se stejným manažerem</li>
+</ul>
+<p><strong>SQL migrace (nutno spustit v Supabase):</strong> Plánovač vyžaduje 3 nové tabulky: <code>trackino_availability_statuses</code>, <code>trackino_availability</code> a <code>trackino_planner_pins</code>.</p>
 `;
 
 function HelpContent() {
