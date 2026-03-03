@@ -775,12 +775,6 @@ function InvoicesContent() {
                         <div style={{ color: 'var(--text-primary)' }}>{userBillingProfile.company_name}</div>
                       </div>
                     )}
-                    {userBillingProfile.representative_name && (
-                      <div>
-                        <span className="font-medium" style={{ color: 'var(--text-muted)' }}>Zástupce</span>
-                        <div style={{ color: 'var(--text-primary)' }}>{userBillingProfile.representative_name}</div>
-                      </div>
-                    )}
                     {(userBillingProfile.address || userBillingProfile.postal_code) && (
                       <div>
                         <span className="font-medium" style={{ color: 'var(--text-muted)' }}>Adresa</span>
@@ -803,6 +797,12 @@ function InvoicesContent() {
                         )}
                       </div>
                     )}
+                    <div>
+                      <span className="font-medium" style={{ color: 'var(--text-muted)' }}>DPH</span>
+                      <div style={{ color: 'var(--text-primary)' }}>
+                        {userBillingProfile.is_vat_payer ? 'Jsme plátci DPH' : 'Nejsme plátci DPH'}
+                      </div>
+                    </div>
                     {userBillingProfile.email && (
                       <div>
                         <span className="font-medium" style={{ color: 'var(--text-muted)' }}>E-mail</span>
@@ -822,9 +822,6 @@ function InvoicesContent() {
                       </div>
                     )}
                   </div>
-                  <p className="text-[10px] mt-3 pt-2 border-t" style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
-                    Tyto údaje jsou přiřazeny k vašemu účtu. Změnit je může správce workspace v sekci Tým.
-                  </p>
                 </div>
               )}
             </div>

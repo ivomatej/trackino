@@ -11,6 +11,12 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v1.4.1 – 3. 3. 2026</h3>
+<ul>
+  <li><strong>Plátce DPH ve fakturačním profilu</strong> – každý fakturační profil má nové pole „Jsme plátci DPH" (checkbox); v panelu při podání faktury se zobrazí „Jsme plátci DPH" nebo „Nejsme plátci DPH"</li>
+  <li><strong>Úprava panelu fakturačních údajů</strong> – z pravého panelu při podání faktury odebrán řádek „Zástupce" a informační poznámka</li>
+</ul>
+
 <h3>v1.4.0 – 3. 3. 2026</h3>
 <ul>
   <li><strong>Více fakturačních profilů</strong> – v Nastavení → Fakturační údaje lze nyní vytvářet více profilů (různé právní subjekty, IČO, DIČ, adresy); jeden profil lze označit jako výchozí; správa přes přehledné karty s editačním modálem</li>

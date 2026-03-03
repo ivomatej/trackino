@@ -155,6 +155,7 @@ function SettingsContent() {
       postal_code: editingBillingProfile.postal_code ?? '',
       ico: editingBillingProfile.ico ?? '',
       dic: editingBillingProfile.dic ?? '',
+      is_vat_payer: editingBillingProfile.is_vat_payer ?? false,
       email: editingBillingProfile.email ?? '',
       phone: editingBillingProfile.phone ?? '',
       billing_note: editingBillingProfile.billing_note ?? '',
@@ -597,6 +598,24 @@ function SettingsContent() {
                         <input type="text" value={editingBillingProfile.dic ?? ''} onChange={(e) => setEditingBillingProfile(p => ({ ...p, dic: e.target.value }))} className={inputCls} style={inputStyle} />
                       </div>
                     </div>
+                    {/* Plátce DPH */}
+                    <label
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer"
+                      style={{ background: editingBillingProfile.is_vat_payer ? 'var(--bg-active)' : 'var(--bg-hover)' }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={editingBillingProfile.is_vat_payer ?? false}
+                        onChange={(e) => setEditingBillingProfile(p => ({ ...p, is_vat_payer: e.target.checked }))}
+                        className="w-4 h-4 rounded"
+                        style={{ accentColor: 'var(--primary)' }}
+                      />
+                      <div>
+                        <span className="text-sm block" style={{ color: 'var(--text-primary)' }}>Jsme plátci DPH</span>
+                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Tato firma je plátcem DPH</span>
+                      </div>
+                    </label>
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className={labelCls} style={{ color: 'var(--text-secondary)' }}>E-mail</label>

@@ -100,6 +100,7 @@ export interface WorkspaceBilling {
   postal_code: string;
   ico: string;
   dic: string;
+  is_vat_payer: boolean; // plátce DPH
   email: string;
   phone: string;
   billing_note: string;
