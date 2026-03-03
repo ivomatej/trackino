@@ -30,7 +30,7 @@ export function usePermissions() {
     /** Může používat manuální zadání */
     canManualEntry: checkManualEntry(userRole),
     /** Vidí štítky */
-    canSeeTags: checkSeeTags(currentMembership),
+    canSeeTags: checkSeeTags(currentMembership, currentWorkspace?.hide_tags_globally),
     /** Má přístup k nastavení workspace */
     canAccessSettings: checkAccessSettings(userRole),
     /** Má přístup k audit logu */
@@ -39,5 +39,5 @@ export function usePermissions() {
     role: userRole,
     /** Aktuální membership */
     membership: currentMembership,
-  }), [profile, userRole, currentMembership, currentWorkspace?.tariff]);
+  }), [profile, userRole, currentMembership, currentWorkspace?.tariff, currentWorkspace?.hide_tags_globally]);
 }

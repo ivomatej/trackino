@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { WorkspaceProvider, useWorkspace } from '@/contexts/WorkspaceContext';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -32,6 +32,9 @@ function SettingsContent() {
     project: false, category: false, task: false, description: false, tag: false,
   });
 
+  // Globální viditelnost štítků
+  const [hideTagsGlobally, setHideTagsGlobally] = useState(false);
+
   // Billing
   const [billing, setBilling] = useState<Partial<WorkspaceBilling>>({});
 
@@ -44,6 +47,7 @@ function SettingsContent() {
       setNumberFormat(currentWorkspace.number_format);
       setCurrency(currentWorkspace.currency);
       setRequiredFields(currentWorkspace.required_fields);
+      setHideTagsGlobally(currentWorkspace.hide_tags_globally ?? false);
       fetchBilling(currentWorkspace.id);
     }
   }, [currentWorkspace]);
@@ -71,6 +75,7 @@ function SettingsContent() {
       date_format: dateFormat,
       number_format: numberFormat,
       currency,
+      hide_tags_globally: hideTagsGlobally,
     };
 
     // Jméno workspace může měnit jen Master Admin
@@ -171,8 +176,21 @@ function SettingsContent() {
   ];
 
   const inputCls = "w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent";
+  const selectCls = "w-full px-3 py-2 pr-8 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent appearance-none cursor-pointer";
   const inputStyle = { borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' };
   const labelCls = "block text-xs font-medium mb-1";
+
+  // Select wrapper SVG arrow
+  const SelectWrap = ({ children }: { children: React.ReactNode }) => (
+    <div className="relative">
+      {children}
+      <div className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: 'var(--text-muted)' }}>
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </div>
+    </div>
+  );
 
   return (
     <DashboardLayout>
@@ -235,76 +253,81 @@ function SettingsContent() {
                 {/* Tarif */}
                 <div>
                   <label className={labelCls} style={{ color: 'var(--text-secondary)' }}>Tarif</label>
-                  <select
-                    value={tariff}
-                    onChange={(e) => setTariff(e.target.value as Tariff)}
-                    className={inputCls}
-                    style={inputStyle}
-                  >
-                    <option value="free">Free</option>
-                    <option value="pro">Pro</option>
-                    <option value="max">Max</option>
-                  </select>
+                  <SelectWrap>
+                    <select value={tariff} onChange={(e) => setTariff(e.target.value as Tariff)} className={selectCls} style={inputStyle}>
+                      <option value="free">Free</option>
+                      <option value="pro">Pro</option>
+                      <option value="max">Max</option>
+                    </select>
+                  </SelectWrap>
                 </div>
 
                 {/* Začátek týdne */}
                 <div>
                   <label className={labelCls} style={{ color: 'var(--text-secondary)' }}>Začátek týdne</label>
-                  <select
-                    value={weekStart}
-                    onChange={(e) => setWeekStart(Number(e.target.value))}
-                    className={inputCls}
-                    style={inputStyle}
-                  >
-                    <option value={1}>Pondělí</option>
-                    <option value={0}>Neděle</option>
-                    <option value={6}>Sobota</option>
-                  </select>
+                  <SelectWrap>
+                    <select value={weekStart} onChange={(e) => setWeekStart(Number(e.target.value))} className={selectCls} style={inputStyle}>
+                      <option value={1}>Pondělí</option>
+                      <option value={0}>Neděle</option>
+                      <option value={6}>Sobota</option>
+                    </select>
+                  </SelectWrap>
                 </div>
 
                 {/* Formát data */}
                 <div>
                   <label className={labelCls} style={{ color: 'var(--text-secondary)' }}>Formát data</label>
-                  <select
-                    value={dateFormat}
-                    onChange={(e) => setDateFormat(e.target.value)}
-                    className={inputCls}
-                    style={inputStyle}
-                  >
-                    <option value="dd.MM.yyyy">dd.MM.yyyy (31.12.2025)</option>
-                    <option value="MM/dd/yyyy">MM/dd/yyyy (12/31/2025)</option>
-                    <option value="yyyy-MM-dd">yyyy-MM-dd (2025-12-31)</option>
-                  </select>
+                  <SelectWrap>
+                    <select value={dateFormat} onChange={(e) => setDateFormat(e.target.value)} className={selectCls} style={inputStyle}>
+                      <option value="dd.MM.yyyy">dd.MM.yyyy (31.12.2025)</option>
+                      <option value="MM/dd/yyyy">MM/dd/yyyy (12/31/2025)</option>
+                      <option value="yyyy-MM-dd">yyyy-MM-dd (2025-12-31)</option>
+                    </select>
+                  </SelectWrap>
                 </div>
 
                 {/* Formát čísel */}
                 <div>
                   <label className={labelCls} style={{ color: 'var(--text-secondary)' }}>Formát čísel</label>
-                  <select
-                    value={numberFormat}
-                    onChange={(e) => setNumberFormat(e.target.value)}
-                    className={inputCls}
-                    style={inputStyle}
-                  >
-                    <option value="cs">1 234,56 (český)</option>
-                    <option value="en">1,234.56 (anglický)</option>
-                  </select>
+                  <SelectWrap>
+                    <select value={numberFormat} onChange={(e) => setNumberFormat(e.target.value)} className={selectCls} style={inputStyle}>
+                      <option value="cs">1 234,56 (český)</option>
+                      <option value="en">1,234.56 (anglický)</option>
+                    </select>
+                  </SelectWrap>
                 </div>
 
                 {/* Měna */}
                 <div>
                   <label className={labelCls} style={{ color: 'var(--text-secondary)' }}>Měna</label>
-                  <select
-                    value={currency}
-                    onChange={(e) => setCurrency(e.target.value)}
-                    className={inputCls}
-                    style={inputStyle}
-                  >
-                    <option value="CZK">CZK (Kč)</option>
-                    <option value="EUR">EUR (€)</option>
-                    <option value="USD">USD ($)</option>
-                  </select>
+                  <SelectWrap>
+                    <select value={currency} onChange={(e) => setCurrency(e.target.value)} className={selectCls} style={inputStyle}>
+                      <option value="CZK">CZK (Kč)</option>
+                      <option value="EUR">EUR (€)</option>
+                      <option value="USD">USD ($)</option>
+                    </select>
+                  </SelectWrap>
                 </div>
+
+                {/* Globální skrytí štítků */}
+                <label
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors"
+                  style={{ background: hideTagsGlobally ? 'var(--bg-active)' : 'transparent' }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = hideTagsGlobally ? 'var(--bg-active)' : 'transparent'}
+                >
+                  <input
+                    type="checkbox"
+                    checked={hideTagsGlobally}
+                    onChange={(e) => setHideTagsGlobally(e.target.checked)}
+                    className="w-4 h-4 rounded"
+                    style={{ accentColor: 'var(--primary)' }}
+                  />
+                  <div>
+                    <span className="text-sm block" style={{ color: 'var(--text-primary)' }}>Skrýt štítky pro všechny</span>
+                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>TagPicker se nebude zobrazovat v Time Trackeru</span>
+                  </div>
+                </label>
               </div>
 
               <button

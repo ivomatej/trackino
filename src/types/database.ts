@@ -24,7 +24,28 @@ export interface Workspace {
   number_format: string;
   currency: 'CZK' | 'EUR' | 'USD';
   required_fields: RequiredFields;
+  hide_tags_globally: boolean;
   created_at: string;
+}
+
+export interface HelpContent {
+  id: string;
+  content: string;
+  updated_at: string;
+  updated_by: string | null;
+}
+
+export type BugStatus = 'open' | 'in_progress' | 'solved';
+
+export interface BugReport {
+  id: string;
+  workspace_id: string;
+  user_id: string;
+  content: string;
+  status: BugStatus;
+  master_note: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Profile {
@@ -146,30 +167,6 @@ export interface TimeEntry {
   manager_note: string;
   created_at: string;
   updated_at: string;
-}
-
-export interface HelpPage {
-  id: string;
-  workspace_id: string;
-  content: string;
-  updated_at: string;
-}
-
-export interface BugReport {
-  id: string;
-  workspace_id: string;
-  user_id: string;
-  user_name: string;
-  message: string;
-  created_at: string;
-}
-
-export interface ChangelogEntry {
-  id: string;
-  version: string;
-  title: string;
-  content: string;
-  created_at: string;
 }
 
 // === Fáze 2: Klienti, Štítky ===

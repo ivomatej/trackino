@@ -27,10 +27,14 @@ export function canManualEntry(role: UserRole | null | undefined): boolean {
   return role !== 'member';
 }
 
-/** Vidí uživatel štítky? Závisí na hide_tags v membership. */
-export function canSeeTags(membership: WorkspaceMember | null | undefined): boolean {
+/** Vidí uživatel štítky? Závisí na hide_tags v membership a hide_tags_globally v workspace. */
+export function canSeeTags(
+  membership: WorkspaceMember | null | undefined,
+  hideTagsGlobally?: boolean
+): boolean {
   if (!membership) return false;
-  return !membership.hide_tags;
+  if (hideTagsGlobally) return false; // Globální skrytí (nastavení workspace)
+  return !membership.hide_tags; // Per-member nastavení
 }
 
 /** Může uživatel editovat time entry jiného uživatele?

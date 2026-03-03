@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
-import { canManualEntry } from '@/lib/permissions';
 import { splitAtMidnight, crossesMidnight } from '@/lib/midnight-split';
 import TagPicker from '@/components/TagPicker';
 import type { Project, Category, Task, TimeEntry, RequiredFields } from '@/types/database';
@@ -13,14 +12,10 @@ interface TimerBarProps {
   onEntryChanged?: () => void;
 }
 
-type EntryMode = 'timer' | 'manual';
-
 export default function TimerBar({ onEntryChanged }: TimerBarProps) {
   const { user } = useAuth();
-  const { currentWorkspace, userRole } = useWorkspace();
+  const { currentWorkspace } = useWorkspace();
 
-  const allowManual = canManualEntry(userRole);
-  const [mode, setMode] = useState<EntryMode>('timer');
   const [description, setDescription] = useState('');
   const [selectedProject, setSelectedProject] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -35,13 +30,6 @@ export default function TimerBar({ onEntryChanged }: TimerBarProps) {
   const [activeEntry, setActiveEntry] = useState<TimeEntry | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  // Manual mode state
-  const [manualDate, setManualDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [manualStart, setManualStart] = useState('09:00');
-  const [manualEnd, setManualEnd] = useState('10:00');
-  const [manualSaving, setManualSaving] = useState(false);
-  const [manualError, setManualError] = useState('');
 
   const [showProjectPicker, setShowProjectPicker] = useState(false);
   const [showTaskPicker, setShowTaskPicker] = useState(false);
@@ -294,76 +282,6 @@ export default function TimerBar({ onEntryChanged }: TimerBarProps) {
     setDescription(''); setSelectedProject(''); setSelectedCategory(''); setSelectedTask(''); setSelectedTags([]);
   };
 
-  // Manual entry save
-  const saveManualEntry = async () => {
-    if (!user || !currentWorkspace) return;
-    if (!allowManual) return; // Bezpečnostní check
-    const vErr = validateRequiredFields();
-    if (vErr) { setValidationError(vErr); setTimeout(() => setValidationError(''), 3000); return; }
-    setValidationError('');
-    const start = new Date(`${manualDate}T${manualStart}:00`);
-    const end = new Date(`${manualDate}T${manualEnd}:00`);
-    const duration = Math.floor((end.getTime() - start.getTime()) / 1000);
-
-    if (duration <= 0) {
-      setManualError('Konec musí být po začátku');
-      return;
-    }
-
-    setManualError('');
-    setManualSaving(true);
-
-    const { data: insertedEntry, error: dbError } = await supabase
-      .from('trackino_time_entries')
-      .insert({
-        workspace_id: currentWorkspace.id,
-        user_id: user.id,
-        description: description.trim(),
-        project_id: selectedProject || null,
-        category_id: selectedCategory || null,
-        task_id: selectedTask || null,
-        start_time: start.toISOString(),
-        end_time: end.toISOString(),
-        duration,
-        is_running: false,
-      })
-      .select()
-      .single();
-
-    setManualSaving(false);
-
-    if (dbError) {
-      setManualError(dbError.message);
-    } else {
-      // Uložit tagy
-      if (insertedEntry && selectedTags.length > 0) {
-        await supabase.from('trackino_time_entry_tags').insert(
-          selectedTags.map(tagId => ({ time_entry_id: insertedEntry.id, tag_id: tagId }))
-        );
-      }
-      setDescription('');
-      setSelectedProject('');
-      setSelectedCategory('');
-      setSelectedTask('');
-      setSelectedTags([]);
-      setManualStart('09:00');
-      setManualEnd('10:00');
-      setManualDate(new Date().toISOString().split('T')[0]);
-      onEntryChanged?.();
-    }
-  };
-
-  const manualDurationPreview = () => {
-    const start = new Date(`${manualDate}T${manualStart}:00`);
-    const end = new Date(`${manualDate}T${manualEnd}:00`);
-    const diff = (end.getTime() - start.getTime()) / 1000;
-    if (diff <= 0) return '0:00:00';
-    const h = Math.floor(diff / 3600);
-    const m = Math.floor((diff % 3600) / 60);
-    const s = Math.floor(diff % 60);
-    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-  };
-
   const selectedProjectObj = projects.find(p => p.id === selectedProject);
 
   // Filter projects by search
@@ -402,8 +320,7 @@ export default function TimerBar({ onEntryChanged }: TimerBarProps) {
         className="flex-1 min-w-0 max-w-md px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
         style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
         onKeyDown={(e) => {
-          if (e.key === 'Enter' && mode === 'timer' && !isRunning) startTimer();
-          if (e.key === 'Enter' && mode === 'manual') saveManualEntry();
+          if (e.key === 'Enter' && !isRunning) startTimer();
         }}
       />
 
@@ -504,9 +421,13 @@ export default function TimerBar({ onEntryChanged }: TimerBarProps) {
           onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
           title="Kategorie / Úkol"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <path d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
-            <path d="M6 6h.008v.008H6V6z" />
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="8" y1="6" x2="21" y2="6" />
+            <line x1="8" y1="12" x2="21" y2="12" />
+            <line x1="8" y1="18" x2="21" y2="18" />
+            <line x1="3" y1="6" x2="3.01" y2="6" />
+            <line x1="3" y1="12" x2="3.01" y2="12" />
+            <line x1="3" y1="18" x2="3.01" y2="18" />
           </svg>
         </button>
 
@@ -616,141 +537,54 @@ export default function TimerBar({ onEntryChanged }: TimerBarProps) {
       {/* Oddělovač */}
       <div className="hidden sm:block w-px h-6" style={{ background: 'var(--border)' }} />
 
-      {/* Timer / Manual mode content */}
-      {mode === 'timer' ? (
-        <>
-          {/* Čas – JetBrains Mono font */}
-          <div
-            className="text-lg sm:text-xl font-bold tabular-nums min-w-[85px] sm:min-w-[100px] text-center"
-            style={{
-              color: isRunning ? 'var(--primary)' : 'var(--text-muted)',
-              fontFamily: 'var(--font-jetbrains), monospace',
-              letterSpacing: '0.02em',
-            }}
-          >
-            {formatTime(elapsed)}
-          </div>
+      {/* Čas – JetBrains Mono font */}
+      <div
+        className="text-lg sm:text-xl font-bold tabular-nums min-w-[85px] sm:min-w-[100px] text-center"
+        style={{
+          color: isRunning ? 'var(--primary)' : 'var(--text-muted)',
+          fontFamily: 'var(--font-jetbrains), monospace',
+          letterSpacing: '0.02em',
+        }}
+      >
+        {formatTime(elapsed)}
+      </div>
 
-          {/* Start/Stop/Discard */}
-          {!isRunning ? (
-            <button
-              onClick={startTimer}
-              className="px-4 sm:px-6 py-2 rounded-lg text-white font-semibold text-sm transition-colors whitespace-nowrap flex-shrink-0"
-              style={{ background: 'var(--primary)' }}
-              onMouseEnter={(e) => e.currentTarget.style.background = 'var(--primary-hover)'}
-              onMouseLeave={(e) => e.currentTarget.style.background = 'var(--primary)'}
-            >
-              START
-            </button>
-          ) : (
-            <div className="flex gap-1 flex-shrink-0">
-              <button
-                onClick={stopTimer}
-                className="px-4 sm:px-6 py-2 rounded-lg text-white font-semibold text-sm transition-colors whitespace-nowrap"
-                style={{ background: 'var(--danger)' }}
-                onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
-                onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
-              >
-                STOP
-              </button>
-              <button
-                onClick={discardTimer}
-                className="p-2 rounded-lg transition-colors"
-                style={{ color: 'var(--text-muted)' }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                title="Zahodit"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="3 6 5 6 21 6" />
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                </svg>
-              </button>
-            </div>
-          )}
-        </>
-      ) : (
-        <>
-          {/* Manual mode – compact inline inputs */}
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-            <input
-              type="date"
-              value={manualDate}
-              onChange={(e) => setManualDate(e.target.value)}
-              className="hidden sm:block px-2 py-1.5 rounded-md border text-xs focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
-              style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)', width: '130px' }}
-            />
-            <input
-              type="time"
-              value={manualStart}
-              onChange={(e) => setManualStart(e.target.value)}
-              className="px-2 py-1.5 rounded-md border text-xs focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
-              style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)', width: '80px' }}
-            />
-            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>–</span>
-            <input
-              type="time"
-              value={manualEnd}
-              onChange={(e) => setManualEnd(e.target.value)}
-              className="px-2 py-1.5 rounded-md border text-xs focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
-              style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)', width: '80px' }}
-            />
-          </div>
-
-          {/* Duration preview */}
-          <div
-            className="text-sm font-bold tabular-nums min-w-[70px] text-center hidden sm:block"
-            style={{
-              color: 'var(--primary)',
-              fontFamily: 'var(--font-jetbrains), monospace',
-            }}
-          >
-            {manualDurationPreview()}
-          </div>
-
-          {/* Error indicator */}
-          {manualError && (
-            <span className="text-xs hidden sm:inline" style={{ color: 'var(--danger)' }} title={manualError}>!</span>
-          )}
-
-          {/* Uložit */}
-          <button
-            onClick={saveManualEntry}
-            disabled={manualSaving}
-            className="px-4 sm:px-5 py-2 rounded-lg text-white font-semibold text-sm transition-colors whitespace-nowrap flex-shrink-0 disabled:opacity-50"
-            style={{ background: 'var(--primary)' }}
-            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--primary-hover)'}
-            onMouseLeave={(e) => e.currentTarget.style.background = 'var(--primary)'}
-          >
-            {manualSaving ? '...' : 'PŘIDAT'}
-          </button>
-        </>
-      )}
-
-      {/* Přepínač timer/manual – ikonka (jen pro role s oprávněním) */}
-      {!isRunning && allowManual && (
+      {/* Start/Stop/Discard */}
+      {!isRunning ? (
         <button
-          onClick={() => setMode(mode === 'timer' ? 'manual' : 'timer')}
-          className="p-2 rounded-lg transition-colors flex-shrink-0"
-          style={{ color: mode === 'manual' ? 'var(--primary)' : 'var(--text-muted)' }}
-          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-          title={mode === 'timer' ? 'Přepnout na manuální zadání' : 'Přepnout na timer'}
+          onClick={startTimer}
+          className="px-4 sm:px-6 py-2 rounded-lg text-white font-semibold text-sm transition-colors whitespace-nowrap flex-shrink-0"
+          style={{ background: 'var(--primary)' }}
+          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--primary-hover)'}
+          onMouseLeave={(e) => e.currentTarget.style.background = 'var(--primary)'}
         >
-          {mode === 'timer' ? (
-            /* Ikona pro manuální – list s perem */
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-            </svg>
-          ) : (
-            /* Ikona pro timer – hodiny */
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <polyline points="12 6 12 12 16 14" />
-            </svg>
-          )}
+          START
         </button>
+      ) : (
+        <div className="flex gap-1 flex-shrink-0">
+          <button
+            onClick={stopTimer}
+            className="px-4 sm:px-6 py-2 rounded-lg text-white font-semibold text-sm transition-colors whitespace-nowrap"
+            style={{ background: 'var(--danger)' }}
+            onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
+            onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+          >
+            STOP
+          </button>
+          <button
+            onClick={discardTimer}
+            className="p-2 rounded-lg transition-colors"
+            style={{ color: 'var(--text-muted)' }}
+            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+            title="Zahodit"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            </svg>
+          </button>
+        </div>
       )}
     </div>
   );

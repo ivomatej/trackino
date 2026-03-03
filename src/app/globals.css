@@ -86,7 +86,36 @@
   --color-background: var(--bg-main);
   --color-foreground: var(--text-primary);
   --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-mono: var(--font-jetbrains), monospace;
+}
+
+/* JetBrains Mono pro veškerá čísla a časy (tabular-nums) */
+.tabular-nums {
+  font-family: var(--font-jetbrains), monospace;
+}
+
+/* Stylizovaný select wrapper */
+.select-wrapper {
+  position: relative;
+}
+.select-wrapper select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 2rem;
+  width: 100%;
+}
+.select-wrapper::after {
+  content: '';
+  position: absolute;
+  right: 0.625rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid var(--text-muted);
 }
 
 /* ===== Základní styly ===== */

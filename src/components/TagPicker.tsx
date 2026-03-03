@@ -17,8 +17,8 @@ export default function TagPicker({ selectedTagIds, onChange }: TagPickerProps) 
   const [search, setSearch] = useState('');
   const ref = useRef<HTMLDivElement>(null);
 
-  // Skrýt pokud uživatel má hide_tags
-  const hidden = currentMembership?.hide_tags === true;
+  // Skrýt pokud workspace má globální skrytí nebo uživatel má per-member skrytí
+  const hidden = currentWorkspace?.hide_tags_globally === true || currentMembership?.hide_tags === true;
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {

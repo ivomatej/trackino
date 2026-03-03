@@ -108,8 +108,8 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
   }, [userRole, profile, currentWorkspace?.tariff]);
 
   const initials = profile?.display_name
-    ? profile.display_name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
-    : '?';
+    ? profile.display_name.split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2)
+    : (profile?.email?.charAt(0).toUpperCase() ?? '?');
 
   const renderNavItem = (item: NavItem) => {
     const active = pathname === item.href;
@@ -259,7 +259,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
               {initials}
             </div>
             <div className="flex-1 min-w-0 text-left">
-              <div className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{profile?.display_name ?? 'Uživatel'}</div>
+              <div className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{profile?.display_name ?? profile?.email ?? 'Uživatel'}</div>
               <div className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{user?.email}</div>
             </div>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
