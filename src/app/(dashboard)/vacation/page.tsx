@@ -38,12 +38,12 @@ function VacationContent() {
 
   // Výpočet pracovních dnů (pondělí–pátek)
   function calcWorkDays(start: string, end: string): number {
-    const s = new Date(start);
-    const e = new Date(end);
-    if (e < s) return 0;
+    // Použijeme lokální poledne (T12:00:00) – robustní vůči timezone a DST přechodům.
+    const cur = new Date(start + 'T12:00:00');
+    const end_ = new Date(end + 'T12:00:00');
+    if (end_ < cur) return 0;
     let count = 0;
-    const cur = new Date(s);
-    while (cur <= e) {
+    while (cur <= end_) {
       const day = cur.getDay();
       if (day !== 0 && day !== 6) count++;
       cur.setDate(cur.getDate() + 1);
@@ -66,16 +66,16 @@ function VacationContent() {
     );
     if (!vs) return; // Stav "Dovolená" v Plánovači neexistuje, přeskočit
 
-    // Sestav seznam všech dnů v rozsahu (včetně víkendů – Plánovač je zobrazuje)
-    // Používáme new Date(y, m-1, d) = lokální půlnoc → .toISOString() = UTC datum,
-    // které přesně odpovídá klíčům Plánovače (ten také ukládá UTC datum lokální půlnoci).
+    // Sestav seznam lokálních datumů v rozsahu (včetně víkendů – Plánovač je zobrazuje).
+    // T12:00:00 = lokální poledne; getFullYear/Month/Date vrátí správný lokální den.
     const dates: string[] = [];
-    const [sy, sm, sd] = startDate.split('-').map(Number);
-    const [ey, em, ed] = endDate.split('-').map(Number);
-    const cur = new Date(sy, sm - 1, sd, 0, 0, 0, 0);
-    const end = new Date(ey, em - 1, ed, 0, 0, 0, 0);
+    const cur = new Date(startDate + 'T12:00:00');
+    const end = new Date(endDate + 'T12:00:00');
     while (cur <= end) {
-      dates.push(cur.toISOString().slice(0, 10));
+      const y = cur.getFullYear();
+      const m = String(cur.getMonth() + 1).padStart(2, '0');
+      const d = String(cur.getDate()).padStart(2, '0');
+      dates.push(`${y}-${m}-${d}`);
       cur.setDate(cur.getDate() + 1);
     }
     if (dates.length === 0) return;
@@ -105,21 +105,16 @@ function VacationContent() {
     );
     if (!vs) return;
 
-    // Smaž availability záznamy kde status = Dovolená a half = full pro dané dny
-    // Konverze vacation lokálních datumů na Plánovač UTC klíče (lokální půlnoc → UTC datum)
-    const [sy, sm, sd] = startDate.split('-').map(Number);
-    const [ey, em, ed] = endDate.split('-').map(Number);
-    const plannerStart = new Date(sy, sm - 1, sd, 0, 0, 0, 0).toISOString().slice(0, 10);
-    const plannerEnd = new Date(ey, em - 1, ed, 0, 0, 0, 0).toISOString().slice(0, 10);
-
+    // Smaž availability záznamy kde status = Dovolená a half = full pro dané dny.
+    // Planner nyní používá lokální data (stejně jako vacation), takže bez konverze.
     await supabase.from('trackino_availability')
       .delete()
       .eq('workspace_id', workspaceId)
       .eq('user_id', userId)
       .eq('status_id', vs.id)
       .eq('half', 'full')
-      .gte('date', plannerStart)
-      .lte('date', plannerEnd);
+      .gte('date', startDate)
+      .lte('date', endDate);
   };
 
   const fetchData = useCallback(async () => {
