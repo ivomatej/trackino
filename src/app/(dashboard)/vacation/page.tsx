@@ -67,9 +67,13 @@ function VacationContent() {
     if (!vs) return; // Stav "Dovolená" v Plánovači neexistuje, přeskočit
 
     // Sestav seznam všech dnů v rozsahu (včetně víkendů – Plánovač je zobrazuje)
+    // Používáme new Date(y, m-1, d) = lokální půlnoc → .toISOString() = UTC datum,
+    // které přesně odpovídá klíčům Plánovače (ten také ukládá UTC datum lokální půlnoci).
     const dates: string[] = [];
-    const cur = new Date(startDate);
-    const end = new Date(endDate);
+    const [sy, sm, sd] = startDate.split('-').map(Number);
+    const [ey, em, ed] = endDate.split('-').map(Number);
+    const cur = new Date(sy, sm - 1, sd, 0, 0, 0, 0);
+    const end = new Date(ey, em - 1, ed, 0, 0, 0, 0);
     while (cur <= end) {
       dates.push(cur.toISOString().slice(0, 10));
       cur.setDate(cur.getDate() + 1);
@@ -102,14 +106,20 @@ function VacationContent() {
     if (!vs) return;
 
     // Smaž availability záznamy kde status = Dovolená a half = full pro dané dny
+    // Konverze vacation lokálních datumů na Plánovač UTC klíče (lokální půlnoc → UTC datum)
+    const [sy, sm, sd] = startDate.split('-').map(Number);
+    const [ey, em, ed] = endDate.split('-').map(Number);
+    const plannerStart = new Date(sy, sm - 1, sd, 0, 0, 0, 0).toISOString().slice(0, 10);
+    const plannerEnd = new Date(ey, em - 1, ed, 0, 0, 0, 0).toISOString().slice(0, 10);
+
     await supabase.from('trackino_availability')
       .delete()
       .eq('workspace_id', workspaceId)
       .eq('user_id', userId)
       .eq('status_id', vs.id)
       .eq('half', 'full')
-      .gte('date', startDate)
-      .lte('date', endDate);
+      .gte('date', plannerStart)
+      .lte('date', plannerEnd);
   };
 
   const fetchData = useCallback(async () => {

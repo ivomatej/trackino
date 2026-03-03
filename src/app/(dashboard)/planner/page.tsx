@@ -517,24 +517,40 @@ function PlannerContent() {
 
   // ── Sync Plánovač → Dovolená ─────────────────────────────────────────────
 
+  /**
+   * Převede Plánovač UTC klíč (datum uložené jako UTC půlnoc lokálního dne)
+   * na lokální datum string používaný ve vacation záznamech.
+   * Příklad v CET (UTC+1): plannerKey '2026-03-04' → vacDate '2026-03-05'.
+   */
+  function plannerKeyToVacDate(plannerKey: string): string {
+    // plannerKey je UTC datum lokální půlnoci. Přidáním T23:59:59Z se dostaneme
+    // na čas, který je ve správném lokálním dni (funguje pro UTC-12 až UTC+14).
+    const d = new Date(plannerKey + 'T23:59:59Z');
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
   /** Vytvoří 1denní vacation záznam pro daný den, pokud ještě neexistuje. */
   const syncPlannerDayToVacation = async (userId: string, date: string) => {
     if (!currentWorkspace) return;
+    const vacDate = plannerKeyToVacDate(date);
     // Dedup: existuje vacation záznam pokrývající tento datum?
     const { data: existing } = await supabase
       .from('trackino_vacation_entries')
       .select('id')
       .eq('workspace_id', currentWorkspace.id)
       .eq('user_id', userId)
-      .lte('start_date', date)
-      .gte('end_date', date);
+      .lte('start_date', vacDate)
+      .gte('end_date', vacDate);
     if (existing && existing.length > 0) return;
 
     await supabase.from('trackino_vacation_entries').insert({
       workspace_id: currentWorkspace.id,
       user_id: userId,
-      start_date: date,
-      end_date: date,
+      start_date: vacDate,
+      end_date: vacDate,
       days: 1,
       note: '',
     });
@@ -543,12 +559,13 @@ function PlannerContent() {
   /** Smaže 1denní vacation záznamy pro daný den (vícedenní záznamy nechá). */
   const removePlannerDayFromVacation = async (userId: string, date: string) => {
     if (!currentWorkspace) return;
+    const vacDate = plannerKeyToVacDate(date);
     await supabase.from('trackino_vacation_entries')
       .delete()
       .eq('workspace_id', currentWorkspace.id)
       .eq('user_id', userId)
-      .eq('start_date', date)
-      .eq('end_date', date);
+      .eq('start_date', vacDate)
+      .eq('end_date', vacDate);
   };
 
   // ── Nastavení stavu dostupnosti ───────────────────────────────────────────
@@ -591,8 +608,9 @@ function PlannerContent() {
     // ── Sync Plánovač → Dovolená (pouze pro half='full') ──────────────────
     const vacStatus = statuses.find(s => s.name.trim().toLowerCase() === 'dovolená');
     if (vacStatus && half === 'full') {
-      // Použít T12:00:00 pro správné určení weekday bez timezone problémů
-      const isWeekday = ![0, 6].includes(new Date(date + 'T12:00:00').getDay());
+      // date je UTC klíč Plánovače (UTC půlnoc lokálního dne).
+      // T23:59:59Z zaručí správný lokální den pro getDay() bez ohledu na časovou zónu.
+      const isWeekday = ![0, 6].includes(new Date(date + 'T23:59:59Z').getDay());
       if (statusId === vacStatus.id) {
         // Nastavení stavu Dovolená → vytvoř vacation záznam (jen pracovní dny + can_use_vacation)
         if (isWeekday && canUseVacMap[userId]) {
