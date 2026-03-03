@@ -13,6 +13,8 @@ import type { Client, Project, ClientProject } from '@/types/database';
 const COLORS = [
   '#2563eb', '#dc2626', '#16a34a', '#ca8a04', '#9333ea',
   '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16',
+  '#0891b2', '#be185d', '#4f46e5', '#059669', '#d97706',
+  '#7c3aed', '#db2777', '#0d9488', '#ea580c', '#4338ca',
 ];
 
 function ClientsContent() {
@@ -157,8 +159,8 @@ function ClientsContent() {
                     <button
                       key={c}
                       onClick={() => setColor(c)}
-                      className="w-7 h-7 rounded-full transition-transform"
-                      style={{ background: c, transform: color === c ? 'scale(1.2)' : 'scale(1)', outline: color === c ? '2px solid var(--text-primary)' : 'none', outlineOffset: '2px' }}
+                      className="w-7 h-7 rounded-full transition-all"
+                      style={{ background: c, outline: color === c ? '2px solid #000' : 'none', outlineOffset: '2px' }}
                     />
                   ))}
                 </div>

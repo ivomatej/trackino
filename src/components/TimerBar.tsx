@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { splitAtMidnight, crossesMidnight } from '@/lib/midnight-split';
 import TagPicker from '@/components/TagPicker';
-import type { Project, Category, Task, TimeEntry, RequiredFields } from '@/types/database';
+import type { Project, Category, Task, TimeEntry, RequiredFields, Client, ClientProject } from '@/types/database';
 
 interface TimerBarProps {
   onEntryChanged?: () => void;
@@ -25,6 +25,8 @@ export default function TimerBar({ onEntryChanged }: TimerBarProps) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [clientProjects, setClientProjects] = useState<ClientProject[]>([]);
 
   const [isRunning, setIsRunning] = useState(false);
   const [activeEntry, setActiveEntry] = useState<TimeEntry | null>(null);
@@ -56,14 +58,18 @@ export default function TimerBar({ onEntryChanged }: TimerBarProps) {
 
   const fetchData = useCallback(async () => {
     if (!currentWorkspace) return;
-    const [projectsRes, categoriesRes, tasksRes] = await Promise.all([
+    const [projectsRes, categoriesRes, tasksRes, clientsRes, cpRes] = await Promise.all([
       supabase.from('trackino_projects').select('*').eq('workspace_id', currentWorkspace.id).eq('archived', false).order('name'),
       supabase.from('trackino_categories').select('*').eq('workspace_id', currentWorkspace.id).order('name'),
       supabase.from('trackino_tasks').select('*').eq('workspace_id', currentWorkspace.id).order('name'),
+      supabase.from('trackino_clients').select('*').eq('workspace_id', currentWorkspace.id).order('name'),
+      supabase.from('trackino_client_projects').select('*'),
     ]);
     setProjects((projectsRes.data ?? []) as Project[]);
     setCategories((categoriesRes.data ?? []) as Category[]);
     setTasks((tasksRes.data ?? []) as Task[]);
+    setClients((clientsRes.data ?? []) as Client[]);
+    setClientProjects((cpRes.data ?? []) as ClientProject[]);
   }, [currentWorkspace]);
 
   const checkRunningTimer = useCallback(async () => {
@@ -284,20 +290,35 @@ export default function TimerBar({ onEntryChanged }: TimerBarProps) {
 
   const selectedProjectObj = projects.find(p => p.id === selectedProject);
 
+  // Mapa project_id → client
+  const projectClientMap = clientProjects.reduce<Record<string, string>>((acc, cp) => {
+    const client = clients.find(c => c.id === cp.client_id);
+    if (client) acc[cp.project_id] = client.name;
+    return acc;
+  }, {});
+
   // Filter projects by search
   const filteredProjects = projects.filter(p => {
     if (!projectSearch) return true;
     const q = projectSearch.toLowerCase();
-    return p.name.toLowerCase().includes(q) || (p.client && p.client.toLowerCase().includes(q));
+    const clientName = projectClientMap[p.id] ?? '';
+    return p.name.toLowerCase().includes(q) || clientName.toLowerCase().includes(q);
   });
 
-  // Group projects by client
+  // Group projects by client (from client_projects table)
   const projectsByClient = filteredProjects.reduce<Record<string, Project[]>>((acc, p) => {
-    const client = p.client || 'Bez klienta';
-    if (!acc[client]) acc[client] = [];
-    acc[client].push(p);
+    const clientName = projectClientMap[p.id] ?? 'Bez klienta';
+    if (!acc[clientName]) acc[clientName] = [];
+    acc[clientName].push(p);
     return acc;
   }, {});
+
+  // Seřadit: klienti abecedně, Bez klienta na konec
+  const sortedClientEntries = Object.entries(projectsByClient).sort(([a], [b]) => {
+    if (a === 'Bez klienta') return 1;
+    if (b === 'Bez klienta') return -1;
+    return a.localeCompare(b, 'cs');
+  });
 
   // Filter categories/tasks by search
   const filteredCategories = categories.filter(c => {
@@ -371,7 +392,7 @@ export default function TimerBar({ onEntryChanged }: TimerBarProps) {
                 Žádný projekt
               </button>
 
-              {Object.entries(projectsByClient).map(([client, clientProjects]) => (
+              {sortedClientEntries.map(([client, clientProjects]) => (
                 <div key={client}>
                   {/* Klient header */}
                   <div

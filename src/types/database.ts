@@ -26,6 +26,7 @@ export interface Workspace {
   currency: 'CZK' | 'EUR' | 'USD';
   required_fields: RequiredFields;
   hide_tags_globally: boolean;
+  locked: boolean;
   created_at: string;
 }
 

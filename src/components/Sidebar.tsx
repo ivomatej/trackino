@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { useTheme } from './ThemeProvider';
-import { isWorkspaceAdmin as checkWsAdmin, isManager as checkIsManager, canAccessAuditLog as checkAuditAccess } from '@/lib/permissions';
+import { isWorkspaceAdmin as checkWsAdmin, isManager as checkIsManager, canAccessAuditLog as checkAuditAccess, isMasterAdmin as checkMasterAdmin } from '@/lib/permissions';
 
 interface SidebarProps {
   open: boolean;
@@ -40,6 +40,7 @@ const ICONS = {
   tags: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" /><path d="M6 6h.008v.008H6V6z" /></svg>,
   subordinates: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="19" y1="8" x2="19" y2="14" /><line x1="22" y1="11" x2="16" y2="11" /></svg>,
   notes: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>,
+  admin: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>,
 };
 
 export default function Sidebar({ open, onClose }: SidebarProps) {
@@ -54,6 +55,8 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
     const isAdmin = checkWsAdmin(userRole);
     const isManagerOrAdmin = checkIsManager(userRole) || isAdmin;
     const showAudit = checkAuditAccess(userRole, profile ?? null, currentWorkspace?.tariff);
+    const masterAdmin = checkMasterAdmin(profile ?? null);
+    const hideTagsGlobally = currentWorkspace?.hide_tags_globally ?? false;
 
     const trackingItems: NavItem[] = [
       { label: 'Time Tracker', href: '/', icon: ICONS.timer },
@@ -68,6 +71,18 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
       );
     }
 
+    const spravaManagedItems: NavItem[] = [
+      { label: 'Projekty', href: '/projects', icon: ICONS.projects },
+      { label: 'Klienti', href: '/clients', icon: ICONS.clients },
+    ];
+
+    // Štítky – skryté pro běžné členy pokud je zapnuto hide_tags_globally
+    if (!hideTagsGlobally || isAdmin) {
+      spravaManagedItems.push({ label: 'Štítky', href: '/tags', icon: ICONS.tags });
+    }
+
+    spravaManagedItems.push({ label: 'Tým', href: '/team', icon: ICONS.team });
+
     const groups: NavGroup[] = [
       {
         title: 'SLEDOVÁNÍ',
@@ -81,12 +96,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
       },
       {
         title: 'SPRÁVA',
-        items: [
-          { label: 'Projekty', href: '/projects', icon: ICONS.projects },
-          { label: 'Klienti', href: '/clients', icon: ICONS.clients },
-          { label: 'Štítky', href: '/tags', icon: ICONS.tags },
-          { label: 'Tým', href: '/team', icon: ICONS.team },
-        ],
+        items: spravaManagedItems,
       },
     ];
 
@@ -104,8 +114,18 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
       );
     }
 
+    // Správa systému – jen pro Master Admin
+    if (masterAdmin) {
+      groups.push({
+        title: 'SYSTÉM',
+        items: [
+          { label: 'Správa workspace', href: '/admin', icon: ICONS.admin },
+        ],
+      });
+    }
+
     return groups;
-  }, [userRole, profile, currentWorkspace?.tariff]);
+  }, [userRole, profile, currentWorkspace?.tariff, currentWorkspace?.hide_tags_globally]);
 
   const initials = profile?.display_name
     ? profile.display_name.split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2)

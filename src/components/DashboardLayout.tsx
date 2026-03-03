@@ -63,9 +63,46 @@ function PendingApprovalScreen() {
   );
 }
 
+function LockedWorkspaceScreen() {
+  const { currentWorkspace } = useWorkspace();
+  const { signOut } = useAuth();
+
+  return (
+    <div className="flex-1 flex items-center justify-center p-6">
+      <div className="max-w-md w-full text-center">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-5" style={{ background: 'var(--bg-hover)' }}>
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)' }}>
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          </svg>
+        </div>
+        <h2 className="text-xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>Workspace je zamčen</h2>
+        {currentWorkspace && (
+          <p className="text-sm font-semibold mb-3" style={{ color: 'var(--primary)' }}>{currentWorkspace.name}</p>
+        )}
+        <p className="text-sm mb-6" style={{ color: 'var(--text-muted)' }}>
+          Přístup k tomuto workspace byl dočasně pozastaven správcem systému.
+        </p>
+        <button
+          onClick={() => signOut()}
+          className="text-sm transition-colors"
+          style={{ color: 'var(--text-muted)' }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
+        >
+          Odhlásit se
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardLayout({ children, showTimer = false, onTimerEntryChanged }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { isPendingApproval } = useWorkspace();
+  const { isPendingApproval, isWorkspaceLocked } = useWorkspace();
+  const { profile } = useAuth();
+  // Master admin vidí zamčený workspace i tak (aby mohl odemknout)
+  const isMasterAdmin = profile?.is_master_admin === true;
+  const showLockedScreen = isWorkspaceLocked && !isMasterAdmin;
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--bg-main)' }}>
@@ -95,8 +132,8 @@ export default function DashboardLayout({ children, showTimer = false, onTimerEn
               </svg>
             </button>
 
-            {/* Timer v hlavičce - jen pro schválené uživatele */}
-            {showTimer && !isPendingApproval ? (
+            {/* Timer v hlavičce - jen pro schválené a nečekající uživatele */}
+            {showTimer && !isPendingApproval && !showLockedScreen ? (
               <div className="flex-1 min-w-0">
                 <TimerBar onEntryChanged={onTimerEntryChanged} />
               </div>
@@ -108,7 +145,7 @@ export default function DashboardLayout({ children, showTimer = false, onTimerEn
 
         {/* Page content – pending screen nebo normální obsah */}
         <main className="flex-1 p-4 lg:p-6 flex flex-col">
-          {isPendingApproval ? <PendingApprovalScreen /> : children}
+          {showLockedScreen ? <LockedWorkspaceScreen /> : isPendingApproval ? <PendingApprovalScreen /> : children}
         </main>
       </div>
     </div>

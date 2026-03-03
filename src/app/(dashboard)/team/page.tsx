@@ -687,7 +687,7 @@ function TeamContent() {
                   <div className="text-xs font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>Barva avatara</div>
                   <div className="flex flex-wrap gap-1.5">
                     {AVATAR_COLORS.map(c => (
-                      <button key={c} onClick={() => setEditColor(c)} className="w-5 h-5 rounded-full transition-all flex-shrink-0" style={{ background: c, transform: editColor === c ? 'scale(1.35)' : 'scale(1)', outline: editColor === c ? '2px solid var(--text-primary)' : '2px solid transparent', outlineOffset: '1px' }} />
+                      <button key={c} onClick={() => setEditColor(c)} className="w-5 h-5 rounded-full transition-all flex-shrink-0" style={{ background: c, outline: editColor === c ? '2px solid #000' : 'none', outlineOffset: '2px' }} />
                     ))}
                   </div>
                 </div>

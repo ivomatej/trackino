@@ -15,6 +15,8 @@ interface WorkspaceContextType {
   userRole: UserRole | null;
   /** Čeká uživatel na schválení adminem? */
   isPendingApproval: boolean;
+  /** Je workspace zamčen adminem? */
+  isWorkspaceLocked: boolean;
   /** Manager assignments pro aktuální workspace (kde je current user managerem) */
   managerAssignments: ManagerAssignment[];
   /** Kontroluje, zda je aktuální uživatel managerem daného uživatele */
@@ -305,6 +307,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         createWorkspace,
         userRole: currentMembership?.role ?? null,
         isPendingApproval: currentMembership?.approved === false,
+        isWorkspaceLocked: currentWorkspace?.locked === true,
         managerAssignments,
         isManagerOf,
         refreshWorkspace,

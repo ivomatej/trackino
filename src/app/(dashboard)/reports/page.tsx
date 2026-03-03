@@ -267,6 +267,21 @@ function ReportsContent() {
 
   const hasCosts = canSeeOthers && totalCost > 0;
 
+  // Per-uživatelský přehled (hodiny + náklady)
+  const perUserStats = canSeeOthers
+    ? Object.values(
+        entries.reduce<Record<string, { userId: string; seconds: number; cost: number }>>((acc, e) => {
+          if (!acc[e.user_id]) acc[e.user_id] = { userId: e.user_id, seconds: 0, cost: 0 };
+          acc[e.user_id].seconds += e.duration ?? 0;
+          if (e.duration) {
+            const rate = getRateForEntry(e.user_id, e.start_time.split('T')[0]);
+            if (rate !== null) acc[e.user_id].cost += (e.duration / 3600) * rate;
+          }
+          return acc;
+        }, {})
+      ).sort((a, b) => b.seconds - a.seconds)
+    : [];
+
   const currencySymbol = currentWorkspace?.currency === 'EUR' ? '€' : currentWorkspace?.currency === 'USD' ? '$' : 'Kč';
 
   function fmtCost(amount: number): string {
@@ -634,6 +649,33 @@ function ReportsContent() {
             </div>
           )}
         </div>
+
+        {/* Per-uživatelský přehled nákladů */}
+        {canSeeOthers && !loading && perUserStats.length > 1 && (
+          <div className="rounded-xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+            <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
+              <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Přehled per uživatel</span>
+            </div>
+            <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
+              {perUserStats.map(stat => {
+                const name = memberName(stat.userId);
+                return (
+                  <div key={stat.userId} className="flex items-center gap-3 px-4 py-3">
+                    <div className="flex-1 text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{name}</div>
+                    <div className="text-sm tabular-nums font-semibold" style={{ color: 'var(--text-secondary)' }}>
+                      {fmtDuration(stat.seconds)}
+                    </div>
+                    {stat.cost > 0 && (
+                      <div className="text-sm tabular-nums font-semibold" style={{ color: 'var(--primary)', minWidth: '80px', textAlign: 'right' }}>
+                        {fmtCost(stat.cost)} {currencySymbol}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Záznamy */}
         {loading ? (
