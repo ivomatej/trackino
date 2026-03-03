@@ -14,12 +14,24 @@ const DEFAULT_HELP_CONTENT = `
 
 <h3>Základní funkce</h3>
 <ul>
+  <li><strong>Dashboard</strong> – úvodní přehledová stránka s personalizovaným pozdravem, souhrnem výdělku, odpracovaných hodin, zbývajících dní a svátků pro aktuální měsíc</li>
   <li><strong>Time Tracker</strong> – spouštějte a zastavujte timer pro sledování odpracovaného času; po výběru projektu a kategorie/úkolu se zobrazuje čitelný breadcrumb místo ikonek</li>
   <li><strong>Projekty</strong> – organizujte záznamy do projektů a přiřazujte klienty</li>
   <li><strong>Klienti</strong> – spravujte klienty a propojujte je s projekty</li>
   <li><strong>Štítky</strong> – označujte záznamy štítky pro lepší kategorizaci</li>
   <li><strong>Reporty</strong> – analyzujte odpracovaný čas (včetně výdělku dle hodinové sazby) a přidávejte záznamy ručně</li>
   <li><strong>Tým</strong> – spravujte členy workspace a přidávejte nové pozvánkou</li>
+</ul>
+
+<h3>Dashboard</h3>
+<p>Po přihlášení se zobrazí Dashboard s klíčovými informacemi pro aktuální měsíc:</p>
+<ul>
+  <li><strong>Výdělek</strong> – součet hodin × hodinová sazba za aktuální měsíc (zobrazuje se pouze pokud máte nastavenou sazbu)</li>
+  <li><strong>Odpracováno</strong> – celkový čas zaznamenaný v tomto měsíci</li>
+  <li><strong>Zbývá dní</strong> – kalendářní dny do konce měsíce</li>
+  <li><strong>Pracovní dny</strong> – zbývající pracovní dny (pondělí–pátek bez svátků)</li>
+  <li><strong>Přehled měsíce</strong> – progress bar, počty dní, státní svátky ČR</li>
+  <li><strong>Dnešní svátek</strong> – kdo dnes slaví svátek dle českého kalendáře</li>
 </ul>
 
 <h3>Výběr kategorie a úkolu v Time Trackeru</h3>

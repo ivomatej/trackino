@@ -11,6 +11,12 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v1.0.0 – 3. 3. 2026</h3>
+<ul>
+  <li><strong>Dashboard</strong> – nová úvodní stránka: personalizovaný pozdrav dle části dne, souhrn výdělku a odpracovaných hodin za aktuální měsíc, zbývající kalendářní a pracovní dny, přehled měsíce s progress barem, dnešní svátek, státní svátky ČR v daném měsíci</li>
+  <li><strong>Logo jako odkaz na Dashboard</strong> – kliknutím na logo Trackino v levém panelu se vždy přejde na Dashboard</li>
+</ul>
+
 <h3>v0.9.0 – 3. 3. 2026</h3>
 <ul>
   <li><strong>Přepínač workspace</strong> – uživatelé s přístupem do více workspace mohou přepínat přímo z horní lišty bez odhlášení</li>

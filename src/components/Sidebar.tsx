@@ -26,6 +26,7 @@ interface NavGroup {
 
 // Ikony jako konstanty
 const ICONS = {
+  dashboard: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /></svg>,
   timer: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>,
   planner: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>,
   reports: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></svg>,
@@ -59,6 +60,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
     const hideTagsGlobally = currentWorkspace?.hide_tags_globally ?? false;
 
     const trackingItems: NavItem[] = [
+      { label: 'Dashboard', href: '/dashboard', icon: ICONS.dashboard },
       { label: 'Time Tracker', href: '/', icon: ICONS.timer },
       { label: 'Plánovač', href: '/planner', icon: ICONS.planner },
     ];
@@ -176,17 +178,19 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
       >
         {/* Logo + Workspace */}
         <div className="flex items-center gap-3 px-4 h-[var(--topbar-height)] border-b" style={{ borderColor: 'var(--border)' }}>
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-xs flex-shrink-0" style={{ background: 'var(--primary)' }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
-            </svg>
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>Trackino</div>
-            <div className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
-              {currentWorkspace?.name ?? ''}
+          <Link href="/dashboard" onClick={onClose} className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-xs flex-shrink-0" style={{ background: 'var(--primary)' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+              </svg>
             </div>
-          </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>Trackino</div>
+              <div className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
+                {currentWorkspace?.name ?? ''}
+              </div>
+            </div>
+          </Link>
           <button onClick={onClose} className="lg:hidden p-1 rounded" style={{ color: 'var(--text-muted)' }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
