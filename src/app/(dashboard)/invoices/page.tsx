@@ -131,6 +131,8 @@ function InvoicesContent() {
   const [editDetailDueDate, setEditDetailDueDate] = useState('');
   const [editDetailHours, setEditDetailHours] = useState('');
   const [editDetailAmount, setEditDetailAmount] = useState('');
+  const [editDetailApprovedAt, setEditDetailApprovedAt] = useState('');
+  const [editDetailPaidAt, setEditDetailPaidAt] = useState('');
   const [savingDetail, setSavingDetail] = useState(false);
   const [changingStatusId, setChangingStatusId] = useState<string | null>(null);
 
@@ -428,6 +430,8 @@ function InvoicesContent() {
     setEditDetailDueDate(invoice.due_date);
     setEditDetailHours(invoice.total_hours !== null ? String(invoice.total_hours) : '');
     setEditDetailAmount(invoice.amount !== null ? String(invoice.amount) : '');
+    setEditDetailApprovedAt(invoice.approved_at ? invoice.approved_at.split('T')[0] : '');
+    setEditDetailPaidAt(invoice.paid_at ? invoice.paid_at.split('T')[0] : '');
   };
 
   const saveDetailEdit = async () => {
@@ -438,6 +442,8 @@ function InvoicesContent() {
       due_date: editDetailDueDate,
       total_hours: editDetailHours ? parseFloat(editDetailHours) : null,
       amount: editDetailAmount ? parseFloat(editDetailAmount) : null,
+      approved_at: editDetailApprovedAt ? editDetailApprovedAt + 'T00:00:00' : null,
+      paid_at: editDetailPaidAt ? editDetailPaidAt + 'T00:00:00' : null,
     };
     await supabase.from('trackino_invoices').update(updates).eq('id', editingDetailId);
     const updated = { ...detailInvoice, ...updates };
@@ -685,17 +691,95 @@ function InvoicesContent() {
           </div>
         )}
 
-        {/* Banner – již podáno */}
-        {canInvoice && alreadySubmitted && (
-          <div className="mb-5 flex items-center gap-3 px-4 py-3 rounded-xl border" style={{ background: '#f0fdf4', borderColor: '#86efac' }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-            <span className="text-sm" style={{ color: '#15803d' }}>
-              Faktura za <strong>{fmtMonth(prevYear, prevMonth)}</strong> byla podána. Sledujte stav níže.
-            </span>
-          </div>
-        )}
+        {/* Faktura aktuálního období – zobrazí se namísto banneru */}
+        {canInvoice && alreadySubmitted && (() => {
+          const inv = invoices.find(
+            i => i.user_id === user?.id &&
+              i.billing_period_year === prevYear &&
+              i.billing_period_month === prevMonth &&
+              i.status !== 'cancelled' &&
+              i.status !== 'returned'
+          );
+          if (!inv) return null;
+          return (
+            <div
+              className="mb-5 rounded-2xl border overflow-hidden"
+              style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}
+            >
+              <div
+                className="flex items-center gap-3 px-4 py-3.5 cursor-pointer transition-colors"
+                onClick={() => openDetail(inv)}
+                onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-hover)')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                      {fmtMonth(inv.billing_period_year, inv.billing_period_month)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>VS: {inv.variable_symbol}</span>
+                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Vystaveno: {fmtDate(inv.issue_date)}</span>
+                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Splatnost: {fmtDate(inv.due_date)}</span>
+                    {inv.total_hours !== null && (
+                      <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{inv.total_hours} h</span>
+                    )}
+                    {inv.amount !== null && (
+                      <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
+                        {inv.amount.toLocaleString('cs-CZ')} {currencySymbol}
+                      </span>
+                    )}
+                    {inv.approved_at && (
+                      <span className="text-xs" style={{ color: '#1e40af' }}>
+                        Schváleno: {fmtDate(inv.approved_at.split('T')[0])}
+                      </span>
+                    )}
+                    {inv.paid_at && (
+                      <span className="text-xs font-medium" style={{ color: '#15803d' }}>
+                        Proplaceno: {fmtDate(inv.paid_at.split('T')[0])}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  {renderStatusBadge(inv.status)}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); openDetail(inv); }}
+                    title="Zobrazit detail"
+                    className="p-1.5 rounded-lg transition-colors"
+                    style={{ color: 'var(--text-muted)' }}
+                    onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-secondary)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" />
+                    </svg>
+                  </button>
+                  {inv.pdf_url && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); downloadPdf(inv); }}
+                      title="Stáhnout PDF"
+                      disabled={downloadingId === inv.id}
+                      className="p-1.5 rounded-lg transition-colors disabled:opacity-50"
+                      style={{ color: 'var(--text-muted)' }}
+                      onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-secondary)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
+                    >
+                      {downloadingId === inv.id ? (
+                        <div className="w-[15px] h-[15px] border border-current border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                      )}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Formulář pro podání faktury */}
         {showSubmitForm && canInvoice && (
@@ -1226,6 +1310,33 @@ function InvoicesContent() {
                       />
                     </div>
                   </div>
+                  {/* Datum schválení / proplacení – editovatelné pokud existuje */}
+                  {(detailInvoice.status === 'approved' || detailInvoice.status === 'paid') && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Datum schválení</label>
+                        <input
+                          type="date"
+                          value={editDetailApprovedAt}
+                          onChange={(e) => setEditDetailApprovedAt(e.target.value)}
+                          className={inputCls}
+                          style={inputStyle}
+                        />
+                      </div>
+                      {detailInvoice.status === 'paid' && (
+                        <div>
+                          <label className="block text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Datum proplacení</label>
+                          <input
+                            type="date"
+                            value={editDetailPaidAt}
+                            onChange={(e) => setEditDetailPaidAt(e.target.value)}
+                            className={inputCls}
+                            style={inputStyle}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
                   {/* Statické pole jen pro čtení */}
                   <div className="grid grid-cols-2 gap-3">
                     <div className="p-3 rounded-xl" style={{ background: 'var(--bg-hover)' }}>

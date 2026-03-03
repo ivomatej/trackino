@@ -11,6 +11,13 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v1.6.1 – 3. 3. 2026</h3>
+<ul>
+  <li><strong>Fakturace – editace dat schválení a proplacení</strong> – admin může v detailu faktury (režim Upravit) měnit také datum schválení a datum proplacení (zobrazují se pouze pro faktury ve stavu Schváleno / Proplaceno)</li>
+  <li><strong>Fakturace – přehled aktuální faktury místo banneru</strong> – po podání faktury se namísto zeleného informačního banneru zobrazí přímo řádek faktury s aktuálním stavem, daty, počtem hodin, částkou a možností stáhnout PDF; badge v bočním panelu se nyní počítá client-side a nezobrazí se, pokud existuje novější aktivní faktura pro stejné období</li>
+  <li><strong>Fakturace – vrácení stavů v detailu</strong> – admin může v detailu faktury změnit stav zpět: Proplaceno → Schváleno nebo → Stornováno; Schváleno → Čekající nebo → Stornováno; Čekající → Stornováno</li>
+</ul>
+
 <h3>v1.6.0 – 3. 3. 2026</h3>
 <ul>
   <li><strong>Patička aplikace</strong> – do spodní části každé stránky přidán copyright „© 2026 Trackino"; rok se automaticky rozšíří na rozsah (např. 2026–2027) s každým novým rokem</li>

@@ -64,11 +64,12 @@ const DEFAULT_HELP_CONTENT = `
 <h3>Fakturace</h3>
 <p>Stránka <strong>Fakturace</strong> slouží k fakturaci odvedené práce. Workflow má čtyři fáze:</p>
 <ul>
-  <li><strong>Podání žádosti</strong> – uživatel s oprávněním „Může fakturovat" klikne na „Požádat o fakturaci", nahraje PDF faktury a vyplní: datum vystavení, datum splatnosti, variabilní symbol a příznak plátce DPH. Při podání se vpravo zobrazí fakturační profil přiřazený k uživateli.</li>
+  <li><strong>Podání žádosti</strong> – uživatel s oprávněním „Může fakturovat" klikne na „Požádat o fakturaci", nahraje PDF faktury a vyplní: datum vystavení, datum splatnosti, variabilní symbol a příznak plátce DPH. Po podání se namísto banneru zobrazí přímo řádek faktury s aktuálním stavem; kliknutím na řádek lze otevřít detail. Při podání se vpravo zobrazí fakturační profil přiřazený k uživateli.</li>
   <li><strong>Schválení</strong> – Team Manažer nebo Admin vidí záložku „Ke schválení"; kliknutím na fakturu ji zkontroluje (hodiny jsou předvyplněny z Reportů za dané období), doplní výši částky a schválí nebo vrátí k opravě</li>
-  <li><strong>Vrácení k opravě</strong> – admin může fakturu „Vrátit k opravě" s poznámkou (např. „uprav fakturační údaje"); uživateli se zobrazí červený odznak na položce Fakturace v bočním panelu a může podat fakturu znovu</li>
+  <li><strong>Vrácení k opravě</strong> – admin může fakturu „Vrátit k opravě" s poznámkou (např. „uprav fakturační údaje"); uživateli se zobrazí červený odznak na položce Fakturace v bočním panelu a může podat fakturu znovu. Odznak se nezobrazí, pokud byla vrácená faktura znovu podána.</li>
   <li><strong>Proplacení</strong> – uživatel s rolí „Správce fakturace" vidí záložku „Přehled faktur"; může stáhnout PDF (název souboru: YYYYMM-faktura-jmeno-prijmeni.pdf) a označit schválenou fakturu jako proplacentou</li>
 </ul>
+<p><strong>Editace detailu faktury (admin)</strong> – Admin nebo Správce fakturace může v detailu faktury kliknout na „Upravit" a změnit: datum vystavení, datum splatnosti, počet hodin, částku a (pro schválené/proplacené faktury) datum schválení a datum proplacení. V detailu jsou dostupná také tlačítka pro změnu stavu zpět: Proplaceno → Schváleno nebo → Stornováno; Schváleno → Čekající nebo → Stornováno.</p>
 <p>Oprávnění se nastavují v Tým → editace člena → sekce Fakturace.</p>
 
 <h3>Fakturační profily workspace</h3>
