@@ -90,7 +90,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
   const navGroups = useMemo<NavGroup[]>(() => {
     const isAdmin = checkWsAdmin(userRole);
     const isManagerOrAdmin = checkIsManager(userRole) || isAdmin;
-    const showAudit = checkAuditAccess(userRole, profile ?? null, currentWorkspace?.tariff);
+    const showAudit = checkAuditAccess(userRole, profile ?? null, currentMembership ?? null);
     const masterAdmin = checkMasterAdmin(profile ?? null);
     const hideTagsGlobally = currentWorkspace?.hide_tags_globally ?? false;
     const canUseVacation = currentMembership?.can_use_vacation ?? false;
@@ -162,7 +162,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
       );
     }
 
-    // Audit log – jen při tarifu Max + admin/master admin
+    // Audit log – Master Admin, Workspace Admin nebo uživatel s can_view_audit
     if (showAudit) {
       groups[2].items.push(
         { label: 'Audit log', href: '/audit', icon: ICONS.audit },

@@ -61,6 +61,9 @@ const DEFAULT_HELP_CONTENT = `
 <h3>Podřízení</h3>
 <p>Team Manažeři a Admini mají přístup ke stránce <strong>Podřízení</strong> (v sekci Analýza). Zobrazuje záznamy přiřazených podřízených s možností filtrovat: Dnes, Týden, nebo Vlastní období (výběrem datumu od–do). Kliknutím na popis záznamu ho lze inline editovat; kliknutím na existující poznámku ji lze upravit.</p>
 
+<h3>Fakturace – vyhledávání (admin)</h3>
+<p>V záložkách <strong>Ke schválení</strong> a <strong>Přehled faktur</strong> je nad seznamem vyhledávací pole. Faktury lze filtrovat podle jména uživatele, variabilního symbolu nebo měsíce/roku (např. „Únor 2026").</p>
+
 <h3>Fakturace</h3>
 <p>Stránka <strong>Fakturace</strong> slouží k fakturaci odvedené práce. Workflow má čtyři fáze:</p>
 <ul>
@@ -75,6 +78,12 @@ const DEFAULT_HELP_CONTENT = `
 <h3>Fakturační profily workspace</h3>
 <p>V <strong>Nastavení → Fakturační údaje</strong> lze vytvořit více fakturačních profilů (např. pro různé právní subjekty). Každý profil obsahuje: název společnosti, jméno jednatele, adresu (ulice + číslo popisné), PSČ, město, stát, IČO, DIČ, příznak plátce DPH, e-mail, telefon a poznámku k fakturaci. Jeden profil lze označit jako výchozí.</p>
 <p>V <strong>Tým → editace člena → sekce Fakturace</strong> lze každému členovi přiřadit konkrétní fakturační profil. Pokud není přiřazen žádný, použije se výchozí profil workspace. Přiřazený profil se uživateli zobrazí při podání žádosti o fakturaci v pravém panelu formuláře.</p>
+
+<h3>Audit log</h3>
+<p>Stránka <strong>Audit log</strong> (dostupná Adminum, Master Adminům a uživatelům s oprávněním „Audit log") zobrazuje historii úprav, které manažeři nebo admini provedli na záznamech podřízených. Každý záznam obsahuje: kdo úpravu provedl, pro koho, jakou akci vykonal, datum a čas úpravy a detail záznamu (datum, čas od–do, délka, popis). Oprávnění se nastavuje v Tým → editace člena.</p>
+
+<h3>Timer – provoz bez internetu</h3>
+<p>Timer sleduje čas čistě lokálně (JavaScript interval) od okamžiku spuštění. Pokud uživateli vypadne internet, timer <strong>stále běží</strong> a zobrazuje správný čas. Při zastavení offline se záznam uloží do lokální paměti prohlížeče a automaticky se odešle do databáze ihned po obnovení připojení. V liště timeru se zobrazí stav „Offline" (při výpadku) nebo „Čeká na uložení" (po zastavení offline).</p>
 
 <h3>Půlnoční split</h3>
 <p>Pokud timer běží přes půlnoc, záznam se automaticky rozdělí na dva – jeden za předchozí den, druhý za nový den. Kontrola probíhá každých 30 sekund na pozadí.</p>

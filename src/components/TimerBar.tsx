@@ -204,6 +204,81 @@ export default function TimerBar({ onEntryChanged, playData }: TimerBarProps) {
 
   const [validationError, setValidationError] = useState('');
 
+  // ── Offline handling ─────────────────────────────────────────────────────
+  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const [offlinePendingMsg, setOfflinePendingMsg] = useState('');
+
+  const PENDING_KEY = 'trackino_pending_stop';
+
+  // Zpracovat čekající stop ze localStorage (po obnovení připojení nebo na mount)
+  const processPendingStop = useCallback(async () => {
+    if (!user || !currentWorkspace) return;
+    const raw = localStorage.getItem(PENDING_KEY);
+    if (!raw) return;
+    try {
+      const pending = JSON.parse(raw) as {
+        entryId: string; startTime: string; stoppedAt: string;
+        description: string; projectId: string; categoryId: string; taskId: string; tagIds: string[];
+        workspaceId: string; userId: string;
+      };
+      // Bezpečnostní kontrola – musí patřit aktuálnímu uživateli a workspace
+      if (pending.workspaceId !== currentWorkspace.id || pending.userId !== user.id) { localStorage.removeItem(PENDING_KEY); return; }
+      const startTime = new Date(pending.startTime);
+      const stoppedAt = new Date(pending.stoppedAt);
+      const segments = splitAtMidnight(startTime, stoppedAt);
+      if (segments.length === 1) {
+        const duration = Math.floor((stoppedAt.getTime() - startTime.getTime()) / 1000);
+        await supabase.from('trackino_time_entries').update({
+          end_time: stoppedAt.toISOString(), duration, is_running: false,
+          description: pending.description,
+          project_id: pending.projectId || null, category_id: pending.categoryId || null, task_id: pending.taskId || null,
+        }).eq('id', pending.entryId);
+      } else {
+        const first = segments[0];
+        const firstDur = Math.floor((first.end.getTime() - first.start.getTime()) / 1000);
+        await supabase.from('trackino_time_entries').update({
+          end_time: first.end.toISOString(), duration: firstDur, is_running: false,
+          description: pending.description,
+          project_id: pending.projectId || null, category_id: pending.categoryId || null, task_id: pending.taskId || null,
+        }).eq('id', pending.entryId);
+        for (let i = 1; i < segments.length; i++) {
+          const seg = segments[i];
+          const segDur = Math.floor((seg.end.getTime() - seg.start.getTime()) / 1000);
+          const { data: newE } = await supabase.from('trackino_time_entries').insert({
+            workspace_id: currentWorkspace.id, user_id: user.id,
+            description: pending.description,
+            project_id: pending.projectId || null, category_id: pending.categoryId || null, task_id: pending.taskId || null,
+            start_time: seg.start.toISOString(), end_time: seg.end.toISOString(), duration: segDur, is_running: false,
+          }).select().single();
+          if (newE && pending.tagIds.length > 0) {
+            await supabase.from('trackino_time_entry_tags').insert(pending.tagIds.map(tid => ({ time_entry_id: newE.id, tag_id: tid })));
+          }
+        }
+      }
+      // Tagy pro původní záznam
+      await supabase.from('trackino_time_entry_tags').delete().eq('time_entry_id', pending.entryId);
+      if (pending.tagIds.length > 0) {
+        await supabase.from('trackino_time_entry_tags').insert(pending.tagIds.map(tid => ({ time_entry_id: pending.entryId, tag_id: tid })));
+      }
+      localStorage.removeItem(PENDING_KEY);
+      setOfflinePendingMsg('');
+      onEntryChanged?.();
+    } catch {
+      localStorage.removeItem(PENDING_KEY);
+    }
+  }, [user, currentWorkspace, onEntryChanged]);
+
+  useEffect(() => {
+    const goOnline = () => { setIsOnline(true); processPendingStop(); };
+    const goOffline = () => setIsOnline(false);
+    window.addEventListener('online', goOnline);
+    window.addEventListener('offline', goOffline);
+    // Zkusit zpracovat čekající stop při mountu (případ refresh po offline)
+    if (navigator.onLine) processPendingStop();
+    return () => { window.removeEventListener('online', goOnline); window.removeEventListener('offline', goOffline); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, currentWorkspace?.id]);
+
   const startTimer = async () => {
     if (!user || !currentWorkspace) return;
     const vErr = validateRequiredFields();
@@ -235,6 +310,27 @@ export default function TimerBar({ onEntryChanged, playData }: TimerBarProps) {
   const stopTimer = async () => {
     if (!activeEntry || !currentWorkspace || !user) return;
     const now = new Date();
+
+    // Pokud jsme offline – ulož do localStorage a zastavíme lokálně
+    if (!navigator.onLine) {
+      localStorage.setItem(PENDING_KEY, JSON.stringify({
+        entryId: activeEntry.id,
+        startTime: activeEntry.start_time,
+        stoppedAt: now.toISOString(),
+        description: description.trim(),
+        projectId: selectedProject,
+        categoryId: selectedCategory,
+        taskId: selectedTask,
+        tagIds: selectedTags,
+        workspaceId: currentWorkspace.id,
+        userId: user.id,
+      }));
+      setOfflinePendingMsg('Jste offline – záznam bude uložen po obnovení připojení.');
+      setIsRunning(false); setActiveEntry(null); setElapsed(0);
+      setDescription(''); setSelectedProject(''); setSelectedCategory(''); setSelectedTask(''); setSelectedTags([]);
+      return;
+    }
+
     const startTime = new Date(activeEntry.start_time);
     const segments = splitAtMidnight(startTime, now);
 
@@ -699,6 +795,18 @@ export default function TimerBar({ onEntryChanged, playData }: TimerBarProps) {
       {validationError && (
         <span className="text-xs whitespace-nowrap hidden sm:inline" style={{ color: 'var(--danger)' }}>
           {validationError}
+        </span>
+      )}
+
+      {/* Offline indikátor / čekající stop */}
+      {(!isOnline || offlinePendingMsg) && (
+        <span
+          className="text-xs whitespace-nowrap hidden sm:inline flex items-center gap-1"
+          style={{ color: offlinePendingMsg ? '#d97706' : '#6b7280' }}
+          title={offlinePendingMsg || 'Jste offline – timer stále běží'}
+        >
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10" /></svg>
+          {offlinePendingMsg ? 'Čeká na uložení' : 'Offline'}
         </span>
       )}
 

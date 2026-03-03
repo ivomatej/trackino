@@ -468,10 +468,26 @@ function InvoicesContent() {
   const inputCls = 'w-full px-3 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]';
   const inputStyle = { borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' };
 
+  // Vyhledávání (jen admin záložky)
+  const [invoiceSearch, setInvoiceSearch] = useState('');
+
   // Filtrování faktur dle tabu
   const myInvoices = invoices.filter(i => i.user_id === user?.id);
+
+  const matchesSearch = (inv: InvoiceWithUser) => {
+    if (!invoiceSearch.trim()) return true;
+    const q = invoiceSearch.toLowerCase();
+    const name = (inv.profile?.display_name ?? inv.profile?.email ?? '').toLowerCase();
+    const vs = (inv.variable_symbol ?? '').toLowerCase();
+    const month = fmtMonth(inv.billing_period_year, inv.billing_period_month).toLowerCase();
+    return name.includes(q) || vs.includes(q) || month.includes(q);
+  };
+
   const pendingInvoices = invoices.filter(i => i.status === 'pending');
   const billingInvoices = invoices.filter(i => i.status === 'approved' || i.status === 'paid');
+
+  const pendingInvoicesFiltered = pendingInvoices.filter(matchesSearch);
+  const billingInvoicesFiltered = billingInvoices.filter(matchesSearch);
 
   const tabs: { key: ViewTab; label: string; count?: number; visible: boolean }[] = [
     { key: 'my', label: 'Moje faktury', count: myInvoices.length, visible: canInvoice },
@@ -997,28 +1013,55 @@ function InvoicesContent() {
           </div>
         )}
 
-        {/* Taby */}
-        {visibleTabs.length > 1 && (
-          <div className="flex gap-1 mb-6 rounded-lg p-1" style={{ background: 'var(--bg-hover)' }}>
-            {visibleTabs.map(tab => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className="flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors"
-                style={{
-                  background: activeTab === tab.key ? 'var(--bg-card)' : 'transparent',
-                  color: activeTab === tab.key ? 'var(--text-primary)' : 'var(--text-muted)',
-                  boxShadow: activeTab === tab.key ? 'var(--shadow-sm)' : 'none',
-                }}
-              >
-                {tab.label}
-                {tab.count !== undefined && tab.count > 0 && (
-                  <span className="ml-1.5 text-xs" style={{ color: 'var(--text-muted)' }}>{tab.count}</span>
-                )}
-              </button>
-            ))}
-          </div>
-        )}
+        {/* Taby + vyhledávání pro admin záložky */}
+        <div className="mb-6">
+          {visibleTabs.length > 1 && (
+            <div className="flex gap-1 rounded-lg p-1 mb-3" style={{ background: 'var(--bg-hover)' }}>
+              {visibleTabs.map(tab => (
+                <button
+                  key={tab.key}
+                  onClick={() => { setActiveTab(tab.key); setInvoiceSearch(''); }}
+                  className="flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                  style={{
+                    background: activeTab === tab.key ? 'var(--bg-card)' : 'transparent',
+                    color: activeTab === tab.key ? 'var(--text-primary)' : 'var(--text-muted)',
+                    boxShadow: activeTab === tab.key ? 'var(--shadow-sm)' : 'none',
+                  }}
+                >
+                  {tab.label}
+                  {tab.count !== undefined && tab.count > 0 && (
+                    <span className="ml-1.5 text-xs" style={{ color: 'var(--text-muted)' }}>{tab.count}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+          {/* Vyhledávání – pouze pro záložky Ke schválení a Přehled faktur */}
+          {(activeTab === 'approve' || activeTab === 'billing') && (
+            <div className="relative">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)' }}>
+                <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input
+                type="text"
+                value={invoiceSearch}
+                onChange={(e) => setInvoiceSearch(e.target.value)}
+                placeholder="Hledat dle jména, VS nebo měsíce…"
+                className="w-full pl-9 pr-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                style={inputStyle}
+              />
+              {invoiceSearch && (
+                <button
+                  onClick={() => setInvoiceSearch('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded"
+                  style={{ color: 'var(--text-muted)' }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                </button>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Content */}
         {loading ? (
@@ -1049,16 +1092,20 @@ function InvoicesContent() {
             {/* Ke schválení */}
             {activeTab === 'approve' && canApprove && (
               <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
-                {pendingInvoices.length === 0 ? (
+                {pendingInvoicesFiltered.length === 0 ? (
                   <div className="px-6 py-16 text-center">
                     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-3" style={{ color: 'var(--text-muted)' }}>
                       <polyline points="20 6 9 17 4 12" />
                     </svg>
-                    <p className="text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>Vše schváleno</p>
-                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Žádné faktury nečekají na schválení.</p>
+                    <p className="text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
+                      {invoiceSearch ? 'Žádné výsledky' : 'Vše schváleno'}
+                    </p>
+                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                      {invoiceSearch ? `Žádná faktura neodpovídá „${invoiceSearch}"` : 'Žádné faktury nečekají na schválení.'}
+                    </p>
                   </div>
                 ) : (
-                  pendingInvoices.map(inv => renderInvoiceRow(inv, true))
+                  pendingInvoicesFiltered.map(inv => renderInvoiceRow(inv, true))
                 )}
               </div>
             )}
@@ -1066,12 +1113,14 @@ function InvoicesContent() {
             {/* Přehled faktur */}
             {activeTab === 'billing' && (canManageBilling || isWorkspaceAdmin) && (
               <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
-                {billingInvoices.length === 0 ? (
+                {billingInvoicesFiltered.length === 0 ? (
                   <div className="px-6 py-16 text-center">
-                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Žádné schválené ani proplacené faktury.</p>
+                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                      {invoiceSearch ? `Žádná faktura neodpovídá „${invoiceSearch}"` : 'Žádné schválené ani proplacené faktury.'}
+                    </p>
                   </div>
                 ) : (
-                  billingInvoices.map(inv => renderInvoiceRow(inv, true))
+                  billingInvoicesFiltered.map(inv => renderInvoiceRow(inv, true))
                 )}
               </div>
             )}

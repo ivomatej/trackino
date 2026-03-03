@@ -188,14 +188,45 @@ function SubordinatesContent() {
     ? entries
     : entries.filter(e => e.user_id === selectedUser);
 
+  const logAudit = async (
+    action: string,
+    entry: SubordinateEntry,
+    extraDetails?: Record<string, unknown>
+  ) => {
+    if (!user || !currentWorkspace) return;
+    const startDate = entry.start_time ? new Date(entry.start_time) : null;
+    const endDate = entry.end_time ? new Date(entry.end_time) : null;
+    const details: Record<string, unknown> = {
+      description: entry.description ?? '',
+      duration: entry.duration ?? 0,
+      date: startDate ? startDate.toLocaleDateString('cs-CZ', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '',
+      start_time: startDate ? startDate.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' }) : '',
+      end_time: endDate ? endDate.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' }) : '',
+      ...extraDetails,
+    };
+    await supabase.from('trackino_audit_log').insert({
+      workspace_id: currentWorkspace.id,
+      actor_user_id: user.id,
+      target_user_id: entry.user_id,
+      action,
+      entity_type: 'time_entry',
+      entity_id: entry.id,
+      details,
+    });
+  };
+
   const saveNote = async (entryId: string) => {
+    const entry = entries.find(e => e.id === entryId);
     await supabase.from('trackino_time_entries').update({ manager_note: noteText }).eq('id', entryId);
+    if (entry) await logAudit('edit_note_for_user', entry, { manager_note: noteText });
     setEditingNote(null);
     fetchData();
   };
 
   const saveDescription = async (entryId: string) => {
+    const entry = entries.find(e => e.id === entryId);
     await supabase.from('trackino_time_entries').update({ description: editDesc }).eq('id', entryId);
+    if (entry) await logAudit('edit_entry_for_user', { ...entry, description: editDesc }, { new_description: editDesc });
     setEditingEntry(null);
     fetchData();
   };

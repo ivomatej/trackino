@@ -34,10 +34,10 @@ export function usePermissions() {
     /** Má přístup k nastavení workspace */
     canAccessSettings: checkAccessSettings(userRole),
     /** Má přístup k audit logu */
-    canAccessAuditLog: checkAccessAuditLog(userRole, profile, currentWorkspace?.tariff),
+    canAccessAuditLog: checkAccessAuditLog(userRole, profile, currentMembership),
     /** Aktuální role */
     role: userRole,
     /** Aktuální membership */
     membership: currentMembership,
-  }), [profile, userRole, currentMembership, currentWorkspace?.tariff, currentWorkspace?.hide_tags_globally]);
+  }), [profile, userRole, currentMembership, currentWorkspace?.hide_tags_globally]);
 }

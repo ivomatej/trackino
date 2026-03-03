@@ -81,6 +81,7 @@ export interface WorkspaceMember {
   can_invoice: boolean;
   can_manage_billing: boolean;
   billing_profile_id: string | null; // přiřazený fakturační profil
+  can_view_audit: boolean; // může vidět audit log
 }
 
 export interface ManagerAssignment {
