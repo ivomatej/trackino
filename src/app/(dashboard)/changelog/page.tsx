@@ -11,6 +11,14 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v1.8.2 – 3. 3. 2026</h3>
+<ul>
+  <li><strong>Vyhledávání v Projektech</strong> – nad seznam projektů přidáno vyhledávací pole pro rychlé filtrování aktivních i archivovaných projektů; křížek pole vymaže</li>
+  <li><strong>Vyhledávání v Klientech</strong> – nad seznam klientů přidáno vyhledávací pole pro filtrování dle jména klienta</li>
+  <li><strong>Vyhledávání v Tým → Členové</strong> – nad seznam schválených členů přidáno vyhledávací pole; hledá podle jména i e-mailu</li>
+  <li><strong>Sidebar – přesunutí Poznámek</strong> – položka Poznámky přesunuta z oddílu Sledování do oddílu Analýza, kde se zobrazuje za Podřízenými</li>
+</ul>
+
 <h3>v1.8.1 – 3. 3. 2026</h3>
 <ul>
   <li><strong>Formát telefonního čísla</strong> – telefonní čísla se napříč aplikací zobrazují s mezerami pro přehlednost (např. +420 608 510 232); tlačítko kopírování zkopíruje číslo bez mezer pro přímé použití v dialeru; uložení automaticky odstraní mezery bez ohledu na formát zadání</li>
