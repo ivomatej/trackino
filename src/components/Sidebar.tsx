@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useMemo, ReactNode } from 'react';
+import { useState, useEffect, useMemo, ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { useTheme } from './ThemeProvider';
+import { supabase } from '@/lib/supabase';
 import { isWorkspaceAdmin as checkWsAdmin, isManager as checkIsManager, canAccessAuditLog as checkAuditAccess, isMasterAdmin as checkMasterAdmin } from '@/lib/permissions';
 
 interface SidebarProps {
@@ -52,6 +53,24 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
   const { currentWorkspace, userRole, currentMembership } = useWorkspace();
   const { theme, setTheme } = useTheme();
   const [showUserPanel, setShowUserPanel] = useState(false);
+
+  // Červená tečka u Fakturace – vrácené faktury k opravě
+  const canInvoice = currentMembership?.can_invoice ?? false;
+  const [returnedInvoiceCount, setReturnedInvoiceCount] = useState(0);
+
+  useEffect(() => {
+    if (!user || !currentWorkspace || !canInvoice) {
+      setReturnedInvoiceCount(0);
+      return;
+    }
+    supabase
+      .from('trackino_invoices')
+      .select('id', { count: 'exact', head: true })
+      .eq('workspace_id', currentWorkspace.id)
+      .eq('user_id', user.id)
+      .eq('status', 'returned')
+      .then(({ count }) => setReturnedInvoiceCount(count ?? 0));
+  }, [user, currentWorkspace, canInvoice]);
 
   // Dynamicky sestavit navigaci dle oprávnění
   const navGroups = useMemo<NavGroup[]>(() => {
@@ -155,6 +174,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
 
   const renderNavItem = (item: NavItem) => {
     const active = pathname === item.href;
+    const hasReturnedBadge = item.href === '/invoices' && returnedInvoiceCount > 0;
     return (
       <Link
         key={item.href}
@@ -169,7 +189,15 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
         onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = active ? 'var(--bg-active)' : 'transparent'; }}
       >
         {item.icon}
-        {item.label}
+        <span className="flex-1">{item.label}</span>
+        {hasReturnedBadge && (
+          <span
+            className="flex-shrink-0 min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[10px] font-bold text-white"
+            style={{ background: '#ef4444' }}
+          >
+            {returnedInvoiceCount}
+          </span>
+        )}
       </Link>
     );
   };

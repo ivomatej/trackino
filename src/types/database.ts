@@ -261,7 +261,7 @@ export interface MemberInvoiceSettings {
   updated_at: string;
 }
 
-export type InvoiceStatus = 'pending' | 'approved' | 'paid' | 'cancelled';
+export type InvoiceStatus = 'pending' | 'approved' | 'paid' | 'cancelled' | 'returned';
 
 export interface Invoice {
   id: string;

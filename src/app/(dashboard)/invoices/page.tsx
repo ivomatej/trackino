@@ -7,7 +7,7 @@ import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import DashboardLayout from '@/components/DashboardLayout';
 import { WorkspaceProvider } from '@/contexts/WorkspaceContext';
-import type { Invoice, InvoiceStatus, WorkspaceMember, Profile } from '@/types/database';
+import type { Invoice, InvoiceStatus, Profile } from '@/types/database';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -34,11 +34,23 @@ function canSubmitInvoice(): boolean {
   return true; // vždy od 1. dne aktuálního měsíce - kontrolujeme jen dostupnost předchozího měsíce
 }
 
+// Převede jméno na slug pro název souboru (odstraní diakritiku, mezery → pomlčky)
+function toSlug(name: string): string {
+  return name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .toLowerCase();
+}
+
 const STATUS_LABELS: Record<InvoiceStatus, string> = {
   pending: 'Zpracovává se',
   approved: 'Schváleno',
   paid: 'Proplaceno',
   cancelled: 'Stornováno',
+  returned: 'Vráceno k opravě',
 };
 
 const STATUS_COLORS: Record<InvoiceStatus, { bg: string; color: string }> = {
@@ -46,6 +58,7 @@ const STATUS_COLORS: Record<InvoiceStatus, { bg: string; color: string }> = {
   approved: { bg: '#dbeafe', color: '#1e40af' },
   paid: { bg: '#dcfce7', color: '#15803d' },
   cancelled: { bg: '#fee2e2', color: '#dc2626' },
+  returned: { bg: '#ffedd5', color: '#c2410c' },
 };
 
 type ViewTab = 'my' | 'approve' | 'billing';
@@ -85,7 +98,6 @@ function InvoicesContent() {
 
   // Schvalování
   const [approvingId, setApprovingId] = useState<string | null>(null);
-  const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [approveHours, setApproveHours] = useState('');
   const [approveAmount, setApproveAmount] = useState('');
   const [approveNote, setApproveNote] = useState('');
@@ -93,6 +105,11 @@ function InvoicesContent() {
 
   // Proplacení
   const [payingId, setPayingId] = useState<string | null>(null);
+
+  // Vrácení k opravě
+  const [returnModalInvoice, setReturnModalInvoice] = useState<InvoiceWithUser | null>(null);
+  const [returnNote, setReturnNote] = useState('');
+  const [returningId, setReturningId] = useState<string | null>(null);
 
   // Stahování PDF
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
@@ -154,13 +171,22 @@ function InvoicesContent() {
     }
   }, [showSubmitForm]);
 
-  // Zkontrolovat zda uživatel již podal fakturu za předchozí měsíc
+  // Zkontrolovat zda uživatel již podal fakturu za předchozí měsíc (vrácené k opravě se nepočítají)
   const alreadySubmitted = invoices.some(
     i => i.user_id === user?.id &&
       i.billing_period_year === prevYear &&
       i.billing_period_month === prevMonth &&
-      i.status !== 'cancelled'
+      i.status !== 'cancelled' &&
+      i.status !== 'returned'
   );
+
+  // Vrácená faktura za aktuální fakturační měsíc (zobrazí se varování)
+  const returnedForCurrentPeriod = !alreadySubmitted ? invoices.find(
+    i => i.user_id === user?.id &&
+      i.billing_period_year === prevYear &&
+      i.billing_period_month === prevMonth &&
+      i.status === 'returned'
+  ) : undefined;
 
   const submitInvoice = async () => {
     if (!currentWorkspace || !user || !submitPdf) return;
@@ -288,11 +314,17 @@ function InvoicesContent() {
     fetchInvoices();
   };
 
-  const rejectInvoice = async (invoiceId: string) => {
-    if (!confirm('Opravdu stornovat tuto fakturu?')) return;
-    setRejectingId(invoiceId);
-    await supabase.from('trackino_invoices').update({ status: 'cancelled' }).eq('id', invoiceId);
-    setRejectingId(null);
+  const returnInvoice = async () => {
+    if (!returnModalInvoice || !returnNote.trim()) return;
+    setReturningId(returnModalInvoice.id);
+    await supabase.from('trackino_invoices').update({
+      status: 'returned',
+      note: returnNote.trim(),
+      updated_at: new Date().toISOString(),
+    }).eq('id', returnModalInvoice.id);
+    setReturningId(null);
+    setReturnModalInvoice(null);
+    setReturnNote('');
     fetchInvoices();
   };
 
@@ -313,9 +345,12 @@ function InvoicesContent() {
     if (!invoice.pdf_url) return;
     setDownloadingId(invoice.id);
     try {
+      const yyyymm = `${invoice.billing_period_year}${String(invoice.billing_period_month).padStart(2, '0')}`;
+      const nameSlug = toSlug(invoice.profile?.display_name ?? 'neznamy');
+      const filename = `${yyyymm}-faktura-${nameSlug}.pdf`;
       const { data } = await supabase.storage
         .from('trackino-invoices')
-        .createSignedUrl(invoice.pdf_url, 3600, { download: `faktura-${fmtMonth(invoice.billing_period_year, invoice.billing_period_month)}.pdf` });
+        .createSignedUrl(invoice.pdf_url, 3600, { download: filename });
       if (data?.signedUrl) {
         const a = document.createElement('a');
         a.href = data.signedUrl;
@@ -415,6 +450,15 @@ function InvoicesContent() {
             </span>
           )}
         </div>
+        {/* Poznámka k vrácení – viditelná v "Moje faktury" */}
+        {invoice.status === 'returned' && invoice.note && (
+          <div className="flex items-center gap-1 mt-1">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#c2410c" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 14 4 9 9 4" /><path d="M20 20v-7a4 4 0 0 0-4-4H4" />
+            </svg>
+            <span className="text-xs" style={{ color: '#c2410c' }}>{invoice.note}</span>
+          </div>
+        )}
       </div>
       <div className="flex items-center gap-1.5 flex-shrink-0">
         {renderStatusBadge(invoice.status)}
@@ -470,12 +514,11 @@ function InvoicesContent() {
         )}
         {activeTab === 'approve' && invoice.status === 'pending' && (
           <button
-            onClick={(e) => { e.stopPropagation(); rejectInvoice(invoice.id); }}
-            disabled={rejectingId === invoice.id}
-            className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
-            style={{ color: 'var(--danger)', border: '1px solid var(--danger)' }}
+            onClick={(e) => { e.stopPropagation(); setReturnModalInvoice(invoice); }}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+            style={{ color: '#d97706', border: '1px solid #d97706' }}
           >
-            {rejectingId === invoice.id ? '...' : 'Stornovat'}
+            Vrátit k opravě
           </button>
         )}
         {/* Proplacení */}
@@ -516,6 +559,25 @@ function InvoicesContent() {
             </button>
           )}
         </div>
+
+        {/* Banner – vráceno k opravě */}
+        {canInvoice && returnedForCurrentPeriod && (
+          <div className="mb-5 flex items-start gap-3 px-4 py-3.5 rounded-xl border" style={{ background: '#fffbeb', borderColor: '#fcd34d' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 mt-0.5">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+              <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium" style={{ color: '#92400e' }}>
+                Faktura za <strong>{fmtMonth(prevYear, prevMonth)}</strong> byla vrácena k opravě
+              </p>
+              {returnedForCurrentPeriod.note && (
+                <p className="text-xs mt-0.5" style={{ color: '#b45309' }}>{returnedForCurrentPeriod.note}</p>
+              )}
+              <p className="text-xs mt-1" style={{ color: '#b45309' }}>Opravte fakturu a podejte ji znovu pomocí tlačítka výše.</p>
+            </div>
+          </div>
+        )}
 
         {/* Banner – již podáno */}
         {canInvoice && alreadySubmitted && (
@@ -819,6 +881,57 @@ function InvoicesContent() {
                   style={{ background: 'var(--primary)' }}
                 >
                   {approvingId ? 'Ukládám...' : 'Schválit fakturu'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ MODAL: Vrátit k opravě ═══ */}
+      {returnModalInvoice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={() => { setReturnModalInvoice(null); setReturnNote(''); }} />
+          <div className="relative w-full max-w-sm rounded-2xl shadow-2xl z-10" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+            <div className="px-6 pt-6 pb-6">
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>Vrátit fakturu k opravě</h3>
+                <button onClick={() => { setReturnModalInvoice(null); setReturnNote(''); }} className="p-1.5 rounded-lg" style={{ color: 'var(--text-muted)' }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </div>
+              <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>
+                {returnModalInvoice.profile?.display_name} · {fmtMonth(returnModalInvoice.billing_period_year, returnModalInvoice.billing_period_month)}
+              </p>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                Poznámka pro uživatele *
+              </label>
+              <textarea
+                value={returnNote}
+                onChange={(e) => setReturnNote(e.target.value)}
+                rows={3}
+                placeholder="např. Uprav fakturační údaje, chybí DIČ…"
+                className={inputCls}
+                style={inputStyle}
+                autoFocus
+              />
+              <div className="flex gap-3 mt-4">
+                <button
+                  onClick={() => { setReturnModalInvoice(null); setReturnNote(''); }}
+                  className="flex-1 py-2.5 rounded-xl border text-sm font-medium"
+                  style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
+                >
+                  Zrušit
+                </button>
+                <button
+                  onClick={returnInvoice}
+                  disabled={!returnNote.trim() || !!returningId}
+                  className="flex-1 py-2.5 rounded-xl text-white text-sm font-medium disabled:opacity-50"
+                  style={{ background: '#d97706' }}
+                >
+                  {returningId ? 'Odesílám...' : 'Vrátit k opravě'}
                 </button>
               </div>
             </div>
