@@ -303,21 +303,24 @@ function NotesContent() {
             )}
 
             {/* Jen s poznámkou */}
-            <button
-              onClick={() => setOnlyWithNotes(v => !v)}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-colors"
-              style={{
-                borderColor: onlyWithNotes ? 'var(--primary)' : 'var(--border)',
-                background: onlyWithNotes ? 'var(--bg-active)' : 'var(--bg-input)',
-                color: onlyWithNotes ? 'var(--primary)' : 'var(--text-secondary)',
-              }}
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-              </svg>
-              Jen s poznámkou
-            </button>
+            <div>
+              <label className="block text-xs font-medium mb-1.5 select-none" style={{ color: 'transparent' }} aria-hidden>_</label>
+              <button
+                onClick={() => setOnlyWithNotes(v => !v)}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-colors"
+                style={{
+                  borderColor: onlyWithNotes ? 'var(--primary)' : 'var(--border)',
+                  background: onlyWithNotes ? 'var(--bg-active)' : 'var(--bg-input)',
+                  color: onlyWithNotes ? 'var(--primary)' : 'var(--text-secondary)',
+                }}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
+                Jen s poznámkou
+              </button>
+            </div>
           </div>
 
           {/* Statistiky */}

@@ -602,7 +602,7 @@ function TeamContent() {
         )}
 
         {/* ========== TAB: ODDĚLENÍ / KATEGORIE / ÚKOLY ========== */}
-        {activeTab !== 'members' && (
+        {activeTab !== 'members' && activeTab !== 'managers' && (
           <>
             {isWorkspaceAdmin && !showForm && (
               <button
@@ -700,28 +700,24 @@ function TeamContent() {
       {/* ========== TAB: MANAŽEŘI ========== */}
       {activeTab === 'managers' && isWorkspaceAdmin && (
         <div>
-          <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
-            Nastavte, kdo je Team Manažerem kterého člena. Každý člen může mít více manažerů.
+          <p className="text-sm mb-5" style={{ color: 'var(--text-secondary)' }}>
+            Kliknutím na manažera ho přiřadíte nebo odeberete. Každý člen může mít více manažerů.
           </p>
 
           {loading ? (
             <div className="text-center py-12"><div className="w-6 h-6 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin mx-auto" /></div>
+          ) : members.filter(m => m.approved && m.role !== 'owner').length === 0 ? (
+            <div className="rounded-xl border px-6 py-12 text-center" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Zatím žádní členové.</p>
+            </div>
           ) : (
-            <div className="rounded-xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
-              {/* Hlavička */}
-              <div className="grid grid-cols-2 px-4 py-2.5 border-b text-xs font-semibold" style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
-                <span>Člen</span>
-                <span>Přiřazení manažeři</span>
-              </div>
-
+            <div className="space-y-2">
               {members.filter(m => m.approved && m.role !== 'owner').map(member => {
                 const p = member.profile;
                 const initials = p?.display_name ? p.display_name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) : '?';
-                // Manažeři přiřazení k tomuto memberovi
                 const assignedManagerIds = wsManagerAssignments
                   .filter(a => a.member_user_id === member.user_id)
                   .map(a => a.manager_user_id);
-                // Dostupní manažeři (role manager nebo admin, ne sám sobě)
                 const availableManagers = members.filter(m2 =>
                   m2.approved &&
                   m2.user_id !== member.user_id &&
@@ -750,13 +746,13 @@ function TeamContent() {
                 return (
                   <div
                     key={member.id}
-                    className="grid grid-cols-2 px-4 py-3 border-b last:border-b-0 items-start gap-4"
-                    style={{ borderColor: 'var(--border)' }}
+                    className="flex items-center gap-4 px-4 py-3.5 rounded-xl border"
+                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}
                   >
-                    {/* Člen */}
-                    <div className="flex items-center gap-2.5">
+                    {/* Avatar + jméno */}
+                    <div className="flex items-center gap-3 w-52 flex-shrink-0">
                       <div
-                        className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                        className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
                         style={{ background: p?.avatar_color ?? 'var(--primary)' }}
                       >
                         {initials}
@@ -771,10 +767,15 @@ function TeamContent() {
                       </div>
                     </div>
 
+                    {/* Oddělovač */}
+                    <div className="w-px self-stretch" style={{ background: 'var(--border)' }} />
+
                     {/* Manažeři */}
-                    <div className="flex flex-wrap gap-2 items-center">
+                    <div className="flex flex-wrap gap-2 flex-1">
                       {availableManagers.length === 0 ? (
-                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Žádní manažeři k dispozici</span>
+                        <span className="text-xs italic" style={{ color: 'var(--text-muted)' }}>
+                          Žádní manažeři k dispozici
+                        </span>
                       ) : (
                         availableManagers.map(mgr => {
                           const mgrProfile = mgr.profile;
@@ -784,23 +785,26 @@ function TeamContent() {
                               key={mgr.user_id}
                               onClick={() => toggleManager(mgr.user_id)}
                               disabled={savingAssignment}
-                              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors disabled:opacity-50"
+                              className="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all disabled:opacity-50"
                               style={{
                                 background: isAssigned ? 'var(--primary)' : 'var(--bg-hover)',
                                 borderColor: isAssigned ? 'var(--primary)' : 'var(--border)',
                                 color: isAssigned ? '#fff' : 'var(--text-secondary)',
                               }}
-                              title={isAssigned ? 'Kliknutím odeberete' : 'Kliknutím přiřadíte'}
+                              title={isAssigned ? 'Kliknutím odeberete manažera' : 'Kliknutím přiřadíte manažera'}
                             >
                               <div
-                                className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold flex-shrink-0"
-                                style={{ background: isAssigned ? 'rgba(255,255,255,0.3)' : (mgrProfile?.avatar_color ?? 'var(--primary)'), color: '#fff' }}
+                                className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold flex-shrink-0"
+                                style={{
+                                  background: isAssigned ? 'rgba(255,255,255,0.25)' : (mgrProfile?.avatar_color ?? 'var(--primary)'),
+                                  color: '#fff',
+                                }}
                               >
                                 {mgrProfile?.display_name?.charAt(0).toUpperCase() ?? '?'}
                               </div>
                               {mgrProfile?.display_name ?? 'Neznámý'}
                               {isAssigned && (
-                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                   <polyline points="20 6 9 17 4 12" />
                                 </svg>
                               )}
@@ -812,12 +816,6 @@ function TeamContent() {
                   </div>
                 );
               })}
-
-              {members.filter(m => m.approved && m.role !== 'owner').length === 0 && (
-                <div className="px-6 py-12 text-center">
-                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Zatím žádní členové.</p>
-                </div>
-              )}
             </div>
           )}
         </div>
