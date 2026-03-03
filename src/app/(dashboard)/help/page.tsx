@@ -92,6 +92,17 @@ function HelpContent() {
     setEditing(false);
   };
 
+  // Při přepnutí do edit módu vloží aktuální obsah do editoru
+  const startEditing = () => {
+    setEditing(true);
+    setTimeout(() => {
+      if (editorRef.current) {
+        editorRef.current.innerHTML = content;
+        editorRef.current.focus();
+      }
+    }, 0);
+  };
+
   const execCmd = (cmd: string, value?: string) => {
     document.execCommand(cmd, false, value);
     editorRef.current?.focus();
@@ -144,7 +155,7 @@ function HelpContent() {
                 </>
               ) : (
                 <button
-                  onClick={() => { setEditing(true); }}
+                  onClick={startEditing}
                   className="px-3 py-1.5 rounded-lg border text-sm flex items-center gap-1.5"
                   style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
                   onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
@@ -193,7 +204,6 @@ function HelpContent() {
             contentEditable={editing}
             suppressContentEditableWarning
             dangerouslySetInnerHTML={!editing ? { __html: content } : undefined}
-            onFocus={() => { if (editing && editorRef.current && !editorRef.current.innerHTML) editorRef.current.innerHTML = content; }}
             className="prose prose-sm max-w-none p-6 focus:outline-none"
             style={{
               color: 'var(--text-primary)',
@@ -214,7 +224,8 @@ function HelpContent() {
         .prose h2 { font-size: 1.25rem; font-weight: 700; margin: 1.5rem 0 0.5rem; color: var(--text-primary); }
         .prose h3 { font-size: 1rem; font-weight: 600; margin: 1.25rem 0 0.4rem; color: var(--text-primary); }
         .prose p { margin: 0.5rem 0; color: var(--text-secondary); line-height: 1.6; }
-        .prose ul, .prose ol { margin: 0.5rem 0 0.5rem 1.5rem; }
+        .prose ul { margin: 0.5rem 0 0.5rem 1.5rem; list-style-type: disc; }
+        .prose ol { margin: 0.5rem 0 0.5rem 1.5rem; list-style-type: decimal; }
         .prose li { margin: 0.2rem 0; color: var(--text-secondary); }
         .prose a { color: var(--primary); text-decoration: underline; }
         .prose strong { font-weight: 700; color: var(--text-primary); }

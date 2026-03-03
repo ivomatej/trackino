@@ -61,6 +61,7 @@ function BugsContent() {
   const [bugs, setBugs] = useState<BugReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [noteEditId, setNoteEditId] = useState<string | null>(null);
   const [noteText, setNoteText] = useState('');
@@ -119,17 +120,31 @@ function BugsContent() {
   useEffect(() => { fetchWorkspaces(); }, [fetchWorkspaces]);
 
   const submitBug = async () => {
-    if (!user || !currentWorkspace) return;
+    setSubmitError('');
+
+    if (!user) { setSubmitError('Nejste přihlášeni.'); return; }
+    if (!currentWorkspace) { setSubmitError('Nebyl načten workspace – zkuste obnovit stránku.'); return; }
+
     const content = editorRef.current?.innerHTML ?? '';
-    if (!content.trim() || content === '<br>') return;
+    // Ověř, že je skutečný text (odstraní HTML tagy)
+    const textOnly = editorRef.current?.innerText?.replace(/\n/g, '').trim() ?? '';
+    if (!textOnly) { setSubmitError('Vyplňte prosím popis chyby.'); return; }
+
     setSubmitting(true);
-    await supabase.from('trackino_bug_reports').insert({
+    const { error } = await supabase.from('trackino_bug_reports').insert({
       workspace_id: currentWorkspace.id,
       user_id: user.id,
       content,
       status: 'open',
       master_note: '',
     });
+
+    if (error) {
+      setSubmitError(`Chyba při odesílání: ${error.message}`);
+      setSubmitting(false);
+      return;
+    }
+
     if (editorRef.current) editorRef.current.innerHTML = '';
     setSubmitting(false);
     fetchBugs();
@@ -331,7 +346,10 @@ function BugsContent() {
             className="prose prose-sm max-w-none p-4 focus:outline-none"
             style={{ color: 'var(--text-primary)', minHeight: '120px', cursor: 'text' }}
           />
-          <div className="px-4 py-3 border-t flex justify-end" style={{ borderColor: 'var(--border)' }}>
+          <div className="px-4 py-3 border-t flex items-center justify-between gap-3" style={{ borderColor: 'var(--border)' }}>
+            {submitError ? (
+              <p className="text-xs" style={{ color: 'var(--danger)' }}>{submitError}</p>
+            ) : <span />}
             <button
               onClick={submitBug}
               disabled={submitting}
@@ -405,9 +423,14 @@ function BugsContent() {
         .prose h2 { font-size: 1.1rem; font-weight: 700; margin: 1rem 0 0.3rem; color: var(--text-primary); }
         .prose h3 { font-size: 0.95rem; font-weight: 600; margin: 0.8rem 0 0.3rem; color: var(--text-primary); }
         .prose p { margin: 0.3rem 0; color: var(--text-secondary); line-height: 1.6; }
-        .prose ul, .prose ol { margin: 0.3rem 0 0.3rem 1.5rem; }
+        .prose ul { margin: 0.3rem 0 0.3rem 1.5rem; list-style-type: disc; }
+        .prose ol { margin: 0.3rem 0 0.3rem 1.5rem; list-style-type: decimal; }
         .prose li { margin: 0.15rem 0; color: var(--text-secondary); }
         .prose strong { font-weight: 700; color: var(--text-primary); }
+        /* V editoru – text má být primární barvy, ne sekundární */
+        [contenteditable] { color: var(--text-primary); }
+        [contenteditable] p { color: var(--text-primary); }
+        [contenteditable] li { color: var(--text-primary); }
         [contenteditable]:empty:before { content: attr(data-placeholder); color: var(--text-muted); pointer-events: none; }
       `}</style>
     </DashboardLayout>
