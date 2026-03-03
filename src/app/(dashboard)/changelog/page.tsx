@@ -11,6 +11,12 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v1.8.1 – 3. 3. 2026</h3>
+<ul>
+  <li><strong>Formát telefonního čísla</strong> – telefonní čísla se napříč aplikací zobrazují s mezerami pro přehlednost (např. +420 608 510 232); tlačítko kopírování zkopíruje číslo bez mezer pro přímé použití v dialeru; uložení automaticky odstraní mezery bez ohledu na formát zadání</li>
+  <li><strong>Plánovač – celý den jako výchozí buňka</strong> – výchozí stav buňky je celý den; při najetí myší se zobrazí ikonka rozdělení, kliknutím se buňka rozloží na DOP a ODP; ikonkou sloučení lze vrátit na celý den (zachová stav z dopoledne)</li>
+</ul>
+
 <h3>v1.8.0 – 3. 3. 2026</h3>
 <ul>
   <li><strong>Plánovač (nová stránka)</strong> – vizuální přehled dostupnosti celého týmu; každý člen má řádek, každý den dvě buňky (DOP / ODP) podbarvené dle vybraného stavu</li>

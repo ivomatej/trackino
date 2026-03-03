@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { formatPhone, normalizePhone } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -322,7 +323,7 @@ function TeamContent() {
       supabase.from('trackino_profiles').update({
         display_name: editName.trim(),
         email: editEmail.trim(),
-        phone: editPhone.trim(),
+        phone: normalizePhone(editPhone),
         position: editPosition.trim(),
         avatar_color: editColor,
       }).eq('id', editingMember.user_id),
@@ -604,7 +605,7 @@ function TeamContent() {
                           </div>
                           {p?.phone && (
                             <div className="flex items-center gap-1">
-                              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{p.phone}</span>
+                              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{formatPhone(p.phone)}</span>
                               <button
                                 onClick={(e) => { e.stopPropagation(); copyPhone(member.id, p.phone); }}
                                 title="Kopírovat telefon"

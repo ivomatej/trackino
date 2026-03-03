@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { formatPhone } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -997,7 +998,7 @@ function InvoicesContent() {
                     {userBillingProfile.phone && (
                       <div>
                         <span className="font-medium" style={{ color: 'var(--text-muted)' }}>Telefon</span>
-                        <div style={{ color: 'var(--text-primary)' }}>{userBillingProfile.phone}</div>
+                        <div style={{ color: 'var(--text-primary)' }}>{formatPhone(userBillingProfile.phone)}</div>
                       </div>
                     )}
                     {userBillingProfile.billing_note && (

@@ -6,6 +6,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import DashboardLayout from '@/components/DashboardLayout';
 import { WorkspaceProvider } from '@/contexts/WorkspaceContext';
 import { useTheme } from '@/components/ThemeProvider';
+import { normalizePhone } from '@/lib/utils';
 import type { Profile } from '@/types/database';
 
 const AVATAR_COLORS = [
@@ -46,7 +47,7 @@ function ProfileContent() {
     const updates: Partial<Profile> = {
       display_name: displayName.trim(),
       email: email.trim(),
-      phone: phone.trim(),
+      phone: normalizePhone(phone),
       avatar_color: avatarColor,
     };
     if (canEditPosition) {

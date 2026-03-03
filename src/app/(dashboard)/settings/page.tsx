@@ -7,6 +7,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import DashboardLayout from '@/components/DashboardLayout';
 import WorkspaceSelector from '@/components/WorkspaceSelector';
 import { supabase } from '@/lib/supabase';
+import { formatPhone, normalizePhone } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import type { WorkspaceBilling, RequiredFields, Tariff, VacationAllowance, CooperationType } from '@/types/database';
 
@@ -159,7 +160,7 @@ function SettingsContent() {
       dic: editingBillingProfile.dic ?? '',
       is_vat_payer: editingBillingProfile.is_vat_payer ?? false,
       email: editingBillingProfile.email ?? '',
-      phone: editingBillingProfile.phone ?? '',
+      phone: normalizePhone(editingBillingProfile.phone ?? ''),
       billing_note: editingBillingProfile.billing_note ?? '',
       is_default: editingBillingProfile.is_default ?? false,
       updated_at: new Date().toISOString(),
@@ -502,7 +503,7 @@ function SettingsContent() {
                         )}
                         {(profile.email || profile.phone) && (
                           <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                            {[profile.email, profile.phone].filter(Boolean).join(' · ')}
+                            {[profile.email, profile.phone ? formatPhone(profile.phone) : null].filter(Boolean).join(' · ')}
                           </p>
                         )}
                       </div>

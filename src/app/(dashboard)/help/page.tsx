@@ -90,6 +90,7 @@ const DEFAULT_HELP_CONTENT = `
 
 <h3>Firemní adresář (Tým → Členové)</h3>
 <p>Záložka <strong>Členové</strong> v sekci Tým slouží jako firemní adresář. Zobrazuje jméno, pracovní pozici, e-mail (s ikonkou pro rychlé zkopírování) a telefonní číslo každého člena. Telefon a pozici si každý uživatel vyplní v <strong>Detailní nastavení</strong>; pozici může nastavit také admin v editaci člena.</p>
+<p><strong>Formát telefonního čísla</strong> – čísla se v aplikaci zobrazují s mezerami pro přehlednost (např. <code>+420 608 510 232</code>). Tlačítko kopírování zkopíruje číslo <em>bez</em> mezer (např. <code>+420608510232</code>) pro přímé použití v dialeru nebo jiné aplikaci. Číslo lze zadat v libovolném formátu – při uložení se mezery automaticky odstraní.</p>
 
 <h3>Detailní nastavení (osobní profil)</h3>
 <p>V levém dolním menu je odkaz <strong>Detailní nastavení</strong>, kde každý uživatel může upravit: zobrazované jméno, e-mail, telefonní číslo, barvu avataru a barevný režim aplikace (světlý / tmavý / auto). Pole <strong>Pozice</strong> je viditelné, ale editovatelné pouze pro adminy – ostatní vidí hodnotu nastavenou adminem.</p>
