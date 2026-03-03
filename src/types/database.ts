@@ -96,7 +96,9 @@ export interface WorkspaceBilling {
   is_default: boolean; // výchozí profil pro workspace
   company_name: string;
   representative_name: string;
-  address: string;
+  address: string;  // ulice + číslo popisné
+  city: string;
+  country: string;
   postal_code: string;
   ico: string;
   dic: string;

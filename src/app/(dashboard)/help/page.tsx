@@ -71,7 +71,7 @@ const DEFAULT_HELP_CONTENT = `
 <p>Oprávnění se nastavují v Tým → editace člena → sekce Fakturace.</p>
 
 <h3>Fakturační profily workspace</h3>
-<p>V <strong>Nastavení → Fakturační údaje</strong> lze vytvořit více fakturačních profilů (např. pro různé právní subjekty). Každý profil obsahuje název společnosti, IČO, DIČ, příznak plátce DPH (Jsme/Nejsme plátci DPH), adresu, kontaktní údaje a poznámku k fakturaci. Jeden profil lze označit jako výchozí.</p>
+<p>V <strong>Nastavení → Fakturační údaje</strong> lze vytvořit více fakturačních profilů (např. pro různé právní subjekty). Každý profil obsahuje: název společnosti, jméno jednatele, adresu (ulice + číslo popisné), PSČ, město, stát, IČO, DIČ, příznak plátce DPH, e-mail, telefon a poznámku k fakturaci. Jeden profil lze označit jako výchozí.</p>
 <p>V <strong>Tým → editace člena → sekce Fakturace</strong> lze každému členovi přiřadit konkrétní fakturační profil. Pokud není přiřazen žádný, použije se výchozí profil workspace. Přiřazený profil se uživateli zobrazí při podání žádosti o fakturaci v pravém panelu formuláře.</p>
 
 <h3>Půlnoční split</h3>

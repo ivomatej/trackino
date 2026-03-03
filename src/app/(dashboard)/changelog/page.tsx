@@ -11,6 +11,11 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v1.4.2 – 3. 3. 2026</h3>
+<ul>
+  <li><strong>Rozdělení adresy v fakturačním profilu</strong> – pole Adresa rozděleno na tři samostatná pole: Adresa (ulice + číslo popisné), Město a Stát; migrace SQL přidává sloupce city a country</li>
+</ul>
+
 <h3>v1.4.1 – 3. 3. 2026</h3>
 <ul>
   <li><strong>Plátce DPH ve fakturačním profilu</strong> – každý fakturační profil má nové pole „Jsme plátci DPH" (checkbox); v panelu při podání faktury se zobrazí „Jsme plátci DPH" nebo „Nejsme plátci DPH"</li>

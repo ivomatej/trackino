@@ -775,12 +775,24 @@ function InvoicesContent() {
                         <div style={{ color: 'var(--text-primary)' }}>{userBillingProfile.company_name}</div>
                       </div>
                     )}
-                    {(userBillingProfile.address || userBillingProfile.postal_code) && (
+                    {userBillingProfile.address && (
                       <div>
                         <span className="font-medium" style={{ color: 'var(--text-muted)' }}>Adresa</span>
+                        <div style={{ color: 'var(--text-primary)' }}>{userBillingProfile.address}</div>
+                      </div>
+                    )}
+                    {(userBillingProfile.postal_code || userBillingProfile.city) && (
+                      <div>
+                        <span className="font-medium" style={{ color: 'var(--text-muted)' }}>Město</span>
                         <div style={{ color: 'var(--text-primary)' }}>
-                          {userBillingProfile.address}{userBillingProfile.postal_code ? `, ${userBillingProfile.postal_code}` : ''}
+                          {[userBillingProfile.postal_code, userBillingProfile.city].filter(Boolean).join(' ')}
                         </div>
+                      </div>
+                    )}
+                    {userBillingProfile.country && (
+                      <div>
+                        <span className="font-medium" style={{ color: 'var(--text-muted)' }}>Stát</span>
+                        <div style={{ color: 'var(--text-primary)' }}>{userBillingProfile.country}</div>
                       </div>
                     )}
                     {userBillingProfile.ico && (

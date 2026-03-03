@@ -152,6 +152,8 @@ function SettingsContent() {
       company_name: editingBillingProfile.company_name ?? '',
       representative_name: editingBillingProfile.representative_name ?? '',
       address: editingBillingProfile.address ?? '',
+      city: editingBillingProfile.city ?? '',
+      country: editingBillingProfile.country ?? '',
       postal_code: editingBillingProfile.postal_code ?? '',
       ico: editingBillingProfile.ico ?? '',
       dic: editingBillingProfile.dic ?? '',
@@ -493,9 +495,9 @@ function SettingsContent() {
                             {profile.dic ? ` · DIČ: ${profile.dic}` : ''}
                           </p>
                         )}
-                        {(profile.address || profile.postal_code) && (
+                        {(profile.address || profile.city || profile.postal_code) && (
                           <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                            {[profile.postal_code, profile.address].filter(Boolean).join(' ')}
+                            {[profile.address, profile.postal_code && profile.city ? `${profile.postal_code} ${profile.city}` : (profile.postal_code || profile.city), profile.country].filter(Boolean).join(', ')}
                           </p>
                         )}
                         {(profile.email || profile.phone) && (
@@ -581,14 +583,24 @@ function SettingsContent() {
                       </div>
                     </div>
                     <div>
-                      <label className={labelCls} style={{ color: 'var(--text-secondary)' }}>Adresa</label>
-                      <input type="text" value={editingBillingProfile.address ?? ''} onChange={(e) => setEditingBillingProfile(p => ({ ...p, address: e.target.value }))} className={inputCls} style={inputStyle} />
+                      <label className={labelCls} style={{ color: 'var(--text-secondary)' }}>Adresa (ulice + číslo popisné)</label>
+                      <input type="text" value={editingBillingProfile.address ?? ''} onChange={(e) => setEditingBillingProfile(p => ({ ...p, address: e.target.value }))} placeholder="např. Václavské náměstí 1" className={inputCls} style={inputStyle} />
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div>
                         <label className={labelCls} style={{ color: 'var(--text-secondary)' }}>PSČ</label>
-                        <input type="text" value={editingBillingProfile.postal_code ?? ''} onChange={(e) => setEditingBillingProfile(p => ({ ...p, postal_code: e.target.value }))} className={inputCls} style={inputStyle} />
+                        <input type="text" value={editingBillingProfile.postal_code ?? ''} onChange={(e) => setEditingBillingProfile(p => ({ ...p, postal_code: e.target.value }))} placeholder="110 00" className={inputCls} style={inputStyle} />
                       </div>
+                      <div>
+                        <label className={labelCls} style={{ color: 'var(--text-secondary)' }}>Město</label>
+                        <input type="text" value={editingBillingProfile.city ?? ''} onChange={(e) => setEditingBillingProfile(p => ({ ...p, city: e.target.value }))} placeholder="Praha" className={inputCls} style={inputStyle} />
+                      </div>
+                      <div>
+                        <label className={labelCls} style={{ color: 'var(--text-secondary)' }}>Stát</label>
+                        <input type="text" value={editingBillingProfile.country ?? ''} onChange={(e) => setEditingBillingProfile(p => ({ ...p, country: e.target.value }))} placeholder="Česká republika" className={inputCls} style={inputStyle} />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className={labelCls} style={{ color: 'var(--text-secondary)' }}>IČ</label>
                         <input type="text" value={editingBillingProfile.ico ?? ''} onChange={(e) => setEditingBillingProfile(p => ({ ...p, ico: e.target.value }))} className={inputCls} style={inputStyle} />
