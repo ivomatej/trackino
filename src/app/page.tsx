@@ -48,6 +48,9 @@ function AppContent() {
 function DashboardContent() {
   const { currentWorkspace, loading } = useWorkspace();
   const [refreshKey, setRefreshKey] = useState(0);
+  const [timerPlayData, setTimerPlayData] = useState<{
+    description: string; projectId: string; categoryId: string; taskId: string; tagIds: string[]; ts: number;
+  } | null>(null);
 
   if (loading) {
     return (
@@ -62,7 +65,7 @@ function DashboardContent() {
   }
 
   return (
-    <DashboardLayout showTimer onTimerEntryChanged={() => setRefreshKey(k => k + 1)}>
+    <DashboardLayout showTimer onTimerEntryChanged={() => setRefreshKey(k => k + 1)} timerPlayData={timerPlayData}>
       <div>
         {/* Hlavička stránky */}
         <div className="flex items-center justify-between mb-6">
@@ -71,7 +74,10 @@ function DashboardContent() {
           </h1>
         </div>
 
-        <TimeEntryList refreshKey={refreshKey} />
+        <TimeEntryList
+          refreshKey={refreshKey}
+          onPlay={(data) => setTimerPlayData({ ...data, ts: Date.now() })}
+        />
       </div>
     </DashboardLayout>
   );

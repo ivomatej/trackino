@@ -66,8 +66,9 @@ function TeamContent() {
   const [codeCopied, setCodeCopied] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
 
-  // Email copy state (ID e-mailu, který byl zkopírován)
+  // Email/telefon copy state
   const [copiedEmailId, setCopiedEmailId] = useState<string | null>(null);
+  const [copiedPhoneId, setCopiedPhoneId] = useState<string | null>(null);
 
   // Edit member – základní pole
   const [editingMember, setEditingMember] = useState<MemberWithProfile | null>(null);
@@ -206,6 +207,21 @@ function TeamContent() {
     }
     setCopiedEmailId(memberId);
     setTimeout(() => setCopiedEmailId(null), 2000);
+  };
+
+  const copyPhone = async (memberId: string, phone: string) => {
+    try {
+      await navigator.clipboard.writeText(phone);
+    } catch {
+      const el = document.createElement('textarea');
+      el.value = phone;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+    }
+    setCopiedPhoneId(memberId);
+    setTimeout(() => setCopiedPhoneId(null), 2000);
   };
 
   const copyJoinCode = async () => {
@@ -566,13 +582,13 @@ function TeamContent() {
                               {p.position}
                             </div>
                           )}
-                          <div className="flex items-center gap-1 group/email">
+                          <div className="flex items-center gap-1">
                             <span className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{p?.email}</span>
                             {p?.email && (
                               <button
                                 onClick={(e) => { e.stopPropagation(); copyEmail(member.id, p.email); }}
                                 title="Kopírovat e-mail"
-                                className="flex-shrink-0 p-0.5 rounded opacity-0 group-hover/email:opacity-100 transition-opacity"
+                                className="flex-shrink-0 p-0.5 rounded transition-colors"
                                 style={{ color: copiedEmailId === member.id ? '#16a34a' : 'var(--text-muted)' }}
                               >
                                 {copiedEmailId === member.id ? (
@@ -584,8 +600,20 @@ function TeamContent() {
                             )}
                           </div>
                           {p?.phone && (
-                            <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                              <span className="mr-1">📞</span>{p.phone}
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{p.phone}</span>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); copyPhone(member.id, p.phone); }}
+                                title="Kopírovat telefon"
+                                className="flex-shrink-0 p-0.5 rounded transition-colors"
+                                style={{ color: copiedPhoneId === member.id ? '#16a34a' : 'var(--text-muted)' }}
+                              >
+                                {copiedPhoneId === member.id ? (
+                                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                                ) : (
+                                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+                                )}
+                              </button>
                             </div>
                           )}
                         </div>

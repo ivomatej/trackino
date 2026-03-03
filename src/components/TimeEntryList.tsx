@@ -7,8 +7,17 @@ import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import type { Project, TimeEntry, Tag } from '@/types/database';
 
+interface PlayData {
+  description: string;
+  projectId: string;
+  categoryId: string;
+  taskId: string;
+  tagIds: string[];
+}
+
 interface TimeEntryListProps {
   refreshKey?: number;
+  onPlay?: (data: PlayData) => void;
 }
 
 interface EntryWithProject extends TimeEntry {
@@ -23,7 +32,7 @@ interface DayGroup {
   entries: EntryWithProject[];
 }
 
-export default function TimeEntryList({ refreshKey }: TimeEntryListProps) {
+export default function TimeEntryList({ refreshKey, onPlay }: TimeEntryListProps) {
   const { user } = useAuth();
   const { currentWorkspace } = useWorkspace();
   const { isWorkspaceAdmin, isManager, isMasterAdmin } = usePermissions();
@@ -286,6 +295,28 @@ export default function TimeEntryList({ refreshKey }: TimeEntryListProps) {
                     <span className="text-sm tabular-nums font-medium min-w-[70px] text-right" style={{ color: 'var(--text-primary)' }}>
                       {formatDuration(entry.duration || 0)}
                     </span>
+
+                    {/* Play – znovu spustit záznam */}
+                    {onPlay && (
+                      <button
+                        onClick={() => onPlay({
+                          description: entry.description || '',
+                          projectId: entry.project_id || '',
+                          categoryId: entry.category_id || '',
+                          taskId: entry.task_id || '',
+                          tagIds: entryTagMap[entry.id] ?? [],
+                        })}
+                        className="p-1 rounded transition-colors"
+                        style={{ color: 'var(--text-muted)' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--primary)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
+                        title="Spustit znovu"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                          <polygon points="5 3 19 12 5 21 5 3" />
+                        </svg>
+                      </button>
+                    )}
 
                     {/* Poznámka – jen pro manažery/adminy */}
                     {canManageNotes && (

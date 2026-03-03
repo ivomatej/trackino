@@ -7,10 +7,20 @@ import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Workspace } from '@/types/database';
 
+interface TimerPlayData {
+  description: string;
+  projectId: string;
+  categoryId: string;
+  taskId: string;
+  tagIds: string[];
+  ts: number;
+}
+
 interface DashboardLayoutProps {
   children: ReactNode;
   showTimer?: boolean;
   onTimerEntryChanged?: () => void;
+  timerPlayData?: TimerPlayData | null;
 }
 
 function PendingApprovalScreen() {
@@ -174,7 +184,7 @@ function WorkspaceSwitcher() {
   );
 }
 
-export default function DashboardLayout({ children, showTimer = false, onTimerEntryChanged }: DashboardLayoutProps) {
+export default function DashboardLayout({ children, showTimer = false, onTimerEntryChanged, timerPlayData }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { isPendingApproval, isWorkspaceLocked } = useWorkspace();
   const { profile } = useAuth();
@@ -213,7 +223,7 @@ export default function DashboardLayout({ children, showTimer = false, onTimerEn
             {/* Timer v hlavičce - jen pro schválené a nečekající uživatele */}
             {showTimer && !isPendingApproval && !showLockedScreen ? (
               <div className="flex-1 min-w-0">
-                <TimerBar onEntryChanged={onTimerEntryChanged} />
+                <TimerBar onEntryChanged={onTimerEntryChanged} playData={timerPlayData} />
               </div>
             ) : (
               <div className="flex-1" />
@@ -228,6 +238,15 @@ export default function DashboardLayout({ children, showTimer = false, onTimerEn
         <main className="flex-1 p-4 lg:p-6 flex flex-col">
           {showLockedScreen ? <LockedWorkspaceScreen /> : isPendingApproval ? <PendingApprovalScreen /> : children}
         </main>
+
+        {/* Patička */}
+        <footer className="py-2 px-6 text-center text-[11px] border-t" style={{ color: 'var(--text-muted)', borderColor: 'var(--border)' }}>
+          {(() => {
+            const start = 2026;
+            const cur = new Date().getFullYear();
+            return `© ${cur > start ? `${start}–${cur}` : start} Trackino`;
+          })()}
+        </footer>
       </div>
     </div>
   );

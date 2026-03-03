@@ -8,11 +8,21 @@ import { splitAtMidnight, crossesMidnight } from '@/lib/midnight-split';
 import TagPicker from '@/components/TagPicker';
 import type { Project, Category, Task, TimeEntry, RequiredFields, Client, ClientProject } from '@/types/database';
 
-interface TimerBarProps {
-  onEntryChanged?: () => void;
+interface PlayData {
+  description: string;
+  projectId: string;
+  categoryId: string;
+  taskId: string;
+  tagIds: string[];
+  ts: number;
 }
 
-export default function TimerBar({ onEntryChanged }: TimerBarProps) {
+interface TimerBarProps {
+  onEntryChanged?: () => void;
+  playData?: PlayData | null;
+}
+
+export default function TimerBar({ onEntryChanged, playData }: TimerBarProps) {
   const { user } = useAuth();
   const { currentWorkspace } = useWorkspace();
 
@@ -279,6 +289,54 @@ export default function TimerBar({ onEntryChanged }: TimerBarProps) {
     setDescription(''); setSelectedProject(''); setSelectedCategory(''); setSelectedTask(''); setSelectedTags([]);
     onEntryChanged?.();
   };
+
+  // Spustí timer s explicitními hodnotami (používá se při "Play znovu")
+  const startTimerWithValues = useCallback(async (values: {
+    description: string; projectId: string; categoryId: string; taskId: string; tagIds: string[];
+  }) => {
+    if (!user || !currentWorkspace) return;
+    const { data, error } = await supabase
+      .from('trackino_time_entries')
+      .insert({
+        workspace_id: currentWorkspace.id, user_id: user.id,
+        description: values.description.trim(),
+        project_id: values.projectId || null,
+        category_id: values.categoryId || null,
+        task_id: values.taskId || null,
+        start_time: new Date().toISOString(), is_running: true,
+      })
+      .select().single();
+    if (!error && data) {
+      const entry = data as TimeEntry;
+      setActiveEntry(entry);
+      setIsRunning(true);
+      setElapsed(0);
+      setDescription(values.description);
+      setSelectedProject(values.projectId);
+      setSelectedCategory(values.categoryId);
+      setSelectedTask(values.taskId);
+      setSelectedTags(values.tagIds);
+      if (values.tagIds.length > 0) {
+        await supabase.from('trackino_time_entry_tags').insert(
+          values.tagIds.map(tagId => ({ time_entry_id: entry.id, tag_id: tagId }))
+        );
+      }
+      onEntryChanged?.();
+    }
+  }, [user, currentWorkspace, onEntryChanged]);
+
+  // Reaguje na požadavek "Play znovu" z TimeEntryList
+  useEffect(() => {
+    if (!playData || isRunning) return;
+    startTimerWithValues({
+      description: playData.description,
+      projectId: playData.projectId,
+      categoryId: playData.categoryId,
+      taskId: playData.taskId,
+      tagIds: playData.tagIds,
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playData]);
 
   const discardTimer = async () => {
     if (!activeEntry) return;

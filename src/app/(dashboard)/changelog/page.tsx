@@ -11,6 +11,16 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v1.6.0 – 3. 3. 2026</h3>
+<ul>
+  <li><strong>Patička aplikace</strong> – do spodní části každé stránky přidán copyright „© 2026 Trackino"; rok se automaticky rozšíří na rozsah (např. 2026–2027) s každým novým rokem</li>
+  <li><strong>Play tlačítko v Time Trackeru</strong> – každý záznam má nové tlačítko ▶ (Spustit znovu); po kliknutí se načtou popis, projekt, kategorie, úkol i štítky záznamu do timeru a timer se automaticky spustí</li>
+  <li><strong>Fakturace – Proplatit jako checkbox</strong> – tlačítko „Proplatit" v záložce Přehled faktur má nový styl checkboxu se zelenou hranicí; kliknutím bez potvrzovacího dialogu okamžitě označí fakturu jako Proplacentou; dostupné také pro Adminy</li>
+  <li><strong>Fakturace – datum schválení a proplacení v řádku</strong> – pro schválené a proplacené faktury se nyní v řádku zobrazuje „Schváleno: datum" a „Proplaceno: datum", takže uživatel vidí vše bez nutnosti otevírat detail</li>
+  <li><strong>Fakturace – badge po novém podání zmizí</strong> – při opětovném odeslání vrácené faktury se stará vrácená faktura automaticky smaže; červený odznak v levém menu ihned zmizí</li>
+  <li><strong>Tým – kopírování kontaktů</strong> – ikona pro kopírování e-mailu je nyní vždy viditelná (dříve jen po najetí myší); přidána stejná ikonka pro kopírování telefonního čísla; odstraněna emoji 📞</li>
+</ul>
+
 <h3>v1.5.0 – 3. 3. 2026</h3>
 <ul>
   <li><strong>Osobní profil (Detailní nastavení)</strong> – nová stránka dostupná z levého dolního menu; každý uživatel si může upravit jméno, e-mail, telefonní číslo, barvu avataru a barevný režim; pole Pozice je viditelné pro všechny, ale editovatelné pouze pro adminy</li>

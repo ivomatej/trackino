@@ -222,6 +222,20 @@ function InvoicesContent() {
     setSubmitting(true);
     setSubmitError('');
 
+    // Pokud existuje vrácená faktura za stejné období, smaž ji (re-submission)
+    const returnedOld = invoices.find(
+      i => i.user_id === user.id &&
+        i.billing_period_year === prevYear &&
+        i.billing_period_month === prevMonth &&
+        i.status === 'returned'
+    );
+    if (returnedOld) {
+      if (returnedOld.pdf_url) {
+        await supabase.storage.from('trackino-invoices').remove([returnedOld.pdf_url]);
+      }
+      await supabase.from('trackino_invoices').delete().eq('id', returnedOld.id);
+    }
+
     // Upload PDF
     const fileName = `${currentWorkspace.id}/${user.id}/${prevYear}-${String(prevMonth).padStart(2, '0')}-${Date.now()}.pdf`;
     const { error: uploadError } = await supabase.storage
@@ -355,7 +369,6 @@ function InvoicesContent() {
 
   const markAsPaid = async (invoiceId: string) => {
     if (!user) return;
-    if (!confirm('Označit fakturu jako proplacentou?')) return;
     setPayingId(invoiceId);
     await supabase.from('trackino_invoices').update({
       status: 'paid',
@@ -464,14 +477,24 @@ function InvoicesContent() {
           <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
             Splatnost: {fmtDate(invoice.due_date)}
           </span>
+          {invoice.total_hours !== null && (
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              {invoice.total_hours} h
+            </span>
+          )}
           {invoice.amount !== null && (
             <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
               {invoice.amount.toLocaleString('cs-CZ')} {currencySymbol}
             </span>
           )}
-          {invoice.total_hours !== null && (
-            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-              {invoice.total_hours} h
+          {invoice.approved_at && (
+            <span className="text-xs" style={{ color: '#1e40af' }}>
+              Schváleno: {fmtDate(invoice.approved_at.split('T')[0])}
+            </span>
+          )}
+          {invoice.paid_at && (
+            <span className="text-xs font-medium" style={{ color: '#15803d' }}>
+              Proplaceno: {fmtDate(invoice.paid_at.split('T')[0])}
             </span>
           )}
         </div>
@@ -546,15 +569,27 @@ function InvoicesContent() {
             Vrátit k opravě
           </button>
         )}
-        {/* Proplacení */}
-        {activeTab === 'billing' && invoice.status === 'approved' && canManageBilling && (
+        {/* Proplacení – checkbox styl */}
+        {activeTab === 'billing' && invoice.status === 'approved' && (canManageBilling || isWorkspaceAdmin) && (
           <button
             onClick={(e) => { e.stopPropagation(); markAsPaid(invoice.id); }}
             disabled={payingId === invoice.id}
-            className="px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-colors disabled:opacity-50"
-            style={{ background: '#16a34a' }}
+            title="Označit jako proplaceno"
+            className="flex items-center gap-1.5 px-2 py-1 rounded-md border text-xs transition-colors disabled:opacity-50 flex-shrink-0"
+            style={{ color: '#16a34a', borderColor: '#16a34a', background: 'transparent' }}
+            onMouseEnter={(e) => { if (!payingId) e.currentTarget.style.background = '#f0fdf4'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
           >
-            {payingId === invoice.id ? '...' : 'Proplatit'}
+            <span
+              className="w-3.5 h-3.5 rounded border-2 border-current flex-shrink-0 flex items-center justify-center"
+            >
+              {payingId === invoice.id && (
+                <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              )}
+            </span>
+            {payingId === invoice.id ? 'Ukládám...' : 'Proplatit'}
           </button>
         )}
       </div>

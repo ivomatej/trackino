@@ -15,7 +15,7 @@ const DEFAULT_HELP_CONTENT = `
 <h3>Základní funkce</h3>
 <ul>
   <li><strong>Dashboard</strong> – úvodní přehledová stránka s personalizovaným pozdravem, souhrnem výdělku, odpracovaných hodin, zbývajících dní a svátků pro aktuální měsíc</li>
-  <li><strong>Time Tracker</strong> – spouštějte a zastavujte timer pro sledování odpracovaného času; po výběru projektu a kategorie/úkolu se zobrazuje čitelný breadcrumb místo ikonek</li>
+  <li><strong>Time Tracker</strong> – spouštějte a zastavujte timer pro sledování odpracovaného času; po výběru projektu a kategorie/úkolu se zobrazuje čitelný breadcrumb místo ikonek; každý záznam má tlačítko ▶ pro opětovné spuštění se stejnými údaji (projekt, kategorie, štítky)</li>
   <li><strong>Projekty</strong> – organizujte záznamy do projektů a přiřazujte klienty</li>
   <li><strong>Klienti</strong> – spravujte klienty a propojujte je s projekty</li>
   <li><strong>Štítky</strong> – označujte záznamy štítky pro lepší kategorizaci</li>
@@ -23,7 +23,7 @@ const DEFAULT_HELP_CONTENT = `
   <li><strong>Podřízení</strong> – Team Manažeři a Admini vidí záznamy podřízených; dostupné filtry: Dnes / Týden / Vlastní období</li>
   <li><strong>Dovolená</strong> – evidence termínů dovolené s automatickým výpočtem pracovních dnů a přehledem zbývajícího nároku</li>
   <li><strong>Fakturace</strong> – fakturace odvedené práce: podání žádosti, schvalování manažerem, proplacení správcem fakturace</li>
-  <li><strong>Tým</strong> – spravujte členy workspace, přidávejte je kódem, nastavujte manažery a oprávnění fakturace</li>
+  <li><strong>Tým</strong> – spravujte členy workspace, přidávejte je kódem, nastavujte manažery a oprávnění fakturace; e-mail a telefon každého člena lze rychle zkopírovat kliknutím na ikonku vedle kontaktu</li>
   <li><strong>Detailní nastavení</strong> – osobní profil: jméno, e-mail, telefon, pozice (nastavuje admin) a barevný režim</li>
 </ul>
 
