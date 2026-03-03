@@ -60,6 +60,8 @@ export interface Profile {
   theme: 'light' | 'dark' | 'system';
   currency: 'CZK' | 'EUR' | 'USD';
   is_master_admin: boolean;
+  phone: string;      // telefonní číslo
+  position: string;   // pracovní pozice (nastavuje admin)
   created_at: string;
 }
 

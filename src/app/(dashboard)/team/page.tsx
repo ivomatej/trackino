@@ -66,10 +66,15 @@ function TeamContent() {
   const [codeCopied, setCodeCopied] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
 
+  // Email copy state (ID e-mailu, který byl zkopírován)
+  const [copiedEmailId, setCopiedEmailId] = useState<string | null>(null);
+
   // Edit member – základní pole
   const [editingMember, setEditingMember] = useState<MemberWithProfile | null>(null);
   const [editName, setEditName] = useState('');
   const [editEmail, setEditEmail] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editPosition, setEditPosition] = useState('');
   const [editColor, setEditColor] = useState(AVATAR_COLORS[0]);
   const [editCanUseVacation, setEditCanUseVacation] = useState(false);
   const [editCanInvoice, setEditCanInvoice] = useState(false);
@@ -188,6 +193,21 @@ function TeamContent() {
     fetchData();
   };
 
+  const copyEmail = async (memberId: string, email: string) => {
+    try {
+      await navigator.clipboard.writeText(email);
+    } catch {
+      const el = document.createElement('textarea');
+      el.value = email;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+    }
+    setCopiedEmailId(memberId);
+    setTimeout(() => setCopiedEmailId(null), 2000);
+  };
+
   const copyJoinCode = async () => {
     if (!currentWorkspace?.join_code) return;
     try {
@@ -253,6 +273,8 @@ function TeamContent() {
     setEditingMember(member);
     setEditName(member.profile?.display_name ?? '');
     setEditEmail(member.profile?.email ?? '');
+    setEditPhone(member.profile?.phone ?? '');
+    setEditPosition(member.profile?.position ?? '');
     setEditColor(member.profile?.avatar_color ?? AVATAR_COLORS[0]);
     setEditCanUseVacation(member.can_use_vacation ?? false);
     setEditCanInvoice(member.can_invoice ?? false);
@@ -282,6 +304,8 @@ function TeamContent() {
       supabase.from('trackino_profiles').update({
         display_name: editName.trim(),
         email: editEmail.trim(),
+        phone: editPhone.trim(),
+        position: editPosition.trim(),
         avatar_color: editColor,
       }).eq('id', editingMember.user_id),
       supabase.from('trackino_workspace_members').update({
@@ -537,7 +561,33 @@ function TeamContent() {
                             <span className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{p?.display_name ?? 'Neznámý'}</span>
                             {isCurrentUser && <span className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: 'var(--primary-light)', color: 'var(--primary)' }}>Ty</span>}
                           </div>
-                          <div className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{p?.email}</div>
+                          {p?.position && (
+                            <div className="text-xs truncate font-medium" style={{ color: 'var(--primary)', opacity: 0.85 }}>
+                              {p.position}
+                            </div>
+                          )}
+                          <div className="flex items-center gap-1 group/email">
+                            <span className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{p?.email}</span>
+                            {p?.email && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); copyEmail(member.id, p.email); }}
+                                title="Kopírovat e-mail"
+                                className="flex-shrink-0 p-0.5 rounded opacity-0 group-hover/email:opacity-100 transition-opacity"
+                                style={{ color: copiedEmailId === member.id ? '#16a34a' : 'var(--text-muted)' }}
+                              >
+                                {copiedEmailId === member.id ? (
+                                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                                ) : (
+                                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+                                )}
+                              </button>
+                            )}
+                          </div>
+                          {p?.phone && (
+                            <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                              <span className="mr-1">📞</span>{p.phone}
+                            </div>
+                          )}
                         </div>
 
                         {(activeRates[member.id] !== undefined || member.hourly_rate !== null) &&
@@ -876,9 +926,21 @@ function TeamContent() {
               </div>
 
               {/* Email */}
-              <div className="mb-4">
+              <div className="mb-3">
                 <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>E-mail</label>
                 <input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} placeholder="jan@firma.cz" className={inputCls} style={inputStyle} />
+              </div>
+
+              {/* Telefon + Pozice */}
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div>
+                  <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Telefon</label>
+                  <input type="tel" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder="+420 123 456 789" className={inputCls} style={inputStyle} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Pozice</label>
+                  <input type="text" value={editPosition} onChange={(e) => setEditPosition(e.target.value)} placeholder="např. Grafik" className={inputCls} style={inputStyle} />
+                </div>
               </div>
 
               {/* Typ spolupráce */}

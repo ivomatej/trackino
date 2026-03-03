@@ -775,24 +775,16 @@ function InvoicesContent() {
                         <div style={{ color: 'var(--text-primary)' }}>{userBillingProfile.company_name}</div>
                       </div>
                     )}
-                    {userBillingProfile.address && (
+                    {(userBillingProfile.address || userBillingProfile.postal_code || userBillingProfile.city || userBillingProfile.country) && (
                       <div>
                         <span className="font-medium" style={{ color: 'var(--text-muted)' }}>Adresa</span>
-                        <div style={{ color: 'var(--text-primary)' }}>{userBillingProfile.address}</div>
-                      </div>
-                    )}
-                    {(userBillingProfile.postal_code || userBillingProfile.city) && (
-                      <div>
-                        <span className="font-medium" style={{ color: 'var(--text-muted)' }}>Město</span>
                         <div style={{ color: 'var(--text-primary)' }}>
-                          {[userBillingProfile.postal_code, userBillingProfile.city].filter(Boolean).join(' ')}
+                          {userBillingProfile.address && <div>{userBillingProfile.address}</div>}
+                          {(userBillingProfile.postal_code || userBillingProfile.city) && (
+                            <div>{[userBillingProfile.postal_code, userBillingProfile.city].filter(Boolean).join(' ')}</div>
+                          )}
+                          {userBillingProfile.country && <div>{userBillingProfile.country}</div>}
                         </div>
-                      </div>
-                    )}
-                    {userBillingProfile.country && (
-                      <div>
-                        <span className="font-medium" style={{ color: 'var(--text-muted)' }}>Stát</span>
-                        <div style={{ color: 'var(--text-primary)' }}>{userBillingProfile.country}</div>
                       </div>
                     )}
                     {userBillingProfile.ico && (

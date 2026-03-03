@@ -24,6 +24,7 @@ const DEFAULT_HELP_CONTENT = `
   <li><strong>Dovolená</strong> – evidence termínů dovolené s automatickým výpočtem pracovních dnů a přehledem zbývajícího nároku</li>
   <li><strong>Fakturace</strong> – fakturace odvedené práce: podání žádosti, schvalování manažerem, proplacení správcem fakturace</li>
   <li><strong>Tým</strong> – spravujte členy workspace, přidávejte je kódem, nastavujte manažery a oprávnění fakturace</li>
+  <li><strong>Detailní nastavení</strong> – osobní profil: jméno, e-mail, telefon, pozice (nastavuje admin) a barevný režim</li>
 </ul>
 
 <h3>Dashboard</h3>
@@ -76,6 +77,12 @@ const DEFAULT_HELP_CONTENT = `
 
 <h3>Půlnoční split</h3>
 <p>Pokud timer běží přes půlnoc, záznam se automaticky rozdělí na dva – jeden za předchozí den, druhý za nový den. Kontrola probíhá každých 30 sekund na pozadí.</p>
+
+<h3>Firemní adresář (Tým → Členové)</h3>
+<p>Záložka <strong>Členové</strong> v sekci Tým slouží jako firemní adresář. Zobrazuje jméno, pracovní pozici, e-mail (s ikonkou pro rychlé zkopírování) a telefonní číslo každého člena. Telefon a pozici si každý uživatel vyplní v <strong>Detailní nastavení</strong>; pozici může nastavit také admin v editaci člena.</p>
+
+<h3>Detailní nastavení (osobní profil)</h3>
+<p>V levém dolním menu je odkaz <strong>Detailní nastavení</strong>, kde každý uživatel může upravit: zobrazované jméno, e-mail, telefonní číslo, barvu avataru a barevný režim aplikace (světlý / tmavý / auto). Pole <strong>Pozice</strong> je viditelné, ale editovatelné pouze pro adminy – ostatní vidí hodnotu nastavenou adminem.</p>
 
 <h3>Pozvánky</h3>
 <p>Nové členy workspace lze přidat v sekci <strong>Tým → Členové</strong>: sdílejte kód pro připojení, nový člen ho zadá při registraci a čeká na schválení adminem.</p>

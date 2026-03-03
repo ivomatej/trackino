@@ -11,6 +11,14 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v1.5.0 – 3. 3. 2026</h3>
+<ul>
+  <li><strong>Osobní profil (Detailní nastavení)</strong> – nová stránka dostupná z levého dolního menu; každý uživatel si může upravit jméno, e-mail, telefonní číslo, barvu avataru a barevný režim; pole Pozice je viditelné pro všechny, ale editovatelné pouze pro adminy</li>
+  <li><strong>Firemní adresář</strong> – v Tým → Členové přibyly sloupce Pozice a Telefon; e-mail má ikonku pro rychlé zkopírování (zobrazí se při najetí myší); přidání polí Telefon a Pozice do editačního modálu člena (admin)</li>
+  <li><strong>Adresa v panelu fakturace</strong> – panel fakturačních údajů při podání faktury nyní zobrazuje ulici, PSČ+město a stát jako řádky pod jedním nadpisem „Adresa" (bez zbytečných popisků Město/Stát)</li>
+  <li><strong>SQL migrace</strong> – do tabulky trackino_profiles přidány sloupce phone a position</li>
+</ul>
+
 <h3>v1.4.2 – 3. 3. 2026</h3>
 <ul>
   <li><strong>Rozdělení adresy v fakturačním profilu</strong> – pole Adresa rozděleno na tři samostatná pole: Adresa (ulice + číslo popisné), Město a Stát; migrace SQL přidává sloupce city a country</li>
