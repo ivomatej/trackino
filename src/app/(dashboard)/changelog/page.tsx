@@ -11,6 +11,27 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v0.8.0 – 3. 3. 2026</h3>
+<ul>
+  <li><strong>Náklady v Reportech</strong> – karta „Náklady" vedle „Celkem odpracováno" zobrazuje hodiny × hodinová sazba; přepočítává se dle zvoleného období, uživatele a projektu; viditelné pro všechny uživatele (každý vidí své vlastní náklady)</li>
+  <li><strong>Přehled nákladů per uživatel</strong> – tabulka pod souhrnými kartami zobrazuje odpracované hodiny a náklady zvlášť pro každého člena (viditelné pro admin/manager)</li>
+  <li><strong>Správa workspace (Master Admin)</strong> – nová stránka /admin umožňuje vytvořit nové workspace, editovat název a tarif, spravovat členy, zamknout/odemknout workspace</li>
+  <li><strong>Zamčený workspace</strong> – zamčený workspace zobrazí uživatelům informační obrazovku; Master Admin vidí workspace i po zamčení</li>
+  <li><strong>Grupování projektů v Time Trackeru</strong> – projekty jsou nyní sdruženy pod správnými klienty (využívá tabulku client_projects místo starého textového pole)</li>
+  <li><strong>Color picker – 20 barev</strong> – všude (Klienti, Štítky, Tým) je k dispozici 20 barev; vybraná barva označena černým okrajem místo zvětšení</li>
+  <li><strong>Viditelnost štítků v menu</strong> – pokud je zapnuto „Skrýt štítky pro všechny", záložka Štítky zmizí z menu pro běžné členy</li>
+  <li><strong>Hodinové sazby – oprávnění</strong> – člen vidí jen svoji sazbu; Team Manager vidí sebe a podřízené; Admin/Master Admin vidí všechny sazby</li>
+  <li><strong>Historie hodinových sazeb</strong> – sazby s platností (valid_from / valid_to); aktivní sazba (bez valid_to) zobrazena v seznamu členů</li>
+  <li><strong>Ikonky akcí</strong> – tlačítka pro editaci, archivaci a mazání v Projektech, Klientech a Štítcích jsou vždy viditelná (šedá), sjednocená ikona koše</li>
+</ul>
+
+<h3>v0.7.0 – 3. 3. 2026</h3>
+<ul>
+  <li><strong>Editace členů týmu</strong> – admin může upravit jméno, email, barvu avataru a hodinovou sazbu přímo v modálním okně</li>
+  <li><strong>Schválení přístupu</strong> – noví uživatelé čekají na schválení adminem; admin schvaluje v sekci Tým</li>
+  <li><strong>Přesměrování po registraci</strong> – uživatel je po registraci přesměrován přímo na dashboard</li>
+</ul>
+
 <h3>v0.6.0 – 3. 3. 2026</h3>
 <ul>
   <li><strong>Nápověda</strong> – nová stránka s dokumentací aplikace, editovatelná Master Adminem</li>

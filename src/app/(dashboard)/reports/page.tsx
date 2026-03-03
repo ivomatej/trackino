@@ -129,58 +129,79 @@ function ReportsContent() {
 
   // Načtení členů workspace + jejich sazeb
   const fetchMembers = useCallback(async () => {
-    if (!currentWorkspace || !canSeeOthers) return;
+    if (!currentWorkspace || !user) return;
 
-    const { data: memberRows } = await supabase
-      .from('trackino_workspace_members')
-      .select('id, user_id')
-      .eq('workspace_id', currentWorkspace.id);
+    if (canSeeOthers) {
+      // Admin/manager: načíst všechny členy a jejich sazby
+      const { data: memberRows } = await supabase
+        .from('trackino_workspace_members')
+        .select('id, user_id')
+        .eq('workspace_id', currentWorkspace.id);
 
-    const rawMembers = (memberRows ?? []) as { id: string; user_id: string }[];
-    const userIds = rawMembers.map(m => m.user_id);
-    if (userIds.length === 0) return;
+      const rawMembers = (memberRows ?? []) as { id: string; user_id: string }[];
+      const userIds = rawMembers.map(m => m.user_id);
+      if (userIds.length === 0) return;
 
-    const { data: profiles } = await supabase
-      .from('trackino_profiles')
-      .select('id, display_name, email')
-      .in('id', userIds);
+      const { data: profiles } = await supabase
+        .from('trackino_profiles')
+        .select('id, display_name, email')
+        .in('id', userIds);
 
-    const memberList: MemberProfile[] = (profiles ?? []).map((p: { id: string; display_name: string; email: string }) => {
-      const row = rawMembers.find(r => r.user_id === p.id);
-      return {
-        member_id: row?.id ?? '',
-        user_id: p.id,
-        display_name: p.display_name || p.email,
-        email: p.email,
-      };
-    });
-
-    // Manager vidí jen podřízené + sebe
-    const filtered = (isManager && !isWorkspaceAdmin)
-      ? memberList.filter(m => m.user_id === user?.id || isManagerOf(m.user_id))
-      : memberList;
-
-    setMembers(filtered);
-
-    // Načíst sazby pro všechny členy
-    const memberDbIds = memberList.map(m => m.member_id).filter(Boolean);
-    if (memberDbIds.length > 0) {
-      const { data: rates } = await supabase
-        .from('trackino_member_rates')
-        .select('*')
-        .in('workspace_member_id', memberDbIds);
-
-      const rMap: Record<string, MemberRate[]> = {};
-      (rates ?? []).forEach((r: MemberRate) => {
-        if (!rMap[r.workspace_member_id]) rMap[r.workspace_member_id] = [];
-        rMap[r.workspace_member_id].push(r);
+      const memberList: MemberProfile[] = (profiles ?? []).map((p: { id: string; display_name: string; email: string }) => {
+        const row = rawMembers.find(r => r.user_id === p.id);
+        return {
+          member_id: row?.id ?? '',
+          user_id: p.id,
+          display_name: p.display_name || p.email,
+          email: p.email,
+        };
       });
-      setRatesByMemberId(rMap);
-    }
 
-    const idMap: Record<string, string> = {};
-    memberList.forEach(m => { if (m.member_id) idMap[m.user_id] = m.member_id; });
-    setUserToMemberId(idMap);
+      const filtered = (isManager && !isWorkspaceAdmin)
+        ? memberList.filter(m => m.user_id === user.id || isManagerOf(m.user_id))
+        : memberList;
+
+      setMembers(filtered);
+
+      const memberDbIds = memberList.map(m => m.member_id).filter(Boolean);
+      if (memberDbIds.length > 0) {
+        const { data: rates } = await supabase
+          .from('trackino_member_rates')
+          .select('*')
+          .in('workspace_member_id', memberDbIds);
+
+        const rMap: Record<string, MemberRate[]> = {};
+        (rates ?? []).forEach((r: MemberRate) => {
+          if (!rMap[r.workspace_member_id]) rMap[r.workspace_member_id] = [];
+          rMap[r.workspace_member_id].push(r);
+        });
+        setRatesByMemberId(rMap);
+      }
+
+      const idMap: Record<string, string> = {};
+      memberList.forEach(m => { if (m.member_id) idMap[m.user_id] = m.member_id; });
+      setUserToMemberId(idMap);
+    } else {
+      // Běžný člen: načíst jen vlastní sazby pro výpočet nákladů
+      const { data: ownRow } = await supabase
+        .from('trackino_workspace_members')
+        .select('id')
+        .eq('workspace_id', currentWorkspace.id)
+        .eq('user_id', user.id)
+        .single();
+
+      if (ownRow) {
+        const { data: rates } = await supabase
+          .from('trackino_member_rates')
+          .select('*')
+          .eq('workspace_member_id', ownRow.id);
+
+        const rMap: Record<string, MemberRate[]> = {};
+        rMap[ownRow.id] = (rates ?? []) as MemberRate[];
+        setRatesByMemberId(rMap);
+        setUserToMemberId({ [user.id]: ownRow.id });
+      }
+    }
   }, [currentWorkspace, canSeeOthers, isManager, isWorkspaceAdmin, user, isManagerOf]);
 
   // Načtení projektů
@@ -257,15 +278,13 @@ function ReportsContent() {
     return match?.hourly_rate ?? null;
   };
 
-  const totalCost = canSeeOthers
-    ? entries.reduce((sum, e) => {
-        if (!e.duration) return sum;
-        const rate = getRateForEntry(e.user_id, e.start_time.split('T')[0]);
-        return rate !== null ? sum + (e.duration / 3600) * rate : sum;
-      }, 0)
-    : 0;
+  const totalCost = entries.reduce((sum, e) => {
+    if (!e.duration) return sum;
+    const rate = getRateForEntry(e.user_id, e.start_time.split('T')[0]);
+    return rate !== null ? sum + (e.duration / 3600) * rate : sum;
+  }, 0);
 
-  const hasCosts = canSeeOthers && totalCost > 0;
+  const hasCosts = totalCost > 0;
 
   // Per-uživatelský přehled (hodiny + náklady)
   const perUserStats = canSeeOthers
@@ -628,6 +647,14 @@ function ReportsContent() {
               {fmtDuration(totalSeconds)}
             </div>
           </div>
+          {hasCosts && (
+            <div className="rounded-xl border p-4" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+              <div className="text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Náklady</div>
+              <div className="text-2xl font-bold tabular-nums" style={{ color: 'var(--primary)' }}>
+                {fmtCost(totalCost)} {currencySymbol}
+              </div>
+            </div>
+          )}
           <div className="rounded-xl border p-4" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
             <div className="text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Počet záznamů</div>
             <div className="text-2xl font-bold tabular-nums" style={{ color: 'var(--text-primary)' }}>
@@ -640,14 +667,6 @@ function ReportsContent() {
               {sortedDays.length > 0 ? fmtDuration(Math.round(totalSeconds / sortedDays.length)) : '0:00'}
             </div>
           </div>
-          {hasCosts && (
-            <div className="rounded-xl border p-4" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
-              <div className="text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Celkové náklady</div>
-              <div className="text-2xl font-bold tabular-nums" style={{ color: 'var(--text-primary)' }}>
-                {fmtCost(totalCost)} {currencySymbol}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Per-uživatelský přehled nákladů */}

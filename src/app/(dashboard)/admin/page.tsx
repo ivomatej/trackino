@@ -48,6 +48,12 @@ function AdminContent() {
   const [wsMembers, setWsMembers] = useState<MemberWithProfile[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
 
+  // Nový workspace
+  const [showNewWs, setShowNewWs] = useState(false);
+  const [newWsName, setNewWsName] = useState('');
+  const [newWsTariff, setNewWsTariff] = useState<Tariff>('free');
+  const [creatingWs, setCreatingWs] = useState(false);
+
   // Pozvánka
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<UserRole>('member');
@@ -110,6 +116,31 @@ function AdminContent() {
       setWsMembers([]);
     }
     setMembersLoading(false);
+  };
+
+  const createNewWorkspace = async () => {
+    if (!profile || !newWsName.trim()) return;
+    setCreatingWs(true);
+    const slug = newWsName.trim().toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const joinCode = Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    const { data: ws, error } = await supabase
+      .from('trackino_workspaces')
+      .insert({ name: newWsName.trim(), slug, created_by: profile.id, join_code: joinCode, tariff: newWsTariff })
+      .select()
+      .single();
+    if (!error && ws) {
+      await supabase.from('trackino_workspace_members').insert({
+        workspace_id: ws.id, user_id: profile.id, role: 'owner' as UserRole, approved: true,
+      });
+    }
+    setCreatingWs(false);
+    setShowNewWs(false);
+    setNewWsName('');
+    setNewWsTariff('free');
+    fetchWorkspaces();
   };
 
   const saveEdit = async () => {
@@ -207,7 +238,60 @@ function AdminContent() {
 
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">
-      <h1 className="text-xl font-bold mb-6" style={{ color: 'var(--text-primary)' }}>Správa workspace</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Správa workspace</h1>
+        <button
+          onClick={() => { setShowNewWs(v => !v); setNewWsName(''); setNewWsTariff('free'); }}
+          className="px-3 py-1.5 rounded-lg text-sm font-medium text-white transition-colors"
+          style={{ background: 'var(--primary)' }}
+        >
+          + Nový workspace
+        </button>
+      </div>
+
+      {showNewWs && (
+        <div className="rounded-xl border p-4 mb-4" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+          <div className="text-sm font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>Nový workspace</div>
+          <div className="flex gap-2 flex-wrap">
+            <input
+              type="text"
+              value={newWsName}
+              onChange={(e) => setNewWsName(e.target.value)}
+              placeholder="Název workspace"
+              className="flex-1 min-w-0 px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+              style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+            />
+            <div className="relative flex-shrink-0">
+              <select
+                value={newWsTariff}
+                onChange={(e) => setNewWsTariff(e.target.value as Tariff)}
+                className="pl-3 pr-8 py-2 rounded-lg border text-sm appearance-none cursor-pointer"
+                style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+              >
+                <option value="free">Free</option>
+                <option value="pro">Pro</option>
+                <option value="max">Max</option>
+              </select>
+              <svg className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
+            </div>
+            <button
+              onClick={createNewWorkspace}
+              disabled={creatingWs || !newWsName.trim()}
+              className="px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors disabled:opacity-50"
+              style={{ background: 'var(--primary)' }}
+            >
+              {creatingWs ? 'Vytvářím...' : 'Vytvořit'}
+            </button>
+            <button
+              onClick={() => setShowNewWs(false)}
+              className="px-3 py-2 rounded-lg border text-sm"
+              style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
+            >
+              Zrušit
+            </button>
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="text-sm" style={{ color: 'var(--text-muted)' }}>Načítám...</div>

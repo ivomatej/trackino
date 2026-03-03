@@ -47,8 +47,8 @@ function TrashIcon({ size = 14 }: { size?: number }) {
 
 function TeamContent() {
   const { user } = useAuth();
-  const { currentWorkspace, refreshWorkspace } = useWorkspace();
-  const { isWorkspaceAdmin } = usePermissions();
+  const { currentWorkspace, refreshWorkspace, isManagerOf } = useWorkspace();
+  const { isWorkspaceAdmin, isManager } = usePermissions();
   const [activeTab, setActiveTab] = useState<Tab>('members');
 
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -498,7 +498,8 @@ function TeamContent() {
                           <div className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{p?.email}</div>
                         </div>
 
-                        {(activeRates[member.id] !== undefined || member.hourly_rate !== null) && (
+                        {(activeRates[member.id] !== undefined || member.hourly_rate !== null) &&
+                         (isWorkspaceAdmin || isCurrentUser || (isManager && isManagerOf(member.user_id))) && (
                           <span className="text-xs hidden sm:inline flex-shrink-0" style={{ color: 'var(--text-muted)' }}>
                             {activeRates[member.id] ?? member.hourly_rate} {currencySymbol}/h
                           </span>
