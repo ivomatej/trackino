@@ -22,7 +22,8 @@ const DEFAULT_HELP_CONTENT = `
   <li><strong>Reporty</strong> – analyzujte odpracovaný čas (včetně výdělku dle hodinové sazby) a přidávejte záznamy ručně</li>
   <li><strong>Podřízení</strong> – Team Manažeři a Admini vidí záznamy podřízených; dostupné filtry: Dnes / Týden / Vlastní období</li>
   <li><strong>Dovolená</strong> – evidence termínů dovolené s automatickým výpočtem pracovních dnů a přehledem zbývajícího nároku</li>
-  <li><strong>Tým</strong> – spravujte členy workspace, přidávejte je kódem, nastavujte manažery</li>
+  <li><strong>Fakturace</strong> – fakturace odvedené práce: podání žádosti, schvalování manažerem, proplacení správcem fakturace</li>
+  <li><strong>Tým</strong> – spravujte členy workspace, přidávejte je kódem, nastavujte manažery a oprávnění fakturace</li>
 </ul>
 
 <h3>Dashboard</h3>
@@ -59,8 +60,17 @@ const DEFAULT_HELP_CONTENT = `
 <h3>Podřízení</h3>
 <p>Team Manažeři a Admini mají přístup ke stránce <strong>Podřízení</strong> (v sekci Analýza). Zobrazuje záznamy přiřazených podřízených s možností filtrovat: Dnes, Týden, nebo Vlastní období (výběrem datumu od–do). Kliknutím na popis záznamu ho lze inline editovat; kliknutím na existující poznámku ji lze upravit.</p>
 
+<h3>Fakturace</h3>
+<p>Stránka <strong>Fakturace</strong> slouží k fakturaci odvedené práce. Workflow má tři fáze:</p>
+<ul>
+  <li><strong>Podání žádosti</strong> – uživatel s oprávněním „Může fakturovat" klikne na „Požádat o fakturaci" (dostupné od 1. dne měsíce za předchozí měsíc), nahraje PDF faktury a vyplní: datum vystavení, datum splatnosti, variabilní symbol a příznak plátce DPH</li>
+  <li><strong>Schválení</strong> – Team Manažer nebo Admin vidí záložku „Ke schválení"; kliknutím na fakturu ji zkontroluje, doplní odpracované hodiny a výši částky a schválí (nebo stornuje)</li>
+  <li><strong>Proplacení</strong> – uživatel s rolí „Správce fakturace" vidí záložku „Přehled faktur"; může stáhnout PDF a označit schválenou fakturu jako proplacentou</li>
+</ul>
+<p>Oprávnění se nastavují v Tým → editace člena → sekce Fakturace.</p>
+
 <h3>Půlnoční split</h3>
-<p>Pokud timer běží přes půlnoc, záznam se automaticky rozdělí na dva – jeden za předchozí den, druhý za nový den.</p>
+<p>Pokud timer běží přes půlnoc, záznam se automaticky rozdělí na dva – jeden za předchozí den, druhý za nový den. Kontrola probíhá každých 30 sekund na pozadí.</p>
 
 <h3>Pozvánky</h3>
 <p>Nové členy workspace lze přidat v sekci <strong>Tým → Členové</strong>: sdílejte kód pro připojení, nový člen ho zadá při registraci a čeká na schválení adminem.</p>

@@ -11,6 +11,15 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v1.3.0 – 3. 3. 2026</h3>
+<ul>
+  <li><strong>Fakturace členů (nová stránka)</strong> – uživatelé s oprávněním „Může fakturovat" mohou od 1. dne měsíce podat žádost o proplacení za předchozí měsíc: nahrají PDF faktury, vyplní datum vystavení, splatnosti, variabilní symbol a příznak plátce DPH</li>
+  <li><strong>Schvalování faktur</strong> – Team Manažeři a Admini vidí záložku „Ke schválení" s čekajícími fakturami; při schválení doplní odpracované hodiny a výši částky</li>
+  <li><strong>Přehled faktur a proplacení</strong> – uživatel s rolí „Správce fakturace" (can_manage_billing) vidí záložku „Přehled faktur" se schválenými fakturami; může stáhnout PDF a označit fakturu jako proplacentou</li>
+  <li><strong>Nastavení fakturace v Týmu</strong> – admin může v editaci člena zapnout „Může fakturovat" a „Správce fakturace" přes nové checkboxy v sekci Fakturace</li>
+  <li><strong>Půlnoční split timeru</strong> – pokud timer běží přes půlnoc, automaticky se při zastavení rozdělí na dvě záznamy (jeden do půlnoci, druhý od půlnoci); background kontrola každých 30 sekund zajistí split i při nezavřeném prohlížeči</li>
+</ul>
+
 <h3>v1.2.0 – 3. 3. 2026</h3>
 <ul>
   <li><strong>Dovolená (nová stránka)</strong> – každý uživatel si může evidovat termíny dovolené; automatický výpočet pracovních dnů; přehled čerpáno / zbývá / celkový nárok dle nastavení workspace; admini vidí záznamy všech uživatelů</li>

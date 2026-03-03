@@ -1,0 +1,782 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
+import { usePermissions } from '@/hooks/usePermissions';
+import DashboardLayout from '@/components/DashboardLayout';
+import { WorkspaceProvider } from '@/contexts/WorkspaceContext';
+import type { Invoice, InvoiceStatus, WorkspaceMember, Profile } from '@/types/database';
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+function fmtDate(iso: string): string {
+  const [y, m, d] = iso.split('-');
+  return `${parseInt(d)}.${parseInt(m)}.${y}`;
+}
+
+function fmtMonth(year: number, month: number): string {
+  const months = ['Leden', 'Únor', 'Březen', 'Duben', 'Květen', 'Červen',
+    'Červenec', 'Srpen', 'Září', 'Říjen', 'Listopad', 'Prosinec'];
+  return `${months[month - 1]} ${year}`;
+}
+
+function getPreviousMonthPeriod(): { year: number; month: number } {
+  const now = new Date();
+  const month = now.getMonth() === 0 ? 12 : now.getMonth(); // getMonth() je 0-indexed
+  const year = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+  return { year, month };
+}
+
+// Fakturaci lze podat od 1. dne aktuálního měsíce (za předchozí měsíc)
+function canSubmitInvoice(): boolean {
+  return true; // vždy od 1. dne aktuálního měsíce - kontrolujeme jen dostupnost předchozího měsíce
+}
+
+const STATUS_LABELS: Record<InvoiceStatus, string> = {
+  pending: 'Zpracovává se',
+  approved: 'Schváleno',
+  paid: 'Proplaceno',
+  cancelled: 'Stornováno',
+};
+
+const STATUS_COLORS: Record<InvoiceStatus, { bg: string; color: string }> = {
+  pending: { bg: '#fef9c3', color: '#854d0e' },
+  approved: { bg: '#dbeafe', color: '#1e40af' },
+  paid: { bg: '#dcfce7', color: '#15803d' },
+  cancelled: { bg: '#fee2e2', color: '#dc2626' },
+};
+
+type ViewTab = 'my' | 'approve' | 'billing';
+
+interface InvoiceWithUser extends Invoice {
+  profile?: Profile;
+}
+
+// ─── Main Component ──────────────────────────────────────────────────────────
+
+function InvoicesContent() {
+  const { user } = useAuth();
+  const { currentWorkspace, currentMembership } = useWorkspace();
+  const { isWorkspaceAdmin, isManager } = usePermissions();
+
+  const canInvoice = currentMembership?.can_invoice ?? false;
+  const canManageBilling = currentMembership?.can_manage_billing ?? false;
+  const canApprove = isWorkspaceAdmin || isManager;
+
+  // Výchozí tab dle oprávnění
+  const defaultTab: ViewTab = canInvoice ? 'my' : canApprove ? 'approve' : 'billing';
+  const [activeTab, setActiveTab] = useState<ViewTab>(defaultTab);
+
+  const [invoices, setInvoices] = useState<InvoiceWithUser[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Stav podání nové faktury
+  const [showSubmitForm, setShowSubmitForm] = useState(false);
+  const [submitIssueDate, setSubmitIssueDate] = useState('');
+  const [submitDueDate, setSubmitDueDate] = useState('');
+  const [submitVarSymbol, setSubmitVarSymbol] = useState('');
+  const [submitIsVat, setSubmitIsVat] = useState(false);
+  const [submitPdf, setSubmitPdf] = useState<File | null>(null);
+  const [submitNote, setSubmitNote] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+
+  // Schvalování
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [approveHours, setApproveHours] = useState('');
+  const [approveAmount, setApproveAmount] = useState('');
+  const [approveNote, setApproveNote] = useState('');
+  const [approveModalInvoice, setApproveModalInvoice] = useState<InvoiceWithUser | null>(null);
+
+  // Proplacení
+  const [payingId, setPayingId] = useState<string | null>(null);
+
+  // Detail faktury
+  const [detailInvoice, setDetailInvoice] = useState<InvoiceWithUser | null>(null);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
+
+  const { year: prevYear, month: prevMonth } = getPreviousMonthPeriod();
+
+  const fetchInvoices = useCallback(async () => {
+    if (!currentWorkspace || !user) return;
+    setLoading(true);
+
+    let query = supabase
+      .from('trackino_invoices')
+      .select('*')
+      .eq('workspace_id', currentWorkspace.id)
+      .order('created_at', { ascending: false });
+
+    // Běžný uživatel vidí jen své faktury
+    if (!canApprove && !canManageBilling) {
+      query = query.eq('user_id', user.id);
+    }
+
+    const { data } = await query;
+    const invData = (data ?? []) as Invoice[];
+
+    // Načteme profily
+    if (invData.length > 0) {
+      const userIds = [...new Set(invData.map(i => i.user_id))];
+      const { data: profiles } = await supabase
+        .from('trackino_profiles')
+        .select('id, display_name, email, avatar_color')
+        .in('id', userIds);
+      const profileMap: Record<string, Profile> = {};
+      (profiles ?? []).forEach((p: unknown) => { const prof = p as Profile; profileMap[prof.id] = prof; });
+      setInvoices(invData.map(i => ({ ...i, profile: profileMap[i.user_id] })));
+    } else {
+      setInvoices([]);
+    }
+    setLoading(false);
+  }, [currentWorkspace, user, canApprove, canManageBilling]);
+
+  useEffect(() => { fetchInvoices(); }, [fetchInvoices]);
+
+  // Automaticky nastavit defaultní hodnoty pro formulář
+  useEffect(() => {
+    if (showSubmitForm) {
+      const today = new Date().toISOString().split('T')[0];
+      const due = new Date();
+      due.setDate(due.getDate() + 14);
+      setSubmitIssueDate(today);
+      setSubmitDueDate(due.toISOString().split('T')[0]);
+    }
+  }, [showSubmitForm]);
+
+  // Zkontrolovat zda uživatel již podal fakturu za předchozí měsíc
+  const alreadySubmitted = invoices.some(
+    i => i.user_id === user?.id &&
+      i.billing_period_year === prevYear &&
+      i.billing_period_month === prevMonth &&
+      i.status !== 'cancelled'
+  );
+
+  const submitInvoice = async () => {
+    if (!currentWorkspace || !user || !submitPdf) return;
+    if (!submitIssueDate || !submitDueDate || !submitVarSymbol.trim()) {
+      setSubmitError('Vyplňte prosím všechna povinná pole.');
+      return;
+    }
+    setSubmitting(true);
+    setSubmitError('');
+
+    // Upload PDF
+    const fileName = `${currentWorkspace.id}/${user.id}/${prevYear}-${String(prevMonth).padStart(2, '0')}-${Date.now()}.pdf`;
+    const { error: uploadError } = await supabase.storage
+      .from('trackino-invoices')
+      .upload(fileName, submitPdf, { contentType: 'application/pdf' });
+
+    if (uploadError) {
+      setSubmitError('Chyba při nahrávání PDF: ' + uploadError.message);
+      setSubmitting(false);
+      return;
+    }
+
+    const { error: insertError } = await supabase.from('trackino_invoices').insert({
+      workspace_id: currentWorkspace.id,
+      user_id: user.id,
+      billing_period_year: prevYear,
+      billing_period_month: prevMonth,
+      issue_date: submitIssueDate,
+      due_date: submitDueDate,
+      variable_symbol: submitVarSymbol.trim(),
+      is_vat_payer: submitIsVat,
+      pdf_url: fileName,
+      status: 'pending',
+      note: submitNote.trim(),
+      submitted_at: new Date().toISOString(),
+    });
+
+    if (insertError) {
+      setSubmitError('Chyba při ukládání faktury: ' + insertError.message);
+      // Pokus o smazání PDF při chybě
+      await supabase.storage.from('trackino-invoices').remove([fileName]);
+    } else {
+      setShowSubmitForm(false);
+      setSubmitPdf(null);
+      setSubmitNote('');
+      setSubmitVarSymbol('');
+      setSubmitIsVat(false);
+      fetchInvoices();
+    }
+    setSubmitting(false);
+  };
+
+  const openApproveModal = (invoice: InvoiceWithUser) => {
+    setApproveModalInvoice(invoice);
+    setApproveHours('');
+    setApproveAmount('');
+    setApproveNote('');
+  };
+
+  const approveInvoice = async () => {
+    if (!approveModalInvoice || !user) return;
+    setApprovingId(approveModalInvoice.id);
+    await supabase.from('trackino_invoices').update({
+      status: 'approved',
+      total_hours: approveHours ? parseFloat(approveHours) : null,
+      amount: approveAmount ? parseFloat(approveAmount) : null,
+      note: approveNote.trim() || approveModalInvoice.note,
+      approved_at: new Date().toISOString(),
+      approved_by: user.id,
+    }).eq('id', approveModalInvoice.id);
+    setApprovingId(null);
+    setApproveModalInvoice(null);
+    fetchInvoices();
+  };
+
+  const rejectInvoice = async (invoiceId: string) => {
+    if (!confirm('Opravdu stornovat tuto fakturu?')) return;
+    setRejectingId(invoiceId);
+    await supabase.from('trackino_invoices').update({ status: 'cancelled' }).eq('id', invoiceId);
+    setRejectingId(null);
+    fetchInvoices();
+  };
+
+  const markAsPaid = async (invoiceId: string) => {
+    if (!user) return;
+    if (!confirm('Označit fakturu jako proplacentou?')) return;
+    setPayingId(invoiceId);
+    await supabase.from('trackino_invoices').update({
+      status: 'paid',
+      paid_at: new Date().toISOString(),
+      paid_by: user.id,
+    }).eq('id', invoiceId);
+    setPayingId(null);
+    fetchInvoices();
+  };
+
+  const openDetail = async (invoice: InvoiceWithUser) => {
+    setDetailInvoice(invoice);
+    setPdfUrl(null);
+    if (invoice.pdf_url) {
+      setPdfLoading(true);
+      const { data } = await supabase.storage
+        .from('trackino-invoices')
+        .createSignedUrl(invoice.pdf_url, 3600);
+      setPdfUrl(data?.signedUrl ?? null);
+      setPdfLoading(false);
+    }
+  };
+
+  const currencySymbol = currentWorkspace?.currency === 'EUR' ? '€' : currentWorkspace?.currency === 'USD' ? '$' : 'Kč';
+  const inputCls = 'w-full px-3 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]';
+  const inputStyle = { borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' };
+
+  // Filtrování faktur dle tabu
+  const myInvoices = invoices.filter(i => i.user_id === user?.id);
+  const pendingInvoices = invoices.filter(i => i.status === 'pending');
+  const billingInvoices = invoices.filter(i => i.status === 'approved' || i.status === 'paid');
+
+  const tabs: { key: ViewTab; label: string; count?: number; visible: boolean }[] = [
+    { key: 'my', label: 'Moje faktury', count: myInvoices.length, visible: canInvoice },
+    { key: 'approve', label: 'Ke schválení', count: pendingInvoices.length, visible: canApprove },
+    { key: 'billing', label: 'Přehled faktur', count: billingInvoices.length, visible: canManageBilling || isWorkspaceAdmin },
+  ];
+  const visibleTabs = tabs.filter(t => t.visible);
+
+  if (!currentWorkspace) return null;
+
+  const renderStatusBadge = (status: InvoiceStatus) => {
+    const { bg, color } = STATUS_COLORS[status];
+    return (
+      <span className="text-[11px] px-2 py-0.5 rounded-full font-medium" style={{ background: bg, color }}>
+        {STATUS_LABELS[status]}
+      </span>
+    );
+  };
+
+  const renderInvoiceRow = (invoice: InvoiceWithUser, showUser = false) => (
+    <div
+      key={invoice.id}
+      className="flex items-center gap-3 px-4 py-3.5 border-b last:border-b-0 cursor-pointer transition-colors"
+      style={{ borderColor: 'var(--border)' }}
+      onClick={() => openDetail(invoice)}
+      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+    >
+      {showUser && invoice.profile && (
+        <div
+          className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+          style={{ background: invoice.profile.avatar_color ?? 'var(--primary)' }}
+        >
+          {invoice.profile.display_name?.charAt(0).toUpperCase() ?? '?'}
+        </div>
+      )}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+            {fmtMonth(invoice.billing_period_year, invoice.billing_period_month)}
+          </span>
+          {showUser && (
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              · {invoice.profile?.display_name ?? invoice.profile?.email ?? 'Neznámý'}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-3 mt-0.5">
+          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+            VS: {invoice.variable_symbol}
+          </span>
+          {invoice.amount !== null && (
+            <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
+              {invoice.amount.toLocaleString('cs-CZ')} {currencySymbol}
+            </span>
+          )}
+          {invoice.total_hours !== null && (
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              {invoice.total_hours} h
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        {renderStatusBadge(invoice.status)}
+        {/* Tlačítka pro schvalování */}
+        {activeTab === 'approve' && invoice.status === 'pending' && (
+          <button
+            onClick={(e) => { e.stopPropagation(); openApproveModal(invoice); }}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-colors"
+            style={{ background: 'var(--primary)' }}
+          >
+            Schválit
+          </button>
+        )}
+        {activeTab === 'approve' && invoice.status === 'pending' && (
+          <button
+            onClick={(e) => { e.stopPropagation(); rejectInvoice(invoice.id); }}
+            disabled={rejectingId === invoice.id}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+            style={{ color: 'var(--danger)', border: '1px solid var(--danger)' }}
+          >
+            {rejectingId === invoice.id ? '...' : 'Stornovat'}
+          </button>
+        )}
+        {/* Proplacení */}
+        {activeTab === 'billing' && invoice.status === 'approved' && canManageBilling && (
+          <button
+            onClick={(e) => { e.stopPropagation(); markAsPaid(invoice.id); }}
+            disabled={payingId === invoice.id}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-colors disabled:opacity-50"
+            style={{ background: '#16a34a' }}
+          >
+            {payingId === invoice.id ? '...' : 'Proplatit'}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <DashboardLayout>
+      <div className="max-w-3xl">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Fakturace</h1>
+            <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
+              Správa faktur a žádostí o proplacení
+            </p>
+          </div>
+          {canInvoice && !showSubmitForm && !alreadySubmitted && canSubmitInvoice() && (
+            <button
+              onClick={() => setShowSubmitForm(true)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white transition-opacity hover:opacity-90"
+              style={{ background: 'var(--primary)' }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              Požádat o fakturaci
+            </button>
+          )}
+        </div>
+
+        {/* Banner – již podáno */}
+        {canInvoice && alreadySubmitted && (
+          <div className="mb-5 flex items-center gap-3 px-4 py-3 rounded-xl border" style={{ background: '#f0fdf4', borderColor: '#86efac' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            <span className="text-sm" style={{ color: '#15803d' }}>
+              Faktura za <strong>{fmtMonth(prevYear, prevMonth)}</strong> byla podána. Sledujte stav níže.
+            </span>
+          </div>
+        )}
+
+        {/* Formulář pro podání faktury */}
+        {showSubmitForm && canInvoice && (
+          <div className="mb-6 rounded-2xl border p-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                  Faktura za {fmtMonth(prevYear, prevMonth)}
+                </h3>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                  Nahrajte svou fakturu ve formátu PDF a vyplňte údaje.
+                </p>
+              </div>
+              <button onClick={() => setShowSubmitForm(false)} className="p-1.5 rounded-lg" style={{ color: 'var(--text-muted)' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Datum vystavení *</label>
+                <input type="date" value={submitIssueDate} onChange={(e) => setSubmitIssueDate(e.target.value)} className={inputCls} style={inputStyle} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Datum splatnosti *</label>
+                <input type="date" value={submitDueDate} onChange={(e) => setSubmitDueDate(e.target.value)} className={inputCls} style={inputStyle} />
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Variabilní symbol *</label>
+              <input type="text" value={submitVarSymbol} onChange={(e) => setSubmitVarSymbol(e.target.value)} placeholder="např. 202401001" className={inputCls} style={inputStyle} />
+            </div>
+
+            <div className="mb-4">
+              <label
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer"
+                style={{ background: 'var(--bg-hover)' }}
+              >
+                <input
+                  type="checkbox"
+                  checked={submitIsVat}
+                  onChange={(e) => setSubmitIsVat(e.target.checked)}
+                  className="w-4 h-4 rounded"
+                  style={{ accentColor: 'var(--primary)' }}
+                />
+                <div>
+                  <span className="text-sm" style={{ color: 'var(--text-primary)' }}>Jsem plátce DPH</span>
+                  <span className="text-xs block" style={{ color: 'var(--text-muted)' }}>Zaškrtněte pokud fakturujete s DPH</span>
+                </div>
+              </label>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Faktura PDF *</label>
+              <div
+                className="border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors"
+                style={{ borderColor: submitPdf ? 'var(--primary)' : 'var(--border)' }}
+                onClick={() => document.getElementById('pdf-upload')?.click()}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const file = e.dataTransfer.files[0];
+                  if (file?.type === 'application/pdf') setSubmitPdf(file);
+                }}
+              >
+                {submitPdf ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
+                    </svg>
+                    <span className="text-sm font-medium" style={{ color: 'var(--primary)' }}>{submitPdf.name}</span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setSubmitPdf(null); }}
+                      className="ml-1 text-xs"
+                      style={{ color: 'var(--text-muted)' }}
+                    >✕</button>
+                  </div>
+                ) : (
+                  <>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-2" style={{ color: 'var(--text-muted)' }}>
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
+                    </svg>
+                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                      Klikněte nebo přetáhněte PDF soubor
+                    </p>
+                  </>
+                )}
+              </div>
+              <input id="pdf-upload" type="file" accept="application/pdf" className="hidden" onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) setSubmitPdf(file);
+              }} />
+            </div>
+
+            <div className="mb-5">
+              <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Poznámka (volitelné)</label>
+              <textarea
+                value={submitNote}
+                onChange={(e) => setSubmitNote(e.target.value)}
+                rows={2}
+                placeholder="Volitelná poznámka pro schvalovatele..."
+                className={inputCls}
+                style={inputStyle}
+              />
+            </div>
+
+            {submitError && (
+              <div className="mb-4 px-3 py-2.5 rounded-lg text-sm" style={{ background: '#fee2e2', color: '#dc2626' }}>
+                {submitError}
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowSubmitForm(false)}
+                className="flex-1 py-2.5 rounded-xl border text-sm font-medium"
+                style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
+              >
+                Zrušit
+              </button>
+              <button
+                onClick={submitInvoice}
+                disabled={submitting || !submitPdf || !submitIssueDate || !submitDueDate || !submitVarSymbol.trim()}
+                className="flex-1 py-2.5 rounded-xl text-white text-sm font-medium disabled:opacity-50"
+                style={{ background: 'var(--primary)' }}
+              >
+                {submitting ? 'Odesílám...' : 'Odeslat ke schválení'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Taby */}
+        {visibleTabs.length > 1 && (
+          <div className="flex gap-1 mb-6 rounded-lg p-1" style={{ background: 'var(--bg-hover)' }}>
+            {visibleTabs.map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className="flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                style={{
+                  background: activeTab === tab.key ? 'var(--bg-card)' : 'transparent',
+                  color: activeTab === tab.key ? 'var(--text-primary)' : 'var(--text-muted)',
+                  boxShadow: activeTab === tab.key ? 'var(--shadow-sm)' : 'none',
+                }}
+              >
+                {tab.label}
+                {tab.count !== undefined && tab.count > 0 && (
+                  <span className="ml-1.5 text-xs" style={{ color: 'var(--text-muted)' }}>{tab.count}</span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Content */}
+        {loading ? (
+          <div className="text-center py-16">
+            <div className="w-6 h-6 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin mx-auto" />
+          </div>
+        ) : (
+          <>
+            {/* Moje faktury */}
+            {activeTab === 'my' && (
+              <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+                {myInvoices.length === 0 ? (
+                  <div className="px-6 py-16 text-center">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-3" style={{ color: 'var(--text-muted)' }}>
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
+                    </svg>
+                    <p className="text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>Žádné faktury</p>
+                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                      Klikněte na „Požádat o fakturaci" pro podání první faktury.
+                    </p>
+                  </div>
+                ) : (
+                  myInvoices.map(inv => renderInvoiceRow(inv, false))
+                )}
+              </div>
+            )}
+
+            {/* Ke schválení */}
+            {activeTab === 'approve' && canApprove && (
+              <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+                {pendingInvoices.length === 0 ? (
+                  <div className="px-6 py-16 text-center">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-3" style={{ color: 'var(--text-muted)' }}>
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    <p className="text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>Vše schváleno</p>
+                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Žádné faktury nečekají na schválení.</p>
+                  </div>
+                ) : (
+                  pendingInvoices.map(inv => renderInvoiceRow(inv, true))
+                )}
+              </div>
+            )}
+
+            {/* Přehled faktur */}
+            {activeTab === 'billing' && (canManageBilling || isWorkspaceAdmin) && (
+              <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+                {billingInvoices.length === 0 ? (
+                  <div className="px-6 py-16 text-center">
+                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Žádné schválené ani proplacené faktury.</p>
+                  </div>
+                ) : (
+                  billingInvoices.map(inv => renderInvoiceRow(inv, true))
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* ═══ MODAL: Schválení faktury ═══ */}
+      {approveModalInvoice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={() => setApproveModalInvoice(null)} />
+          <div className="relative w-full max-w-md rounded-2xl shadow-2xl z-10" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+            <div className="flex items-center justify-between px-6 pt-6 pb-4">
+              <div>
+                <h3 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>Schválit fakturu</h3>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                  {approveModalInvoice.profile?.display_name} · {fmtMonth(approveModalInvoice.billing_period_year, approveModalInvoice.billing_period_month)}
+                </p>
+              </div>
+              <button onClick={() => setApproveModalInvoice(null)} className="p-1.5 rounded-lg" style={{ color: 'var(--text-muted)' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+            <div className="px-6 pb-4">
+              {/* Info z faktury */}
+              <div className="mb-4 p-3 rounded-xl" style={{ background: 'var(--bg-hover)' }}>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div><span style={{ color: 'var(--text-muted)' }}>Datum vystavení:</span><br /><strong style={{ color: 'var(--text-primary)' }}>{fmtDate(approveModalInvoice.issue_date)}</strong></div>
+                  <div><span style={{ color: 'var(--text-muted)' }}>Datum splatnosti:</span><br /><strong style={{ color: 'var(--text-primary)' }}>{fmtDate(approveModalInvoice.due_date)}</strong></div>
+                  <div><span style={{ color: 'var(--text-muted)' }}>Variabilní symbol:</span><br /><strong style={{ color: 'var(--text-primary)' }}>{approveModalInvoice.variable_symbol}</strong></div>
+                  <div><span style={{ color: 'var(--text-muted)' }}>Plátce DPH:</span><br /><strong style={{ color: 'var(--text-primary)' }}>{approveModalInvoice.is_vat_payer ? 'Ano' : 'Ne'}</strong></div>
+                </div>
+                {approveModalInvoice.note && (
+                  <div className="mt-2 pt-2 border-t text-xs" style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
+                    <em>{approveModalInvoice.note}</em>
+                  </div>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                  <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Odpracované hodiny</label>
+                  <input type="number" value={approveHours} onChange={(e) => setApproveHours(e.target.value)} placeholder="0" min="0" step="0.5" className={inputCls} style={inputStyle} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Částka ({currencySymbol})</label>
+                  <input type="number" value={approveAmount} onChange={(e) => setApproveAmount(e.target.value)} placeholder="0" min="0" step="1" className={inputCls} style={inputStyle} />
+                </div>
+              </div>
+              <div className="mb-5">
+                <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Poznámka ke schválení</label>
+                <textarea value={approveNote} onChange={(e) => setApproveNote(e.target.value)} rows={2} placeholder="Volitelná poznámka..." className={inputCls} style={inputStyle} />
+              </div>
+              <div className="flex gap-3">
+                <button onClick={() => setApproveModalInvoice(null)} className="flex-1 py-2.5 rounded-xl border text-sm font-medium" style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}>
+                  Zrušit
+                </button>
+                <button
+                  onClick={approveInvoice}
+                  disabled={!!approvingId}
+                  className="flex-1 py-2.5 rounded-xl text-white text-sm font-medium disabled:opacity-50"
+                  style={{ background: 'var(--primary)' }}
+                >
+                  {approvingId ? 'Ukládám...' : 'Schválit fakturu'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ MODAL: Detail faktury ═══ */}
+      {detailInvoice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={() => setDetailInvoice(null)} />
+          <div className="relative w-full max-w-lg rounded-2xl shadow-2xl z-10" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div className="flex items-center justify-between px-6 pt-6 pb-4 sticky top-0" style={{ background: 'var(--bg-card)', borderBottom: '1px solid var(--border)' }}>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>
+                    Faktura – {fmtMonth(detailInvoice.billing_period_year, detailInvoice.billing_period_month)}
+                  </h3>
+                  {renderStatusBadge(detailInvoice.status)}
+                </div>
+                {detailInvoice.profile && (
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                    {detailInvoice.profile.display_name ?? detailInvoice.profile.email}
+                  </p>
+                )}
+              </div>
+              <button onClick={() => setDetailInvoice(null)} className="p-1.5 rounded-lg" style={{ color: 'var(--text-muted)' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+            <div className="px-6 py-5">
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                {[
+                  { label: 'Datum vystavení', value: fmtDate(detailInvoice.issue_date) },
+                  { label: 'Datum splatnosti', value: fmtDate(detailInvoice.due_date) },
+                  { label: 'Variabilní symbol', value: detailInvoice.variable_symbol },
+                  { label: 'Plátce DPH', value: detailInvoice.is_vat_payer ? 'Ano' : 'Ne' },
+                  ...(detailInvoice.total_hours !== null ? [{ label: 'Hodiny', value: `${detailInvoice.total_hours} h` }] : []),
+                  ...(detailInvoice.amount !== null ? [{ label: 'Částka', value: `${detailInvoice.amount.toLocaleString('cs-CZ')} ${currencySymbol}` }] : []),
+                  ...(detailInvoice.approved_at ? [{ label: 'Schváleno', value: fmtDate(detailInvoice.approved_at.split('T')[0]) }] : []),
+                  ...(detailInvoice.paid_at ? [{ label: 'Proplaceno', value: fmtDate(detailInvoice.paid_at.split('T')[0]) }] : []),
+                ].map(item => (
+                  <div key={item.label} className="p-3 rounded-xl" style={{ background: 'var(--bg-hover)' }}>
+                    <div className="text-xs mb-0.5" style={{ color: 'var(--text-muted)' }}>{item.label}</div>
+                    <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{item.value}</div>
+                  </div>
+                ))}
+              </div>
+
+              {detailInvoice.note && (
+                <div className="mb-4 p-3 rounded-xl text-sm" style={{ background: 'var(--bg-hover)', color: 'var(--text-secondary)' }}>
+                  <div className="text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Poznámka</div>
+                  {detailInvoice.note}
+                </div>
+              )}
+
+              {/* PDF */}
+              {detailInvoice.pdf_url && (
+                <div className="mb-4">
+                  {pdfLoading ? (
+                    <div className="py-4 text-center"><div className="w-4 h-4 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin mx-auto" /></div>
+                  ) : pdfUrl ? (
+                    <a
+                      href={pdfUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 px-4 py-3 rounded-xl border transition-colors text-sm font-medium"
+                      style={{ borderColor: 'var(--border)', color: 'var(--primary)', background: 'var(--bg-hover)' }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
+                      </svg>
+                      Stáhnout PDF faktury
+                    </a>
+                  ) : (
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Nepodařilo se načíst PDF.</p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </DashboardLayout>
+  );
+}
+
+export default function InvoicesPage() {
+  const { user, loading } = useAuth();
+  if (loading || !user) return null;
+  return (
+    <WorkspaceProvider>
+      <InvoicesContent />
+    </WorkspaceProvider>
+  );
+}

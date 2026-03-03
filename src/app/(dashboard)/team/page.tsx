@@ -72,6 +72,8 @@ function TeamContent() {
   const [editEmail, setEditEmail] = useState('');
   const [editColor, setEditColor] = useState(AVATAR_COLORS[0]);
   const [editCanUseVacation, setEditCanUseVacation] = useState(false);
+  const [editCanInvoice, setEditCanInvoice] = useState(false);
+  const [editCanManageBilling, setEditCanManageBilling] = useState(false);
   const [editCooperationTypeId, setEditCooperationTypeId] = useState<string>('');
   const [editSaving, setEditSaving] = useState(false);
 
@@ -247,6 +249,8 @@ function TeamContent() {
     setEditEmail(member.profile?.email ?? '');
     setEditColor(member.profile?.avatar_color ?? AVATAR_COLORS[0]);
     setEditCanUseVacation(member.can_use_vacation ?? false);
+    setEditCanInvoice(member.can_invoice ?? false);
+    setEditCanManageBilling(member.can_manage_billing ?? false);
     setEditCooperationTypeId(member.cooperation_type_id ?? '');
     setMemberRates([]);
     setShowAddRate(false);
@@ -275,6 +279,8 @@ function TeamContent() {
       }).eq('id', editingMember.user_id),
       supabase.from('trackino_workspace_members').update({
         can_use_vacation: editCanUseVacation,
+        can_invoice: editCanInvoice,
+        can_manage_billing: editCanManageBilling,
         cooperation_type_id: editCooperationTypeId || null,
       }).eq('id', editingMember.id),
     ]);
@@ -906,6 +912,47 @@ function TeamContent() {
                   <div>
                     <span className="text-sm block" style={{ color: 'var(--text-primary)' }}>Může čerpat dovolenou</span>
                     <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Zaměstnanec s nárokem na dovolenou (HPP apod.)</span>
+                  </div>
+                </label>
+              </div>
+
+              {/* Fakturace */}
+              <div className="mb-4 space-y-2">
+                <div className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Fakturace</div>
+                <label
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors"
+                  style={{ background: editCanInvoice ? 'var(--bg-active)' : 'var(--bg-hover)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = editCanInvoice ? 'var(--bg-active)' : 'var(--bg-hover)'}
+                >
+                  <input
+                    type="checkbox"
+                    checked={editCanInvoice}
+                    onChange={(e) => setEditCanInvoice(e.target.checked)}
+                    className="w-4 h-4 rounded flex-shrink-0"
+                    style={{ accentColor: 'var(--primary)' }}
+                  />
+                  <div>
+                    <span className="text-sm block" style={{ color: 'var(--text-primary)' }}>Může fakturovat</span>
+                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Uživatel může podávat žádosti o proplacení faktury</span>
+                  </div>
+                </label>
+                <label
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors"
+                  style={{ background: editCanManageBilling ? 'var(--bg-active)' : 'var(--bg-hover)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = editCanManageBilling ? 'var(--bg-active)' : 'var(--bg-hover)'}
+                >
+                  <input
+                    type="checkbox"
+                    checked={editCanManageBilling}
+                    onChange={(e) => setEditCanManageBilling(e.target.checked)}
+                    className="w-4 h-4 rounded flex-shrink-0"
+                    style={{ accentColor: 'var(--primary)' }}
+                  />
+                  <div>
+                    <span className="text-sm block" style={{ color: 'var(--text-primary)' }}>Správce fakturace</span>
+                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Může stahovat faktury a označovat je jako proplacené</span>
                   </div>
                 </label>
               </div>
