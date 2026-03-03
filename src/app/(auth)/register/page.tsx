@@ -12,7 +12,6 @@ export default function RegisterPage() {
   const [workspaceCode, setWorkspaceCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
   const { signUp } = useAuth();
   const router = useRouter();
 
@@ -29,7 +28,7 @@ export default function RegisterPage() {
 
     setLoading(true);
 
-    // Uložit kód před registrací, aby byl dostupný při SIGNED_IN eventu
+    // Uložit kód před registrací – WorkspaceContext ho zpracuje po přesměrování
     if (code) {
       localStorage.setItem('trackino_pending_join_code', code);
     }
@@ -42,55 +41,12 @@ export default function RegisterPage() {
       setError(signUpError);
       setLoading(false);
     } else {
-      setSuccess(true);
-      setLoading(false);
+      // Email confirmation je vypnuto → uživatel je ihned přihlášen.
+      // Přesměrovat na dashboard: WorkspaceProvider se mountne, fetchWorkspaces
+      // zavolá tryJoinWorkspaceByCode a přidá uživatele do workspace.
+      router.push('/');
     }
   };
-
-  if (success) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f8fafc] px-4">
-        <div className="w-full max-w-[400px]">
-          {/* Logo */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-[#2563eb] mb-4">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <polyline points="12 6 12 12 16 14" />
-              </svg>
-            </div>
-            <h1 className="text-2xl font-bold text-[#0f172a]">Trackino</h1>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1)] border border-[#e2e8f0] p-6 text-center">
-            {/* Zelená fajfka */}
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-[#dcfce7] mb-4">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-            </div>
-            <h2 className="text-lg font-bold text-[#0f172a] mb-2">Registrace úspěšná!</h2>
-            <p className="text-sm text-[#475569] mb-4">
-              Účet byl vytvořen pro <strong>{email}</strong>.
-            </p>
-            {workspaceCode.trim() && (
-              <div className="mb-4 p-3 rounded-lg bg-[#fffbeb] border border-[#fde68a]">
-                <p className="text-xs text-[#92400e]">
-                  <strong>Čeká na schválení:</strong> Správce workspace musí váš přístup schválit, než budete moci pracovat.
-                </p>
-              </div>
-            )}
-            <Link
-              href="/login"
-              className="inline-block w-full py-2.5 bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-medium rounded-lg text-sm transition-colors text-center"
-            >
-              Přihlásit se
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#f8fafc] px-4">
