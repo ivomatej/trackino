@@ -542,7 +542,6 @@ export default function TimerBar({ onEntryChanged }: TimerBarProps) {
         className="text-lg sm:text-xl font-bold tabular-nums min-w-[85px] sm:min-w-[100px] text-center"
         style={{
           color: isRunning ? 'var(--primary)' : 'var(--text-muted)',
-          fontFamily: 'var(--font-jetbrains), monospace',
           letterSpacing: '0.02em',
         }}
       >

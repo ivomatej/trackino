@@ -21,14 +21,11 @@ export default function DashboardLayout({ children, showTimer = false, onTimerEn
       <div className="lg:ml-[var(--sidebar-width)] min-h-screen flex flex-col">
         {/* Topbar s timerem */}
         <header
-          className="sticky top-0 z-30 border-b"
-          style={{
-            background: 'var(--bg-card)',
-            borderColor: 'var(--border)',
-          }}
+          className="sticky top-0 z-30"
+          style={{ background: 'var(--bg-card)' }}
         >
           {/* Horní řádek: hamburger + timer */}
-          <div className="flex items-center gap-3 px-4 lg:px-6 h-[var(--topbar-height)]">
+          <div className="flex items-center gap-3 px-4 lg:px-6 h-[var(--topbar-height)] border-b" style={{ borderColor: 'var(--border)' }}>
             {/* Hamburger (mobile) */}
             <button
               onClick={() => setSidebarOpen(true)}

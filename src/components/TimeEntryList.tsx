@@ -186,7 +186,7 @@ export default function TimeEntryList({ refreshKey }: TimeEntryListProps) {
           </div>
 
           {/* Záznamy – subtilní oddělovače */}
-          <div className="divide-y" style={{ borderColor: 'color-mix(in srgb, var(--border) 50%, transparent)' }}>
+          <div className="divide-y" style={{ borderColor: 'color-mix(in srgb, var(--border) 30%, transparent)' }}>
             {day.entries.map(entry => (
               <div
                 key={entry.id}

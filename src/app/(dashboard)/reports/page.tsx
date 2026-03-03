@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { WorkspaceProvider, useWorkspace } from '@/contexts/WorkspaceContext';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -16,8 +16,7 @@ function fmtDuration(seconds: number): string {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   const s = seconds % 60;
-  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-  return `${m}:${String(s).padStart(2, '0')}`;
+  return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
 function fmtTime(iso: string): string {
@@ -54,6 +53,21 @@ function getPresetRange(preset: DatePreset): { from: string; to: string } {
     return { from: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`, to: today };
   }
   return { from: today, to: today };
+}
+
+// ── SelectWrap – custom arrow ─────────────────────────────────────────────────
+
+function SelectWrap({ children }: { children: ReactNode }) {
+  return (
+    <div className="relative">
+      {children}
+      <div className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: 'var(--text-muted)' }}>
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </div>
+    </div>
+  );
 }
 
 // ── ReportsContent ────────────────────────────────────────────────────────────
@@ -327,57 +341,65 @@ function ReportsContent() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Projekt</label>
-                <select
-                  value={manualProject}
-                  onChange={(e) => setManualProject(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none"
-                  style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
-                >
-                  <option value="">— Bez projektu —</option>
-                  {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
+                <SelectWrap>
+                  <select
+                    value={manualProject}
+                    onChange={(e) => setManualProject(e.target.value)}
+                    className="w-full px-3 py-2 pr-8 rounded-lg border text-sm focus:outline-none appearance-none cursor-pointer"
+                    style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                  >
+                    <option value="">— Bez projektu —</option>
+                    {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                </SelectWrap>
               </div>
               <div>
                 <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Kategorie</label>
-                <select
-                  value={manualCategory}
-                  onChange={(e) => setManualCategory(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none"
-                  style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
-                >
-                  <option value="">— Bez kategorie —</option>
-                  {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
+                <SelectWrap>
+                  <select
+                    value={manualCategory}
+                    onChange={(e) => setManualCategory(e.target.value)}
+                    className="w-full px-3 py-2 pr-8 rounded-lg border text-sm focus:outline-none appearance-none cursor-pointer"
+                    style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                  >
+                    <option value="">— Bez kategorie —</option>
+                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </SelectWrap>
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Úkol</label>
-                <select
-                  value={manualTask}
-                  onChange={(e) => setManualTask(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none"
-                  style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
-                >
-                  <option value="">— Bez úkolu —</option>
-                  {tasks.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                </select>
+                <SelectWrap>
+                  <select
+                    value={manualTask}
+                    onChange={(e) => setManualTask(e.target.value)}
+                    className="w-full px-3 py-2 pr-8 rounded-lg border text-sm focus:outline-none appearance-none cursor-pointer"
+                    style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                  >
+                    <option value="">— Bez úkolu —</option>
+                    {tasks.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  </select>
+                </SelectWrap>
               </div>
               {canSeeOthers && members.length > 0 && (
                 <div>
                   <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Zadat za uživatele</label>
-                  <select
-                    value={manualForUser}
-                    onChange={(e) => setManualForUser(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none"
-                    style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
-                  >
-                    <option value="me">Já (vlastní záznam)</option>
-                    {members.filter(m => m.user_id !== user?.id).map(m => (
-                      <option key={m.user_id} value={m.user_id}>{m.display_name}</option>
-                    ))}
-                  </select>
+                  <SelectWrap>
+                    <select
+                      value={manualForUser}
+                      onChange={(e) => setManualForUser(e.target.value)}
+                      className="w-full px-3 py-2 pr-8 rounded-lg border text-sm focus:outline-none appearance-none cursor-pointer"
+                      style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                    >
+                      <option value="me">Já (vlastní záznam)</option>
+                      {members.filter(m => m.user_id !== user?.id).map(m => (
+                        <option key={m.user_id} value={m.user_id}>{m.display_name}</option>
+                      ))}
+                    </select>
+                  </SelectWrap>
                 </div>
               )}
             </div>
@@ -472,33 +494,37 @@ function ReportsContent() {
             {canSeeOthers && members.length > 0 && (
               <div>
                 <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Uživatel</label>
-                <select
-                  value={userFilter}
-                  onChange={(e) => setUserFilter(e.target.value)}
-                  className="px-3 py-2 rounded-lg border text-sm focus:outline-none"
-                  style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
-                >
-                  <option value="me">Já</option>
-                  <option value="all">Všichni</option>
-                  {members.filter(m => m.user_id !== user?.id).map(m => (
-                    <option key={m.user_id} value={m.user_id}>{m.display_name}</option>
-                  ))}
-                </select>
+                <SelectWrap>
+                  <select
+                    value={userFilter}
+                    onChange={(e) => setUserFilter(e.target.value)}
+                    className="px-3 py-2 pr-8 rounded-lg border text-sm focus:outline-none appearance-none cursor-pointer"
+                    style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                  >
+                    <option value="me">Já</option>
+                    <option value="all">Všichni</option>
+                    {members.filter(m => m.user_id !== user?.id).map(m => (
+                      <option key={m.user_id} value={m.user_id}>{m.display_name}</option>
+                    ))}
+                  </select>
+                </SelectWrap>
               </div>
             )}
 
             {/* Project filter */}
             <div>
               <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Projekt</label>
-              <select
-                value={projectFilter}
-                onChange={(e) => setProjectFilter(e.target.value)}
-                className="px-3 py-2 rounded-lg border text-sm focus:outline-none"
-                style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
-              >
-                <option value="all">Všechny projekty</option>
-                {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
+              <SelectWrap>
+                <select
+                  value={projectFilter}
+                  onChange={(e) => setProjectFilter(e.target.value)}
+                  className="px-3 py-2 pr-8 rounded-lg border text-sm focus:outline-none appearance-none cursor-pointer"
+                  style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                >
+                  <option value="all">Všechny projekty</option>
+                  {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </SelectWrap>
             </div>
           </div>
         </div>
@@ -552,7 +578,7 @@ function ReportsContent() {
                       {fmtDuration(dayTotal)}
                     </span>
                   </div>
-                  <div className="divide-y" style={{ borderColor: 'color-mix(in srgb, var(--border) 50%, transparent)' }}>
+                  <div className="divide-y" style={{ borderColor: 'color-mix(in srgb, var(--border) 30%, transparent)' }}>
                     {dayEntries.map(entry => {
                       const cat = categoryName(entry.category_id);
                       const task = taskName(entry.task_id);
