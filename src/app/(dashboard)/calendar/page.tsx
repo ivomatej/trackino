@@ -626,7 +626,7 @@ function CalendarContent() {
                 color: view === v ? 'white' : 'var(--text-secondary)',
               }}
             >
-              {v === 'list' ? 'Liste' : v === 'week' ? 'Týden' : 'Měsíc'}
+              {v === 'list' ? 'Seznam' : v === 'week' ? 'Týden' : 'Měsíc'}
             </button>
           ))}
         </div>
@@ -1212,12 +1212,11 @@ function CalendarContent() {
                     <button
                       key={c}
                       onClick={() => setEventForm(f => ({ ...f, color: c }))}
-                      className="w-6 h-6 rounded-full transition-transform"
+                      className="w-6 h-6 rounded-full transition-all"
                       style={{
                         background: c,
-                        transform: eventForm.color === c ? 'scale(1.3)' : 'scale(1)',
-                        outline: eventForm.color === c ? `2px solid ${c}` : 'none',
-                        outlineOffset: '2px',
+                        boxShadow: eventForm.color === c ? `0 0 0 2px white, 0 0 0 4px ${c}` : 'none',
+                        transform: eventForm.color === c ? 'scale(1.15)' : 'scale(1)',
                       }}
                     />
                   ))}
@@ -1304,12 +1303,11 @@ function CalendarContent() {
                     <button
                       key={c}
                       onClick={() => setCalendarForm(f => ({ ...f, color: c }))}
-                      className="w-7 h-7 rounded-full transition-transform"
+                      className="w-7 h-7 rounded-full transition-all"
                       style={{
                         background: c,
-                        transform: calendarForm.color === c ? 'scale(1.3)' : 'scale(1)',
-                        outline: calendarForm.color === c ? `2px solid ${c}` : 'none',
-                        outlineOffset: '2px',
+                        boxShadow: calendarForm.color === c ? `0 0 0 2px white, 0 0 0 4px ${c}` : 'none',
+                        transform: calendarForm.color === c ? 'scale(1.15)' : 'scale(1)',
                       }}
                     />
                   ))}

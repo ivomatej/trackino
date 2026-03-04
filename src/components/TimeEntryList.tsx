@@ -126,10 +126,11 @@ export default function TimeEntryList({ refreshKey, onPlay }: TimeEntryListProps
     }
     setEntryTagMap(etMap);
 
-    // Seskupení podle dnů
+    // Seskupení podle dnů (ISO klíč YYYY-MM-DD v lokálním čase)
     const grouped: Record<string, EntryWithProject[]> = {};
     entries.forEach(entry => {
-      const dateKey = new Date(entry.start_time).toLocaleDateString('cs-CZ');
+      const d = new Date(entry.start_time);
+      const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       if (!grouped[dateKey]) grouped[dateKey] = [];
       grouped[dateKey].push({
         ...entry,
@@ -137,15 +138,19 @@ export default function TimeEntryList({ refreshKey, onPlay }: TimeEntryListProps
       });
     });
 
-    const today = new Date().toLocaleDateString('cs-CZ');
-    const yesterday = new Date(Date.now() - 86400000).toLocaleDateString('cs-CZ');
+    const todayD = new Date();
+    const todayISO = `${todayD.getFullYear()}-${String(todayD.getMonth() + 1).padStart(2, '0')}-${String(todayD.getDate()).padStart(2, '0')}`;
+    const yD = new Date(Date.now() - 86400000);
+    const yesterdayISO = `${yD.getFullYear()}-${String(yD.getMonth() + 1).padStart(2, '0')}-${String(yD.getDate()).padStart(2, '0')}`;
 
-    const dayGroups: DayGroup[] = Object.entries(grouped).map(([date, entries]) => ({
-      date,
-      label: date === today ? 'Dnes' : date === yesterday ? 'Včera' : date,
-      totalSeconds: entries.reduce((sum, e) => sum + (e.duration || 0), 0),
-      entries,
-    }));
+    const dayGroups: DayGroup[] = Object.entries(grouped)
+      .sort(([a], [b]) => b.localeCompare(a))
+      .map(([date, grpEntries]) => ({
+        date,
+        label: date === todayISO ? 'Dnes' : date === yesterdayISO ? 'Včera' : date,
+        totalSeconds: grpEntries.reduce((sum, e) => sum + (e.duration || 0), 0),
+        entries: grpEntries,
+      }));
 
     setDays(dayGroups);
     setLoading(false);
@@ -154,6 +159,12 @@ export default function TimeEntryList({ refreshKey, onPlay }: TimeEntryListProps
   useEffect(() => {
     fetchEntries();
   }, [fetchEntries, refreshKey]);
+
+  const formatDayLabel = (isoDate: string): string => {
+    const d = new Date(isoDate + 'T12:00:00');
+    const label = d.toLocaleDateString('cs-CZ', { weekday: 'long', day: 'numeric', month: 'long' });
+    return label.charAt(0).toUpperCase() + label.slice(1);
+  };
 
   const formatDuration = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
@@ -233,9 +244,13 @@ export default function TimeEntryList({ refreshKey, onPlay }: TimeEntryListProps
       {days.map(day => (
         <div key={day.date} className="rounded-xl border" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
           {/* Header dne */}
-          <div className="px-4 sm:px-6 py-3 border-b flex items-center justify-between" style={{ borderColor: 'var(--border)' }}>
-            <h2 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>{day.label}</h2>
-            <span className="text-sm tabular-nums font-medium" style={{ color: 'var(--text-secondary)' }}>
+          <div className="px-4 sm:px-6 py-2.5 border-b flex items-center justify-between" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
+            <h2 className="text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>
+              {day.label === 'Dnes' || day.label === 'Včera'
+                ? day.label
+                : formatDayLabel(day.date)}
+            </h2>
+            <span className="text-xs tabular-nums font-medium" style={{ color: 'var(--text-secondary)' }}>
               {formatDuration(day.totalSeconds)}
             </span>
           </div>

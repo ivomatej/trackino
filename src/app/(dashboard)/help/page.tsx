@@ -10,11 +10,11 @@ import { useRouter } from 'next/navigation';
 
 const DEFAULT_HELP_CONTENT = `
 <h2>Vítejte v Trackinu</h2>
-<p>Trackino je moderní aplikace pro sledování pracovního času, inspirovaná nástroji jako Toggl a Clockify.</p>
+<p>Trackino je moderní aplikace pro sledování pracovního času, plánování a správu týmu.</p>
 
 <h3>Základní funkce</h3>
 <ul>
-  <li><strong>Dashboard</strong> – úvodní přehledová stránka s personalizovaným pozdravem, souhrnem výdělku, odpracovaných hodin, zbývajících dní a svátků pro aktuální měsíc</li>
+  <li><strong>Přehled</strong> – úvodní přehledová stránka s personalizovaným pozdravem, souhrnem výdělku, odpracovaných hodin, zbývajících dní a svátků pro aktuální měsíc</li>
   <li><strong>Měřič</strong> – spouštějte a zastavujte timer pro sledování odpracovaného času; po výběru projektu a kategorie/úkolu se zobrazuje čitelný breadcrumb místo ikonek; každý záznam má tlačítko ▶ pro opětovné spuštění se stejnými údaji (projekt, kategorie, štítky); u každého záznamu se zobrazuje také přiřazená kategorie a úkol (světle šedě vpravo od projektu)</li>
   <li><strong>Projekty</strong> – organizujte záznamy do projektů a přiřazujte klienty; seznam projektů lze prohledávat pomocí vyhledávacího pole nad seznamem</li>
   <li><strong>Klienti</strong> – spravujte klienty a propojujte je s projekty; seznam klientů lze filtrovat vyhledávacím polem</li>
@@ -29,8 +29,8 @@ const DEFAULT_HELP_CONTENT = `
   <li><strong>Detailní nastavení</strong> – osobní profil: jméno, e-mail, telefon, pozice (nastavuje admin) a barevný režim; dostupné přes rozbalovací panel uživatele v levém dolním rohu sidebaru</li>
 </ul>
 
-<h3>Dashboard</h3>
-<p>Po přihlášení se zobrazí Dashboard s klíčovými informacemi pro aktuální měsíc:</p>
+<h3>Přehled</h3>
+<p>Po přihlášení se zobrazí Přehled s klíčovými informacemi pro aktuální měsíc:</p>
 <ul>
   <li><strong>Výdělek</strong> – součet hodin × hodinová sazba za aktuální měsíc (zobrazuje se pouze pokud máte nastavenou sazbu)</li>
   <li><strong>Odpracováno</strong> – celkový čas zaznamenaný v tomto měsíci</li>
@@ -40,7 +40,7 @@ const DEFAULT_HELP_CONTENT = `
   <li><strong>Dnešní svátek</strong> – kdo dnes slaví svátek dle českého kalendáře</li>
 </ul>
 
-<h3>Výběr projektu a kategorie v Time Trackeru</h3>
+<h3>Výběr projektu a kategorie v Měřiči</h3>
 <p>Kliknutím na ikonu projektu otevřete picker projektů – při najetí myší se zobrazí tooltip „Klient · Projekt". Kliknutím na ikonu seznamu otevřete picker kategorie/úkolu – tooltip zobrazuje „Kategorie · Úkol".</p>
 
 <h3>Přepínání workspace</h3>
@@ -64,21 +64,14 @@ const DEFAULT_HELP_CONTENT = `
   <li><strong>Dovolená ≤ 3 dní</strong> – přidává se přímo jako schválená (bez nutnosti čekat na souhlas)</li>
   <li><strong>Admin / Owner</strong> – dovolená přidaná adminem se vždy schválí okamžitě bez ohledu na délku</li>
 </ul>
-<p><strong>Synchronizace s Plánovačem:</strong> Přidání záznamu dovolené automaticky nastaví stav „Dovolená" v Plánovači pro všechny dny v zadaném rozsahu (včetně víkendů, pokud jsou v rozsahu). Smazání záznamu stav v Plánovači odebere. Aby sync fungoval, musí v Plánovači existovat stav s přesným názvem <strong>„Dovolená"</strong> (velké D, háček nad A).</p>
-<p><strong>SQL migrace (nutno spustit v Supabase):</strong> Pro schvalování dovolené jsou potřeba nové sloupce:<br/>
-<code>ALTER TABLE trackino_vacation_entries
-  ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'approved'
-    CHECK (status IN ('approved', 'pending', 'rejected')),
-  ADD COLUMN IF NOT EXISTS reviewed_by uuid REFERENCES auth.users(id),
-  ADD COLUMN IF NOT EXISTS reviewed_at timestamptz,
-  ADD COLUMN IF NOT EXISTS reviewer_note text DEFAULT '';</code></p>
+<p><strong>Synchronizace s Plánovačem:</strong> Přidání záznamu dovolené automaticky nastaví stav „Dovolená" v Plánovači pro všechny dny v zadaném rozsahu. Smazání záznamu stav v Plánovači odebere. Aby sync fungoval, musí v Plánovači existovat stav s přesným názvem <strong>„Dovolená"</strong>.</p>
 
 <h3>Kalendář</h3>
 <p>Stránka <strong>Kalendář</strong> (v sekci Sledování, dostupná v tarifu <strong>Max</strong>) poskytuje přehled všech vašich událostí na jednom místě. Automaticky zobrazuje vaši schválenou dovolenou a záznamy z modulu Důležité dny – bez nutnosti cokoli ručně přidávat.</p>
 <ul>
   <li><strong>Měsíční pohled</strong> – klasická mřížka celého měsíce (Po–Ne); kliknutím na libovolný den vytvoříte novou událost</li>
   <li><strong>Týdenní pohled</strong> – sedm sloupců (Po–Ne) s barevnými event pillsy pro každý den; dnešní sloupec je jemně zvýrazněn</li>
-  <li><strong>Listový pohled</strong> – chronologický výpis událostí seskupených po měsících; zobrazuje 6 měsíců dopředu</li>
+  <li><strong>Pohled Seznam</strong> – chronologický výpis událostí seskupených po měsících; zobrazuje 6 měsíců dopředu</li>
   <li><strong>Navigace</strong> – tlačítka ← Dnes → pro přepínání týdnů nebo měsíců; rozsah dat je vždy zobrazen v záhlaví stránky</li>
 </ul>
 <p><strong>Moje kalendáře:</strong> Levý panel zobrazuje seznam vašich kalendářů. Při prvním přístupu se automaticky vytvoří výchozí kalendář „Můj kalendář". Další kalendáře přidáte tlačítkem + vedle nadpisu. Každý kalendář má vlastní barvu; zaškrtnutím/odškrtnutím jej zobrazíte nebo skryjete v pohledu.</p>
@@ -87,51 +80,6 @@ const DEFAULT_HELP_CONTENT = `
   <li>Dovolená a Důležité dny se zobrazují automaticky (sekce Automaticky v levém panelu) – nejdou odfiltrovat dle kalendáře</li>
 </ul>
 <p><strong>Přidání události:</strong> Klikněte na tlačítko <em>+ Přidat událost</em> nebo klikněte přímo na den v měsíčním nebo týdenním pohledu. Ve formuláři vyplňte název, datum od–do, zda jde o celý den (nebo zadejte čas), volitelný popis a barvu. Událost lze kdykoli editovat kliknutím na ni, nebo smazat z formuláře.</p>
-<p><strong>SQL migrace (nutno spustit v Supabase):</strong> Pro modul Kalendář jsou potřeba tři nové tabulky:</p>
-<pre><code>CREATE TABLE IF NOT EXISTS trackino_calendars (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL,
-  owner_user_id uuid NOT NULL REFERENCES auth.users(id),
-  name text NOT NULL DEFAULT 'Můj kalendář',
-  color text NOT NULL DEFAULT '#3b82f6',
-  is_default boolean NOT NULL DEFAULT false,
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
-ALTER TABLE trackino_calendars ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Auth full" ON trackino_calendars FOR ALL TO authenticated USING (true) WITH CHECK (true);
-
-CREATE TABLE IF NOT EXISTS trackino_calendar_events (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  calendar_id uuid NOT NULL REFERENCES trackino_calendars(id) ON DELETE CASCADE,
-  workspace_id uuid NOT NULL,
-  user_id uuid NOT NULL REFERENCES auth.users(id),
-  title text NOT NULL,
-  description text NOT NULL DEFAULT '',
-  start_date text NOT NULL,
-  end_date text NOT NULL,
-  is_all_day boolean NOT NULL DEFAULT true,
-  start_time text,
-  end_time text,
-  color text,
-  source text NOT NULL DEFAULT 'manual' CHECK (source IN ('manual', 'vacation', 'important_day')),
-  source_id uuid,
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
-ALTER TABLE trackino_calendar_events ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Auth full" ON trackino_calendar_events FOR ALL TO authenticated USING (true) WITH CHECK (true);
-
-CREATE TABLE IF NOT EXISTS trackino_calendar_shares (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  calendar_id uuid NOT NULL REFERENCES trackino_calendars(id) ON DELETE CASCADE,
-  shared_with_user_id uuid NOT NULL REFERENCES auth.users(id),
-  can_edit boolean NOT NULL DEFAULT false,
-  created_at timestamptz DEFAULT now(),
-  UNIQUE(calendar_id, shared_with_user_id)
-);
-ALTER TABLE trackino_calendar_shares ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Auth full" ON trackino_calendar_shares FOR ALL TO authenticated USING (true) WITH CHECK (true);</code></pre>
 
 <h3>Přiřazení manažerů (Tým → Manažeři)</h3>
 <p>Admin workspace může v záložce <strong>Manažeři</strong> (v sekci Tým) definovat, kdo je čí Team Manažer. Kliknutím na tlačítko manažera se toto přiřazení okamžitě aktivuje nebo odebere. Každý člen může mít více manažerů. Přiřazení se promítá do stránky <strong>Podřízení</strong>, kde manažer vidí záznamy svých podřízených.</p>
@@ -179,26 +127,7 @@ CREATE POLICY "Auth full" ON trackino_calendar_shares FOR ALL TO authenticated U
   <li><strong>Barva</strong> – každý záznam má vlastní barvu z palety 12 barev pro snadné rozlišení</li>
   <li><strong>Poznámka</strong> – volitelný textový popis záznamu</li>
 </ul>
-<p><strong>Zobrazení v Plánovači:</strong> Důležité dny se zobrazují v záhlaví Plánovače jako barevné proužky (pill) přes příslušné sloupce. Vícedenní záznamy tvoří jeden proužek přesahující přes celý rozsah dnů; jednorázové záznamy (1 den) tvoří proužek v daném sloupci. Pokud se proužky překrývají, jsou automaticky rozloženy do více řádků nad záhlavím. Opakující se záznamy se zobrazují pro každý odpovídající den jako samostatný proužek. Přehled je personalizovaný – každý uživatel vidí pouze své záznamy.</p>
-<p><strong>SQL migrace (nutno spustit v Supabase):</strong><br/>
-<code>CREATE TABLE IF NOT EXISTS trackino_important_days (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL REFERENCES trackino_workspaces(id) ON DELETE CASCADE,
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  title text NOT NULL,
-  start_date text NOT NULL,
-  end_date text NOT NULL,
-  color text NOT NULL DEFAULT '#6366f1',
-  is_recurring boolean NOT NULL DEFAULT false,
-  recurring_type text NOT NULL DEFAULT 'none'
-    CHECK (recurring_type IN ('none','weekly','monthly','yearly')),
-  note text DEFAULT '',
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
-ALTER TABLE trackino_important_days ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Auth full" ON trackino_important_days
-  FOR ALL TO authenticated USING (true) WITH CHECK (true);</code></p>
+<p><strong>Zobrazení v Plánovači:</strong> Důležité dny se zobrazují v záhlaví Plánovače jako barevné proužky přes příslušné sloupce. Vícedenní záznamy tvoří jeden proužek přesahující přes celý rozsah dnů. Opakující se záznamy se zobrazují pro každý odpovídající den. Přehled je personalizovaný – každý uživatel vidí pouze své záznamy.</p>
 
 <h3>Úpravy aplikace</h3>
 <p>Stránka <strong>Úpravy aplikace</strong> je dostupná pouze pro <strong>Master Admina</strong> (odkaz v levém menu pod „Nahlásit chybu"). Slouží jako soukromý úkolník k evidenci nápadů a požadavků na rozvoj aplikace.</p>
@@ -219,8 +148,6 @@ CREATE POLICY "Auth full" ON trackino_important_days
 </ul>
 <p><strong>Přesun z Bug logu:</strong> V sekci Nahlásit chybu (Master Admin vidí tlačítko <strong>→ Úpravy aplikace</strong> u každého reportu po rozbalení karty) se kliknutím automaticky vytvoří položka v Úpravách. Obsah pole Poznámka se přenese do popisu. Přesunuté bugy jsou okamžitě označeny zeleným štítkem <em>„Přesunuto ✓"</em> v headeru karty a nelze je přesunout znovu. Přesunuté položky v Úpravách aplikace jsou označeny štítkem <em>„Z Bug logu"</em>. Původní report zůstane v Bug logu nezměněn.</p>
 <p><strong>Poznámka Master Admina:</strong> Poznámka se zobrazuje v šedém poli. Na pravém kraji řádku jsou dvě ikonky – <em>tužka</em> (upravit) a <em>koš</em> (smazat). Pokud poznámka dosud neexistuje, zobrazuje se odkaz „+ Přidat poznámku".</p>
-<p><strong>SQL migrace (nutno spustit v Supabase):</strong><br/><code>CREATE TABLE IF NOT EXISTS trackino_app_changes (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), title text NOT NULL, content text DEFAULT '', type text NOT NULL DEFAULT 'idea' CHECK (type IN ('bug', 'idea', 'request', 'note')), priority text NOT NULL DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high')), status text NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'solved', 'archived')), source_bug_id uuid REFERENCES trackino_bug_reports(id) ON DELETE SET NULL, created_at timestamptz DEFAULT now(), updated_at timestamptz DEFAULT now()); ALTER TABLE trackino_app_changes ENABLE ROW LEVEL SECURITY; CREATE POLICY "Auth full" ON trackino_app_changes FOR ALL TO authenticated USING (true) WITH CHECK (true);</code></p>
-<p><strong>Pokud tabulka již existuje a chybí typy 'note'/'archived' (SQL migrace pro aktualizaci constraint):</strong><br/><code>ALTER TABLE trackino_app_changes DROP CONSTRAINT IF EXISTS trackino_app_changes_type_check, DROP CONSTRAINT IF EXISTS trackino_app_changes_status_check; ALTER TABLE trackino_app_changes ADD CONSTRAINT trackino_app_changes_type_check CHECK (type IN ('bug', 'idea', 'request', 'note')), ADD CONSTRAINT trackino_app_changes_status_check CHECK (status IN ('open', 'in_progress', 'solved', 'archived'));</code></p>
 
 <h3>Oblíbené v levém menu</h3>
 <p>Funkce <strong>Oblíbené</strong> je dostupná pro tarify <strong>Pro a Max</strong>. Umožňuje přidat libovolnou položku z levého menu do sekce <strong>OBLÍBENÉ</strong>, která se zobrazuje úplně nahoře v navigaci.</p>
@@ -245,8 +172,6 @@ CREATE POLICY "Auth full" ON trackino_important_days
   <li><strong>Dovolená</strong> – výchozí rok pro zobrazení nároku odpovídá workspace zóně</li>
 </ul>
 <p>Výchozí hodnota je <strong>Praha / Bratislava (UTC+1/+2)</strong>. Pro týmy pracující výhradně v ČR/SK není nutné nic měnit. Pro mezinárodní týmy nastavte zónu podle sídla/hlavní provozovny.</p>
-<p><strong>Poznámka k datovým posunům:</strong> Data jsou v databázi ukládána jako textové řetězce (YYYY-MM-DD), takže nedochází k UTC posunu při čtení ani zápisu. Funkce „co je dnes" je vyřešena pomocí standardního API <code>Intl.DateTimeFormat</code> s locale <code>sv-SE</code>, který vrátí správné lokální datum pro danou zónu.</p>
-<p><strong>SQL migrace (nutno spustit v Supabase):</strong> Pro funkci časové zóny je potřeba nový sloupec:<br/><code>ALTER TABLE trackino_workspaces ADD COLUMN IF NOT EXISTS timezone text NOT NULL DEFAULT 'Europe/Prague';</code></p>
 
 <h3>Modulární systém</h3>
 <p>Aplikace je rozdělena do <strong>modulů</strong>, které lze zapnout nebo vypnout. Výchozí sada modulů závisí na tarifu workspace:</p>
@@ -256,28 +181,7 @@ CREATE POLICY "Auth full" ON trackino_important_days
   <li><strong>Max</strong> – Pro + Audit log</li>
 </ul>
 <p>Admin může v <strong>Nastavení → Moduly</strong> nastavit výjimky pro jednotlivé uživatele – přidat modul, který není v tarifu, nebo zakázat modul, který v tarifu je. Výjimky mají vždy přednost před výchozím tarifem. Moduly, které uživatel nemá povoleny, se nezobrazují v levém menu.</p>
-<p>Master Admin může v <strong>Nastavení aplikace</strong> (sekce Systém) globálně změnit, které moduly jsou součástí každého tarifu. Konfigurace se uloží do DB a okamžitě se projeví pro všechny workspace. Pokud konfigurace nebyla nastavena, použijí se výchozí hodnoty ze systému.</p>
-<p><strong>SQL migrace (nutno spustit v Supabase):</strong> Pro modulární systém jsou potřeba dvě nové tabulky:<br/>
-<code>CREATE TABLE IF NOT EXISTS trackino_user_module_overrides (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL REFERENCES trackino_workspaces(id) ON DELETE CASCADE,
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  module_id text NOT NULL,
-  enabled boolean NOT NULL DEFAULT true,
-  created_at timestamptz DEFAULT now(),
-  UNIQUE(workspace_id, user_id, module_id)
-);
-ALTER TABLE trackino_user_module_overrides ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Auth full" ON trackino_user_module_overrides FOR ALL TO authenticated USING (true) WITH CHECK (true);
-
-CREATE TABLE IF NOT EXISTS trackino_tariff_config (
-  tariff text NOT NULL CHECK (tariff IN ('free','pro','max')),
-  module_id text NOT NULL,
-  enabled boolean NOT NULL DEFAULT true,
-  PRIMARY KEY (tariff, module_id)
-);
-ALTER TABLE trackino_tariff_config ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Auth full" ON trackino_tariff_config FOR ALL TO authenticated USING (true) WITH CHECK (true);</code></p>
+<p>Master Admin může v <strong>Nastavení aplikace</strong> (sekce Systém) globálně změnit, které moduly jsou součástí každého tarifu. Konfigurace se okamžitě projeví pro všechny workspace.</p>
 
 <h3>Správa workspace (Master Admin)</h3>
 <p>Stránka <strong>Správa workspace</strong> (sekce Systém, viditelná pouze pro Master Adminy) zobrazuje přehled všech workspace na platformě. Každá karta workspace obsahuje:</p>
@@ -288,7 +192,6 @@ CREATE POLICY "Auth full" ON trackino_tariff_config FOR ALL TO authenticated USI
   <li><strong>Archivace</strong> – workspace lze archivovat (data zůstanou zachována, jde obnovit) nebo <strong>přesunout do koše</strong> (smazat); smazané workspace jsou viditelné v záložce Smazané a lze je obnovit nebo trvale odstranit</li>
 </ul>
 <p>Záložky přepínají mezi <strong>Aktivními</strong>, <strong>Archivovanými</strong> a <strong>Smazanými</strong> workspace. Nad kartami je vyhledávací pole pro filtrování podle názvu.</p>
-<p><strong>SQL migrace (nutno spustit v Supabase):</strong> Pro funkci archivace a smazání jsou potřeba dva nové sloupce:<br/><code>ALTER TABLE trackino_workspaces ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ NULL;<br/>ALTER TABLE trackino_workspaces ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ NULL;</code></p>
 
 <h3>Nastavení aplikace (Master Admin)</h3>
 <p>Stránka <strong>Nastavení aplikace</strong> (sekce Systém, viditelná pouze pro Master Adminy) je rozdělena do dvou záložek:</p>
@@ -296,7 +199,6 @@ CREATE POLICY "Auth full" ON trackino_tariff_config FOR ALL TO authenticated USI
   <li><strong>Nastavení tarifů</strong> – matice modulů × tarifů (Free / Pro / Max), kde lze zaškrtnutím nebo odškrtnutím každého políčka definovat, které moduly jsou v daném tarifu dostupné. Tlačítko <em>Uložit konfiguraci</em> uloží nastavení do DB; tlačítko <em>Obnovit výchozí</em> smaže konfiguraci z DB a obnoví hardcoded výchozí hodnoty. Individuální výjimky nastavené v <strong>Nastavení workspace → Moduly</strong> mají vždy přednost před tarifní konfigurací.</li>
   <li><strong>Systémová oznámení</strong> – viz sekce níže.</li>
 </ul>
-<p><strong>SQL migrace (nutno spustit v Supabase):</strong> Viz sekce Modulární systém výše.</p>
 
 <h3>Systémová oznámení (Master Admin)</h3>
 <p>V záložce <strong>Systémová oznámení</strong> stránky Nastavení aplikace může Master Admin vytvářet systémové zprávy zobrazené všem uživatelům aplikace jako banner nad horní lištou (timerem).</p>
@@ -307,22 +209,7 @@ CREATE POLICY "Auth full" ON trackino_tariff_config FOR ALL TO authenticated USI
   <li><strong>Stavy oznámení</strong> – <em>Zobrazuje se</em> (aktivní a v platném časovém rozsahu), <em>Aktivní (mimo čas)</em> (aktivní, ale mimo rozsah od–do), <em>Neaktivní</em>.</li>
   <li><strong>Náhled</strong> – formulář zobrazuje live náhled, jak bude banner vypadat uživatelům.</li>
 </ul>
-<p><strong>Zobrazení banneru u uživatelů:</strong> Aktivní oznámení v platném časovém rozsahu se zobrazí jako barevný pruh v horní části aplikace nad řádkem s timerem. Každý uživatel může banner skrýt kliknutím na křížek – skrytí se uloží v prohlížeči (localStorage) a banner se po obnovení stránky znovu nezobrazí. Zobrazuje se všem uživatelům bez ohledu na workspace nebo roli.</p>
-<p><strong>SQL migrace (nutno spustit v Supabase):</strong><br/>
-<code>CREATE TABLE IF NOT EXISTS trackino_system_notifications (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  title text NOT NULL DEFAULT '',
-  message text NOT NULL DEFAULT '',
-  color text NOT NULL DEFAULT '#f59e0b',
-  is_active boolean NOT NULL DEFAULT false,
-  show_from timestamptz,
-  show_until timestamptz,
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
-ALTER TABLE trackino_system_notifications ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Auth full" ON trackino_system_notifications
-  FOR ALL TO authenticated USING (true) WITH CHECK (true);</code></p>
+<p><strong>Zobrazení banneru u uživatelů:</strong> Aktivní oznámení v platném časovém rozsahu se zobrazí jako barevný pruh v horní části aplikace nad řádkem s timerem. Každý uživatel může banner skrýt kliknutím na křížek – skrytí se uloží v prohlížeči a banner se po obnovení stránky znovu nezobrazí. Zobrazuje se všem uživatelům bez ohledu na workspace nebo roli.</p>
 
 <h3>Audit log</h3>
 <p>Stránka <strong>Audit log</strong> (dostupná Adminum, Master Adminům a uživatelům s oprávněním „Audit log") zobrazuje historii úprav, které manažeři nebo admini provedli na záznamech podřízených. Každý záznam obsahuje: kdo úpravu provedl, pro koho, jakou akci vykonal, datum a čas úpravy a detail záznamu (datum, čas od–do, délka, popis). Oprávnění se nastavuje v Tým → editace člena.</p>
@@ -358,7 +245,6 @@ CREATE POLICY "Auth full" ON trackino_system_notifications
   <li><strong>Viditelnost</strong> – Admin/Master Admin vidí všechny členy; Team Manager vidí sebe a svůj tým; Member vidí sebe a spoluhráče se stejným manažerem</li>
   <li><strong>Synchronizace s Dovolená</strong> – nastavení stavu „Dovolená" (celý den, ne DOP/ODP) pro uživatele s příznakem „Může čerpat dovolenou" automaticky vytvoří 1denní záznam v Dovolené (pouze pracovní dny Po–Pá). Odebrání stavu nebo změna na jiný stav smaže odpovídající 1denní záznam z Dovolené. Vícedenní záznamy vytvořené ze stránky Dovolená se touto akcí nemažou. Aby sync fungoval, stav musí mít přesný název <strong>„Dovolená"</strong>.</li>
 </ul>
-<p><strong>SQL migrace (nutno spustit v Supabase):</strong> Plánovač vyžaduje 3 nové tabulky: <code>trackino_availability_statuses</code>, <code>trackino_availability</code> a <code>trackino_planner_pins</code>.</p>
 
 <h3>Přehled hodin</h3>
 <p>Stránka <strong>Přehled hodin</strong> (sekce Analýza) zobrazuje týdenní tabulku odpracovaných hodin za celý viditelný tým. Každý člen tvoří jeden řádek, každý den týdne (Po–Ne) jeden sloupec.</p>
@@ -380,6 +266,27 @@ CREATE POLICY "Auth full" ON trackino_system_notifications
   <li><strong>Detailní tabulka</strong> – pro každou kategorii uvádí počet záznamů, odpracované hodiny a procentuální podíl s grafickým progress barem</li>
   <li><strong>Bez kategorie</strong> – záznamy bez přiřazené kategorie se zobrazí jako samostatná položka „Bez kategorie"</li>
   <li><strong>Viditelnost</strong> – Admin/Master Admin vidí záznamy celého workspace; Team Manager vidí záznamy svého týmu; Member vidí pouze své záznamy</li>
+</ul>
+
+<h3>Žádosti</h3>
+<p>Modul <strong>Žádosti</strong> (sekce Sledování, tarif Pro a Max) umožňuje zaměstnancům podávat různé typy žádostí a manažerům/adminům je schvalovat nebo zamítat.</p>
+<ul>
+  <li><strong>Typy žádostí</strong> – Dovolená, Nový software, Pracovní cesta, Firemní karta, Jiné</li>
+  <li><strong>Podání žádosti</strong> – vyplňte typ, název a popis žádosti; u dovolené zadejte také datum od–do (počet dnů se vypočítá automaticky)</li>
+  <li><strong>Stav žádosti</strong> – Čeká na vyřízení (žlutý štítek), Schváleno (zelený štítek), Zamítnuto (červený štítek s poznámkou)</li>
+  <li><strong>Záložka Moje žádosti</strong> – přehled všech vašich žádostí s aktuálním stavem; zamítnuté žádosti zobrazují poznámku od nadřízeného</li>
+  <li><strong>Záložka Ke zpracování</strong> – viditelná pro manažery a adminy; přehled čekajících žádostí od podřízených s tlačítky Schválit a Zamítnout</li>
+  <li><strong>Kdo zpracovává žádosti</strong> – primárně přímý manažer; admini vidí žádosti všech; konfiguruje se v Tým → Členové (příznak „Zpracovává žádosti")</li>
+  <li><strong>Propojení s Dovolená</strong> – schválená žádost o dovolenou automaticky vytvoří záznam na stránce Dovolená a synchronizuje se s Plánovačem</li>
+</ul>
+
+<h3>Připomínky (anonymní formulář)</h3>
+<p>Modul <strong>Připomínky</strong> (sekce Nástroje, tarif Pro a Max) umožňuje všem členům workspace anonymně sdílet podněty, návrhy nebo zpětnou vazbu.</p>
+<ul>
+  <li><strong>Anonymita</strong> – připomínky jsou zcela anonymní; nikdo (ani admin) nemůže zjistit, kdo zprávu odeslal</li>
+  <li><strong>Odeslání připomínky</strong> – vyplňte zprávu a klikněte Odeslat; formulář jasně upozorňuje na anonymitu</li>
+  <li><strong>Zobrazení připomínek</strong> – přijaté připomínky vidí uživatelé s příznakem „Přijímá připomínky" (nastavuje admin v Tým → Členové) a Master Admin vždy</li>
+  <li><strong>Správa připomínek</strong> – přijímatelé vidí seznam zpráv seřazených od nejnovější; každou připomínku lze označit jako vyřízenou nebo smazat</li>
 </ul>
 `;
 

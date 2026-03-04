@@ -11,6 +11,18 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.9.0 – 4. 3. 2026</h3>
+<ul>
+  <li><strong>Nový modul: Žádosti</strong> (tarif Pro a Max) – zaměstnanci mohou podávat formální žádosti svému manažerovi: dovolená, software, pracovní cesta, firemní karta nebo jiné. Každá žádost prochází schvalovacím procesem (Čeká na schválení → Schváleno / Zamítnuto). Záložka <em>Žádosti</em> je viditelná jen pro uživatele s oprávněním zpracovávat žádosti (nastavují admin/vlastník v sekci Tým). Při schválení žádosti o dovolenou se automaticky vytvoří záznam v modulu Dovolená a zapíše se do Plánovače. Zamítnuté žádosti zůstávají viditelné s poznámkou recenzenta.</li>
+  <li><strong>Nový modul: Připomínky</strong> (tarif Pro a Max) – anonymní formulář pro sdílení podnětů a návrhů v rámci týmu. Odesílatel je zcela anonymní – jméno ani žádné osobní údaje se neukládají. Připomínky vidí pouze uživatelé s oprávněním přijímat zpětnou vazbu (lze nastavit per-člen v sekci Tým), workspace admini a Master Admin. Každou připomínku lze označit jako vyřízenou (zelený checkbox) nebo smazat.</li>
+  <li><strong>Tým – nové přepínače pro členy</strong> – v dialogu úpravy člena přibyly dvě nová oprávnění: <em>Zpracovávat žádosti</em> (vidí záložku Žádosti a může schvalovat/zamítat žádosti od podřízených) a <em>Přijímat anonymní připomínky</em> (vidí připomínky odesílaných v rámci workspace).</li>
+  <li><strong>Kalendář – přejmenování pohledu</strong> – pohled <em>Liste</em> přejmenován na <em>Seznam</em> pro konzistentnost s českou terminologií.</li>
+  <li><strong>Kalendář – zvýraznění vybrané barvy</strong> – ve formuláři pro tvorbu/úpravu události a kalendáře je vybraná barva nyní zřetelně zvýrazněna bílým kroužkem a barevným ohraničením (box-shadow), stejně jako na ostatních místech v aplikaci.</li>
+  <li><strong>Nastavení – názvy rolí v modulu</strong> – v sekci Nastavení workspace → Moduly se zobrazují české názvy rolí (Vlastník, Admin, Team Manager, Člen) místo interních kódů (owner, admin, manager, member).</li>
+  <li><strong>Přehled hodin – celá jména členů</strong> – ve sloupci Člen v Přehledu hodin byla dříve jména ořezávána na 100 px. Nyní se vždy zobrazí celé jméno.</li>
+  <li><strong>Měřič – záhlaví dnů jako v Reportech</strong> – skupiny záznamů v Měřiči nyní mají záhlaví ve stejném stylu jako v modulu Reporty: šedé podbarvení (<em>var(--bg-hover)</em>), formát „Úterý 3. března" (celý název dne a měsíce), dnešní a včerejší den zůstávají jako „Dnes" a „Včera".</li>
+</ul>
+
 <h3>v2.8.0 – 4. 3. 2026</h3>
 <ul>
   <li><strong>Nový modul: Kalendář</strong> (tarif Max) – komplexní osobní kalendář s třemi pohledy: <em>Měsíční</em> (klasická mřížka), <em>Týdenní</em> (sedmisloupcový přehled) a <em>Listový</em> (chronologický výpis po měsících). Navigace pomocí tlačítek ← Dnes → pro přechod mezi týdny nebo měsíci. Přidávání ručních událostí formulářem nebo přímým kliknutím na den v mřížce.</li>

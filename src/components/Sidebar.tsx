@@ -53,6 +53,8 @@ const ICONS = {
   appChanges: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg>,
   favorites: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>,
   calendar: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5" /><path d="M16 2v4" /><path d="M8 2v4" /><path d="M3 10h5" /><circle cx="17" cy="17" r="4" /><path d="M17 15v2l1 1" /></svg>,
+  requests: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="9" y1="13" x2="15" y2="13" /><line x1="9" y1="17" x2="11" y2="17" /></svg>,
+  feedback: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>,
 };
 
 // Ikonka hvězdičky pro tlačítko oblíbených (inline SVG pro různé stavy)
@@ -225,6 +227,11 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
       trackingItems.push({ label: 'Fakturace', href: '/invoices', icon: ICONS.invoice });
     }
 
+    // Žádosti – viditelné všem členům (každý může podávat žádosti)
+    if (hasModule('requests')) {
+      trackingItems.push({ label: 'Žádosti', href: '/requests', icon: ICONS.requests });
+    }
+
     // ANALÝZA
     const analyzeItems: NavItem[] = [];
 
@@ -251,6 +258,11 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
     }
     if (hasModule('important_days')) {
       nastrojeItems.push({ label: 'Důležité dny', href: '/important-days', icon: ICONS.importantDays });
+    }
+
+    // Připomínky – viditelné všem členům (každý může posílat zpětnou vazbu)
+    if (hasModule('feedback')) {
+      nastrojeItems.push({ label: 'Připomínky', href: '/feedback', icon: ICONS.feedback });
     }
 
     // SPRÁVA

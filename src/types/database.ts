@@ -23,7 +23,9 @@ export type ModuleId =
   | 'audit'
   | 'text_converter'
   | 'important_days'
-  | 'calendar';
+  | 'calendar'
+  | 'requests'
+  | 'feedback';
 
 /** Per-uživatelský override modulu (nad rámec tarifu nebo zakázání) */
 export interface UserModuleOverride {
@@ -145,7 +147,9 @@ export interface WorkspaceMember {
   can_invoice: boolean;
   can_manage_billing: boolean;
   billing_profile_id: string | null; // přiřazený fakturační profil
-  can_view_audit: boolean; // může vidět audit log
+  can_view_audit: boolean;      // může vidět audit log
+  can_process_requests: boolean; // zpracovává žádosti (schvaluje/zamítá)
+  can_receive_feedback: boolean; // přijímá anonymní připomínky
 }
 
 export interface ManagerAssignment {
@@ -457,5 +461,42 @@ export interface CalendarShare {
   calendar_id: string;
   shared_with_user_id: string;
   can_edit: boolean;
+  created_at: string;
+}
+
+// === Žádosti ===
+
+export type RequestType = 'vacation' | 'software' | 'business_trip' | 'company_card' | 'other';
+export type RequestStatus = 'pending' | 'approved' | 'rejected';
+
+export interface TrackingRequest {
+  id: string;
+  workspace_id: string;
+  user_id: string;
+  type: RequestType;
+  title: string;
+  note: string;
+  status: RequestStatus;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  reviewer_note: string;
+  // Doplňkové pole pro typ 'vacation'
+  vacation_start_date: string | null;
+  vacation_end_date: string | null;
+  vacation_days: number | null;
+  // Propojení se schválenou dovolenkovou žádostí
+  vacation_entry_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// === Připomínky (anonymní) ===
+
+export interface FeedbackEntry {
+  id: string;
+  workspace_id: string;
+  // Bez user_id – záměrně anonymní
+  message: string;
+  is_resolved: boolean;
   created_at: string;
 }

@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 4. 3. 2026 (v2.8.0)
+> Aktualizováno: 4. 3. 2026 (v2.9.0)
 
 ---
 
@@ -43,6 +43,8 @@ src/
       audit/          – Audit log (jen tarif Max)
       text-converter/ – Převodník textu (tarif Pro a Max)
       important-days/ – Důležité dny (tarif Pro a Max)
+      requests/       – Žádosti (tarif Pro a Max)
+      feedback/       – Připomínky – anonymní (tarif Pro a Max)
       app-settings/   – Nastavení modulů dle tarifu (admin)
       app-changes/    – Úpravy aplikace (admin)
       bugs/           – Hlášení chyb
@@ -115,6 +117,8 @@ Výchozí policy: `CREATE POLICY "Auth full" ... FOR ALL TO authenticated USING 
 | `trackino_system_notifications` | id, title, message, color, is_active, show_from (timestamptz\|null), show_until (timestamptz\|null), created_at, updated_at | Systémová oznámení zobrazená všem uživatelům jako banner (jen Master Admin spravuje) |
 | `trackino_calendars` | id, workspace_id, owner_user_id, name, color, is_default, created_at, updated_at | Osobní kalendáře uživatele (výchozí se vytvoří automaticky) |
 | `trackino_calendar_events` | id, calendar_id, workspace_id, user_id, title, description, start_date (text YYYY-MM-DD), end_date (text), is_all_day, start_time (text\|null), end_time (text\|null), color (text\|null), source ('manual'\|'vacation'\|'important_day'), source_id (uuid\|null), created_at, updated_at | Ruční události v kalendáři; dovolená a důležité dny se čtou přímo z jejich tabulek |
+| `trackino_requests` | id, workspace_id, user_id, type ('vacation'\|'software'\|'business_trip'\|'company_card'\|'other'), title, note, status ('pending'\|'approved'\|'rejected'), reviewed_by (uuid\|null), reviewed_at (timestamptz\|null), reviewer_note, vacation_start_date (text\|null), vacation_end_date (text\|null), vacation_days (int\|null), vacation_entry_id (uuid\|null), created_at, updated_at | Žádosti zaměstnanců ke schválení (dovolená, SW, cestovní příkaz, atd.) |
+| `trackino_feedback` | id, workspace_id, message, is_resolved (bool), created_at | Anonymní připomínky – bez user_id záměrně (plná anonymita) |
 | `trackino_calendar_shares` | id, calendar_id, shared_with_user_id, can_edit, created_at | Sdílení kalendáře mezi uživateli workspace (UNIQUE calendar_id+shared_with_user_id) |
 
 ### Poznámky k DB
@@ -131,7 +135,8 @@ Výchozí policy: `CREATE POLICY "Auth full" ... FOR ALL TO authenticated USING 
 ```typescript
 type ModuleId = 'time_tracker' | 'planner' | 'calendar' | 'vacation' | 'invoices' | 'reports' |
   'attendance' | 'category_report' | 'subordinates' | 'notes' | 'projects' |
-  'clients' | 'tags' | 'team' | 'settings' | 'audit' | 'text_converter' | 'important_days';
+  'clients' | 'tags' | 'team' | 'settings' | 'audit' | 'text_converter' | 'important_days' |
+  'requests' | 'feedback';
 ```
 
 ### Výchozí moduly dle tarifu (hardcoded TARIFF_MODULES)
@@ -154,6 +159,8 @@ type ModuleId = 'time_tracker' | 'planner' | 'calendar' | 'vacation' | 'invoices
 | Audit log (audit) | – | – | ✓ |
 | Převodník textu (text_converter) | – | ✓ | ✓ |
 | Důležité dny (important_days) | – | ✓ | ✓ |
+| Žádosti (requests) | – | ✓ | ✓ |
+| Připomínky (feedback) | – | ✓ | ✓ |
 | Kalendář (calendar) | – | – | ✓ |
 
 ### computeEnabledModules()
@@ -367,6 +374,8 @@ TARIFF_MODULES: Record<Tariff, ModuleId[]>
 | Audit log | – | – | ✓ |
 | Převodník textu | – | ✓ | ✓ |
 | **Důležité dny** | – | ✓ | ✓ |
+| **Žádosti** | – | ✓ | ✓ |
+| **Připomínky (anonymní)** | – | ✓ | ✓ |
 
 ---
 
@@ -423,6 +432,9 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 |-------|-------|---------------|
 | v2.8.0 | 4. 3. 2026 | Modul Kalendář (Max) – list/week/month pohled, více kalendářů, auto-sync dovolená+důležité dny, CRUD událostí; Fix: sidebar badge kolize s hvězdičkou oblíbených (pr-8 padding) |
 | v2.7.2 | 4. 3. 2026 | Fix: app-settings redirect (čekání na user+profile, ne jen authLoading); Fix: vacation tabulka rozhozené sloupce (pevné šířky místo auto); Sidebar badge na Dovolené pro manager/admin |
+| v2.9.0 | 4. 3. 2026 | Nový modul Žádosti (Pro+Max); Nový modul Připomínky anonymní (Pro+Max); Tým – toggles can_process_requests + can_receive_feedback; Kalendář – přejmenování Liste→Seznam + fix color picker; Nastavení – české názvy rolí; Přehled hodin – celá jména bez ořezu; Měřič – záhlaví dnů jako v Reportech |
+| v2.8.0 | 4. 3. 2026 | Nový modul Kalendář (Max tarif) – 3 pohledy (Měsíční/Týdenní/Seznam), sync s Dovolenou a Důležitými dny; Fix: Sidebar – kolize badge s hvězdičkou Oblíbených |
+| v2.7.2 | 4. 3. 2026 | Fix: app-settings přesměrování při refreshi (definitivní); Fix: Dovolená rozhozené sloupce (pevné šířky); Badge čekajících žádostí o dovolenou v Sidebaru |
 | v2.7.1 | 4. 3. 2026 | Fix: app-settings falešné přesměrování při refreshi (authLoading guard); Fix: vacation infinite loop (useMemo pro subordinateUserIds); Fix: planner chybějící borderBottom na leading gap buňkách |
 | v2.7.0 | 4. 3. 2026 | Schvalování dovolené (status pending/approved/rejected, tab Žádosti pro managery, sync s Plánovačem jen po schválení); Plánovač – proužky pod záhlavím + today tint jen na headeru; Fix: ikonka v náhledu banneru (items-center) |
 | v2.6.0 | 4. 3. 2026 | Systémová oznámení (nová tabulka `trackino_system_notifications`, záložka v App Settings, banner v DashboardLayout, localStorage dismissal); Plánovač – vizuální proužky pro důležité dny a státní svátky (StripItem, packStripLanes, colspan thead rendering) |
@@ -601,6 +613,104 @@ ALTER TABLE trackino_vacation_entries
   ADD COLUMN IF NOT EXISTS reviewed_by uuid REFERENCES auth.users(id),
   ADD COLUMN IF NOT EXISTS reviewed_at timestamptz,
   ADD COLUMN IF NOT EXISTS reviewer_note text DEFAULT '';
+```
+
+---
+
+## 18. Žádosti – architektura (requests/page.tsx)
+
+### Workflow
+```
+Zaměstnanec podá žádost  →  status: 'pending'
+Admin/Owner přidá žádost  →  status: 'pending' (stejná logika)
+
+Reviewer schválí  →  status: 'approved', reviewed_by, reviewed_at
+  → pokud type='vacation': vytvoří trackino_vacation_entries + syncVacationToPlanner()
+Reviewer zamítne  →  status: 'rejected', reviewer_note (dialog pro zadání)
+```
+
+### Typy žádostí
+```typescript
+type RequestType = 'vacation' | 'software' | 'business_trip' | 'company_card' | 'other';
+```
+
+### Key state variables
+- `activeTab: 'mine' | 'pending'` – tab state ('pending' jen pro reviewery)
+- `canProcessRequests = isWorkspaceAdmin || isManager || isMasterAdmin || currentMembership?.can_process_requests`
+- `myRequests` – všechny žádosti aktuálního uživatele
+- `pendingRequests` – čekající žádosti od ostatních (pro reviewery)
+
+### WorkspaceMember toggle
+```typescript
+can_process_requests: boolean  // nový sloupec, DEFAULT false
+```
+
+### SQL migrace
+```sql
+ALTER TABLE trackino_workspace_members
+  ADD COLUMN IF NOT EXISTS can_process_requests boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS can_receive_feedback boolean NOT NULL DEFAULT false;
+
+CREATE TABLE IF NOT EXISTS trackino_requests (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES trackino_workspaces(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES auth.users(id),
+  type text NOT NULL CHECK (type IN ('vacation','software','business_trip','company_card','other')),
+  title text NOT NULL DEFAULT '',
+  note text NOT NULL DEFAULT '',
+  status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected')),
+  reviewed_by uuid REFERENCES auth.users(id),
+  reviewed_at timestamptz,
+  reviewer_note text NOT NULL DEFAULT '',
+  vacation_start_date text,
+  vacation_end_date text,
+  vacation_days integer,
+  vacation_entry_id uuid,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+ALTER TABLE trackino_requests ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Auth full" ON trackino_requests
+  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+```
+
+---
+
+## 19. Připomínky – architektura (feedback/page.tsx)
+
+### Anonymita
+- Tabulka `trackino_feedback` záměrně **nemá** sloupec `user_id`
+- Při vkládání se neodesílá žádný identifikátor uživatele
+- Nikdo (ani Master Admin) nemůže zjistit, kdo připomínku napsal
+
+### Oprávnění k zobrazení
+```typescript
+const canViewFeedback = isMasterAdmin || isWorkspaceAdmin || currentMembership?.can_receive_feedback;
+```
+
+### WorkspaceMember toggle
+```typescript
+can_receive_feedback: boolean  // nový sloupec, DEFAULT false
+```
+
+### Key state
+- `feedbackList` – všechny připomínky workspace (jen pro canViewFeedback)
+- `is_resolved` – bool, toggle checkboxem
+- Sekce „Nevyřízené" / „Vyřízené" v zobrazení
+
+### SQL migrace
+```sql
+CREATE TABLE IF NOT EXISTS trackino_feedback (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES trackino_workspaces(id) ON DELETE CASCADE,
+  -- Záměrně bez user_id – plná anonymita
+  message text NOT NULL DEFAULT '',
+  is_resolved boolean NOT NULL DEFAULT false,
+  created_at timestamptz DEFAULT now()
+);
+ALTER TABLE trackino_feedback ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Auth full" ON trackino_feedback
+  FOR ALL TO authenticated USING (true) WITH CHECK (true);
 ```
 
 ---

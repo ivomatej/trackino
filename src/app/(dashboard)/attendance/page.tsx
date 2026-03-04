@@ -368,7 +368,7 @@ function AttendanceContent() {
                             {member.initials}
                           </div>
                           {/* Name */}
-                          <span className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)', maxWidth: 100 }}>
+                          <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
                             {member.displayName}
                           </span>
                         </div>

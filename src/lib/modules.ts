@@ -22,6 +22,8 @@ export const ALL_MODULES: { id: ModuleId; label: string; description: string; gr
   { id: 'text_converter',  label: 'Převodník textu',    description: 'Převod formátovaného textu na prostý text nebo Markdown', group: 'Nástroje' },
   { id: 'important_days', label: 'Důležité dny',       description: 'Evidence osobních důležitých dnů a opakujících se událostí', group: 'Nástroje' },
   { id: 'calendar',       label: 'Kalendář',            description: 'Osobní a sdílený kalendář s přehledem událostí, dovolené a důležitých dnů', group: 'Sledování' },
+  { id: 'requests',       label: 'Žádosti',             description: 'Podávání a schvalování žádostí (dovolená, software, pracovní cesta aj.)', group: 'Sledování' },
+  { id: 'feedback',       label: 'Připomínky',          description: 'Anonymní formulář pro zpětnou vazbu od členů týmu', group: 'Nástroje' },
 ];
 
 /**
@@ -54,6 +56,8 @@ export const TARIFF_MODULES: Record<Tariff, ModuleId[]> = {
     'settings',
     'text_converter',
     'important_days',
+    'requests',
+    'feedback',
   ],
   max: [
     'time_tracker',
@@ -74,6 +78,8 @@ export const TARIFF_MODULES: Record<Tariff, ModuleId[]> = {
     'audit',
     'text_converter',
     'important_days',
+    'requests',
+    'feedback',
   ],
 };
 

@@ -1093,7 +1093,9 @@ function SettingsContent() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{member.display_name}</div>
-                            <div className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{member.role}</div>
+                            <div className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
+                              {{ owner: 'Vlastník', admin: 'Admin', manager: 'Team Manager', member: 'Člen' }[member.role] ?? member.role}
+                            </div>
                           </div>
                           {member.overrides.length > 0 && (
                             <span className="text-[11px] px-2 py-0.5 rounded-full font-medium" style={{ background: 'var(--bg-active)', color: 'var(--primary)' }}>

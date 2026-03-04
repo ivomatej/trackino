@@ -87,6 +87,8 @@ function TeamContent() {
   const [editCanInvoice, setEditCanInvoice] = useState(false);
   const [editCanManageBilling, setEditCanManageBilling] = useState(false);
   const [editCanViewAudit, setEditCanViewAudit] = useState(false);
+  const [editCanProcessRequests, setEditCanProcessRequests] = useState(false);
+  const [editCanReceiveFeedback, setEditCanReceiveFeedback] = useState(false);
   const [editCooperationTypeId, setEditCooperationTypeId] = useState<string>('');
   const [editBillingProfileId, setEditBillingProfileId] = useState<string>('');
   const [editSaving, setEditSaving] = useState(false);
@@ -303,6 +305,8 @@ function TeamContent() {
     setEditCanInvoice(member.can_invoice ?? false);
     setEditCanManageBilling(member.can_manage_billing ?? false);
     setEditCanViewAudit(member.can_view_audit ?? false);
+    setEditCanProcessRequests(member.can_process_requests ?? false);
+    setEditCanReceiveFeedback(member.can_receive_feedback ?? false);
     setEditCooperationTypeId(member.cooperation_type_id ?? '');
     setEditBillingProfileId(member.billing_profile_id ?? '');
     setMemberRates([]);
@@ -337,6 +341,8 @@ function TeamContent() {
         can_invoice: editCanInvoice,
         can_manage_billing: editCanManageBilling,
         can_view_audit: editCanViewAudit,
+        can_process_requests: editCanProcessRequests,
+        can_receive_feedback: editCanReceiveFeedback,
         cooperation_type_id: editCooperationTypeId || null,
         billing_profile_id: editBillingProfileId || null,
       }).eq('id', editingMember.id),
@@ -1159,6 +1165,42 @@ function TeamContent() {
                   <div>
                     <span className="text-sm block" style={{ color: 'var(--text-primary)' }}>Audit log</span>
                     <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Může zobrazit historii úprav záznamů podřízených</span>
+                  </div>
+                </label>
+                <label
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors"
+                  style={{ background: editCanProcessRequests ? 'var(--bg-active)' : 'var(--bg-hover)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = editCanProcessRequests ? 'var(--bg-active)' : 'var(--bg-hover)'}
+                >
+                  <input
+                    type="checkbox"
+                    checked={editCanProcessRequests}
+                    onChange={(e) => setEditCanProcessRequests(e.target.checked)}
+                    className="w-4 h-4 rounded flex-shrink-0"
+                    style={{ accentColor: 'var(--primary)' }}
+                  />
+                  <div>
+                    <span className="text-sm block" style={{ color: 'var(--text-primary)' }}>Zpracovává žádosti</span>
+                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Může schvalovat a zamítat žádosti zaměstnanců</span>
+                  </div>
+                </label>
+                <label
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors"
+                  style={{ background: editCanReceiveFeedback ? 'var(--bg-active)' : 'var(--bg-hover)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = editCanReceiveFeedback ? 'var(--bg-active)' : 'var(--bg-hover)'}
+                >
+                  <input
+                    type="checkbox"
+                    checked={editCanReceiveFeedback}
+                    onChange={(e) => setEditCanReceiveFeedback(e.target.checked)}
+                    className="w-4 h-4 rounded flex-shrink-0"
+                    style={{ accentColor: 'var(--primary)' }}
+                  />
+                  <div>
+                    <span className="text-sm block" style={{ color: 'var(--text-primary)' }}>Přijímá připomínky</span>
+                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Může zobrazit anonymní připomínky od kolegů</span>
                   </div>
                 </label>
 
