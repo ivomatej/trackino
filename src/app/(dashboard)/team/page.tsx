@@ -32,6 +32,9 @@ const ROLE_LABELS: Record<string, string> = {
   member: 'Člen',
 };
 
+// Pořadí rolí pro řazení (nižší číslo = vyšší právo = nahoře)
+const ROLE_ORDER: Record<string, number> = { owner: 0, admin: 1, manager: 2, member: 3 };
+
 interface MemberWithProfile extends WorkspaceMember {
   profile?: Profile;
 }
@@ -65,6 +68,7 @@ function TeamContent() {
   const [activeRates, setActiveRates] = useState<Record<string, number>>({}); // workspace_member.id → aktivní sazba
   const [loading, setLoading] = useState(true);
   const [memberSearch, setMemberSearch] = useState('');
+  const [memberSort, setMemberSort] = useState<'role' | 'name_asc' | 'name_desc'>('role');
   const [codeCopied, setCodeCopied] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
 
@@ -507,37 +511,63 @@ function TeamContent() {
               </div>
             )}
 
-            {/* Vyhledávání členů */}
+            {/* Vyhledávání a řazení členů */}
             {!loading && members.filter(m => m.approved && (isMasterAdmin || !m.profile?.is_master_admin)).length > 0 && (
-              <div className="relative mb-4">
-                <svg
-                  className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-                  width="15" height="15" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                  style={{ color: 'var(--text-muted)' }}
-                >
-                  <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-                </svg>
-                <input
-                  type="text"
-                  placeholder="Hledat člena..."
-                  value={memberSearch}
-                  onChange={e => setMemberSearch(e.target.value)}
-                  className="w-full pl-9 pr-8 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-                  style={{ background: 'var(--bg-input)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
-                />
-                {memberSearch && (
-                  <button
-                    onClick={() => setMemberSearch('')}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded transition-colors hover:bg-[var(--bg-hover)]"
+              <div className="mb-4">
+                {/* Search input */}
+                <div className="relative">
+                  <svg
+                    className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                    width="15" height="15" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
                     style={{ color: 'var(--text-muted)' }}
-                    title="Vymazat hledání"
                   >
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                    </svg>
-                  </button>
-                )}
+                    <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  </svg>
+                  <input
+                    type="text"
+                    placeholder="Hledat člena..."
+                    value={memberSearch}
+                    onChange={e => setMemberSearch(e.target.value)}
+                    className="w-full pl-9 pr-8 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+                  />
+                  {memberSearch && (
+                    <button
+                      onClick={() => setMemberSearch('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded transition-colors hover:bg-[var(--bg-hover)]"
+                      style={{ color: 'var(--text-muted)' }}
+                      title="Vymazat hledání"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+
+                {/* Řazení */}
+                <div className="flex items-center gap-1.5 mt-2">
+                  <span className="text-xs mr-0.5" style={{ color: 'var(--text-muted)' }}>Řadit:</span>
+                  {([
+                    { key: 'role' as const, label: 'Práva' },
+                    { key: 'name_asc' as const, label: 'A → Z' },
+                    { key: 'name_desc' as const, label: 'Z → A' },
+                  ] as const).map(s => (
+                    <button
+                      key={s.key}
+                      onClick={() => setMemberSort(s.key)}
+                      className="px-2.5 py-1 rounded-md text-xs font-medium transition-colors"
+                      style={{
+                        background: memberSort === s.key ? 'var(--primary)' : 'var(--bg-card)',
+                        color: memberSort === s.key ? '#fff' : 'var(--text-muted)',
+                        border: `1px solid ${memberSort === s.key ? 'var(--primary)' : 'var(--border)'}`,
+                      }}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -615,7 +645,15 @@ function TeamContent() {
                     !memberSearch.trim() ||
                     m.profile?.display_name?.toLowerCase().includes(memberSearch.toLowerCase()) ||
                     m.profile?.email?.toLowerCase().includes(memberSearch.toLowerCase())
-                  )).map(member => {
+                  )).sort((a, b) => {
+                    if (memberSort === 'name_asc') return (a.profile?.display_name ?? '').localeCompare(b.profile?.display_name ?? '', 'cs');
+                    if (memberSort === 'name_desc') return (b.profile?.display_name ?? '').localeCompare(a.profile?.display_name ?? '', 'cs');
+                    // 'role': řadit dle práv, stejná práva abecedně
+                    const ra = ROLE_ORDER[a.role] ?? 99;
+                    const rb = ROLE_ORDER[b.role] ?? 99;
+                    if (ra !== rb) return ra - rb;
+                    return (a.profile?.display_name ?? '').localeCompare(b.profile?.display_name ?? '', 'cs');
+                  }).map(member => {
                     const p = member.profile;
                     const initials = p?.display_name ? p.display_name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) : '?';
                     const isCurrentUser = member.user_id === user?.id;

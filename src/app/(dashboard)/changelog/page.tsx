@@ -11,6 +11,11 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v1.9.9 – 4. 3. 2026</h3>
+<ul>
+  <li><strong>Tým → Členové – řazení členů</strong> – nad seznamem schválených členů přibyly tři přepínače řazení: <strong>Práva</strong> (výchozí – Vlastník → Admin → Team Manager → Člen, stejná role abecedně), <strong>A → Z</strong> a <strong>Z → A</strong> (abecedně dle jména). Přepínače jsou zobrazeny pod vyhledávacím polem, aktivní možnost je zvýrazněna.</li>
+</ul>
+
 <h3>v1.9.8 – 4. 3. 2026</h3>
 <ul>
   <li><strong>Nastavení workspace – optimální šíře</strong> – stránka Nastavení workspace má nyní nastaven rozumný maximální rozměr (max-w-3xl); záložky se nezalamují a obsah karet je pohodlně editovatelný</li>
