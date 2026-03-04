@@ -8,6 +8,34 @@ import DashboardLayout from '@/components/DashboardLayout';
 import WorkspaceSelector from '@/components/WorkspaceSelector';
 import { supabase } from '@/lib/supabase';
 import { formatPhone, normalizePhone } from '@/lib/utils';
+
+// Kurátor seznam běžných časových zón
+const TIMEZONE_OPTIONS: { value: string; label: string }[] = [
+  { value: 'Europe/Prague',        label: 'Praha / Bratislava (UTC+1/+2)' },
+  { value: 'Europe/Warsaw',        label: 'Varšava (UTC+1/+2)' },
+  { value: 'Europe/Berlin',        label: 'Berlín / Vídeň / Curych (UTC+1/+2)' },
+  { value: 'Europe/Paris',         label: 'Paříž / Brusel (UTC+1/+2)' },
+  { value: 'Europe/Rome',          label: 'Řím / Madrid (UTC+1/+2)' },
+  { value: 'Europe/London',        label: 'Londýn (UTC+0/+1)' },
+  { value: 'Europe/Lisbon',        label: 'Lisabon (UTC+0/+1)' },
+  { value: 'Europe/Bucharest',     label: 'Bukurešť / Sofia (UTC+2/+3)' },
+  { value: 'Europe/Helsinki',      label: 'Helsinky / Tallinn (UTC+2/+3)' },
+  { value: 'Europe/Moscow',        label: 'Moskva (UTC+3)' },
+  { value: 'UTC',                  label: 'UTC (±0)' },
+  { value: 'America/New_York',     label: 'New York / Toronto (UTC-5/-4)' },
+  { value: 'America/Chicago',      label: 'Chicago (UTC-6/-5)' },
+  { value: 'America/Denver',       label: 'Denver (UTC-7/-6)' },
+  { value: 'America/Los_Angeles',  label: 'Los Angeles / Vancouver (UTC-8/-7)' },
+  { value: 'America/Sao_Paulo',    label: 'São Paulo (UTC-3/-2)' },
+  { value: 'Africa/Cairo',         label: 'Káhira (UTC+2/+3)' },
+  { value: 'Asia/Dubai',           label: 'Dubaj (UTC+4)' },
+  { value: 'Asia/Kolkata',         label: 'Indie (UTC+5:30)' },
+  { value: 'Asia/Bangkok',         label: 'Bangkok / Jakarta (UTC+7)' },
+  { value: 'Asia/Singapore',       label: 'Singapur / Kuala Lumpur (UTC+8)' },
+  { value: 'Asia/Shanghai',        label: 'Peking / Shanghai (UTC+8)' },
+  { value: 'Asia/Tokyo',           label: 'Tokio / Soul (UTC+9)' },
+  { value: 'Australia/Sydney',     label: 'Sydney (UTC+10/+11)' },
+];
 import { useRouter } from 'next/navigation';
 import type { WorkspaceBilling, RequiredFields, Tariff, VacationAllowance, CooperationType, ModuleId } from '@/types/database';
 import { ALL_MODULES, TARIFF_MODULES } from '@/lib/modules';
@@ -43,6 +71,9 @@ function SettingsContent() {
   const [requiredFields, setRequiredFields] = useState<RequiredFields>({
     project: false, category: false, task: false, description: false, tag: false,
   });
+
+  // Časová zóna workspace
+  const [timezone, setTimezone] = useState('Europe/Prague');
 
   // Globální viditelnost štítků
   const [hideTagsGlobally, setHideTagsGlobally] = useState(false);
@@ -83,6 +114,7 @@ function SettingsContent() {
       setCurrency(currentWorkspace.currency);
       setRequiredFields(currentWorkspace.required_fields);
       setHideTagsGlobally(currentWorkspace.hide_tags_globally ?? false);
+      setTimezone(currentWorkspace.timezone ?? 'Europe/Prague');
       fetchBillingProfiles(currentWorkspace.id);
       fetchVacationAllowances(currentWorkspace.id);
       fetchCooperationTypes(currentWorkspace.id);
@@ -308,6 +340,7 @@ function SettingsContent() {
       date_format: dateFormat,
       number_format: numberFormat,
       currency,
+      timezone,
       hide_tags_globally: hideTagsGlobally,
     };
 
@@ -513,6 +546,21 @@ function SettingsContent() {
                       <option value="USD">USD ($)</option>
                     </select>
                   </SelectWrap>
+                </div>
+
+                {/* Časová zóna */}
+                <div>
+                  <label className={labelCls} style={{ color: 'var(--text-secondary)' }}>Časová zóna</label>
+                  <SelectWrap>
+                    <select value={timezone} onChange={(e) => setTimezone(e.target.value)} className={selectCls} style={inputStyle}>
+                      {TIMEZONE_OPTIONS.map(tz => (
+                        <option key={tz.value} value={tz.value}>{tz.label}</option>
+                      ))}
+                    </select>
+                  </SelectWrap>
+                  <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                    Určuje, co se považuje za „dnešní datum" v Plánovači, Dovolené a reportech.
+                  </p>
                 </div>
 
                 {/* Globální skrytí štítků */}

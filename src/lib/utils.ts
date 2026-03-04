@@ -1,6 +1,33 @@
 // Trackino – sdílené utility funkce
 
 /**
+ * Vrátí dnešní datum v dané časové zóně jako YYYY-MM-DD string.
+ *
+ * Locale 'sv-SE' přirozeně produkuje formát YYYY-MM-DD.
+ * Díky tomu je výsledek konzistentní bez ohledu na časovou zónu prohlížeče –
+ * datum vždy odpovídá tomu, co je "dnes" v časové zóně workspace.
+ *
+ * Příklady:
+ *   getWorkspaceToday('Europe/Prague')      → '2026-03-04'
+ *   getWorkspaceToday('America/New_York')   → '2026-03-03' (pokud je u nás 1:00)
+ *   getWorkspaceToday()                     → fallback na 'Europe/Prague'
+ */
+export function getWorkspaceToday(timezone: string = 'Europe/Prague'): string {
+  try {
+    return new Date().toLocaleDateString('sv-SE', { timeZone: timezone });
+  } catch {
+    // Neplatná timezone – fallback na lokální datum
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+}
+
+
+
+/**
  * Formátuje telefonní číslo pro zobrazení (přidává mezery mezi skupiny číslic).
  * V databázi a při kopírování do schránky se číslo uchovává BEZ mezer.
  *

@@ -56,6 +56,7 @@ export interface Workspace {
   hide_tags_globally: boolean;
   locked: boolean;
   color: string | null;
+  timezone: string; // IANA timezone, např. 'Europe/Prague'
   created_at: string;
   archived_at: string | null;
   deleted_at: string | null;

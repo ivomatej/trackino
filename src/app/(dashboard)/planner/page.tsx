@@ -8,6 +8,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import type { AvailabilityStatus, AvailabilityEntry } from '@/types/database';
+import { getWorkspaceToday } from '@/lib/utils';
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -41,9 +42,7 @@ function formatDayName(date: Date): string {
   return date.toLocaleDateString('cs-CZ', { weekday: 'short' });
 }
 
-function isToday(date: Date): boolean {
-  return toDateStr(date) === toDateStr(new Date());
-}
+// isToday je definována uvnitř komponenty (potřebuje workspace timezone)
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -240,6 +239,11 @@ function PlannerContent() {
   const { currentWorkspace, managerAssignments } = useWorkspace();
   const { isWorkspaceAdmin, isMasterAdmin, isManager } = usePermissions();
   const [loading, setLoading] = useState(true);
+
+  // Dnešní datum v timezone workspace (YYYY-MM-DD)
+  const workspaceTodayStr = getWorkspaceToday(currentWorkspace?.timezone ?? 'Europe/Prague');
+  // isToday komponentová funkce – porovnává vůči workspace timezone
+  const isToday = (date: Date) => toDateStr(date) === workspaceTodayStr;
 
   const [weekStart, setWeekStart] = useState<Date>(() => getMonday(new Date()));
 
@@ -801,7 +805,7 @@ function PlannerContent() {
             style={{ borderColor: 'var(--border)', color: 'var(--text-primary)' }}
           >›</button>
           <button
-            onClick={() => setWeekStart(getMonday(new Date()))}
+            onClick={() => setWeekStart(getMonday(new Date(workspaceTodayStr + 'T12:00:00')))}
             className="px-3 py-1 rounded-lg text-xs border transition-colors hover:bg-[var(--bg-hover)]"
             style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
           >Dnes</button>

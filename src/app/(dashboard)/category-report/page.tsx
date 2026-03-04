@@ -13,6 +13,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
 } from 'recharts';
 import type { Category } from '@/types/database';
+import { getWorkspaceToday } from '@/lib/utils';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -96,8 +97,9 @@ function CategoryReportContent() {
   const { isWorkspaceAdmin, isMasterAdmin, isManager } = usePermissions();
 
   const canAdmin = isWorkspaceAdmin || isMasterAdmin;
-  const today = toDateStr(new Date());
-  const monday = toDateStr(getMonday(new Date()));
+  // Dnešní datum v timezone workspace (YYYY-MM-DD)
+  const today = getWorkspaceToday(currentWorkspace?.timezone ?? 'Europe/Prague');
+  const monday = toDateStr(getMonday(new Date(today + 'T12:00:00')));
 
   const [preset, setPreset] = useState<Preset>('week');
   const [from, setFrom] = useState(monday);
@@ -109,20 +111,20 @@ function CategoryReportContent() {
   // ─── Preset date ranges ────────────────────────────────────────────────────
 
   const applyPreset = useCallback((p: Preset) => {
-    const now = new Date();
+    const t = getWorkspaceToday(currentWorkspace?.timezone ?? 'Europe/Prague');
+    const nowDate = new Date(t + 'T12:00:00');
     if (p === 'today') {
-      const t = toDateStr(now);
       setFrom(t); setTo(t);
     } else if (p === 'week') {
-      setFrom(toDateStr(getMonday(now)));
-      setTo(toDateStr(now));
+      setFrom(toDateStr(getMonday(nowDate)));
+      setTo(t);
     } else if (p === 'month') {
-      const first = new Date(now.getFullYear(), now.getMonth(), 1);
+      const first = new Date(nowDate.getFullYear(), nowDate.getMonth(), 1);
       setFrom(toDateStr(first));
-      setTo(toDateStr(now));
+      setTo(t);
     }
     setPreset(p);
-  }, []);
+  }, [currentWorkspace?.timezone]);
 
   // ─── Fetch data ────────────────────────────────────────────────────────────
 

@@ -82,6 +82,19 @@ const DEFAULT_HELP_CONTENT = `
 <p>V <strong>Nastavení → Fakturační údaje</strong> lze vytvořit více fakturačních profilů (např. pro různé právní subjekty). Každý profil obsahuje: název společnosti, jméno jednatele, adresu (ulice + číslo popisné), PSČ, město, stát, IČO, DIČ, příznak plátce DPH, e-mail, telefon a poznámku k fakturaci. Jeden profil lze označit jako výchozí.</p>
 <p>V <strong>Tým → editace člena → sekce Fakturace</strong> lze každému členovi přiřadit konkrétní fakturační profil. Pokud není přiřazen žádný, použije se výchozí profil workspace. Přiřazený profil se uživateli zobrazí při podání žádosti o fakturaci v pravém panelu formuláře.</p>
 
+<h3>Časová zóna workspace</h3>
+<p>V <strong>Nastavení → Obecné</strong> lze nastavit <strong>Časovou zónu</strong> workspace. Tato zóna určuje, co celá aplikace považuje za „dnešní datum" – bez ohledu na to, z jaké země se člen týmu právě přihlásí.</p>
+<p><strong>Co ovlivňuje:</strong></p>
+<ul>
+  <li><strong>Plánovač</strong> – zvýraznění dnešního sloupce modrým nadpisem a odkazem tlačítka <em>Dnes</em></li>
+  <li><strong>Přehled hodin</strong> – tlačítko <em>Dnes</em> přejde na týden obsahující dnešní datum dle workspace zóny</li>
+  <li><strong>Analýza kategorií</strong> – výchozí rozsah <em>Dnes</em> a <em>Týden</em> vychází z workspace zóny</li>
+  <li><strong>Dovolená</strong> – výchozí rok pro zobrazení nároku odpovídá workspace zóně</li>
+</ul>
+<p>Výchozí hodnota je <strong>Praha / Bratislava (UTC+1/+2)</strong>. Pro týmy pracující výhradně v ČR/SK není nutné nic měnit. Pro mezinárodní týmy nastavte zónu podle sídla/hlavní provozovny.</p>
+<p><strong>Poznámka k datovým posunům:</strong> Data jsou v databázi ukládána jako textové řetězce (YYYY-MM-DD), takže nedochází k UTC posunu při čtení ani zápisu. Funkce „co je dnes" je vyřešena pomocí standardního API <code>Intl.DateTimeFormat</code> s locale <code>sv-SE</code>, který vrátí správné lokální datum pro danou zónu.</p>
+<p><strong>SQL migrace (nutno spustit v Supabase):</strong> Pro funkci časové zóny je potřeba nový sloupec:<br/><code>ALTER TABLE trackino_workspaces ADD COLUMN IF NOT EXISTS timezone text NOT NULL DEFAULT 'Europe/Prague';</code></p>
+
 <h3>Modulární systém</h3>
 <p>Aplikace je rozdělena do <strong>modulů</strong>, které lze zapnout nebo vypnout. Výchozí sada modulů závisí na tarifu workspace:</p>
 <ul>

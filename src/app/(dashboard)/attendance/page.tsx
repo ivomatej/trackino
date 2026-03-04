@@ -9,6 +9,7 @@ import WorkspaceSelector from '@/components/WorkspaceSelector';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import type { TimeEntry } from '@/types/database';
+import { getWorkspaceToday } from '@/lib/utils';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -65,6 +66,10 @@ function AttendanceContent() {
   const { isWorkspaceAdmin, isMasterAdmin, isManager } = usePermissions();
 
   const canAdmin = isWorkspaceAdmin || isMasterAdmin;
+
+  // Dnešní datum v timezone workspace (YYYY-MM-DD)
+  const workspaceTodayStr = getWorkspaceToday(currentWorkspace?.timezone ?? 'Europe/Prague');
+  const isToday = (d: Date) => toDateStr(d) === workspaceTodayStr;
 
   const [weekStart, setWeekStart] = useState<Date>(() => getMonday(new Date()));
   const [members, setMembers] = useState<MemberRow[]>([]);
@@ -212,7 +217,6 @@ function AttendanceContent() {
   });
   const grandTotal = Object.values(dayTotals).reduce((a, b) => a + b, 0);
 
-  const isToday = (d: Date) => toDateStr(d) === toDateStr(new Date());
   const isWeekend = (d: Date) => {
     const day = d.getDay();
     return day === 0 || day === 6;
@@ -249,7 +253,7 @@ function AttendanceContent() {
               ← Předchozí
             </button>
             <button
-              onClick={() => setWeekStart(getMonday(new Date()))}
+              onClick={() => setWeekStart(getMonday(new Date(workspaceTodayStr + 'T12:00:00')))}
               className="px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors"
               style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)', background: 'var(--bg-card)' }}
               onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; }}

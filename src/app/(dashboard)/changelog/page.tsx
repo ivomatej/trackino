@@ -11,6 +11,11 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.0.0 – 4. 3. 2026</h3>
+<ul>
+  <li><strong>Časová zóna workspace</strong> – v Nastavení → Obecné přibyl picker <strong>Časová zóna</strong>. Workspace může mít nastavenou libovolnou IANA časovou zónu (výchozí: <em>Praha / Bratislava UTC+1/+2</em>). Vybraná zóna určuje, co je v celé aplikaci považováno za „dnešní datum" – zvýraznění dnešního sloupce v Plánovači a Přehledu hodin, počáteční rozsah v Analýze kategorií a výchozí rok na stránce Dovolená. Funkce <code>getWorkspaceToday()</code> v <code>src/lib/utils.ts</code> používá <code>Intl.DateTimeFormat</code> s locale <code>sv-SE</code>, který přirozeně produkuje formát YYYY-MM-DD. Vyžaduje SQL migraci – viz Nápověda.</li>
+</ul>
+
 <h3>v1.9.9 – 4. 3. 2026</h3>
 <ul>
   <li><strong>Tým → Členové – řazení členů</strong> – nad seznamem schválených členů přibyly tři přepínače řazení: <strong>Práva</strong> (výchozí – Vlastník → Admin → Team Manager → Člen, stejná role abecedně), <strong>A → Z</strong> a <strong>Z → A</strong> (abecedně dle jména). Přepínače jsou zobrazeny pod vyhledávacím polem, aktivní možnost je zvýrazněna.</li>
