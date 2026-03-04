@@ -99,8 +99,8 @@ function ProfileContent() {
                       className="w-6 h-6 rounded-full transition-all flex-shrink-0"
                       style={{
                         background: color,
-                        transform: avatarColor === color ? 'scale(1.2)' : 'scale(1)',
-                        boxShadow: avatarColor === color ? `0 0 0 2px var(--bg-card), 0 0 0 4px ${color}` : 'none',
+                        outline: avatarColor === color ? '2px solid #000' : 'none',
+                        outlineOffset: '2px',
                       }}
                     />
                   ))}

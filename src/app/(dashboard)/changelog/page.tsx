@@ -11,6 +11,13 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v1.9.5 – 4. 3. 2026</h3>
+<ul>
+  <li><strong>Master Admin – skrytí v Tým → Členové</strong> – Master Admin je nyní skryt ze seznamu členů pro všechny ostatní uživatele; sám Master Admin vidí seznam kompletně; v záložce Manažeři je Master Admin také skryt</li>
+  <li><strong>Správa workspace – Admin kontakt bez Master Admina</strong> – v kartě workspace se nyní zobrazuje skutečný workspace Admin (owner nebo admin role), nikoli Master Admin, který by byl přítomen ve všech workspace</li>
+  <li><strong>Výběr barvy avataru – sjednocení stylu</strong> – vybraná barva je nyní везде označena černým kroužkem (outline: 2px solid #000, offset 2px) – stejný styl jako v editaci uživatele; platí pro Detailní nastavení i Správu workspace</li>
+</ul>
+
 <h3>v1.9.4 – 4. 3. 2026</h3>
 <ul>
   <li><strong>Správa workspace – redesign</strong> – karty workspace nyní zobrazují: kód (s ikonkou kopírování), datum vytvoření, počet členů, počet aktivních členů za posledních 30 dní a kontakt na vlastníka/admina (jméno, e-mail, telefon – vše kopírovatelné); přidáno vyhledávací pole pro filtrování dle názvu</li>

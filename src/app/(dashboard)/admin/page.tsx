@@ -200,12 +200,14 @@ function AdminContent() {
       (profiles ?? []).forEach((p: Profile) => { profileMap[p.id] = p; });
     }
 
-    // Owner má přednost před adminem
+    // Owner má přednost před adminem; Master Admin se přeskakuje (byl by všude stejný)
     const sorted = [...adminMembers].sort(a => (a.role === 'owner' ? -1 : 1));
     const adminByWs: Record<string, Profile | null> = {};
     sorted.forEach(m => {
-      if (!adminByWs[m.workspace_id]) {
-        adminByWs[m.workspace_id] = profileMap[m.user_id] ?? null;
+      const p = profileMap[m.user_id];
+      // Přeskočit Master Admina – chceme zobrazit skutečného workspace admina
+      if (!adminByWs[m.workspace_id] && !p?.is_master_admin) {
+        adminByWs[m.workspace_id] = p ?? null;
       }
     });
 
@@ -450,8 +452,8 @@ function AdminContent() {
                   className="w-5 h-5 rounded-full flex-shrink-0 transition-all"
                   style={{
                     background: c,
-                    transform: newWsColor === c ? 'scale(1.2)' : 'scale(1)',
-                    boxShadow: newWsColor === c ? `0 0 0 2px var(--bg-card), 0 0 0 4px ${c}` : 'none',
+                    outline: newWsColor === c ? '2px solid #000' : 'none',
+                    outlineOffset: '2px',
                   }}
                 />
               ))}
@@ -790,8 +792,8 @@ function AdminContent() {
                       className="w-5 h-5 rounded-full flex-shrink-0 transition-all"
                       style={{
                         background: c,
-                        transform: editColor === c ? 'scale(1.2)' : 'scale(1)',
-                        boxShadow: editColor === c ? `0 0 0 2px var(--bg-card), 0 0 0 4px ${c}` : 'none',
+                        outline: editColor === c ? '2px solid #000' : 'none',
+                        outlineOffset: '2px',
                       }}
                     />
                   ))}

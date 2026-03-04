@@ -55,7 +55,7 @@ function TrashIcon({ size = 14 }: { size?: number }) {
 function TeamContent() {
   const { user } = useAuth();
   const { currentWorkspace, refreshWorkspace, isManagerOf } = useWorkspace();
-  const { isWorkspaceAdmin, isManager } = usePermissions();
+  const { isWorkspaceAdmin, isManager, isMasterAdmin } = usePermissions();
   const [activeTab, setActiveTab] = useState<Tab>('members');
 
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -508,7 +508,7 @@ function TeamContent() {
             )}
 
             {/* Vyhledávání členů */}
-            {!loading && members.filter(m => m.approved).length > 0 && (
+            {!loading && members.filter(m => m.approved && (isMasterAdmin || !m.profile?.is_master_admin)).length > 0 && (
               <div className="relative mb-4">
                 <svg
                   className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
@@ -602,7 +602,7 @@ function TeamContent() {
                 )}
 
                 <div className="space-y-2">
-                  {members.filter(m => m.approved && (
+                  {members.filter(m => m.approved && (isMasterAdmin || !m.profile?.is_master_admin) && (
                     !memberSearch.trim() ||
                     m.profile?.display_name?.toLowerCase().includes(memberSearch.toLowerCase()) ||
                     m.profile?.email?.toLowerCase().includes(memberSearch.toLowerCase())
@@ -611,7 +611,7 @@ function TeamContent() {
                       <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Žádné výsledky hledání.</p>
                     </div>
                   )}
-                  {members.filter(m => m.approved && (
+                  {members.filter(m => m.approved && (isMasterAdmin || !m.profile?.is_master_admin) && (
                     !memberSearch.trim() ||
                     m.profile?.display_name?.toLowerCase().includes(memberSearch.toLowerCase()) ||
                     m.profile?.email?.toLowerCase().includes(memberSearch.toLowerCase())
@@ -850,13 +850,13 @@ function TeamContent() {
 
           {loading ? (
             <div className="text-center py-12"><div className="w-6 h-6 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin mx-auto" /></div>
-          ) : members.filter(m => m.approved && m.role !== 'owner').length === 0 ? (
+          ) : members.filter(m => m.approved && m.role !== 'owner' && (isMasterAdmin || !m.profile?.is_master_admin)).length === 0 ? (
             <div className="rounded-xl border px-6 py-12 text-center" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
               <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Zatím žádní členové.</p>
             </div>
           ) : (
             <div className="space-y-2">
-              {members.filter(m => m.approved && m.role !== 'owner').map(member => {
+              {members.filter(m => m.approved && m.role !== 'owner' && (isMasterAdmin || !m.profile?.is_master_admin)).map(member => {
                 const p = member.profile;
                 const initials = p?.display_name ? p.display_name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) : '?';
                 const assignedManagerIds = wsManagerAssignments

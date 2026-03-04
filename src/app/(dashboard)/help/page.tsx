@@ -48,8 +48,8 @@ const DEFAULT_HELP_CONTENT = `
 
 <h3>Role v systému</h3>
 <ul>
-  <li><strong>Master Admin</strong> – správce celé platformy, může spravovat workspace</li>
-  <li><strong>Admin / Owner</strong> – správce workspace, přístup k nastavení a správě týmu; vidí záznamy a dovolenou všech</li>
+  <li><strong>Master Admin</strong> – správce celé platformy, může spravovat workspace; ostatní uživatelé ho v Tým → Členové nevidí (je skryt pro zachování přehlednosti); v Správě workspace se zobrazuje skutečný workspace Admin, nikoli Master Admin</li>
+  <li><strong>Admin / Owner</strong> – správce workspace, přístup k nastavení a správě týmu; vidí záznamy a dovolenou všech; nejvyšší role viditelná běžným uživatelům</li>
   <li><strong>Team Manager</strong> – správce podřízených, vidí a edituje jejich záznamy, přidává poznámky; vidí dovolenou svých podřízených</li>
   <li><strong>Member</strong> – běžný uživatel, sleduje čas timerem; spravuje svoji dovolenou (pokud má nastaven nárok)</li>
 </ul>
