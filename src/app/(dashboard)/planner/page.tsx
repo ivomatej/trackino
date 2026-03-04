@@ -45,6 +45,33 @@ function formatDayName(date: Date): string {
 
 // isToday je definována uvnitř komponenty (potřebuje workspace timezone)
 
+// ─── Strip lanes (proužky přes více dní) ───────────────────────────────────
+
+interface StripItem {
+  id: string;
+  title: string;
+  color: string;
+  startCol: number; // 0–6 v aktuálním týdnu
+  endCol: number;   // 0–6 v aktuálním týdnu
+}
+
+function packStripLanes(strips: StripItem[]): StripItem[][] {
+  const lanes: StripItem[][] = [];
+  const sorted = [...strips].sort((a, b) => a.startCol - b.startCol);
+  for (const strip of sorted) {
+    let placed = false;
+    for (const lane of lanes) {
+      if (lane[lane.length - 1].endCol < strip.startCol) {
+        lane.push(strip);
+        placed = true;
+        break;
+      }
+    }
+    if (!placed) lanes.push([strip]);
+  }
+  return lanes;
+}
+
 // ─── Types ─────────────────────────────────────────────────────────────────
 
 interface MemberRow {
@@ -849,53 +876,123 @@ function PlannerContent() {
         <div className="rounded-2xl border overflow-x-auto" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 640 }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                <th
-                  className="text-left px-4 py-2.5 text-xs font-semibold"
-                  style={{ color: 'var(--text-muted)', width: 160, background: 'var(--bg-card)' }}
-                >
-                  Člen
-                </th>
-                {weekDays.map(day => {
-                  const dayHoliday = isCzechHoliday(day, weekHolidays);
-                  const dayImportantDays = getImportantDaysForDate(day);
-                  return (
-                    <th
-                      key={toDateStr(day)}
-                      className="px-1 py-2 text-center text-xs font-semibold"
-                      style={{
-                        color: isToday(day) ? 'var(--primary)' : 'var(--text-muted)',
-                        background: isToday(day)
-                          ? 'color-mix(in srgb, var(--primary) 8%, transparent)'
-                          : 'var(--bg-card)',
-                        minWidth: 110,
-                      }}
-                    >
-                      <div>{formatDayName(day)}</div>
-                      <div className="font-normal mt-0.5">{formatDateShort(day)}</div>
-                      {dayHoliday.isHoliday && (
-                        <div
-                          className="font-normal text-[9px] mt-0.5 leading-tight w-full"
-                          style={{ color: '#ef4444' }}
-                          title={dayHoliday.name}
+              {(() => {
+                // ── Sestavení proužků ────────────────────────────────────
+                const strips: StripItem[] = [];
+
+                // Státní svátky (jednodenvní proužky)
+                weekDays.forEach((day, colIdx) => {
+                  const h = isCzechHoliday(day, weekHolidays);
+                  if (h.isHoliday) {
+                    strips.push({ id: `holiday-${colIdx}`, title: '🎉 ' + h.name, color: '#ef4444', startCol: colIdx, endCol: colIdx });
+                  }
+                });
+
+                // Důležité dny (mohou přesahovat přes více dní týdne)
+                const processed = new Set<string>();
+                importantDays.forEach(imp => {
+                  if (processed.has(imp.id)) return;
+                  const matchingCols = weekDays
+                    .map((d, i) => (getImportantDaysForDate(d).some(x => x.id === imp.id) ? i : -1))
+                    .filter(i => i >= 0);
+                  if (!matchingCols.length) return;
+                  processed.add(imp.id);
+                  // Skupiny po sobě jdoucích sloupců → samostatné proužky
+                  let spanStart = matchingCols[0];
+                  let prev = matchingCols[0];
+                  for (let i = 1; i <= matchingCols.length; i++) {
+                    const col = i < matchingCols.length ? matchingCols[i] : -1;
+                    if (col !== prev + 1) {
+                      strips.push({ id: `${imp.id}-${spanStart}`, title: imp.title, color: imp.color, startCol: spanStart, endCol: prev });
+                      spanStart = col;
+                    }
+                    prev = col;
+                  }
+                });
+
+                const stripLanes = packStripLanes(strips);
+
+                return (
+                  <>
+                    {/* Řádky proužků (nad záhlavím dnů) */}
+                    {stripLanes.map((lane, laneIdx) => {
+                      const cells: React.ReactNode[] = [];
+                      let col = 0;
+                      for (const strip of lane) {
+                        if (strip.startCol > col) {
+                          cells.push(
+                            <th key={`gap-${laneIdx}-${col}`} colSpan={strip.startCol - col}
+                              style={{ padding: '2px 0', background: 'var(--bg-card)' }} />
+                          );
+                        }
+                        const span = strip.endCol - strip.startCol + 1;
+                        cells.push(
+                          <th key={strip.id} colSpan={span}
+                            style={{ padding: '2px 3px', background: 'var(--bg-card)' }}>
+                            <div
+                              title={strip.title}
+                              style={{
+                                background: strip.color + '22',
+                                color: strip.color,
+                                borderRadius: 5,
+                                padding: '2px 7px',
+                                fontSize: 10,
+                                fontWeight: 600,
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                textAlign: 'left',
+                                lineHeight: '1.4',
+                              }}
+                            >
+                              {strip.title}
+                            </div>
+                          </th>
+                        );
+                        col = strip.endCol + 1;
+                      }
+                      if (col < 7) {
+                        cells.push(
+                          <th key={`gap-end-${laneIdx}`} colSpan={7 - col}
+                            style={{ padding: '2px 0', background: 'var(--bg-card)' }} />
+                        );
+                      }
+                      return (
+                        <tr key={`strip-lane-${laneIdx}`}>
+                          <th style={{ width: 160, background: 'var(--bg-card)', padding: '2px 0' }} />
+                          {cells}
+                        </tr>
+                      );
+                    })}
+
+                    {/* Záhlaví dnů */}
+                    <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                      <th
+                        className="text-left px-4 py-2.5 text-xs font-semibold"
+                        style={{ color: 'var(--text-muted)', width: 160, background: 'var(--bg-card)' }}
+                      >
+                        Člen
+                      </th>
+                      {weekDays.map(day => (
+                        <th
+                          key={toDateStr(day)}
+                          className="px-1 py-2 text-center text-xs font-semibold"
+                          style={{
+                            color: isToday(day) ? 'var(--primary)' : 'var(--text-muted)',
+                            background: isToday(day)
+                              ? 'color-mix(in srgb, var(--primary) 8%, transparent)'
+                              : 'var(--bg-card)',
+                            minWidth: 110,
+                          }}
                         >
-                          🎉 {dayHoliday.name}
-                        </div>
-                      )}
-                      {dayImportantDays.map(imp => (
-                        <div
-                          key={imp.id}
-                          className="font-normal text-[9px] mt-0.5 leading-tight truncate w-full"
-                          style={{ color: imp.color }}
-                          title={imp.title + (imp.note ? ' – ' + imp.note : '')}
-                        >
-                          ● {imp.title}
-                        </div>
+                          <div>{formatDayName(day)}</div>
+                          <div className="font-normal mt-0.5">{formatDateShort(day)}</div>
+                        </th>
                       ))}
-                    </th>
-                  );
-                })}
-              </tr>
+                    </tr>
+                  </>
+                );
+              })()}
             </thead>
             <tbody>
               {members.length === 0 && (

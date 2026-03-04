@@ -101,6 +101,19 @@ export interface AppChange {
   updated_at: string;
 }
 
+// Systémová oznámení (Master Admin → všichni uživatelé)
+export interface SystemNotification {
+  id: string;
+  title: string;       // krátký nadpis (volitelný)
+  message: string;     // text oznámení
+  color: string;       // hex barva banneru (#f59e0b = oranžová)
+  is_active: boolean;  // aktivní / neaktivní
+  show_from: string | null;  // ISO timestamp – od kdy zobrazovat (null = okamžitě)
+  show_until: string | null; // ISO timestamp – do kdy zobrazovat (null = navždy)
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Profile {
   id: string;
   display_name: string;

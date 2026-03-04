@@ -104,7 +104,7 @@ const DEFAULT_HELP_CONTENT = `
   <li><strong>Barva</strong> – každý záznam má vlastní barvu z palety 12 barev pro snadné rozlišení</li>
   <li><strong>Poznámka</strong> – volitelný textový popis záznamu</li>
 </ul>
-<p><strong>Zobrazení v Plánovači:</strong> Důležité dny se propíší do záhlaví sloupců Plánovače – pod státní svátky se zobrazí barevná tečka s názvem události pro každý den, kdy záznam platí. Opakující se záznamy se zobrazují pro každý odpovídající den. Přehled je personalizovaný – každý uživatel vidí pouze své záznamy.</p>
+<p><strong>Zobrazení v Plánovači:</strong> Důležité dny se zobrazují v záhlaví Plánovače jako barevné proužky (pill) přes příslušné sloupce. Vícedenní záznamy tvoří jeden proužek přesahující přes celý rozsah dnů; jednorázové záznamy (1 den) tvoří proužek v daném sloupci. Pokud se proužky překrývají, jsou automaticky rozloženy do více řádků nad záhlavím. Opakující se záznamy se zobrazují pro každý odpovídající den jako samostatný proužek. Přehled je personalizovaný – každý uživatel vidí pouze své záznamy.</p>
 <p><strong>SQL migrace (nutno spustit v Supabase):</strong><br/>
 <code>CREATE TABLE IF NOT EXISTS trackino_important_days (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -157,7 +157,7 @@ CREATE POLICY "Auth full" ON trackino_important_days
 </ul>
 
 <h3>České státní svátky v Plánovači</h3>
-<p>V <strong>Plánovači</strong> se nad záhlavím každého dne zobrazují <strong>státní svátky ČR</strong>. Pokud je daný den svátek, zobrazí se pod datumem červený text s emoji 🎉 a celým názvem svátku. Sloupce jsou dostatečně široké, aby se celý název vždy zobrazil (případně se zalomí na více řádků).</p>
+<p>V <strong>Plánovači</strong> se v záhlaví týdne zobrazují <strong>státní svátky ČR</strong> jako červené proužky (pill) nad příslušným dnem. Pokud je daný den svátek, zobrazí se červený proužek s názvem svátku přesahující přes daný sloupec. Proužky státních svátků a proužky důležitých dnů se automaticky řadí do řádků vedle sebe bez překryvů.</p>
 <p>Plánovač zobrazuje všechny státní svátky ČR: Nový rok, Velký pátek, Velikonoční pondělí, Svátek práce, Den vítězství, Den Cyrila a Metoděje, Den Jana Husa, Den české státnosti, Den vzniku ČSR, Den boje za svobodu a demokracii, Štědrý den, 1. a 2. svátek vánoční.</p>
 
 <h3>Časová zóna workspace</h3>
@@ -216,13 +216,38 @@ CREATE POLICY "Auth full" ON trackino_tariff_config FOR ALL TO authenticated USI
 <p><strong>SQL migrace (nutno spustit v Supabase):</strong> Pro funkci archivace a smazání jsou potřeba dva nové sloupce:<br/><code>ALTER TABLE trackino_workspaces ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ NULL;<br/>ALTER TABLE trackino_workspaces ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ NULL;</code></p>
 
 <h3>Nastavení aplikace (Master Admin)</h3>
-<p>Stránka <strong>Nastavení aplikace</strong> (sekce Systém, viditelná pouze pro Master Adminy) slouží ke konfiguraci tarifů na platformní úrovni. Zobrazuje matici modulů × tarifů (Free / Pro / Max), kde lze zaškrtnutím nebo odškrtnutím každého políčka definovat, které moduly jsou v daném tarifu dostupné.</p>
+<p>Stránka <strong>Nastavení aplikace</strong> (sekce Systém, viditelná pouze pro Master Adminy) je rozdělena do dvou záložek:</p>
 <ul>
-  <li><strong>Uložit konfiguraci</strong> – uloží aktuální nastavení do DB; změny se projeví pro nové přihlášení nebo obnovení stránky u ostatních uživatelů</li>
-  <li><strong>Obnovit výchozí</strong> – smaže konfiguraci z DB a obnoví hardcoded výchozí hodnoty (tlačítko se zobrazí pouze pokud je konfigurace uložena v DB)</li>
-  <li>Individuální výjimky nastavené v <strong>Nastavení workspace → Moduly</strong> mají vždy přednost před tarifní konfigurací</li>
+  <li><strong>Nastavení tarifů</strong> – matice modulů × tarifů (Free / Pro / Max), kde lze zaškrtnutím nebo odškrtnutím každého políčka definovat, které moduly jsou v daném tarifu dostupné. Tlačítko <em>Uložit konfiguraci</em> uloží nastavení do DB; tlačítko <em>Obnovit výchozí</em> smaže konfiguraci z DB a obnoví hardcoded výchozí hodnoty. Individuální výjimky nastavené v <strong>Nastavení workspace → Moduly</strong> mají vždy přednost před tarifní konfigurací.</li>
+  <li><strong>Systémová oznámení</strong> – viz sekce níže.</li>
 </ul>
 <p><strong>SQL migrace (nutno spustit v Supabase):</strong> Viz sekce Modulární systém výše.</p>
+
+<h3>Systémová oznámení (Master Admin)</h3>
+<p>V záložce <strong>Systémová oznámení</strong> stránky Nastavení aplikace může Master Admin vytvářet systémové zprávy zobrazené všem uživatelům aplikace jako banner nad horní lištou (timerem).</p>
+<ul>
+  <li><strong>Vytvoření oznámení</strong> – každé oznámení má: volitelný <em>Nadpis</em> (tučně zvýrazněn v banneru), povinný <em>Text zprávy</em>, <em>Barvu</em> banneru z palety barev, přepínač <em>Aktivní / Neaktivní</em> a volitelný časový rozsah: <em>Zobrazit od</em> a <em>Zobrazit do</em>.</li>
+  <li><strong>Plánování oznámení</strong> – oznámení lze vytvořit předem a nastavit přesný datum a čas, kdy se banner začne zobrazovat a kdy zmizí. Oznámení mimo nastavený časový rozsah se uživatelům nezobrazí i přesto, že jsou označena jako aktivní.</li>
+  <li><strong>Aktivace / Deaktivace</strong> – kliknutím na přepínač u každého oznámení ho lze okamžitě aktivovat nebo deaktivovat bez nutnosti otevírat editační formulář.</li>
+  <li><strong>Stavy oznámení</strong> – <em>Zobrazuje se</em> (aktivní a v platném časovém rozsahu), <em>Aktivní (mimo čas)</em> (aktivní, ale mimo rozsah od–do), <em>Neaktivní</em>.</li>
+  <li><strong>Náhled</strong> – formulář zobrazuje live náhled, jak bude banner vypadat uživatelům.</li>
+</ul>
+<p><strong>Zobrazení banneru u uživatelů:</strong> Aktivní oznámení v platném časovém rozsahu se zobrazí jako barevný pruh v horní části aplikace nad řádkem s timerem. Každý uživatel může banner skrýt kliknutím na křížek – skrytí se uloží v prohlížeči (localStorage) a banner se po obnovení stránky znovu nezobrazí. Zobrazuje se všem uživatelům bez ohledu na workspace nebo roli.</p>
+<p><strong>SQL migrace (nutno spustit v Supabase):</strong><br/>
+<code>CREATE TABLE IF NOT EXISTS trackino_system_notifications (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  title text NOT NULL DEFAULT '',
+  message text NOT NULL DEFAULT '',
+  color text NOT NULL DEFAULT '#f59e0b',
+  is_active boolean NOT NULL DEFAULT false,
+  show_from timestamptz,
+  show_until timestamptz,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+ALTER TABLE trackino_system_notifications ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Auth full" ON trackino_system_notifications
+  FOR ALL TO authenticated USING (true) WITH CHECK (true);</code></p>
 
 <h3>Audit log</h3>
 <p>Stránka <strong>Audit log</strong> (dostupná Adminum, Master Adminům a uživatelům s oprávněním „Audit log") zobrazuje historii úprav, které manažeři nebo admini provedli na záznamech podřízených. Každý záznam obsahuje: kdo úpravu provedl, pro koho, jakou akci vykonal, datum a čas úpravy a detail záznamu (datum, čas od–do, délka, popis). Oprávnění se nastavuje v Tým → editace člena.</p>

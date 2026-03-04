@@ -111,6 +111,7 @@ Výchozí policy: `CREATE POLICY "Auth full" ... FOR ALL TO authenticated USING 
 | `trackino_audit_log` | id, workspace_id, actor_user_id, action, entity_type, details | Audit záznamy |
 | `trackino_app_changes` | id, workspace_id, title, content, type (bug\|idea\|request\|note), priority, status (open\|in_progress\|solved\|archived), source_bug_id, created_at, updated_at | Požadavky na úpravy aplikace |
 | `trackino_important_days` | id, workspace_id, user_id, title, start_date, end_date, color, is_recurring, recurring_type ('none'\|'weekly'\|'monthly'\|'yearly'), note, created_at, updated_at | Osobní důležité dny a opakující se události |
+| `trackino_system_notifications` | id, title, message, color, is_active, show_from (timestamptz\|null), show_until (timestamptz\|null), created_at, updated_at | Systémová oznámení zobrazená všem uživatelům jako banner (jen Master Admin spravuje) |
 
 ### Poznámky k DB
 - `trackino_member_rates.valid_to IS NULL` = aktuálně platná sazba (aktivní rate)
@@ -283,11 +284,20 @@ NÁSTROJE
 - Zahrnuje pohyblivé svátky (Velikonoce) via Gaussův algoritmus
 - Třídy: `w-full` (bez truncate), text se volně zalomí v rámci sloupce
 
-### Důležité dny v Plánovači
-- Stav: `importantDays: ImportantDay[]` – načítáno z `trackino_important_days` pro přihlášeného uživatele
-- Helper: `getImportantDaysForDate(date)` – vrátí záznamy odpovídající danému dni
-- Opakující se: weekly (stejný den v týdnu), monthly (stejný den v měsíci), yearly (stejné datum)
-- Zobrazeno v `<th>` záhlaví pod svátky: barevná tečka ● + název záznamu (`color: imp.color`)
+### Důležité dny a státní svátky – vizuální proužky (strips)
+- **StripItem interface** (definováno před komponentou):
+  ```typescript
+  interface StripItem { id: string; title: string; color: string; startCol: number; endCol: number; }
+  ```
+  - `startCol` / `endCol`: 0–6 (index dne v týdnu, 0 = pondělí)
+- **`packStripLanes(strips: StripItem[]): StripItem[][]`** – greedy algoritmus, řadí proužky do řad (lanes) bez překryvů
+  - Sort dle `startCol`, každý proužek do první řady kde `lane[last].endCol < strip.startCol`
+- **Rendering v `<thead>`**: IIFE (`{(() => { ... })()}`) vypočítá strips z holidays + important days, volá `packStripLanes()`, renderuje extra `<tr>` řádky nad záhlavím dnů
+  - Každý strip-lane `<tr>`: `<th>` spacer pro sloupec jmen + sada `<th colSpan={N}>` buněk
+  - Styl buňky: `background: color+'22'`, `color: color`, `borderRadius: 5`, `fontSize: 10`, `fontWeight: 600`
+- **Contiguous span detection** pro důležité dny: iteruje `matchingCols[]`, detekuje mezery (non-consecutive indexy) a vytváří separátní StripItems pro každý kontinuální rozsah
+- **Státní svátky**: barva `#ef4444` (červená), každý svátek = jeden StripItem přes jeden sloupec
+- **Důležité dny**: barva dle `importantDay.color`; vícedenní záznamy = proužek přes rozsah sloupců; opakující se záznamy = proužek pro každý odpovídající den v týdnu
 - Personalizované – každý uživatel vidí jen své záznamy
 
 ### Navigace po týdnech
@@ -402,6 +412,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.6.0 | 4. 3. 2026 | Systémová oznámení (nová tabulka `trackino_system_notifications`, záložka v App Settings, banner v DashboardLayout, localStorage dismissal); Plánovač – vizuální proužky pro důležité dny a státní svátky (StripItem, packStripLanes, colspan thead rendering) |
 | v2.5.0 | 4. 3. 2026 | Sidebar – sekce NÁSTROJE; nový modul Důležité dny (Pro+Max) s opakujícími se událostmi; zobrazení v Plánovači; Přesun Převodníku textu do NÁSTROJE + dostupný od Pro; Fix DB constraints pro app_changes (note+archived) |
 | v2.4.0 | 4. 3. 2026 | Sidebar hvězdičky jen na hover; Plánovač – celý název svátku (minWidth 110px); Úpravy aplikace – nový typ Poznámka + Archiv (soft delete + hromadné trvalé mazání) |
 | v2.3.0 | 4. 3. 2026 | Oblíbené v sidebaru (Pro/Max), české svátky v Plánovači, skupina Nástroje v App Settings, oprava názvů modulů |
@@ -412,7 +423,52 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 ---
 
-## 15. Úpravy aplikace – architektura
+## 15. Systémová oznámení – architektura
+
+### Tabulka
+`trackino_system_notifications` – bez `workspace_id` (globální pro celou platformu)
+
+### App Settings (`app-settings/page.tsx`)
+- Záložky: `'tariffs' | 'notifications'` (stav `activeTab`)
+- Lazy fetch: oznámení se načítají jen při přepnutí na záložku notifications
+- CRUD: `fetchNotifications`, `openNewNotif`, `openEditNotif`, `saveNotif`, `deleteNotif`, `toggleNotifActive`
+- `toDatetimeLocal(iso)` → `YYYY-MM-DDTHH:mm` pro `<input type="datetime-local">`
+- `fromDatetimeLocal(val)` → ISO string (`new Date(val).toISOString()`)
+- Stav oznámení: `isVisible = n.is_active && (!n.show_from || show_from <= now) && (!n.show_until || show_until >= now)`
+- Badge: „Zobrazuje se" (zelený) / „Aktivní (mimo čas)" (žlutý) / „Neaktivní" (šedý)
+- Live náhled banneru v modálním formuláři
+
+### DashboardLayout – banner
+- Hook `useSystemNotifications()` – lokální v `DashboardLayout.tsx`
+  - Načítá `dismissed` IDs z `localStorage.getItem('trackino_dismissed_notifications')` (JSON array)
+  - Fetchuje `trackino_system_notifications` kde `is_active = true`
+  - Filtruje: `!dismissed.has(id) && show_from <= now && show_until >= now`
+  - `dismiss(id)` → aktualizuje state + localStorage
+- Banner renderován v `<header>` **před** řádkem s timerem
+- Styl: `background: n.color + '18'`, `borderColor: n.color + '44'`
+- Ikona ⓘ + nadpis (tučně, barvou) + text + × tlačítko
+
+### SQL migrace
+```sql
+CREATE TABLE IF NOT EXISTS trackino_system_notifications (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  title text NOT NULL DEFAULT '',
+  message text NOT NULL DEFAULT '',
+  color text NOT NULL DEFAULT '#f59e0b',
+  is_active boolean NOT NULL DEFAULT false,
+  show_from timestamptz,
+  show_until timestamptz,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+ALTER TABLE trackino_system_notifications ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Auth full" ON trackino_system_notifications
+  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+```
+
+---
+
+## 16. Úpravy aplikace – architektura
 
 ### Typy a stavy (`src/types/database.ts`)
 ```typescript

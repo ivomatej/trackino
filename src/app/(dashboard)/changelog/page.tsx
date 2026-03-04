@@ -11,6 +11,13 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.6.0 – 4. 3. 2026</h3>
+<ul>
+  <li><strong>Systémová oznámení (Master Admin)</strong> – nová záložka v Nastavení aplikace. Master Admin může vytvářet systémové bannery zobrazené všem uživatelům. Každé oznámení má: volitelný nadpis, text zprávy, barvu, přepínač aktivity a časový rozsah (od–do). Oznámení lze připravit předem a naplánovat přesný čas zobrazení. Stránka zobrazuje stav každého oznámení: <em>Zobrazuje se / Aktivní (mimo čas) / Neaktivní</em>. Přidán live náhled banneru přímo ve formuláři.</li>
+  <li><strong>Systémový banner</strong> – aktivní oznámení se zobrazí jako barevný pruh nad horní lištou (timerem). Každý uživatel může banner skrýt křížkem; skrytí se zapamatuje v prohlížeči. Banner se zobrazuje všem uživatelům bez ohledu na workspace nebo roli.</li>
+  <li><strong>Plánovač – vizuální proužky (Důležité dny &amp; Státní svátky)</strong> – záhlaví Plánovače nyní zobrazuje důležité dny a státní svátky jako barevné proužky (pill) přesahující přes příslušné sloupce. Vícedenní záznamy tvoří jeden proužek přes celý rozsah; jednorázové záznamy tvoří proužek pro jeden sloupec. Překrývající se proužky jsou automaticky rozloženy do více řádků. Státní svátky mají červené proužky, důležité dny barvu přiřazenou při vytváření záznamu.</li>
+</ul>
+
 <h3>v2.5.0 – 4. 3. 2026</h3>
 <ul>
   <li><strong>Sidebar – sekce NÁSTROJE</strong> – nová sekce <em>NÁSTROJE</em> v levém menu (umístěna za ANALÝZA). Modul <strong>Převodník textu</strong> byl přesunut z ANALÝZA do NÁSTROJE. Tarif Pro nově zahrnuje Převodník textu i Důležité dny.</li>

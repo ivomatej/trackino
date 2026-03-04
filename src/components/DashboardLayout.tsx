@@ -5,7 +5,8 @@ import Sidebar from './Sidebar';
 import TimerBar from './TimerBar';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { useAuth } from '@/contexts/AuthContext';
-import type { Workspace } from '@/types/database';
+import { supabase } from '@/lib/supabase';
+import type { Workspace, SystemNotification } from '@/types/database';
 
 interface TimerPlayData {
   description: string;
@@ -184,6 +185,51 @@ function WorkspaceSwitcher() {
   );
 }
 
+// ─── System notification banner hook ─────────────────────────────────────────
+
+function useSystemNotifications() {
+  const [notifications, setNotifications] = useState<SystemNotification[]>([]);
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    // Načti dismissed ids z localStorage
+    try {
+      const raw = localStorage.getItem('trackino_dismissed_notifications');
+      if (raw) setDismissed(new Set(JSON.parse(raw)));
+    } catch {}
+
+    // Fetch aktivních oznámení
+    supabase
+      .from('trackino_system_notifications')
+      .select('*')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        if (data) setNotifications(data as SystemNotification[]);
+      });
+  }, []);
+
+  const dismiss = (id: string) => {
+    setDismissed(prev => {
+      const next = new Set(prev);
+      next.add(id);
+      try { localStorage.setItem('trackino_dismissed_notifications', JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  };
+
+  // Filtruj oznámení, která jsou aktuálně v časovém rozsahu a nebyla skryta
+  const now = new Date();
+  const visible = notifications.filter(n => {
+    if (dismissed.has(n.id)) return false;
+    if (n.show_from && new Date(n.show_from) > now) return false;
+    if (n.show_until && new Date(n.show_until) < now) return false;
+    return true;
+  });
+
+  return { visible, dismiss };
+}
+
 export default function DashboardLayout({ children, showTimer = false, onTimerEntryChanged, timerPlayData }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { isPendingApproval, isWorkspaceLocked } = useWorkspace();
@@ -191,6 +237,8 @@ export default function DashboardLayout({ children, showTimer = false, onTimerEn
   // Master admin vidí zamčený workspace i tak (aby mohl odemknout)
   const isMasterAdmin = profile?.is_master_admin === true;
   const showLockedScreen = isWorkspaceLocked && !isMasterAdmin;
+
+  const { visible: activeNotifications, dismiss: dismissNotification } = useSystemNotifications();
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--bg-main)' }}>
@@ -203,6 +251,37 @@ export default function DashboardLayout({ children, showTimer = false, onTimerEn
           className="sticky top-0 z-30"
           style={{ background: 'var(--bg-card)' }}
         >
+          {/* Systémová oznámení – bannery nad timerem */}
+          {activeNotifications.map(n => (
+            <div
+              key={n.id}
+              className="flex items-center justify-between gap-3 px-4 lg:px-6 py-2 text-sm border-b"
+              style={{ background: n.color + '18', borderColor: n.color + '44' }}
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0" style={{ color: n.color }}>
+                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                <p className="text-sm truncate" style={{ color: 'var(--text-primary)' }}>
+                  {n.title && <strong className="mr-1" style={{ color: n.color }}>{n.title}:</strong>}
+                  {n.message}
+                </p>
+              </div>
+              <button
+                onClick={() => dismissNotification(n.id)}
+                className="flex-shrink-0 p-1 rounded transition-colors"
+                style={{ color: 'var(--text-muted)' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                title="Skrýt"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+          ))}
+
           {/* Horní řádek: hamburger + timer */}
           <div className="flex items-center gap-3 px-4 lg:px-6 h-[var(--topbar-height)] border-b" style={{ borderColor: 'var(--border)' }}>
             {/* Hamburger (mobile) */}
