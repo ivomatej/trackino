@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 4. 3. 2026
+> Aktualizováno: 4. 3. 2026 (v2.7.0)
 
 ---
 
@@ -100,7 +100,7 @@ Výchozí policy: `CREATE POLICY "Auth full" ... FOR ALL TO authenticated USING 
 | `trackino_tags` | id, workspace_id, name, color | Štítky |
 | `trackino_availability` | id, workspace_id, user_id, date (YYYY-MM-DD), half ('am'|'pm'|'full'), status_id, note | Plánovač dostupnosti |
 | `trackino_availability_statuses` | id, workspace_id, name, color | Stavy dostupnosti (Dovolená, Home office, ...) |
-| `trackino_vacation_entries` | id, workspace_id, user_id, start_date, end_date, days, note | Evidence dovolené |
+| `trackino_vacation_entries` | id, workspace_id, user_id, start_date, end_date, days, note, status ('approved'\|'pending'\|'rejected'), reviewed_by (uuid\|null), reviewed_at (timestamptz\|null), reviewer_note | Evidence dovolené (status DEFAULT 'approved' pro zpětnou kompatibilitu) |
 | `trackino_vacation_allowances` | workspace_id, user_id, year, days_per_year | Fond dovolené |
 | `trackino_member_rates` | workspace_id, user_id, rate, valid_from, valid_to | Hodinové sazby (valid_to IS NULL = aktivní) |
 | `trackino_invoices` | id, workspace_id, number, client_name, amount, status, ... | Faktury |
@@ -412,6 +412,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.7.0 | 4. 3. 2026 | Schvalování dovolené (status pending/approved/rejected, tab Žádosti pro managery, sync s Plánovačem jen po schválení); Plánovač – proužky pod záhlavím + today tint jen na headeru; Fix: ikonka v náhledu banneru (items-center) |
 | v2.6.0 | 4. 3. 2026 | Systémová oznámení (nová tabulka `trackino_system_notifications`, záložka v App Settings, banner v DashboardLayout, localStorage dismissal); Plánovač – vizuální proužky pro důležité dny a státní svátky (StripItem, packStripLanes, colspan thead rendering) |
 | v2.5.0 | 4. 3. 2026 | Sidebar – sekce NÁSTROJE; nový modul Důležité dny (Pro+Max) s opakujícími se událostmi; zobrazení v Plánovači; Přesun Převodníku textu do NÁSTROJE + dostupný od Pro; Fix DB constraints pro app_changes (note+archived) |
 | v2.4.0 | 4. 3. 2026 | Sidebar hvězdičky jen na hover; Plánovač – celý název svátku (minWidth 110px); Úpravy aplikace – nový typ Poznámka + Archiv (soft delete + hromadné trvalé mazání) |
@@ -489,6 +490,60 @@ AppChangeStatus = 'open' | 'in_progress' | 'solved' | 'archived'
 - `permanentDeleteSelected()` → bulk DB delete dle `selectedIds: Set<string>`
 - Klik na kartu v archivu = toggle výběru (checkbox)
 - Panel nahoře: "Označit vše" checkbox + "Trvale smazat (N)" tlačítko
+
+---
+
+## 17. Schvalování dovolené – architektura (vacation/page.tsx)
+
+### Konstanty
+```typescript
+const APPROVAL_THRESHOLD = 3; // > 3 pracovních dní vyžaduje schválení
+```
+
+### Status flow
+```
+Uživatel přidá dovolenou > 3 dní  →  status: 'pending'  (žádný planner sync)
+Uživatel přidá dovolenou ≤ 3 dní  →  status: 'approved' + syncVacationToPlanner()
+Admin přidá dovolenou (jakkoliv)   →  status: 'approved' + syncVacationToPlanner()
+
+Manager/Admin schválí  →  status: 'approved', reviewed_by, reviewed_at + syncVacationToPlanner()
+Manager/Admin zamítne  →  status: 'rejected', reviewed_by, reviewed_at, reviewer_note (žádný sync)
+```
+
+### Typy (`database.ts`)
+```typescript
+export type VacationStatus = 'approved' | 'pending' | 'rejected';
+// VacationEntry má: status, reviewed_by, reviewed_at, reviewer_note
+```
+
+### Key state variables
+- `activeTab: 'records' | 'requests'` – tab state
+- `subordinateUserIds: string[]` – z managerAssignments kde manager_user_id === user?.id
+- `canSeeRequests = isWorkspaceAdmin || isManager`
+- `approvedEntries` – jen `status === 'approved'`
+- `myPendingRejectedEntries` – vlastní pending/rejected záznamy
+- `pendingRequestEntries` – pending od podřízených (manager) nebo od všech (admin)
+
+### Klíčové funkce
+- `addEntry()` – pokud `days > APPROVAL_THRESHOLD && !isWorkspaceAdmin` → status='pending', jinak 'approved' + sync
+- `deleteEntry(id)` – sync s Plánovačem jen pokud `entry.status === 'approved'`
+- `approveEntry(id)` – UPDATE approved → fetch entry → syncVacationToPlanner
+- `rejectEntry()` – UPDATE rejected s reviewer_note z rejectModal
+
+### Stats (usedDays)
+```typescript
+const usedDays = entries.filter(e => e.status === 'approved').reduce(...)
+```
+
+### SQL migrace
+```sql
+ALTER TABLE trackino_vacation_entries
+  ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'approved'
+    CHECK (status IN ('approved', 'pending', 'rejected')),
+  ADD COLUMN IF NOT EXISTS reviewed_by uuid REFERENCES auth.users(id),
+  ADD COLUMN IF NOT EXISTS reviewed_at timestamptz,
+  ADD COLUMN IF NOT EXISTS reviewer_note text DEFAULT '';
+```
 
 ---
 

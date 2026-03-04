@@ -56,7 +56,22 @@ const DEFAULT_HELP_CONTENT = `
 
 <h3>Dovolená</h3>
 <p>Stránka <strong>Dovolená</strong> (v sekci Sledování) je dostupná uživatelům s příznakem „Může čerpat dovolenou" (nastavuje admin v Tým → editace člena). Záznamy se přidávají zadáním začátku a konce dovolené – počet pracovních dnů (pondělí–pátek) se vypočítá automaticky. Přehled kartiček zobrazuje čerpáno / zbývá / celkový nárok dle nastavení workspace (Nastavení → Dovolené). Admini vidí a spravují záznamy všech uživatelů.</p>
+<p><strong>Schvalování dovolené:</strong> Dovolená delší než 3 pracovní dny vyžaduje schválení přímého nadřízeného (managera). Po podání žádosti záznam čeká ve stavu <em>Čeká na schválení</em> – uvidíte ho se žlutým štítkem v záložce Záznamy → sekce Moje žádosti. Do statistiky čerpání se počítají pouze schválené záznamy.</p>
+<ul>
+  <li><strong>Záložka Záznamy</strong> – zobrazuje vaše schválené záznamy + sekci „Moje žádosti" s pending/zamítnutými žádostmi</li>
+  <li><strong>Záložka Žádosti</strong> (viditelná jen pro managery a adminy) – přehled čekajících žádostí od podřízených; každou žádost lze <em>Schválit</em> nebo <em>Zamítnout</em> (s volitelnou poznámkou)</li>
+  <li><strong>Zamítnuté žádosti</strong> – zůstávají viditelné s červeným štítkem a poznámkou od nadřízeného; uživatel je může smazat</li>
+  <li><strong>Dovolená ≤ 3 dní</strong> – přidává se přímo jako schválená (bez nutnosti čekat na souhlas)</li>
+  <li><strong>Admin / Owner</strong> – dovolená přidaná adminem se vždy schválí okamžitě bez ohledu na délku</li>
+</ul>
 <p><strong>Synchronizace s Plánovačem:</strong> Přidání záznamu dovolené automaticky nastaví stav „Dovolená" v Plánovači pro všechny dny v zadaném rozsahu (včetně víkendů, pokud jsou v rozsahu). Smazání záznamu stav v Plánovači odebere. Aby sync fungoval, musí v Plánovači existovat stav s přesným názvem <strong>„Dovolená"</strong> (velké D, háček nad A).</p>
+<p><strong>SQL migrace (nutno spustit v Supabase):</strong> Pro schvalování dovolené jsou potřeba nové sloupce:<br/>
+<code>ALTER TABLE trackino_vacation_entries
+  ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'approved'
+    CHECK (status IN ('approved', 'pending', 'rejected')),
+  ADD COLUMN IF NOT EXISTS reviewed_by uuid REFERENCES auth.users(id),
+  ADD COLUMN IF NOT EXISTS reviewed_at timestamptz,
+  ADD COLUMN IF NOT EXISTS reviewer_note text DEFAULT '';</code></p>
 
 <h3>Přiřazení manažerů (Tým → Manažeři)</h3>
 <p>Admin workspace může v záložce <strong>Manažeři</strong> (v sekci Tým) definovat, kdo je čí Team Manažer. Kliknutím na tlačítko manažera se toto přiřazení okamžitě aktivuje nebo odebere. Každý člen může mít více manažerů. Přiřazení se promítá do stránky <strong>Podřízení</strong>, kde manažer vidí záznamy svých podřízených.</p>

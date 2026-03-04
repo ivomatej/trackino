@@ -914,7 +914,33 @@ function PlannerContent() {
 
                 return (
                   <>
-                    {/* Řádky proužků (nad záhlavím dnů) */}
+                    {/* Záhlaví dnů – vždy nahoře */}
+                    <tr style={{ borderBottom: strips.length === 0 ? '1px solid var(--border)' : 'none' }}>
+                      <th
+                        className="text-left px-4 py-2.5 text-xs font-semibold"
+                        style={{ color: 'var(--text-muted)', width: 160, background: 'var(--bg-card)' }}
+                      >
+                        Člen
+                      </th>
+                      {weekDays.map(day => (
+                        <th
+                          key={toDateStr(day)}
+                          className="px-1 py-2 text-center text-xs font-semibold"
+                          style={{
+                            color: isToday(day) ? 'var(--primary)' : 'var(--text-muted)',
+                            background: isToday(day)
+                              ? 'color-mix(in srgb, var(--primary) 8%, transparent)'
+                              : 'var(--bg-card)',
+                            minWidth: 110,
+                          }}
+                        >
+                          <div>{formatDayName(day)}</div>
+                          <div className="font-normal mt-0.5">{formatDateShort(day)}</div>
+                        </th>
+                      ))}
+                    </tr>
+
+                    {/* Řádky proužků (pod záhlavím dnů) */}
                     {stripLanes.map((lane, laneIdx) => {
                       const cells: React.ReactNode[] = [];
                       let col = 0;
@@ -928,7 +954,7 @@ function PlannerContent() {
                         const span = strip.endCol - strip.startCol + 1;
                         cells.push(
                           <th key={strip.id} colSpan={span}
-                            style={{ padding: '2px 3px', background: 'var(--bg-card)' }}>
+                            style={{ padding: '2px 3px', background: 'var(--bg-card)', borderBottom: laneIdx === stripLanes.length - 1 ? '1px solid var(--border)' : 'none' }}>
                             <div
                               title={strip.title}
                               style={{
@@ -954,42 +980,16 @@ function PlannerContent() {
                       if (col < 7) {
                         cells.push(
                           <th key={`gap-end-${laneIdx}`} colSpan={7 - col}
-                            style={{ padding: '2px 0', background: 'var(--bg-card)' }} />
+                            style={{ padding: '2px 0', background: 'var(--bg-card)', borderBottom: laneIdx === stripLanes.length - 1 ? '1px solid var(--border)' : 'none' }} />
                         );
                       }
                       return (
                         <tr key={`strip-lane-${laneIdx}`}>
-                          <th style={{ width: 160, background: 'var(--bg-card)', padding: '2px 0' }} />
+                          <th style={{ width: 160, background: 'var(--bg-card)', padding: '2px 0', borderBottom: laneIdx === stripLanes.length - 1 ? '1px solid var(--border)' : 'none' }} />
                           {cells}
                         </tr>
                       );
                     })}
-
-                    {/* Záhlaví dnů */}
-                    <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                      <th
-                        className="text-left px-4 py-2.5 text-xs font-semibold"
-                        style={{ color: 'var(--text-muted)', width: 160, background: 'var(--bg-card)' }}
-                      >
-                        Člen
-                      </th>
-                      {weekDays.map(day => (
-                        <th
-                          key={toDateStr(day)}
-                          className="px-1 py-2 text-center text-xs font-semibold"
-                          style={{
-                            color: isToday(day) ? 'var(--primary)' : 'var(--text-muted)',
-                            background: isToday(day)
-                              ? 'color-mix(in srgb, var(--primary) 8%, transparent)'
-                              : 'var(--bg-card)',
-                            minWidth: 110,
-                          }}
-                        >
-                          <div>{formatDayName(day)}</div>
-                          <div className="font-normal mt-0.5">{formatDateShort(day)}</div>
-                        </th>
-                      ))}
-                    </tr>
                   </>
                 );
               })()}
@@ -1068,9 +1068,7 @@ function PlannerContent() {
                           key={dateStr}
                           className="px-1.5 py-1.5"
                           style={{
-                            background: isTodayCol
-                              ? 'color-mix(in srgb, var(--primary) 5%, transparent)'
-                              : 'transparent',
+                            background: 'transparent',
                             verticalAlign: 'middle',
                           }}
                         >

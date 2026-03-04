@@ -11,6 +11,14 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.7.0 – 4. 3. 2026</h3>
+<ul>
+  <li><strong>Schvalování dovolené</strong> – dovolená delší než 3 pracovní dny nyní vyžaduje schválení přímého nadřízeného (managera). Po podání žádosti se záznam zobrazí se žlutým štítkem „Čeká na schválení" v záložce Záznamy → sekce Moje žádosti. Do statistiky čerpání se počítají pouze schválené záznamy. Manager a Admin mají novou záložku <strong>Žádosti</strong> se seznamem čekajících žádostí od podřízených – každou lze Schválit (zelené tlačítko, spustí sync s Plánovačem) nebo Zamítnout (červené tlačítko, otevře pole pro volitelnou poznámku). Zamítnutá žádost zůstane viditelná s červeným štítkem a poznámkou; uživatel ji může smazat. Dovolená ≤ 3 dní a veškerá dovolená přidaná adminem se schvaluje okamžitě. Vyžaduje SQL migraci – viz Nápověda → Dovolená.</li>
+  <li><strong>Plánovač – proužky pod záhlavím</strong> – vizuální proužky důležitých dnů a státních svátků se nyní zobrazují <em>pod</em> řádkem s názvem dne a datem (dříve nad ním). Záhlaví dnů je vždy viditelné jako první řádek hlavičky tabulky.</li>
+  <li><strong>Plánovač – zvýraznění dnešního dne</strong> – modrý tint pro aktuální den je nyní omezen pouze na záhlaví (boxík se jménem a datem); tělo sloupce zůstává bez podbarvení pro přehlednější čtení plánovacích buněk.</li>
+  <li><strong>Fix: Ikonka v náhledu systémového oznámení</strong> – ⓘ ikonka v live náhledu banneru ve formuláři Nastavení aplikace → Systémová oznámení byla vertikálně posunutá; opraveno správným zarovnáním (items-center).</li>
+</ul>
+
 <h3>v2.6.0 – 4. 3. 2026</h3>
 <ul>
   <li><strong>Systémová oznámení (Master Admin)</strong> – nová záložka v Nastavení aplikace. Master Admin může vytvářet systémové bannery zobrazené všem uživatelům. Každé oznámení má: volitelný nadpis, text zprávy, barvu, přepínač aktivity a časový rozsah (od–do). Oznámení lze připravit předem a naplánovat přesný čas zobrazení. Stránka zobrazuje stav každého oznámení: <em>Zobrazuje se / Aktivní (mimo čas) / Neaktivní</em>. Přidán live náhled banneru přímo ve formuláři.</li>

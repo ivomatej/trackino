@@ -304,6 +304,8 @@ export interface CooperationType {
   created_at: string;
 }
 
+export type VacationStatus = 'approved' | 'pending' | 'rejected';
+
 export interface VacationEntry {
   id: string;
   workspace_id: string;
@@ -312,6 +314,10 @@ export interface VacationEntry {
   end_date: string;   // YYYY-MM-DD
   days: number;
   note: string;
+  status: VacationStatus;         // 'approved' | 'pending' | 'rejected'
+  reviewed_by: string | null;     // user_id reviewera
+  reviewed_at: string | null;     // ISO timestamp
+  reviewer_note: string;          // poznámka při zamítnutí
   created_at: string;
 }
 
