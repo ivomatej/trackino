@@ -194,7 +194,14 @@ function AppChangesContent() {
     }
 
     setSaving(false);
-    if (error) { setFormError('Chyba: ' + error.message); return; }
+    if (error) {
+      if (error.message.includes('check constraint') || error.message.includes('violates')) {
+        setFormError('Chyba DB: spusť SQL migraci v Supabase (viz banner nahoře). Detail: ' + error.message);
+      } else {
+        setFormError('Chyba: ' + error.message);
+      }
+      return;
+    }
     setShowForm(false);
     fetchItems();
   };
@@ -202,9 +209,13 @@ function AppChangesContent() {
   // Přesunout položku do archivu (soft delete)
   const archiveItem = async (id: string) => {
     if (!confirm('Přesunout tuto položku do archivu?')) return;
-    await supabase.from('trackino_app_changes')
+    const { error } = await supabase.from('trackino_app_changes')
       .update({ status: 'archived', updated_at: new Date().toISOString() })
       .eq('id', id);
+    if (error) {
+      alert('Nelze archivovat – spusť SQL migraci v Supabase (viz banner nahoře).\n\nDetail: ' + error.message);
+      return;
+    }
     if (expandedId === id) setExpandedId(null);
     fetchItems();
   };
@@ -297,6 +308,33 @@ function AppChangesContent() {
   return (
     <DashboardLayout>
       <div className="max-w-4xl">
+
+        {/* SQL migrace – upozornění (vždy viditelné, dokud si uživatel nezavře) */}
+        <details className="mb-5 rounded-xl border" style={{ borderColor: '#f59e0b44', background: '#fffbeb' }}>
+          <summary className="px-4 py-3 cursor-pointer text-sm font-medium flex items-center gap-2" style={{ color: '#92400e' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            Vyžadována SQL migrace v Supabase – klikni pro zobrazení
+          </summary>
+          <div className="px-4 pb-4">
+            <p className="text-xs mb-2 mt-1" style={{ color: '#78350f' }}>
+              Aby fungovaly nové stavy <strong>Archiv</strong> a typ <strong>Poznámka</strong>, musíš spustit tuto migraci v Supabase → SQL Editor:
+            </p>
+            <pre className="text-xs rounded-lg p-3 overflow-x-auto" style={{ background: '#1e1e2e', color: '#cdd6f4', fontFamily: 'monospace' }}>{`-- Oprav CHECK constraints pro trackino_app_changes
+ALTER TABLE trackino_app_changes
+  DROP CONSTRAINT IF EXISTS trackino_app_changes_type_check,
+  DROP CONSTRAINT IF EXISTS trackino_app_changes_status_check;
+
+ALTER TABLE trackino_app_changes
+  ADD CONSTRAINT trackino_app_changes_type_check
+    CHECK (type IN ('bug', 'idea', 'request', 'note')),
+  ADD CONSTRAINT trackino_app_changes_status_check
+    CHECK (status IN ('open', 'in_progress', 'solved', 'archived'));`}</pre>
+            <p className="text-xs mt-2" style={{ color: '#92400e' }}>Po spuštění migrace bude Archiv a typ Poznámka funkční.</p>
+          </div>
+        </details>
+
         {/* Hlavička */}
         <div className="flex items-center justify-between mb-6">
           <div>

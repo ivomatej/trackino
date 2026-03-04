@@ -40,7 +40,8 @@ src/
       team/           – Správa týmu
       settings/       – Nastavení workspace
       audit/          – Audit log (jen tarif Max)
-      text-converter/ – Převodník textu (jen tarif Max)
+      text-converter/ – Převodník textu (tarif Pro a Max)
+      important-days/ – Důležité dny (tarif Pro a Max)
       app-settings/   – Nastavení modulů dle tarifu (admin)
       app-changes/    – Úpravy aplikace (admin)
       bugs/           – Hlášení chyb
@@ -109,6 +110,7 @@ Výchozí policy: `CREATE POLICY "Auth full" ... FOR ALL TO authenticated USING 
 | `trackino_invitations` | id, workspace_id, email, role, token, accepted | Pozvánky emailem |
 | `trackino_audit_log` | id, workspace_id, actor_user_id, action, entity_type, details | Audit záznamy |
 | `trackino_app_changes` | id, workspace_id, title, content, type (bug\|idea\|request\|note), priority, status (open\|in_progress\|solved\|archived), source_bug_id, created_at, updated_at | Požadavky na úpravy aplikace |
+| `trackino_important_days` | id, workspace_id, user_id, title, start_date, end_date, color, is_recurring, recurring_type ('none'\|'weekly'\|'monthly'\|'yearly'), note, created_at, updated_at | Osobní důležité dny a opakující se události |
 
 ### Poznámky k DB
 - `trackino_member_rates.valid_to IS NULL` = aktuálně platná sazba (aktivní rate)
@@ -124,7 +126,7 @@ Výchozí policy: `CREATE POLICY "Auth full" ... FOR ALL TO authenticated USING 
 ```typescript
 type ModuleId = 'time_tracker' | 'planner' | 'vacation' | 'invoices' | 'reports' |
   'attendance' | 'category_report' | 'subordinates' | 'notes' | 'projects' |
-  'clients' | 'tags' | 'team' | 'settings' | 'audit' | 'text_converter';
+  'clients' | 'tags' | 'team' | 'settings' | 'audit' | 'text_converter' | 'important_days';
 ```
 
 ### Výchozí moduly dle tarifu (hardcoded TARIFF_MODULES)
@@ -145,7 +147,8 @@ type ModuleId = 'time_tracker' | 'planner' | 'vacation' | 'invoices' | 'reports'
 | Tým (team) | ✓ | ✓ | ✓ |
 | Nastavení (settings) | – | ✓ | ✓ |
 | Audit log (audit) | – | – | ✓ |
-| Převodník textu (text_converter) | – | – | ✓ |
+| Převodník textu (text_converter) | – | ✓ | ✓ |
+| Důležité dny (important_days) | – | ✓ | ✓ |
 
 ### computeEnabledModules()
 ```
@@ -159,7 +162,7 @@ Základ = TARIFF_MODULES[tariff]
 - `'Sledování'`: time_tracker, planner, vacation, invoices
 - `'Analýza'`: reports, attendance, category_report, subordinates, notes
 - `'Správa'`: projects, clients, tags, team, settings, audit
-- `'Nástroje'`: text_converter
+- `'Nástroje'`: text_converter, important_days
 
 ---
 
@@ -233,6 +236,9 @@ ANALÝZA
   Analýza kategorií (/category-report)
   Podřízení (/subordinates)
   Poznámky (/notes)
+NÁSTROJE
+  Převodník textu (/text-converter)
+  Důležité dny (/important-days)
 SPRÁVA
   Projekty (/projects)
   Klienti (/clients)
@@ -276,6 +282,13 @@ NÁSTROJE
 - `minWidth` sloupce: 110px (dostatečný prostor pro zalamování)
 - Zahrnuje pohyblivé svátky (Velikonoce) via Gaussův algoritmus
 - Třídy: `w-full` (bez truncate), text se volně zalomí v rámci sloupce
+
+### Důležité dny v Plánovači
+- Stav: `importantDays: ImportantDay[]` – načítáno z `trackino_important_days` pro přihlášeného uživatele
+- Helper: `getImportantDaysForDate(date)` – vrátí záznamy odpovídající danému dni
+- Opakující se: weekly (stejný den v týdnu), monthly (stejný den v měsíci), yearly (stejné datum)
+- Zobrazeno v `<th>` záhlaví pod svátky: barevná tečka ● + název záznamu (`color: imp.color`)
+- Personalizované – každý uživatel vidí jen své záznamy
 
 ### Navigace po týdnech
 - `getMonday(date)` – vrátí pondělí daného týdne
@@ -336,7 +349,8 @@ TARIFF_MODULES: Record<Tariff, ModuleId[]>
 | Nastavení workspace | – | ✓ | ✓ |
 | **Oblíbené v sidebaru** | – | ✓ | ✓ |
 | Audit log | – | – | ✓ |
-| Převodník textu | – | – | ✓ |
+| Převodník textu | – | ✓ | ✓ |
+| **Důležité dny** | – | ✓ | ✓ |
 
 ---
 
@@ -388,6 +402,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.5.0 | 4. 3. 2026 | Sidebar – sekce NÁSTROJE; nový modul Důležité dny (Pro+Max) s opakujícími se událostmi; zobrazení v Plánovači; Přesun Převodníku textu do NÁSTROJE + dostupný od Pro; Fix DB constraints pro app_changes (note+archived) |
 | v2.4.0 | 4. 3. 2026 | Sidebar hvězdičky jen na hover; Plánovač – celý název svátku (minWidth 110px); Úpravy aplikace – nový typ Poznámka + Archiv (soft delete + hromadné trvalé mazání) |
 | v2.3.0 | 4. 3. 2026 | Oblíbené v sidebaru (Pro/Max), české svátky v Plánovači, skupina Nástroje v App Settings, oprava názvů modulů |
 | v2.2.0 | – | Audit log, Nastavení workspace (tarify, fakturační údaje), půlnoční split timeru |

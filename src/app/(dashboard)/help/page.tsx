@@ -96,6 +96,35 @@ const DEFAULT_HELP_CONTENT = `
 </ul>
 <p>Přepínač módu se nachází v horní části stránky. Tlačítko <em>Kopírovat</em> v každé záložce zkopíruje výstup do schránky. Tlačítko <em>Vymazat vše</em> vyčistí oba panely.</p>
 
+<h3>Důležité dny</h3>
+<p>Modul <strong>Důležité dny</strong> (sekce <strong>NÁSTROJE</strong>, tarif Pro a Max) slouží k evidenci osobních důležitých dat a opakujících se událostí. Záznamy jsou soukromé – každý uživatel vidí pouze své vlastní.</p>
+<ul>
+  <li><strong>Jednorázový záznam</strong> – konkrétní den nebo rozsah od–do (např. narozeniny, výroční akce, projektový termín)</li>
+  <li><strong>Opakující se události</strong> – po přepnutí na opakování lze vybrat: <em>Každý týden</em> (stejný den v týdnu), <em>Každý měsíc</em> (stejný den v měsíci) nebo <em>Každý rok</em> (stejné datum). U opakujících se событий se zadává pouze datum začátku opakování.</li>
+  <li><strong>Barva</strong> – každý záznam má vlastní barvu z palety 12 barev pro snadné rozlišení</li>
+  <li><strong>Poznámka</strong> – volitelný textový popis záznamu</li>
+</ul>
+<p><strong>Zobrazení v Plánovači:</strong> Důležité dny se propíší do záhlaví sloupců Plánovače – pod státní svátky se zobrazí barevná tečka s názvem události pro každý den, kdy záznam platí. Opakující se záznamy se zobrazují pro každý odpovídající den. Přehled je personalizovaný – každý uživatel vidí pouze své záznamy.</p>
+<p><strong>SQL migrace (nutno spustit v Supabase):</strong><br/>
+<code>CREATE TABLE IF NOT EXISTS trackino_important_days (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES trackino_workspaces(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  title text NOT NULL,
+  start_date text NOT NULL,
+  end_date text NOT NULL,
+  color text NOT NULL DEFAULT '#6366f1',
+  is_recurring boolean NOT NULL DEFAULT false,
+  recurring_type text NOT NULL DEFAULT 'none'
+    CHECK (recurring_type IN ('none','weekly','monthly','yearly')),
+  note text DEFAULT '',
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+ALTER TABLE trackino_important_days ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Auth full" ON trackino_important_days
+  FOR ALL TO authenticated USING (true) WITH CHECK (true);</code></p>
+
 <h3>Úpravy aplikace</h3>
 <p>Stránka <strong>Úpravy aplikace</strong> je dostupná pouze pro <strong>Master Admina</strong> (odkaz v levém menu pod „Nahlásit chybu"). Slouží jako soukromý úkolník k evidenci nápadů a požadavků na rozvoj aplikace.</p>
 <ul>
@@ -115,7 +144,8 @@ const DEFAULT_HELP_CONTENT = `
 </ul>
 <p><strong>Přesun z Bug logu:</strong> V sekci Nahlásit chybu (Master Admin vidí tlačítko <strong>→ Úpravy aplikace</strong> u každého reportu po rozbalení karty) se kliknutím automaticky vytvoří položka v Úpravách. Obsah pole Poznámka se přenese do popisu. Přesunuté bugy jsou okamžitě označeny zeleným štítkem <em>„Přesunuto ✓"</em> v headeru karty a nelze je přesunout znovu. Přesunuté položky v Úpravách aplikace jsou označeny štítkem <em>„Z Bug logu"</em>. Původní report zůstane v Bug logu nezměněn.</p>
 <p><strong>Poznámka Master Admina:</strong> Poznámka se zobrazuje v šedém poli. Na pravém kraji řádku jsou dvě ikonky – <em>tužka</em> (upravit) a <em>koš</em> (smazat). Pokud poznámka dosud neexistuje, zobrazuje se odkaz „+ Přidat poznámku".</p>
-<p><strong>SQL migrace (nutno spustit v Supabase):</strong><br/><code>CREATE TABLE IF NOT EXISTS trackino_app_changes (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), title text NOT NULL, content text DEFAULT '', type text NOT NULL DEFAULT 'idea' CHECK (type IN ('bug', 'idea', 'request')), priority text NOT NULL DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high')), status text NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'solved')), source_bug_id uuid REFERENCES trackino_bug_reports(id) ON DELETE SET NULL, created_at timestamptz DEFAULT now(), updated_at timestamptz DEFAULT now()); ALTER TABLE trackino_app_changes ENABLE ROW LEVEL SECURITY; CREATE POLICY "Auth full" ON trackino_app_changes FOR ALL TO authenticated USING (true) WITH CHECK (true);</code></p>
+<p><strong>SQL migrace (nutno spustit v Supabase):</strong><br/><code>CREATE TABLE IF NOT EXISTS trackino_app_changes (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), title text NOT NULL, content text DEFAULT '', type text NOT NULL DEFAULT 'idea' CHECK (type IN ('bug', 'idea', 'request', 'note')), priority text NOT NULL DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high')), status text NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'solved', 'archived')), source_bug_id uuid REFERENCES trackino_bug_reports(id) ON DELETE SET NULL, created_at timestamptz DEFAULT now(), updated_at timestamptz DEFAULT now()); ALTER TABLE trackino_app_changes ENABLE ROW LEVEL SECURITY; CREATE POLICY "Auth full" ON trackino_app_changes FOR ALL TO authenticated USING (true) WITH CHECK (true);</code></p>
+<p><strong>Pokud tabulka již existuje a chybí typy 'note'/'archived' (SQL migrace pro aktualizaci constraint):</strong><br/><code>ALTER TABLE trackino_app_changes DROP CONSTRAINT IF EXISTS trackino_app_changes_type_check, DROP CONSTRAINT IF EXISTS trackino_app_changes_status_check; ALTER TABLE trackino_app_changes ADD CONSTRAINT trackino_app_changes_type_check CHECK (type IN ('bug', 'idea', 'request', 'note')), ADD CONSTRAINT trackino_app_changes_status_check CHECK (status IN ('open', 'in_progress', 'solved', 'archived'));</code></p>
 
 <h3>Oblíbené v levém menu</h3>
 <p>Funkce <strong>Oblíbené</strong> je dostupná pro tarify <strong>Pro a Max</strong>. Umožňuje přidat libovolnou položku z levého menu do sekce <strong>OBLÍBENÉ</strong>, která se zobrazuje úplně nahoře v navigaci.</p>
@@ -147,8 +177,8 @@ const DEFAULT_HELP_CONTENT = `
 <p>Aplikace je rozdělena do <strong>modulů</strong>, které lze zapnout nebo vypnout. Výchozí sada modulů závisí na tarifu workspace:</p>
 <ul>
   <li><strong>Free</strong> – Měřič, Reporty, Projekty, Klienti, Štítky, Tým</li>
-  <li><strong>Pro</strong> – Free + Plánovač, Dovolená, Fakturace, Přehled hodin, Analýza kategorií, Podřízení, Poznámky, Nastavení + funkce <strong>Oblíbené</strong> v levém menu</li>
-  <li><strong>Max</strong> – Pro + Audit log, Převodník textu</li>
+  <li><strong>Pro</strong> – Free + Plánovač, Dovolená, Fakturace, Přehled hodin, Analýza kategorií, Podřízení, Poznámky, Nastavení, Převodník textu, Důležité dny + funkce <strong>Oblíbené</strong> v levém menu</li>
+  <li><strong>Max</strong> – Pro + Audit log</li>
 </ul>
 <p>Admin může v <strong>Nastavení → Moduly</strong> nastavit výjimky pro jednotlivé uživatele – přidat modul, který není v tarifu, nebo zakázat modul, který v tarifu je. Výjimky mají vždy přednost před výchozím tarifem. Moduly, které uživatel nemá povoleny, se nezobrazují v levém menu.</p>
 <p>Master Admin může v <strong>Nastavení aplikace</strong> (sekce Systém) globálně změnit, které moduly jsou součástí každého tarifu. Konfigurace se uloží do DB a okamžitě se projeví pro všechny workspace. Pokud konfigurace nebyla nastavena, použijí se výchozí hodnoty ze systému.</p>
@@ -208,7 +238,7 @@ CREATE POLICY "Auth full" ON trackino_tariff_config FOR ALL TO authenticated USI
 <p><strong>Formát telefonního čísla</strong> – čísla se v aplikaci zobrazují s mezerami pro přehlednost (např. <code>+420 608 510 232</code>). Tlačítko kopírování zkopíruje číslo <em>bez</em> mezer (např. <code>+420608510232</code>) pro přímé použití v dialeru nebo jiné aplikaci. Číslo lze zadat v libovolném formátu – při uložení se mezery automaticky odstraní.</p>
 
 <h3>Navigace – rozbalovací sekce</h3>
-<p>Levý sidebar je členěn do čtyř sekcí: <strong>SLEDOVÁNÍ</strong>, <strong>ANALÝZA</strong>, <strong>SPRÁVA</strong> a <strong>SYSTÉM</strong> (viditelná pouze pro Master Adminy). Každou sekci lze kliknutím na její název sbalit nebo rozbalit – šipka indikuje aktuální stav. Stav sbalení se ukládá v prohlížeči a přetrvá i po obnovení stránky.</p>
+<p>Levý sidebar je členěn do pěti sekcí: <strong>SLEDOVÁNÍ</strong>, <strong>ANALÝZA</strong>, <strong>NÁSTROJE</strong>, <strong>SPRÁVA</strong> a <strong>SYSTÉM</strong> (viditelná pouze pro Master Adminy). Každou sekci lze kliknutím na její název sbalit nebo rozbalit – šipka indikuje aktuální stav. Stav sbalení se ukládá v prohlížeči a přetrvá i po obnovení stránky.</p>
 
 <h3>Detailní nastavení (osobní profil)</h3>
 <p>V levém dolním rohu sidebaru je panel přihlášeného uživatele. Kliknutím na něj se rozbalí možnosti: odkaz <strong>Detailní nastavení</strong> (profil, jméno, e-mail, telefon, barva avataru, barevný režim) a tlačítko <strong>Odhlásit se</strong>. Pole <strong>Pozice</strong> v profilu je editovatelné pouze pro adminy – ostatní vidí hodnotu nastavenou adminem.</p>

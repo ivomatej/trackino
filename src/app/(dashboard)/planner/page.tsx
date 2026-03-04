@@ -7,7 +7,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import DashboardLayout from '@/components/DashboardLayout';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import type { AvailabilityStatus, AvailabilityEntry } from '@/types/database';
+import type { AvailabilityStatus, AvailabilityEntry, ImportantDay } from '@/types/database';
 import { getWorkspaceToday } from '@/lib/utils';
 import { getCzechHolidays, isCzechHoliday } from '@/lib/czech-calendar';
 
@@ -270,6 +270,9 @@ function PlannerContent() {
   const [hoveredCell, setHoveredCell] = useState<CellKey | null>(null);
   const [tooltipPos, setTooltipPos] = useState<{ top: number; left: number } | null>(null);
 
+  // Důležité dny (osobní záznamy uživatele)
+  const [importantDays, setImportantDays] = useState<ImportantDay[]>([]);
+
   // Status manager state
   const [newStatusName, setNewStatusName] = useState('');
   const [newStatusColor, setNewStatusColor] = useState('#6366f1');
@@ -408,11 +411,39 @@ function PlannerContent() {
     setSplitDays(autoSplit);
   }, [currentWorkspace, weekStart]);
 
+  // Fetch důležitých dnů přihlášeného uživatele
+  const fetchImportantDays = useCallback(async () => {
+    if (!user || !currentWorkspace) return;
+    const { data } = await supabase
+      .from('trackino_important_days')
+      .select('*')
+      .eq('workspace_id', currentWorkspace.id)
+      .eq('user_id', user.id);
+    setImportantDays((data ?? []) as ImportantDay[]);
+  }, [user, currentWorkspace]);
+
+  // Helper: vrátí záznamy důležitých dnů pro konkrétní datum
+  function getImportantDaysForDate(date: Date): ImportantDay[] {
+    const dateStr = toDateStr(date);
+    return importantDays.filter(entry => {
+      if (!entry.is_recurring || entry.recurring_type === 'none') {
+        return dateStr >= entry.start_date && dateStr <= entry.end_date;
+      }
+      const startD = new Date(entry.start_date + 'T12:00:00');
+      switch (entry.recurring_type) {
+        case 'weekly':  return date.getDay() === startD.getDay();
+        case 'monthly': return date.getDate() === startD.getDate();
+        case 'yearly':  return date.getMonth() === startD.getMonth() && date.getDate() === startD.getDate();
+        default:        return false;
+      }
+    });
+  }
+
   useEffect(() => {
     if (!currentWorkspace) return;
     setLoading(true);
-    Promise.all([fetchStatuses(), fetchMembers(), fetchAvailability()]).finally(() => setLoading(false));
-  }, [currentWorkspace, fetchStatuses, fetchMembers, fetchAvailability]);
+    Promise.all([fetchStatuses(), fetchMembers(), fetchAvailability(), fetchImportantDays()]).finally(() => setLoading(false));
+  }, [currentWorkspace, fetchStatuses, fetchMembers, fetchAvailability, fetchImportantDays]);
 
   // Zavřít picker při kliknutí mimo
   useEffect(() => {
@@ -827,6 +858,7 @@ function PlannerContent() {
                 </th>
                 {weekDays.map(day => {
                   const dayHoliday = isCzechHoliday(day, weekHolidays);
+                  const dayImportantDays = getImportantDaysForDate(day);
                   return (
                     <th
                       key={toDateStr(day)}
@@ -850,6 +882,16 @@ function PlannerContent() {
                           🎉 {dayHoliday.name}
                         </div>
                       )}
+                      {dayImportantDays.map(imp => (
+                        <div
+                          key={imp.id}
+                          className="font-normal text-[9px] mt-0.5 leading-tight truncate w-full"
+                          style={{ color: imp.color }}
+                          title={imp.title + (imp.note ? ' – ' + imp.note : '')}
+                        >
+                          ● {imp.title}
+                        </div>
+                      ))}
                     </th>
                   );
                 })}

@@ -11,6 +11,13 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.5.0 – 4. 3. 2026</h3>
+<ul>
+  <li><strong>Sidebar – sekce NÁSTROJE</strong> – nová sekce <em>NÁSTROJE</em> v levém menu (umístěna za ANALÝZA). Modul <strong>Převodník textu</strong> byl přesunut z ANALÝZA do NÁSTROJE. Tarif Pro nově zahrnuje Převodník textu i Důležité dny.</li>
+  <li><strong>Důležité dny</strong> (tarif Pro a Max) – nový osobní modul v sekci NÁSTROJE. Umožňuje evidovat důležitá data a opakující se události: jednorázový den nebo rozsah, opakování každý týden / měsíc / rok. Každý záznam má vlastní barvu a volitelnou poznámku. Záznamy se zobrazují v záhlaví sloupců <strong>Plánovače</strong> (pod státními svátky) – barevná tečka s názvem události pro každý příslušný den.</li>
+  <li><strong>Úpravy aplikace – oprava DB constraint</strong> – typ <em>Poznámka</em> a stav <em>Archiv</em> nyní fungují bez chyby. Vyžaduje SQL migraci v Supabase (viz Nápověda → Úpravy aplikace). Na stránce Úpravy aplikace je zobrazen informační banner s přesným SQL příkazem.</li>
+</ul>
+
 <h3>v2.4.0 – 4. 3. 2026</h3>
 <ul>
   <li><strong>Sidebar – hvězdičky jen při hoveru</strong> – hvězdičky oblíbených položek jsou nyní ve výchozím stavu neviditelné. Zobrazí se (zlatě) teprve po najetí myší na danou položku. Již oblíbené položky jsou zvýrazněny zlatou hvězdičkou vždy.</li>

@@ -21,7 +21,8 @@ export type ModuleId =
   | 'team'
   | 'settings'
   | 'audit'
-  | 'text_converter';
+  | 'text_converter'
+  | 'important_days';
 
 /** Per-uživatelský override modulu (nad rámec tarifu nebo zakázání) */
 export interface UserModuleOverride {
@@ -374,6 +375,24 @@ export interface Invoice {
   approved_by: string | null;
   paid_at: string | null;
   paid_by: string | null;
+  note: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Důležité dny – osobní calendar events s opakováním
+export type ImportantDayRecurring = 'none' | 'weekly' | 'monthly' | 'yearly';
+
+export interface ImportantDay {
+  id: string;
+  workspace_id: string;
+  user_id: string;
+  title: string;
+  start_date: string;   // YYYY-MM-DD
+  end_date: string;     // YYYY-MM-DD (= start_date pro jednorázové)
+  color: string;        // hex barva
+  is_recurring: boolean;
+  recurring_type: ImportantDayRecurring;
   note: string;
   created_at: string;
   updated_at: string;

@@ -20,6 +20,7 @@ export const ALL_MODULES: { id: ModuleId; label: string; description: string; gr
   { id: 'settings',        label: 'Nastavení',          description: 'Nastavení workspace (jen admin)',       group: 'Správa' },
   { id: 'audit',           label: 'Audit log',          description: 'Protokol změn v systému',              group: 'Správa' },
   { id: 'text_converter',  label: 'Převodník textu',    description: 'Převod formátovaného textu na prostý text nebo Markdown', group: 'Nástroje' },
+  { id: 'important_days', label: 'Důležité dny',       description: 'Evidence osobních důležitých dnů a opakujících se událostí', group: 'Nástroje' },
 ];
 
 /**
@@ -50,6 +51,8 @@ export const TARIFF_MODULES: Record<Tariff, ModuleId[]> = {
     'tags',
     'team',
     'settings',
+    'text_converter',
+    'important_days',
   ],
   max: [
     'time_tracker',
@@ -68,6 +71,7 @@ export const TARIFF_MODULES: Record<Tariff, ModuleId[]> = {
     'settings',
     'audit',
     'text_converter',
+    'important_days',
   ],
 };
 

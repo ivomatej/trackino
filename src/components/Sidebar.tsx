@@ -49,6 +49,7 @@ const ICONS = {
   attendance: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18" /><path d="M3 15h18" /><path d="M9 3v18" /><path d="M15 3v18" /></svg>,
   categoryReport: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83" /><path d="M22 12A10 10 0 0 0 12 2v10z" /></svg>,
   textConverter: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 7 4 4 20 4 20 7" /><line x1="9" y1="20" x2="15" y2="20" /><line x1="12" y1="4" x2="12" y2="20" /></svg>,
+  importantDays: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /><path d="M8 14h.01" /><path d="M12 14h.01" /><path d="M16 14h.01" /><path d="M8 18h.01" /><path d="M12 18h.01" /></svg>,
   appChanges: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg>,
   favorites: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>,
 };
@@ -215,8 +216,14 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
     if (hasModule('category_report')) {
       analyzeItems.push({ label: 'Analýza kategorií', href: '/category-report', icon: ICONS.categoryReport });
     }
+
+    // NÁSTROJE
+    const nastrojeItems: NavItem[] = [];
     if (hasModule('text_converter')) {
-      analyzeItems.push({ label: 'Převodník textu', href: '/text-converter', icon: ICONS.textConverter });
+      nastrojeItems.push({ label: 'Převodník textu', href: '/text-converter', icon: ICONS.textConverter });
+    }
+    if (hasModule('important_days')) {
+      nastrojeItems.push({ label: 'Důležité dny', href: '/important-days', icon: ICONS.importantDays });
     }
 
     // SPRÁVA
@@ -259,6 +266,13 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
       groups.push({
         title: 'ANALÝZA',
         items: analyzeItems,
+      });
+    }
+
+    if (nastrojeItems.length > 0) {
+      groups.push({
+        title: 'NÁSTROJE',
+        items: nastrojeItems,
       });
     }
 
