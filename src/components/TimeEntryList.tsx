@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { usePermissions } from '@/hooks/usePermissions';
-import type { Project, TimeEntry, Tag } from '@/types/database';
+import type { Project, TimeEntry, Tag, Category, Task } from '@/types/database';
 
 interface PlayData {
   description: string;
@@ -39,6 +39,8 @@ export default function TimeEntryList({ refreshKey, onPlay }: TimeEntryListProps
   const [days, setDays] = useState<DayGroup[]>([]);
   const [projects, setProjects] = useState<Record<string, Project>>({});
   const [allTags, setAllTags] = useState<Record<string, Tag>>({});
+  const [allCategories, setAllCategories] = useState<Record<string, Category>>({});
+  const [allTasks, setAllTasks] = useState<Record<string, Task>>({});
   const [entryTagMap, setEntryTagMap] = useState<Record<string, string[]>>({}); // entryId -> tagIds[]
   const [loading, setLoading] = useState(true);
   const [editingEntry, setEditingEntry] = useState<string | null>(null);
@@ -56,7 +58,7 @@ export default function TimeEntryList({ refreshKey, onPlay }: TimeEntryListProps
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
 
-    const [entriesRes, projectsRes, tagsRes] = await Promise.all([
+    const [entriesRes, projectsRes, tagsRes, categoriesRes, tasksRes] = await Promise.all([
       supabase
         .from('trackino_time_entries')
         .select('*')
@@ -73,11 +75,21 @@ export default function TimeEntryList({ refreshKey, onPlay }: TimeEntryListProps
         .from('trackino_tags')
         .select('*')
         .eq('workspace_id', currentWorkspace.id),
+      supabase
+        .from('trackino_categories')
+        .select('*')
+        .eq('workspace_id', currentWorkspace.id),
+      supabase
+        .from('trackino_tasks')
+        .select('*')
+        .eq('workspace_id', currentWorkspace.id),
     ]);
 
     const entries = (entriesRes.data ?? []) as TimeEntry[];
     const projectsList = (projectsRes.data ?? []) as Project[];
     const tagsList = (tagsRes.data ?? []) as Tag[];
+    const categoriesList = (categoriesRes.data ?? []) as Category[];
+    const tasksList = (tasksRes.data ?? []) as Task[];
 
     // Projekty do mapy
     const projectMap: Record<string, Project> = {};
@@ -88,6 +100,16 @@ export default function TimeEntryList({ refreshKey, onPlay }: TimeEntryListProps
     const tagMap: Record<string, Tag> = {};
     tagsList.forEach(t => { tagMap[t.id] = t; });
     setAllTags(tagMap);
+
+    // Kategorie do mapy
+    const categoryMap: Record<string, Category> = {};
+    categoriesList.forEach(c => { categoryMap[c.id] = c; });
+    setAllCategories(categoryMap);
+
+    // Úkoly do mapy
+    const taskMap: Record<string, Task> = {};
+    tasksList.forEach(t => { taskMap[t.id] = t; });
+    setAllTasks(taskMap);
 
     // Načíst tag vazby pro všechny záznamy
     const entryIds = entries.map(e => e.id);
@@ -271,6 +293,18 @@ export default function TimeEntryList({ refreshKey, onPlay }: TimeEntryListProps
                           </span>
                         </span>
                       )}
+                      {(entry.category_id || entry.task_id) && (() => {
+                        const catName = entry.category_id ? allCategories[entry.category_id]?.name : null;
+                        const taskName = entry.task_id ? allTasks[entry.task_id]?.name : null;
+                        const label = [catName, taskName].filter(Boolean).join(' · ');
+                        if (!label) return null;
+                        return (
+                          <span className="inline-flex items-center gap-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+                            {(entry.project) && <span style={{ color: 'var(--border)' }}>·</span>}
+                            {label}
+                          </span>
+                        );
+                      })()}
                       {(entryTagMap[entry.id]?.length > 0) && entryTagMap[entry.id].map(tagId => {
                         const tag = allTags[tagId];
                         if (!tag) return null;

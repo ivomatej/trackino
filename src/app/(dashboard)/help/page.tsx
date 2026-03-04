@@ -15,7 +15,7 @@ const DEFAULT_HELP_CONTENT = `
 <h3>Základní funkce</h3>
 <ul>
   <li><strong>Dashboard</strong> – úvodní přehledová stránka s personalizovaným pozdravem, souhrnem výdělku, odpracovaných hodin, zbývajících dní a svátků pro aktuální měsíc</li>
-  <li><strong>Time Tracker</strong> – spouštějte a zastavujte timer pro sledování odpracovaného času; po výběru projektu a kategorie/úkolu se zobrazuje čitelný breadcrumb místo ikonek; každý záznam má tlačítko ▶ pro opětovné spuštění se stejnými údaji (projekt, kategorie, štítky)</li>
+  <li><strong>Time Tracker</strong> – spouštějte a zastavujte timer pro sledování odpracovaného času; po výběru projektu a kategorie/úkolu se zobrazuje čitelný breadcrumb místo ikonek; každý záznam má tlačítko ▶ pro opětovné spuštění se stejnými údaji (projekt, kategorie, štítky); u každého záznamu se zobrazuje také přiřazená kategorie a úkol (světle šedě vpravo od projektu)</li>
   <li><strong>Projekty</strong> – organizujte záznamy do projektů a přiřazujte klienty; seznam projektů lze prohledávat pomocí vyhledávacího pole nad seznamem</li>
   <li><strong>Klienti</strong> – spravujte klienty a propojujte je s projekty; seznam klientů lze filtrovat vyhledávacím polem</li>
   <li><strong>Štítky</strong> – označujte záznamy štítky pro lepší kategorizaci</li>

@@ -11,6 +11,12 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v1.9.3 – 4. 3. 2026</h3>
+<ul>
+  <li><strong>Time Tracker – kategorie a úkol u záznamu</strong> – pod popisem každého záznamu se nyní zobrazuje přiřazená kategorie a úkol (světle šedě, vpravo od projektu); pokud je vyplněna kategorie i úkol, jsou odděleny tečkou</li>
+  <li><strong>Detailní nastavení – výběr barvy avataru</strong> – vybraná barva je nyní zvýrazněna subtilnějším způsobem (shadow ring místo zvětšení na 130 %); sjednoceno s výběrem barvy projektu a klienta</li>
+</ul>
+
 <h3>v1.9.2 – 4. 3. 2026</h3>
 <ul>
   <li><strong>Sidebar – rozbalovací sekce</strong> – navigační sekce (Sledování, Analýza, Správa, Systém) lze kliknutím na název sbalit nebo rozbalit; stav se ukládá v prohlížeči a přetrvá po obnovení stránky</li>
