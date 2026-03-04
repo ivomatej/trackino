@@ -215,6 +215,14 @@ function BugsContent() {
     fetchBugs();
   };
 
+  const deleteNote = async (id: string) => {
+    const { error } = await supabase.from('trackino_bug_reports')
+      .update({ master_note: '' })
+      .eq('id', id);
+    if (error) { alert(`Chyba při mazání poznámky: ${error.message}`); return; }
+    fetchBugs();
+  };
+
   const saveEdit = async (id: string) => {
     const content = editEditorRef.current?.innerHTML ?? '';
     const { error } = await supabase.from('trackino_bug_reports')
@@ -465,17 +473,7 @@ function BugsContent() {
                   )}
                 </div>
 
-                {/* Poznámka (zobrazení) */}
-                {bug.master_note && !isEditingNote && (
-                  <div
-                    className="mt-2 p-2 rounded-lg text-xs"
-                    style={{ background: 'var(--bg-hover)', color: 'var(--text-secondary)' }}
-                  >
-                    <strong style={{ color: 'var(--text-primary)' }}>Poznámka:</strong> {bug.master_note}
-                  </div>
-                )}
-
-                {/* Poznámka (editace) */}
+                {/* Poznámka */}
                 {isEditingNote ? (
                   <div className="mt-2 flex gap-2">
                     <input
@@ -505,13 +503,56 @@ function BugsContent() {
                       Uložit
                     </button>
                   </div>
+                ) : bug.master_note ? (
+                  /* Zobrazení poznámky – editace a smazání ikonkami vpravo */
+                  <div
+                    className="mt-2 flex items-start justify-between gap-2 p-2 rounded-lg text-xs"
+                    style={{ background: 'var(--bg-hover)' }}
+                  >
+                    <span style={{ color: 'var(--text-secondary)' }}>
+                      <strong style={{ color: 'var(--text-primary)' }}>Poznámka:</strong> {bug.master_note}
+                    </span>
+                    <div className="flex gap-0.5 flex-shrink-0 ml-1">
+                      {/* Ikona úpravy */}
+                      <button
+                        onClick={() => { setNoteEditId(bug.id); setNoteText(bug.master_note ?? ''); }}
+                        title="Upravit poznámku"
+                        className="p-1 rounded"
+                        style={{ color: 'var(--text-muted)' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--border)'; e.currentTarget.style.color = 'var(--primary)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                        </svg>
+                      </button>
+                      {/* Ikona koše */}
+                      <button
+                        onClick={() => deleteNote(bug.id)}
+                        title="Smazat poznámku"
+                        className="p-1 rounded"
+                        style={{ color: 'var(--text-muted)' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--danger-light)'; e.currentTarget.style.color = 'var(--danger)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                          <path d="M10 11v6" /><path d="M14 11v6" />
+                          <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
                 ) : (
+                  /* Žádná poznámka – malý přidávací link */
                   <button
-                    onClick={() => { setNoteEditId(bug.id); setNoteText(bug.master_note ?? ''); }}
+                    onClick={() => { setNoteEditId(bug.id); setNoteText(''); }}
                     className="mt-2 text-xs"
                     style={{ color: 'var(--primary)' }}
                   >
-                    {bug.master_note ? 'Upravit poznámku' : '+ Přidat poznámku'}
+                    + Přidat poznámku
                   </button>
                 )}
               </div>

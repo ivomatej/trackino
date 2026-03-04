@@ -11,10 +11,16 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.1.2 – 4. 3. 2026</h3>
+<ul>
+  <li><strong>Oprava Převodníku textu – viditelnost modulu</strong> – nové moduly přidané do kódu po nastavení DB konfigurace tarifů se nyní zobrazují správně. Logika <code>computeEnabledModules()</code> byla upravena: základ je vždy hardcoded seznam dle tarifu; DB config aplikuje jen explicitní výjimky. Tím se zamezí situaci, kdy nový modul zmizí jen proto, že DB konfigurace vznikla před jeho přidáním do aplikace.</li>
+  <li><strong>Bug log – ikonky úpravy a smazání poznámky</strong> – poznámka Master Admina má nově na pravém kraji řádku dvě ikonky: <em>tužka</em> (upravit) a <em>koš</em> (smazat). Textový odkaz „Upravit poznámku" pod poznámkou byl odstraněn. Tlačítko „+ Přidat poznámku" zůstává beze změny.</li>
+</ul>
+
 <h3>v2.1.1 – 4. 3. 2026</h3>
 <ul>
   <li><strong>Bug log – skládací karty</strong> – každý bug report je nyní zobrazen jako skládací karta (kliknutím na header se rozbalí detail). Header vždy zobrazuje stav, autora, datum a případně workspace. Levý barevný pruh indikuje stav (červená = Otevřeno, žlutá = Řeší se, zelená = Vyřešeno) – shodný vizuální styl s Úpravami aplikace.</li>
-  <li><strong>Bug log – označení přesunutých bugů</strong> – bug přesunutý do Úprav aplikace je v headeru okamžitě označen zeleným štítkem <em>„Přesunuto ✓"</em> a tlačítko přesunu je nahrazeno statusovým prkem. Znovu přesunutý bug nelze.</li>
+  <li><strong>Bug log – označení přesunutých bugů</strong> – bug přesunutý do Úprav aplikace je v headeru okamžitě označen zeleným štítkem <em>„Přesunuto ✓"</em> a tlačítko přesunu je nahrazeno statusovým prvkem. Znovu přesunout nelze.</li>
   <li><strong>Bug log – přenos poznámky</strong> – obsah pole <em>Poznámka</em> (Master Admin) se při přesunu do Úprav aplikace automaticky zahrne do popisu položky.</li>
   <li><strong>Bug log – opraveny šipky ve filtrech</strong> – rozbalovací šipky u filtrů Workspace a Stav jsou nyní správně zarovnány pomocí vlastní SVG šipky (konzistentní s ostatními stránkami).</li>
 </ul>

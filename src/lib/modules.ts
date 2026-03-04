@@ -82,26 +82,35 @@ export type TariffConfigMap = Map<string, boolean>;
  * @param tariff         tarif workspace
  * @param overrides      pole override záznamů z DB pro tohoto uživatele
  * @param tariffConfig   tariff config z DB (pokud prázdná, použijí se hardcoded defaults)
+ *
+ * Logika:
+ * - Základ je vždy hardcoded TARIFF_MODULES (zajišťuje, že nové moduly přidané do kódu
+ *   jsou automaticky dostupné bez nutnosti updatovat DB konfiguraci).
+ * - Pokud existuje DB tariff config, aplikují se POUZE explicitně nastavené záznamy
+ *   (true = přidat, false = odebrat). Moduly bez záznamu v DB zůstávají dle hardcoded defaults.
+ * - Nakonec se aplikují per-user overrides.
  */
 export function computeEnabledModules(
   tariff: Tariff,
   overrides: { module_id: ModuleId; enabled: boolean }[],
   tariffConfig?: TariffConfigMap
 ): Set<ModuleId> {
-  let base: Set<ModuleId>;
+  // Vždy začni s hardcoded defaults jako základem
+  const base = new Set<ModuleId>(TARIFF_MODULES[tariff] ?? TARIFF_MODULES.free);
 
   if (tariffConfig && tariffConfig.size > 0) {
-    // Použij DB tariff config
-    base = new Set<ModuleId>();
+    // Aplikuj explicitní DB nastavení – jen pro moduly, které mají záznam v DB
     for (const mod of ALL_MODULES) {
       const key = `${tariff}:${mod.id}`;
-      if (tariffConfig.get(key) === true) {
-        base.add(mod.id);
+      if (tariffConfig.has(key)) {
+        if (tariffConfig.get(key) === true) {
+          base.add(mod.id);
+        } else {
+          base.delete(mod.id);
+        }
       }
+      // Moduly bez záznamu v DB zůstávají dle hardcoded defaults (výše)
     }
-  } else {
-    // Fallback na hardcoded defaults
-    base = new Set<ModuleId>(TARIFF_MODULES[tariff] ?? TARIFF_MODULES.free);
   }
 
   for (const o of overrides) {
