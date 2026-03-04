@@ -238,6 +238,9 @@ const DEFAULT_HELP_CONTENT = `
 <h3>Měřič v záhlaví na všech stránkách</h3>
 <p>Ve výchozím nastavení je Měřič (timer) viditelný pouze na stránce Měřič. Pokud chcete mít přístup k timeru i na ostatních stránkách (Přehled, Reporty, Tým apod.), zapněte v <strong>Detailní nastavení → Zobrazení aplikace</strong> přepínač <em>„Zobrazovat Měřič v záhlaví na všech stránkách"</em>. Toto nastavení je per-uživatel a nijak neovlivňuje ostatní členy workspace.</p>
 
+<h3>Navigace v Nastavení workspace</h3>
+<p>Nastavení workspace využívá <strong>vertikální postranní menu</strong> vlevo s 8 sekcemi: Obecné, Společnost, Předplatné, Fakturace, Povinná pole, Dovolená, Spolupráce a Moduly. Aktivní sekce je zvýrazněna bílým pozadím. Kliknutím na název sekce se obsah zobrazí v pravé části.</p>
+
 <h3>Předplatné workspace</h3>
 <p>Záložka <strong>Předplatné</strong> v Nastavení workspace zobrazuje informace o aktuálním tarifu a historii fakturace. Dostupná pro adminy a vlastníky workspace.</p>
 <ul>

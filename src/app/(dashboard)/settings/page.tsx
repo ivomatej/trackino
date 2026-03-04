@@ -532,26 +532,32 @@ function SettingsContent() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-3xl">
+      <div className="max-w-5xl">
         <h1 className="text-xl font-bold mb-6" style={{ color: 'var(--text-primary)' }}>Nastavení workspace</h1>
 
-        {/* Taby */}
-        <div className="flex gap-1 mb-6 p-1 rounded-lg overflow-x-auto" style={{ background: 'var(--bg-hover)' }}>
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => { setActiveTab(tab.id); setMessage(''); }}
-              className="px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0"
-              style={{
-                background: activeTab === tab.id ? 'var(--bg-card)' : 'transparent',
-                color: activeTab === tab.id ? 'var(--text-primary)' : 'var(--text-muted)',
-                boxShadow: activeTab === tab.id ? 'var(--shadow-sm)' : 'none',
-              }}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        <div className="flex gap-6 items-start">
+          {/* Levé vertikální menu */}
+          <div className="w-44 flex-shrink-0">
+            <nav className="flex flex-col gap-0.5 p-1 rounded-xl" style={{ background: 'var(--bg-hover)' }}>
+              {tabs.map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => { setActiveTab(tab.id); setMessage(''); }}
+                  className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+                  style={{
+                    background: activeTab === tab.id ? 'var(--bg-card)' : 'transparent',
+                    color: activeTab === tab.id ? 'var(--text-primary)' : 'var(--text-muted)',
+                    boxShadow: activeTab === tab.id ? 'var(--shadow-sm)' : 'none',
+                  }}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          {/* Pravý obsah */}
+          <div className="flex-1 min-w-0">
 
         {/* Zpráva */}
         {message && (
@@ -1479,6 +1485,8 @@ function SettingsContent() {
             </div>
           </div>
         )}
+          </div>{/* /Pravý obsah */}
+        </div>{/* /flex gap-6 */}
       </div>
     </DashboardLayout>
   );

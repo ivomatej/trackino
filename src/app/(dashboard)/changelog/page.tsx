@@ -11,6 +11,11 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.12.1 – 4. 3. 2026</h3>
+<ul>
+  <li><strong>Nastavení workspace – vertikální navigace</strong> – záložky v Nastavení workspace byly přesunuty z horizontálního pásu (který při 8 sekcích způsoboval posuvník) do <strong>vertikálního levého menu</strong>. Aktivní sekce je zvýrazněna bílým pozadím; obsah se zobrazuje v pravém sloupci. Layout byl rozšířen z max-w-3xl na max-w-5xl pro optimální využití prostoru.</li>
+</ul>
+
 <h3>v2.12.0 – 4. 3. 2026</h3>
 <ul>
   <li><strong>Oslovení (nickname)</strong> – v Detailním nastavení přibyl nový vstupní řádek „Jak tě má aplikace oslovovat" (max 30 znaků). Při prvním uložení se předvyplní křestním jménem z Zobrazovaného jména. Oslovení se zobrazuje v úvodním pozdravení na stránce Přehled místo celého jména.</li>

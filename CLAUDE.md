@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 4. 3. 2026 (v2.12.0)
+> Aktualizováno: 4. 3. 2026 (v2.12.1)
 
 ---
 
@@ -448,6 +448,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.12.1 | 4. 3. 2026 | Fix: Nastavení workspace – horizontální tab scrollbar (8 záložek) → vertikální levé menu (w-44) + rozšíření layout na max-w-5xl |
 | v2.12.0 | 4. 3. 2026 | Oslovení (display_nickname v profilu, greeting na Přehledu); Timer always visible (per-user toggle, profile.timer_always_visible); Předplatné v Nastavení (lazy monthly snapshots do trackino_workspace_subscriptions); Kalendář redesign (mini cal + week time grid + settings modal, calendar_day_start/end); App Settings skupina Společnost; Nastavení workspace záložka Společnost (society_modules_enabled JSONB); SQL migrace: ALTER trackino_profiles ADD display_nickname/timer_always_visible/calendar_day_start/calendar_day_end; CREATE TABLE trackino_workspace_subscriptions; ALTER trackino_workspaces ADD society_modules_enabled |
 | v2.11.0 | 4. 3. 2026 | Sekce SPOLEČNOST v sidebaru (Pro+Max) – Znalostní báze (placeholder), Dokumenty (soubory+složky+Storage), Firemní pravidla (rich text editor), Pravidla v kanceláři (rich text editor); Tým – toggle can_manage_documents; Fix: Připomínky layout záhlaví + šířka formuláře; SQL migrace: trackino_workspace_pages, trackino_document_folders, trackino_documents, ALTER workspace_members ADD can_manage_documents |
 | v2.10.0 | 4. 3. 2026 | Dokumentace skryta (jen MasterAdmin + Max tarif); Žádosti – 13 nových kategorií + průvodce kategoriemi (collapsible panel); Fix: select arrow + header layout v Žádostech |
@@ -918,6 +919,40 @@ Globální tariffConfig má vždy přednost – society toggle může pouze vypn
 ### Nastavení workspace → záložka Společnost
 - Načítání: z `currentWorkspace.society_modules_enabled` v useEffect
 - Uložení: `supabase.from('trackino_workspaces').update({ society_modules_enabled: societyModules })` + `refreshWorkspace()`
+
+---
+
+## 23. Nastavení workspace – navigační layout (settings/page.tsx)
+
+### Layout
+- Outer wrapper: `max-w-5xl` (rozšířeno z původního `max-w-3xl`)
+- Dvousloupcové rozvržení: `flex gap-6 items-start`
+  - **Levý sloupec** (`w-44 flex-shrink-0`): vertikální `<nav>` s tlačítky pro každou sekci
+  - **Pravý sloupec** (`flex-1 min-w-0`): obsah aktivní sekce + message banner
+
+### Tab typ
+```typescript
+type SettingsTab = 'general' | 'society' | 'subscription' | 'billing' | 'fields' | 'vacation' | 'cooperation' | 'modules';
+```
+
+### Sekce (v pořadí)
+1. **Obecné** – název workspace, tarif, logo, formát data/čísel, začátek týdne
+2. **Společnost** – per-workspace toggle pro 4 Společnost moduly
+3. **Předplatné** – aktuální plán, history snapshotů, přechod na Free
+4. **Fakturace** – fakturační údaje workspace
+5. **Povinná pole** – required_fields konfigurace
+6. **Dovolená** – can_use_vacation per member
+7. **Spolupráce** – manager assignments
+8. **Moduly** – per-user module_overrides
+
+### Styl aktivní položky v levém menu
+```tsx
+style={{
+  background: activeTab === tab.id ? 'var(--bg-card)' : 'transparent',
+  color: activeTab === tab.id ? 'var(--text-primary)' : 'var(--text-muted)',
+  boxShadow: activeTab === tab.id ? 'var(--shadow-sm)' : 'none',
+}}
+```
 
 ---
 
