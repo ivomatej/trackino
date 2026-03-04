@@ -26,7 +26,7 @@ const DEFAULT_HELP_CONTENT = `
   <li><strong>Tým</strong> – spravujte členy workspace, přidávejte je kódem, nastavujte manažery a oprávnění fakturace; e-mail a telefon každého člena lze rychle zkopírovat kliknutím na ikonku vedle kontaktu; seznam členů lze vyhledávat podle jména nebo e-mailu</li>
   <li><strong>Přehled hodin</strong> – týdenní mřížka odpracovaných hodin pro celý tým; navigace mezi týdny, řazení řádků šipkami, součet za den i za týden</li>
   <li><strong>Analýza kategorií</strong> – přehled odpracovaného času rozdělený po kategoriích za vybrané období; koláčový graf, sloupcový graf a detailní tabulka s podíly</li>
-  <li><strong>Detailní nastavení</strong> – osobní profil: jméno, e-mail, telefon, pozice (nastavuje admin) a barevný režim</li>
+  <li><strong>Detailní nastavení</strong> – osobní profil: jméno, e-mail, telefon, pozice (nastavuje admin) a barevný režim; dostupné přes rozbalovací panel uživatele v levém dolním rohu sidebaru</li>
 </ul>
 
 <h3>Dashboard</h3>
@@ -95,8 +95,11 @@ const DEFAULT_HELP_CONTENT = `
 <p>Záložka <strong>Členové</strong> v sekci Tým slouží jako firemní adresář. Zobrazuje jméno, pracovní pozici, e-mail (s ikonkou pro rychlé zkopírování) a telefonní číslo každého člena. Telefon a pozici si každý uživatel vyplní v <strong>Detailní nastavení</strong>; pozici může nastavit také admin v editaci člena.</p>
 <p><strong>Formát telefonního čísla</strong> – čísla se v aplikaci zobrazují s mezerami pro přehlednost (např. <code>+420 608 510 232</code>). Tlačítko kopírování zkopíruje číslo <em>bez</em> mezer (např. <code>+420608510232</code>) pro přímé použití v dialeru nebo jiné aplikaci. Číslo lze zadat v libovolném formátu – při uložení se mezery automaticky odstraní.</p>
 
+<h3>Navigace – rozbalovací sekce</h3>
+<p>Levý sidebar je členěn do čtyř sekcí: <strong>SLEDOVÁNÍ</strong>, <strong>ANALÝZA</strong>, <strong>SPRÁVA</strong> a <strong>SYSTÉM</strong> (viditelná pouze pro Master Adminy). Každou sekci lze kliknutím na její název sbalit nebo rozbalit – šipka indikuje aktuální stav. Stav sbalení se ukládá v prohlížeči a přetrvá i po obnovení stránky.</p>
+
 <h3>Detailní nastavení (osobní profil)</h3>
-<p>V levém dolním menu je odkaz <strong>Detailní nastavení</strong>, kde každý uživatel může upravit: zobrazované jméno, e-mail, telefonní číslo, barvu avataru a barevný režim aplikace (světlý / tmavý / auto). Pole <strong>Pozice</strong> je viditelné, ale editovatelné pouze pro adminy – ostatní vidí hodnotu nastavenou adminem.</p>
+<p>V levém dolním rohu sidebaru je panel přihlášeného uživatele. Kliknutím na něj se rozbalí možnosti: odkaz <strong>Detailní nastavení</strong> (profil, jméno, e-mail, telefon, barva avataru, barevný režim) a tlačítko <strong>Odhlásit se</strong>. Pole <strong>Pozice</strong> v profilu je editovatelné pouze pro adminy – ostatní vidí hodnotu nastavenou adminem.</p>
 
 <h3>Pozvánky</h3>
 <p>Nové členy workspace lze přidat v sekci <strong>Tým → Členové</strong>: sdílejte kód pro připojení, nový člen ho zadá při registraci a čeká na schválení adminem.</p>

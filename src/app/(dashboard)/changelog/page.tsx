@@ -11,6 +11,13 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v1.9.2 – 4. 3. 2026</h3>
+<ul>
+  <li><strong>Sidebar – rozbalovací sekce</strong> – navigační sekce (Sledování, Analýza, Správa, Systém) lze kliknutím na název sbalit nebo rozbalit; stav se ukládá v prohlížeči a přetrvá po obnovení stránky</li>
+  <li><strong>Sidebar – uživatelský panel</strong> – odkaz „Detailní nastavení" přesunut z dolního menu do rozbalovacího panelu uživatele (spodní část sidebaru); panel nyní zobrazuje Detailní nastavení a tlačítko Odhlásit se s ikonkou</li>
+  <li><strong>Sidebar – odstraněn přepínač motivu</strong> – volba barevného motivu (světlý / tmavý / auto) byla odebrána z uživatelského panelu v sidebaru; nastavení motivu je nadále dostupné v Detailní nastavení (/profile)</li>
+</ul>
+
 <h3>v1.9.1 – 3. 3. 2026</h3>
 <ul>
   <li><strong>Synchronizace Dovolená ↔ Plánovač</strong> – přidání záznamu dovolené automaticky nastaví stav „Dovolená" v Plánovači pro všechny dny v rozsahu; smazání záznamu ho odebere. Nastavení stavu „Dovolená" (celý den) v Plánovači pro uživatele s příznakem „Může čerpat dovolenou" automaticky vytvoří 1denní záznam v Dovolené (pouze pracovní dny); odebrání stavu záznam smaže. Sync vyžaduje existenci stavu s přesným názvem „Dovolená" v Plánovači.</li>

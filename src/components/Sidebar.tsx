@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
-import { useTheme } from './ThemeProvider';
 import { supabase } from '@/lib/supabase';
 import { isWorkspaceAdmin as checkWsAdmin, isManager as checkIsManager, canAccessAuditLog as checkAuditAccess, isMasterAdmin as checkMasterAdmin } from '@/lib/permissions';
 
@@ -54,8 +53,26 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
   const pathname = usePathname();
   const { user, profile, signOut } = useAuth();
   const { currentWorkspace, userRole, currentMembership } = useWorkspace();
-  const { theme, setTheme } = useTheme();
   const [showUserPanel, setShowUserPanel] = useState(false);
+
+  // Stav sbalení sekcí – persistováno v localStorage
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => {
+    if (typeof window === 'undefined') return new Set();
+    try {
+      const saved = localStorage.getItem('sidebar_collapsed_groups');
+      return saved ? new Set(JSON.parse(saved) as string[]) : new Set();
+    } catch { return new Set(); }
+  });
+
+  const toggleGroup = (title: string) => {
+    setCollapsedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(title)) next.delete(title);
+      else next.add(title);
+      try { localStorage.setItem('sidebar_collapsed_groups', JSON.stringify([...next])); } catch { /* ignore */ }
+      return next;
+    });
+  };
 
   // Červená tečka u Fakturace – vrácené faktury k opravě (bez těch, které už byly znovu podány)
   const canInvoice = currentMembership?.can_invoice ?? false;
@@ -215,7 +232,6 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
   };
 
   const bottomItems: NavItem[] = [
-    { label: 'Detailní nastavení', href: '/profile', icon: ICONS.profile },
     { label: 'Nápověda', href: '/help', icon: ICONS.help },
     { label: 'Nahlásit chybu', href: '/bugs', icon: ICONS.bug },
     { label: 'Dokumentace', href: '/changelog', icon: ICONS.docs },
@@ -261,19 +277,36 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
 
         {/* Navigace se skupinami */}
         <nav className="flex-1 overflow-y-auto py-2 px-3">
-          {navGroups.map((group) => (
-            <div key={group.title} className="mb-4">
-              <div
-                className="px-3 py-1.5 text-[10px] font-semibold tracking-wider"
-                style={{ color: 'var(--text-muted)' }}
-              >
-                {group.title}
+          {navGroups.map((group) => {
+            const isCollapsed = collapsedGroups.has(group.title);
+            return (
+              <div key={group.title} className="mb-3">
+                {/* Klikatelná hlavička sekce */}
+                <button
+                  onClick={() => toggleGroup(group.title)}
+                  className="w-full flex items-center justify-between px-3 py-1 rounded-md transition-colors"
+                  style={{ color: 'var(--text-muted)' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                >
+                  <span className="text-[10px] font-semibold tracking-wider">{group.title}</span>
+                  <svg
+                    width="12" height="12" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                    style={{ transition: 'transform 0.18s', transform: isCollapsed ? 'rotate(-90deg)' : 'none', flexShrink: 0 }}
+                  >
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+                {/* Položky sekce */}
+                {!isCollapsed && (
+                  <div className="space-y-0.5 mt-0.5">
+                    {group.items.map(renderNavItem)}
+                  </div>
+                )}
               </div>
-              <div className="space-y-0.5">
-                {group.items.map(renderNavItem)}
-              </div>
-            </div>
-          ))}
+            );
+          })}
 
           {/* Spodní sekce */}
           <div className="border-t pt-3 mt-2" style={{ borderColor: 'var(--border)' }}>
@@ -305,30 +338,35 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
         {/* User panel */}
         <div className="border-t" style={{ borderColor: 'var(--border)' }}>
           {showUserPanel && (
-            <div className="px-4 py-3 border-b animate-fade-in" style={{ borderColor: 'var(--border)' }}>
-              <div className="text-xs font-medium mb-2" style={{ color: 'var(--text-muted)' }}>Vzhled</div>
-              <div className="flex gap-1 mb-3">
-                {(['light', 'dark', 'system'] as const).map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setTheme(t)}
-                    className="flex-1 px-2 py-1.5 rounded-md text-xs font-medium transition-colors"
-                    style={{
-                      background: theme === t ? 'var(--primary)' : 'var(--bg-hover)',
-                      color: theme === t ? 'white' : 'var(--text-secondary)',
-                    }}
-                  >
-                    {t === 'light' ? 'Světlý' : t === 'dark' ? 'Tmavý' : 'Auto'}
-                  </button>
-                ))}
-              </div>
+            <div className="px-3 py-2 border-b animate-fade-in" style={{ borderColor: 'var(--border)' }}>
+              {/* Detailní nastavení */}
+              <Link
+                href="/profile"
+                onClick={onClose}
+                className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors w-full"
+                style={{
+                  color: pathname === '/profile' ? 'var(--primary)' : 'var(--text-secondary)',
+                  background: pathname === '/profile' ? 'var(--bg-active)' : 'transparent',
+                }}
+                onMouseEnter={e => { if (pathname !== '/profile') e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = pathname === '/profile' ? 'var(--bg-active)' : 'transparent'; }}
+              >
+                {ICONS.profile}
+                <span>Detailní nastavení</span>
+              </Link>
+              {/* Odhlásit se */}
               <button
                 onClick={signOut}
-                className="w-full px-3 py-2 rounded-lg text-sm font-medium text-left transition-colors"
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
                 style={{ color: 'var(--danger)' }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--danger-light)'}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--danger-light, #fee2e2)'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
                 Odhlásit se
               </button>
             </div>
