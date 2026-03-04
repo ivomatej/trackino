@@ -108,7 +108,7 @@ Výchozí policy: `CREATE POLICY "Auth full" ... FOR ALL TO authenticated USING 
 | `trackino_availability_statuses` | id, workspace_id, name, color | Stavy pro Plánovač |
 | `trackino_invitations` | id, workspace_id, email, role, token, accepted | Pozvánky emailem |
 | `trackino_audit_log` | id, workspace_id, actor_user_id, action, entity_type, details | Audit záznamy |
-| `trackino_app_changes` | id, workspace_id, title, content, status, priority, created_by | Požadavky na úpravy aplikace |
+| `trackino_app_changes` | id, workspace_id, title, content, type (bug\|idea\|request\|note), priority, status (open\|in_progress\|solved\|archived), source_bug_id, created_at, updated_at | Požadavky na úpravy aplikace |
 
 ### Poznámky k DB
 - `trackino_member_rates.valid_to IS NULL` = aktuálně platná sazba (aktivní rate)
@@ -254,8 +254,9 @@ NÁSTROJE
 ### Oblíbené (Favorites)
 - Dostupné pro tarify: `pro`, `max`
 - Uloženo v localStorage: klíč `trackino_favorites_{workspaceId}`
-- Hvězdičky jsou defaultně průhledné (opacity 0.18), zlaté pokud je položka oblíbená
-- V sekci OBLÍBENÉ je ikona × pro odebrání z oblíbených
+- Hvězdičky jsou defaultně **neviditelné** (opacity 0), zobrazí se až při hoveru na položku
+- Oblíbená položka má hvězdičku trvale zlatou (opacity 0.8)
+- V sekci OBLÍBENÉ je ikona × pro odebrání z oblíbených (viditelná na hover)
 
 ---
 
@@ -271,8 +272,10 @@ NÁSTROJE
 ### České státní svátky
 - Import: `getCzechHolidays(year)` z `@/lib/czech-calendar`
 - Výpočet: `const weekHolidays = [...new Set(weekDays.map(d => d.getFullYear()))].flatMap(y => getCzechHolidays(y));`
-- Zobrazeny v záhlaví sloupce: 🎉 název svátku (červeně, malé písmo)
+- Zobrazeny v záhlaví sloupce: 🎉 celý název svátku (červeně, malé písmo, může se zalomit)
+- `minWidth` sloupce: 110px (dostatečný prostor pro zalamování)
 - Zahrnuje pohyblivé svátky (Velikonoce) via Gaussův algoritmus
+- Třídy: `w-full` (bez truncate), text se volně zalomí v rámci sloupce
 
 ### Navigace po týdnech
 - `getMonday(date)` – vrátí pondělí daného týdne
@@ -385,6 +388,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.4.0 | 4. 3. 2026 | Sidebar hvězdičky jen na hover; Plánovač – celý název svátku (minWidth 110px); Úpravy aplikace – nový typ Poznámka + Archiv (soft delete + hromadné trvalé mazání) |
 | v2.3.0 | 4. 3. 2026 | Oblíbené v sidebaru (Pro/Max), české svátky v Plánovači, skupina Nástroje v App Settings, oprava názvů modulů |
 | v2.2.0 | – | Audit log, Nastavení workspace (tarify, fakturační údaje), půlnoční split timeru |
 | v2.1.0 | – | Přehled hodin (attendance), Analýza kategorií (recharts), Podřízení, Poznámky |
@@ -393,7 +397,31 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 ---
 
-## 15. Konvence kódu
+## 15. Úpravy aplikace – architektura
+
+### Typy a stavy (`src/types/database.ts`)
+```typescript
+AppChangeType  = 'bug' | 'idea' | 'request' | 'note'
+AppChangeStatus = 'open' | 'in_progress' | 'solved' | 'archived'
+```
+
+### Záložky filtru
+- `all` → aktivní položky (status !== solved && !== archived)
+- `bug` / `idea` / `request` / `note` → filtruje dle type (bez solved/archived)
+- `solved` → dokončené
+- `archived` → archivované (soft delete)
+
+### Archiv – chování
+- `archiveItem(id)` → UPDATE status = 'archived' (soft delete, nahrazuje trvalé smazání)
+- `restoreItem(id)` → UPDATE status = 'open'
+- `permanentDeleteOne(id)` → skutečný DB delete
+- `permanentDeleteSelected()` → bulk DB delete dle `selectedIds: Set<string>`
+- Klik na kartu v archivu = toggle výběru (checkbox)
+- Panel nahoře: "Označit vše" checkbox + "Trvale smazat (N)" tlačítko
+
+---
+
+## 16. Konvence kódu
 
 - Vždy `'use client'` na interaktivních stránkách
 - CSS proměnné: `var(--primary)`, `var(--text-muted)`, `var(--bg-card)`, `var(--bg-hover)`, `var(--border)`

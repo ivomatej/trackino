@@ -15,12 +15,14 @@ const TYPE_LABELS: Record<AppChangeType, string> = {
   bug: 'Bug',
   idea: 'Nápad',
   request: 'Požadavek',
+  note: 'Poznámka',
 };
 
 const TYPE_COLORS: Record<AppChangeType, string> = {
   bug: '#ef4444',
   idea: '#8b5cf6',
   request: '#3b82f6',
+  note: '#6b7280',
 };
 
 const PRIORITY_LABELS: Record<AppChangePriority, string> = {
@@ -39,12 +41,14 @@ const STATUS_LABELS: Record<AppChangeStatus, string> = {
   open: 'Otevřeno',
   in_progress: 'Řeší se',
   solved: 'Hotovo',
+  archived: 'Archiv',
 };
 
 const STATUS_COLORS: Record<AppChangeStatus, string> = {
   open: '#ef4444',
   in_progress: '#f59e0b',
   solved: '#22c55e',
+  archived: '#6b7280',
 };
 
 const PRIORITY_BORDER: Record<AppChangePriority, string> = {
@@ -90,6 +94,9 @@ const EMPTY_FORM: FormState = {
   status: 'open',
 };
 
+// ─── Typ filtrovací záložky ────────────────────────────────────────────────────
+type FilterTab = 'all' | AppChangeType | 'solved' | 'archived';
+
 // ─── Hlavní obsah ─────────────────────────────────────────────────────────────
 
 function AppChangesContent() {
@@ -100,8 +107,11 @@ function AppChangesContent() {
   const [items, setItems] = useState<AppChange[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [filterTab, setFilterTab] = useState<'all' | AppChangeType | 'solved'>('all');
+  const [filterTab, setFilterTab] = useState<FilterTab>('all');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  // Výběr pro hromadné mazání v Archivu
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Modal stav
   const [showForm, setShowForm] = useState(false);
@@ -127,6 +137,12 @@ function AppChangesContent() {
   }, []);
 
   useEffect(() => { fetchItems(); }, [fetchItems]);
+
+  // Vymaž výběr při změně záložky
+  useEffect(() => {
+    setSelectedIds(new Set());
+    setExpandedId(null);
+  }, [filterTab]);
 
   // Auto-resize textarea když se modal otevře s existujícím textem
   useEffect(() => {
@@ -183,11 +199,38 @@ function AppChangesContent() {
     fetchItems();
   };
 
-  const deleteItem = async (id: string) => {
-    if (!confirm('Smazat tuto položku?')) return;
-    await supabase.from('trackino_app_changes').delete().eq('id', id);
-    // Zavři rozbalenout kartu pokud se smazala
+  // Přesunout položku do archivu (soft delete)
+  const archiveItem = async (id: string) => {
+    if (!confirm('Přesunout tuto položku do archivu?')) return;
+    await supabase.from('trackino_app_changes')
+      .update({ status: 'archived', updated_at: new Date().toISOString() })
+      .eq('id', id);
     if (expandedId === id) setExpandedId(null);
+    fetchItems();
+  };
+
+  // Obnovit z archivu
+  const restoreItem = async (id: string) => {
+    await supabase.from('trackino_app_changes')
+      .update({ status: 'open', updated_at: new Date().toISOString() })
+      .eq('id', id);
+    fetchItems();
+  };
+
+  // Trvale smazat jednu položku
+  const permanentDeleteOne = async (id: string) => {
+    if (!confirm('Trvale smazat tuto položku? Tuto akci nelze vrátit.')) return;
+    await supabase.from('trackino_app_changes').delete().eq('id', id);
+    setSelectedIds(prev => { const next = new Set(prev); next.delete(id); return next; });
+    fetchItems();
+  };
+
+  // Trvale smazat vybrané
+  const permanentDeleteSelected = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Trvale smazat ${selectedIds.size} ${selectedIds.size === 1 ? 'položku' : selectedIds.size < 5 ? 'položky' : 'položek'}? Tuto akci nelze vrátit.`)) return;
+    await supabase.from('trackino_app_changes').delete().in('id', [...selectedIds]);
+    setSelectedIds(new Set());
     fetchItems();
   };
 
@@ -199,21 +242,55 @@ function AppChangesContent() {
   const formatDate = (iso: string) =>
     new Date(iso).toLocaleDateString('cs-CZ', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
+  // Počty pro záložky
+  const activeItems = items.filter(i => i.status !== 'solved' && i.status !== 'archived');
+  const archivedItems = items.filter(i => i.status === 'archived');
+
+  const tabs: { key: FilterTab; label: string; count: number }[] = [
+    { key: 'all',     label: 'Vše (otevřené)', count: activeItems.length },
+    { key: 'bug',     label: 'Bug',             count: activeItems.filter(i => i.type === 'bug').length },
+    { key: 'idea',    label: 'Nápad',           count: activeItems.filter(i => i.type === 'idea').length },
+    { key: 'request', label: 'Požadavek',       count: activeItems.filter(i => i.type === 'request').length },
+    { key: 'note',    label: 'Poznámka',        count: activeItems.filter(i => i.type === 'note').length },
+    { key: 'solved',  label: 'Hotové',          count: items.filter(i => i.status === 'solved').length },
+    { key: 'archived',label: 'Archiv',          count: archivedItems.length },
+  ];
+
   const filtered = items.filter(item => {
     const matchSearch = !search ||
       item.title.toLowerCase().includes(search.toLowerCase()) ||
       item.content.toLowerCase().includes(search.toLowerCase());
     const matchTab =
-      filterTab === 'all' ? item.status !== 'solved' :
-      filterTab === 'solved' ? item.status === 'solved' :
-      item.type === filterTab && item.status !== 'solved';
+      filterTab === 'all'      ? (item.status !== 'solved' && item.status !== 'archived') :
+      filterTab === 'solved'   ? item.status === 'solved' :
+      filterTab === 'archived' ? item.status === 'archived' :
+      item.type === filterTab && item.status !== 'solved' && item.status !== 'archived';
     return matchSearch && matchTab;
   });
+
+  // Archiv – označit / odznačit vše
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filtered.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map(i => i.id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
 
   const inputCls = "w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent";
   const inputStyle = { borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' };
   const labelCls = "block text-xs font-medium mb-1";
   const selectCls = "w-full px-3 py-2 pr-8 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent appearance-none cursor-pointer";
+
+  const isArchiveTab = filterTab === 'archived';
 
   if (!isMasterAdmin) return null;
 
@@ -259,13 +336,7 @@ function AppChangesContent() {
           </div>
 
           <div className="flex gap-1 p-1 rounded-lg overflow-x-auto" style={{ background: 'var(--bg-hover)' }}>
-            {([
-              { key: 'all', label: 'Vše (otevřené)', count: items.filter(i => i.status !== 'solved').length },
-              { key: 'bug', label: 'Bug', count: items.filter(i => i.type === 'bug' && i.status !== 'solved').length },
-              { key: 'idea', label: 'Nápad', count: items.filter(i => i.type === 'idea' && i.status !== 'solved').length },
-              { key: 'request', label: 'Požadavek', count: items.filter(i => i.type === 'request' && i.status !== 'solved').length },
-              { key: 'solved', label: 'Hotové', count: items.filter(i => i.status === 'solved').length },
-            ] as { key: typeof filterTab; label: string; count: number }[]).map(tab => (
+            {tabs.map(tab => (
               <button
                 key={tab.key}
                 onClick={() => setFilterTab(tab.key)}
@@ -276,11 +347,16 @@ function AppChangesContent() {
                   boxShadow: filterTab === tab.key ? 'var(--shadow-sm)' : 'none',
                 }}
               >
+                {tab.key === 'archived' && (
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="21 8 21 21 3 21 3 8" /><rect x="1" y="3" width="22" height="5" /><line x1="10" y1="12" x2="14" y2="12" />
+                  </svg>
+                )}
                 {tab.label}
                 <span
                   className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold"
                   style={{
-                    background: filterTab === tab.key ? 'var(--primary)' : 'var(--border)',
+                    background: filterTab === tab.key ? (tab.key === 'archived' ? '#6b7280' : 'var(--primary)') : 'var(--border)',
                     color: filterTab === tab.key ? 'white' : 'var(--text-muted)',
                   }}
                 >
@@ -291,6 +367,40 @@ function AppChangesContent() {
           </div>
         </div>
 
+        {/* Archiv – panel hromadných akcí */}
+        {isArchiveTab && filtered.length > 0 && (
+          <div
+            className="mb-3 px-4 py-2.5 rounded-xl border flex items-center justify-between gap-3"
+            style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}
+          >
+            <label className="flex items-center gap-2 cursor-pointer select-none text-sm" style={{ color: 'var(--text-secondary)' }}>
+              <input
+                type="checkbox"
+                checked={selectedIds.size === filtered.length && filtered.length > 0}
+                onChange={toggleSelectAll}
+                className="w-4 h-4 rounded cursor-pointer accent-[var(--primary)]"
+              />
+              {selectedIds.size === 0
+                ? 'Označit vše'
+                : `Vybráno ${selectedIds.size} z ${filtered.length}`}
+            </label>
+            {selectedIds.size > 0 && (
+              <button
+                onClick={permanentDeleteSelected}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-colors"
+                style={{ background: '#ef4444' }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#dc2626'}
+                onMouseLeave={(e) => e.currentTarget.style.background = '#ef4444'}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6" /><path d="M14 11v6" />
+                </svg>
+                Trvale smazat ({selectedIds.size})
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Seznam položek */}
         {loading ? (
           <div className="flex items-center justify-center py-12">
@@ -298,41 +408,71 @@ function AppChangesContent() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="py-12 text-center" style={{ color: 'var(--text-muted)' }}>
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-3">
-              <path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-            </svg>
-            <p className="text-sm">
-              {search ? 'Žádné výsledky pro hledaný výraz.' : 'Žádné položky v této kategorii.'}
-            </p>
+            {isArchiveTab ? (
+              <>
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-3">
+                  <polyline points="21 8 21 21 3 21 3 8" /><rect x="1" y="3" width="22" height="5" /><line x1="10" y1="12" x2="14" y2="12" />
+                </svg>
+                <p className="text-sm">Archiv je prázdný.</p>
+              </>
+            ) : (
+              <>
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-3">
+                  <path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                </svg>
+                <p className="text-sm">
+                  {search ? 'Žádné výsledky pro hledaný výraz.' : 'Žádné položky v této kategorii.'}
+                </p>
+              </>
+            )}
           </div>
         ) : (
           <div className="space-y-2">
             {filtered.map(item => {
               const isExpanded = expandedId === item.id;
               const isSolved = item.status === 'solved';
+              const isArchived = item.status === 'archived';
+              const isSelected = selectedIds.has(item.id);
 
               return (
                 <div
                   key={item.id}
                   className="rounded-xl border overflow-hidden"
                   style={{
-                    background: 'var(--bg-card)',
-                    borderColor: 'var(--border)',
-                    borderLeft: `4px solid ${PRIORITY_BORDER[item.priority]}`,
+                    background: isSelected ? 'color-mix(in srgb, var(--primary) 4%, var(--bg-card))' : 'var(--bg-card)',
+                    borderColor: isSelected ? 'var(--primary)' : 'var(--border)',
+                    borderLeft: `4px solid ${isArchived ? '#9ca3af' : PRIORITY_BORDER[item.priority]}`,
+                    opacity: isArchived ? 0.85 : 1,
                   }}
                 >
                   {/* Klikatelný header */}
                   <div
                     className="px-4 py-3 cursor-pointer select-none"
-                    onClick={() => setExpandedId(isExpanded ? null : item.id)}
+                    onClick={() => {
+                      if (isArchiveTab) {
+                        // V archivu klik na kartu = toggle checkbox
+                        toggleSelect(item.id);
+                      } else {
+                        setExpandedId(isExpanded ? null : item.id);
+                      }
+                    }}
                   >
                     <div className="flex items-center justify-between gap-3">
-                      {/* Badges + datum */}
                       <div className="flex items-center gap-2 flex-wrap min-w-0">
+                        {/* Checkbox v archivu */}
+                        {isArchiveTab && (
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSelect(item.id)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-4 h-4 rounded cursor-pointer accent-[var(--primary)] flex-shrink-0"
+                          />
+                        )}
                         {/* Typ */}
                         <span
                           className="px-2 py-0.5 rounded-full text-xs font-semibold text-white flex-shrink-0"
-                          style={{ background: TYPE_COLORS[item.type] }}
+                          style={{ background: isArchived ? '#9ca3af' : TYPE_COLORS[item.type] }}
                         >
                           {TYPE_LABELS[item.type]}
                         </span>
@@ -367,8 +507,8 @@ function AppChangesContent() {
                           {formatDate(item.created_at)}
                         </span>
                       </div>
-                      {/* Chevron */}
-                      <ChevronDown open={isExpanded} />
+                      {/* Chevron (jen mimo archiv) */}
+                      {!isArchiveTab && <ChevronDown open={isExpanded} />}
                     </div>
 
                     {/* Název (vždy viditelný) */}
@@ -377,15 +517,47 @@ function AppChangesContent() {
                       style={{
                         color: 'var(--text-primary)',
                         textDecoration: isSolved ? 'line-through' : 'none',
-                        opacity: isSolved ? 0.6 : 1,
+                        opacity: isSolved || isArchived ? 0.6 : 1,
                       }}
                     >
                       {item.title}
                     </p>
                   </div>
 
-                  {/* Rozbalitelný obsah */}
-                  {isExpanded && (
+                  {/* Archiv – akce na položce */}
+                  {isArchiveTab && (
+                    <div className="px-4 pb-3 flex items-center justify-between gap-2 border-t" style={{ borderColor: 'var(--border)' }}>
+                      {item.content && (
+                        <p className="text-xs py-2 whitespace-pre-wrap flex-1" style={{ color: 'var(--text-muted)' }}>
+                          {item.content.length > 120 ? item.content.slice(0, 120) + '…' : item.content}
+                        </p>
+                      )}
+                      <div className="flex gap-1.5 flex-shrink-0 ml-auto pt-3" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => restoreItem(item.id)}
+                          className="px-2 py-1 rounded text-xs border transition-colors"
+                          style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                          title="Obnovit z archivu (nastaví stav na Otevřeno)"
+                        >
+                          Obnovit
+                        </button>
+                        <button
+                          onClick={() => permanentDeleteOne(item.id)}
+                          className="px-2 py-1 rounded text-xs border transition-colors"
+                          style={{ borderColor: 'var(--border)', color: 'var(--danger)' }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--danger-light)'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                        >
+                          Trvale smazat
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Rozbalitelný obsah (jen mimo archiv) */}
+                  {!isArchiveTab && isExpanded && (
                     <div className="px-4 pb-4 border-t" style={{ borderColor: 'var(--border)' }}>
                       {/* Popis */}
                       {item.content && (
@@ -424,13 +596,14 @@ function AppChangesContent() {
                             Upravit
                           </button>
                           <button
-                            onClick={() => deleteItem(item.id)}
+                            onClick={() => archiveItem(item.id)}
                             className="px-2 py-1 rounded text-xs border transition-colors"
-                            style={{ borderColor: 'var(--border)', color: 'var(--danger)' }}
-                            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--danger-light)'}
+                            style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
                             onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                            title="Přesunout do archivu"
                           >
-                            Smazat
+                            Archivovat
                           </button>
                         </div>
                       </div>
@@ -521,6 +694,7 @@ function AppChangesContent() {
                         <option value="idea">Nápad</option>
                         <option value="request">Požadavek</option>
                         <option value="bug">Bug</option>
+                        <option value="note">Poznámka</option>
                       </select>
                       <div className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center">
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: 'var(--text-muted)' }}>

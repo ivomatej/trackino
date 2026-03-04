@@ -836,15 +836,15 @@ function PlannerContent() {
                         background: isToday(day)
                           ? 'color-mix(in srgb, var(--primary) 8%, transparent)'
                           : 'var(--bg-card)',
-                        minWidth: 90,
+                        minWidth: 110,
                       }}
                     >
                       <div>{formatDayName(day)}</div>
                       <div className="font-normal mt-0.5">{formatDateShort(day)}</div>
                       {dayHoliday.isHoliday && (
                         <div
-                          className="font-normal text-[9px] mt-0.5 leading-tight truncate px-1"
-                          style={{ color: '#ef4444', maxWidth: 88 }}
+                          className="font-normal text-[9px] mt-0.5 leading-tight w-full"
+                          style={{ color: '#ef4444' }}
                           title={dayHoliday.name}
                         >
                           🎉 {dayHoliday.name}

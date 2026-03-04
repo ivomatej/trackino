@@ -99,12 +99,20 @@ const DEFAULT_HELP_CONTENT = `
 <h3>Úpravy aplikace</h3>
 <p>Stránka <strong>Úpravy aplikace</strong> je dostupná pouze pro <strong>Master Admina</strong> (odkaz v levém menu pod „Nahlásit chybu"). Slouží jako soukromý úkolník k evidenci nápadů a požadavků na rozvoj aplikace.</p>
 <ul>
-  <li><strong>Bug / Nápad / Požadavek</strong> – typ položky</li>
+  <li><strong>Bug / Nápad / Požadavek / Poznámka</strong> – typ položky; Poznámka (šedý badge) slouží pro obecné poznámky a interní zápisky bez specifické kategorie</li>
   <li><strong>Priorita</strong> – Nízká (šedý pruh) / Střední (žlutý pruh) / Vysoká (červený pruh)</li>
   <li><strong>Stav</strong> – Otevřeno / Řeší se / Hotovo</li>
 </ul>
-<p>Každá položka je zobrazena jako <strong>skládací karta</strong> – header ukazuje typ, prioritu, stav, datum a název; kliknutím se rozbalí popis a ovládací prvky (změna stavu, Upravit, Smazat). Formulář pro přidání/úpravu má větší pole pro popis, které se automaticky rozrůstá při psaní.</p>
-<p>Filtrování: záložky Vše / Bug / Nápad / Požadavek / Hotové + vyhledávání podle názvu nebo popisu. Hotové položky jsou přeškrtnuty a odděleny záložkou „Hotové".</p>
+<p>Každá položka je zobrazena jako <strong>skládací karta</strong> – header ukazuje typ, prioritu, stav, datum a název; kliknutím se rozbalí popis a ovládací prvky (změna stavu, Upravit, Archivovat). Formulář pro přidání/úpravu má větší pole pro popis, které se automaticky rozrůstá při psaní.</p>
+<p>Filtrování: záložky <strong>Vše (otevřené) / Bug / Nápad / Požadavek / Poznámka / Hotové / Archiv</strong> + vyhledávání podle názvu nebo popisu.</p>
+<p><strong>Archiv:</strong> Tlačítko <em>Archivovat</em> (dříve Smazat) přesune položku do archivu místo trvalého smazání. V záložce <strong>Archiv</strong> lze:</p>
+<ul>
+  <li>Označit jednotlivé položky zaškrtávátkem nebo kliknutím na kartu</li>
+  <li>Označit <strong>vše najednou</strong> pomocí checkboxu v liště nahoře</li>
+  <li>Kliknout <strong>Trvale smazat (N)</strong> pro hromadné trvalé smazání vybraných položek</li>
+  <li>Kliknout <strong>Obnovit</strong> u konkrétní položky – vrátí ji do stavu Otevřeno</li>
+  <li>Kliknout <strong>Trvale smazat</strong> u konkrétní položky – permanentní smazání</li>
+</ul>
 <p><strong>Přesun z Bug logu:</strong> V sekci Nahlásit chybu (Master Admin vidí tlačítko <strong>→ Úpravy aplikace</strong> u každého reportu po rozbalení karty) se kliknutím automaticky vytvoří položka v Úpravách. Obsah pole Poznámka se přenese do popisu. Přesunuté bugy jsou okamžitě označeny zeleným štítkem <em>„Přesunuto ✓"</em> v headeru karty a nelze je přesunout znovu. Přesunuté položky v Úpravách aplikace jsou označeny štítkem <em>„Z Bug logu"</em>. Původní report zůstane v Bug logu nezměněn.</p>
 <p><strong>Poznámka Master Admina:</strong> Poznámka se zobrazuje v šedém poli. Na pravém kraji řádku jsou dvě ikonky – <em>tužka</em> (upravit) a <em>koš</em> (smazat). Pokud poznámka dosud neexistuje, zobrazuje se odkaz „+ Přidat poznámku".</p>
 <p><strong>SQL migrace (nutno spustit v Supabase):</strong><br/><code>CREATE TABLE IF NOT EXISTS trackino_app_changes (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), title text NOT NULL, content text DEFAULT '', type text NOT NULL DEFAULT 'idea' CHECK (type IN ('bug', 'idea', 'request')), priority text NOT NULL DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high')), status text NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'solved')), source_bug_id uuid REFERENCES trackino_bug_reports(id) ON DELETE SET NULL, created_at timestamptz DEFAULT now(), updated_at timestamptz DEFAULT now()); ALTER TABLE trackino_app_changes ENABLE ROW LEVEL SECURITY; CREATE POLICY "Auth full" ON trackino_app_changes FOR ALL TO authenticated USING (true) WITH CHECK (true);</code></p>
@@ -112,14 +120,14 @@ const DEFAULT_HELP_CONTENT = `
 <h3>Oblíbené v levém menu</h3>
 <p>Funkce <strong>Oblíbené</strong> je dostupná pro tarify <strong>Pro a Max</strong>. Umožňuje přidat libovolnou položku z levého menu do sekce <strong>OBLÍBENÉ</strong>, která se zobrazuje úplně nahoře v navigaci.</p>
 <ul>
-  <li><strong>Přidání do oblíbených</strong> – na pravém okraji každé položky v menu je velmi světlá hvězdička. Po najetí myší se zvýrazní. Kliknutím se položka přidá do sekce OBLÍBENÉ (hvězdička zežloutne).</li>
+  <li><strong>Přidání do oblíbených</strong> – hvězdičky jsou ve výchozím stavu neviditelné. Po najetí myší na položku v menu se hvězdička zobrazí na pravém okraji. Kliknutím se položka přidá do sekce OBLÍBENÉ (hvězdička zežloutne a zůstane viditelná jako trvale zlatá).</li>
   <li><strong>Odebrání z oblíbených</strong> – v sekci OBLÍBENÉ se u každé položky na hover zobrazí křížek. Kliknutím na křížek se položka ze sekce odebere (ale v původní sekci zůstane).</li>
   <li><strong>Uložení</strong> – oblíbené se ukládají v prohlížeči (localStorage) per workspace; jsou tedy dostupné i po obnovení stránky.</li>
   <li><strong>Sekce je sbalitelná</strong> stejně jako ostatní skupiny v levém menu.</li>
 </ul>
 
 <h3>České státní svátky v Plánovači</h3>
-<p>V <strong>Plánovači</strong> se nad záhlavím každého dne zobrazují <strong>státní svátky ČR</strong>. Pokud je daný den svátek, zobrazí se pod datumem červený text s emoji 🎉 a názvem svátku (zkrácený pokud je příliš dlouhý, plný název se zobrazí v tooltip po najetí myší).</p>
+<p>V <strong>Plánovači</strong> se nad záhlavím každého dne zobrazují <strong>státní svátky ČR</strong>. Pokud je daný den svátek, zobrazí se pod datumem červený text s emoji 🎉 a celým názvem svátku. Sloupce jsou dostatečně široké, aby se celý název vždy zobrazil (případně se zalomí na více řádků).</p>
 <p>Plánovač zobrazuje všechny státní svátky ČR: Nový rok, Velký pátek, Velikonoční pondělí, Svátek práce, Den vítězství, Den Cyrila a Metoděje, Den Jana Husa, Den české státnosti, Den vzniku ČSR, Den boje za svobodu a demokracii, Štědrý den, 1. a 2. svátek vánoční.</p>
 
 <h3>Časová zóna workspace</h3>

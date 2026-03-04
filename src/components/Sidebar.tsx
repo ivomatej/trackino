@@ -346,10 +346,10 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
             title={isFavorited ? 'Odebrat z oblíbených' : 'Přidat do oblíbených'}
             style={{
               color: isFavorited ? '#f59e0b' : 'var(--text-muted)',
-              opacity: isFavorited ? 0.8 : 0.18,
+              opacity: isFavorited ? 0.8 : 0,
             }}
             onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.opacity = isFavorited ? '0.8' : '0.18'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.opacity = isFavorited ? '0.8' : '0'; }}
           >
             <StarIcon filled={isFavorited} />
           </button>
@@ -525,10 +525,10 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                         title={isFavorited ? 'Odebrat z oblíbených' : 'Přidat do oblíbených'}
                         style={{
                           color: isFavorited ? '#f59e0b' : 'var(--text-muted)',
-                          opacity: isFavorited ? 0.8 : 0.18,
+                          opacity: isFavorited ? 0.8 : 0,
                         }}
                         onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.opacity = isFavorited ? '0.8' : '0.18'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.opacity = isFavorited ? '0.8' : '0'; }}
                       >
                         <StarIcon filled={isFavorited} />
                       </button>

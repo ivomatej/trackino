@@ -11,6 +11,14 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.4.0 – 4. 3. 2026</h3>
+<ul>
+  <li><strong>Sidebar – hvězdičky jen při hoveru</strong> – hvězdičky oblíbených položek jsou nyní ve výchozím stavu neviditelné. Zobrazí se (zlatě) teprve po najetí myší na danou položku. Již oblíbené položky jsou zvýrazněny zlatou hvězdičkou vždy.</li>
+  <li><strong>Plánovač – celý název svátku</strong> – název státního svátku v záhlaví sloupce nyní nezůstává oříznutý. Šířka sloupce zvýšena z 90 na 110 px, text se volně zalomí na více řádků – celý název je vždy čitelný.</li>
+  <li><strong>Úpravy aplikace – typ Poznámka</strong> – nový typ položky <em>Poznámka</em> (šedý badge). Má vlastní záložku v horním filtrovacím menu vedle Bug, Nápad a Požadavek. Dostupný i v přidávacím formuláři.</li>
+  <li><strong>Úpravy aplikace – Archiv</strong> – tlačítko <em>Smazat</em> přejmenováno na <em>Archivovat</em> – kliknutím se položka přesune do archivu místo trvalého smazání. Nová záložka <strong>Archiv</strong> zobrazuje archivované položky. V archivu lze: označit jednotlivé položky nebo hromadně <em>Označit vše</em> a kliknout <em>Trvale smazat (N)</em>. Každá položka v archivu má také tlačítko <em>Obnovit</em> (vrátí do stavu Otevřeno) a <em>Trvale smazat</em>.</li>
+</ul>
+
 <h3>v2.3.0 – 4. 3. 2026</h3>
 <ul>
   <li><strong>Oblíbené v levém menu</strong> (tarif Pro a Max) – nová sekce <em>OBLÍBENÉ</em> se zobrazuje úplně nahoře v navigaci. Každá položka v sidebaru má na pravém okraji velmi světlou hvězdičku; kliknutím ji přidáte do Oblíbených (sekce se vytvoří automaticky). V sekci Oblíbené se položky zobrazují se křížkem pro odebrání (viditelný na hover). Oblíbené se ukládají v prohlížeči (localStorage) per workspace.</li>

@@ -84,9 +84,9 @@ export interface BugReport {
 }
 
 // Úpravy aplikace – úkolník pro Master Admina
-export type AppChangeType = 'bug' | 'idea' | 'request';
+export type AppChangeType = 'bug' | 'idea' | 'request' | 'note';
 export type AppChangePriority = 'low' | 'medium' | 'high';
-export type AppChangeStatus = 'open' | 'in_progress' | 'solved';
+export type AppChangeStatus = 'open' | 'in_progress' | 'solved' | 'archived';
 
 export interface AppChange {
   id: string;
