@@ -132,6 +132,27 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
     });
   };
 
+  // Badge u Dovolené – počet čekajících žádostí (pro managera/admina)
+  const isManagerOrAdminForVacation = useMemo(
+    () => checkWsAdmin(userRole) || checkIsManager(userRole),
+    [userRole]
+  );
+  const [pendingVacationCount, setPendingVacationCount] = useState(0);
+
+  useEffect(() => {
+    if (!user || !currentWorkspace || !isManagerOrAdminForVacation) {
+      setPendingVacationCount(0);
+      return;
+    }
+    supabase
+      .from('trackino_vacation_entries')
+      .select('id')
+      .eq('workspace_id', currentWorkspace.id)
+      .eq('status', 'pending')
+      .neq('user_id', user.id)
+      .then(({ data }) => setPendingVacationCount((data ?? []).length));
+  }, [user, currentWorkspace, isManagerOrAdminForVacation]);
+
   // Červená tečka u Fakturace – vrácené faktury k opravě (bez těch, které už byly znovu podány)
   const canInvoice = currentMembership?.can_invoice ?? false;
   const [returnedInvoiceCount, setReturnedInvoiceCount] = useState(0);
@@ -326,6 +347,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
   const renderNavItem = (item: NavItem) => {
     const active = pathname === item.href;
     const hasReturnedBadge = item.href === '/invoices' && returnedInvoiceCount > 0;
+    const hasPendingVacationBadge = item.href === '/vacation' && pendingVacationCount > 0;
     const isFavorited = favorites.includes(item.href);
 
     return (
@@ -349,6 +371,14 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
               style={{ background: '#ef4444' }}
             >
               {returnedInvoiceCount}
+            </span>
+          )}
+          {hasPendingVacationBadge && (
+            <span
+              className="flex-shrink-0 min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[10px] font-bold text-white"
+              style={{ background: '#ef4444' }}
+            >
+              {pendingVacationCount}
             </span>
           )}
         </Link>

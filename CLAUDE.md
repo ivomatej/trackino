@@ -405,7 +405,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 | Build selže s TypeScript chybou | Chybí typ v `database.ts` nebo špatný import | Přidat typ a reimportovat |
 | Oblíbené se nezobrazují | Tarif workspace je 'free' | Oblíbené jsou jen pro Pro a Max tarif |
 | České svátky se nezobrazují v Plánovači | Chybí import nebo špatný rok | Zkontrolovat `getCzechHolidays` import |
-| `/app-settings` přesměruje na `/` při refreshi | `profile` v AuthContext je `null` (ne `undefined`) při načítání → `profile !== undefined` je hned `true` | Použít `authLoading` guard: `if (!authLoading && !isMasterAdmin) router.replace('/')` |
+| `/app-settings` přesměruje na `/` při refreshi | AuthContext volá `setLoading(false)` PŘED dokončením `fetchProfile()` (setTimeout 0) → `authLoading=false`, `user=set`, `profile=null` → redirect se spustí | Čekat na všechny tři: `if (authLoading) return; if (!user) redirect; if (profile===null) return; if (!isMasterAdmin) redirect;` |
 | Dovolená / jiná stránka se neustále načítá (infinite loop) | Pole/objekt počítaný inline v těle komponenty je v deps `useCallback` → nová reference každý render → `useEffect` se spouští donekonečna | Obalit do `useMemo` se správnými deps |
 | Chybějící borderBottom na některých buňkách v Plánovači | Gap buňky před prvním proužkem v strip lane neměly `borderBottom` | Přidat `borderBottom` i na leading gap `<th>` buňky |
 
@@ -415,6 +415,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.7.2 | 4. 3. 2026 | Fix: app-settings redirect (čekání na user+profile, ne jen authLoading); Fix: vacation tabulka rozhozené sloupce (pevné šířky místo auto); Sidebar badge na Dovolené pro manager/admin |
 | v2.7.1 | 4. 3. 2026 | Fix: app-settings falešné přesměrování při refreshi (authLoading guard); Fix: vacation infinite loop (useMemo pro subordinateUserIds); Fix: planner chybějící borderBottom na leading gap buňkách |
 | v2.7.0 | 4. 3. 2026 | Schvalování dovolené (status pending/approved/rejected, tab Žádosti pro managery, sync s Plánovačem jen po schválení); Plánovač – proužky pod záhlavím + today tint jen na headeru; Fix: ikonka v náhledu banneru (items-center) |
 | v2.6.0 | 4. 3. 2026 | Systémová oznámení (nová tabulka `trackino_system_notifications`, záložka v App Settings, banner v DashboardLayout, localStorage dismissal); Plánovač – vizuální proužky pro důležité dny a státní svátky (StripItem, packStripLanes, colspan thead rendering) |

@@ -11,6 +11,13 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.7.2 – 4. 3. 2026</h3>
+<ul>
+  <li><strong>Fix: Nastavení aplikace – přesměrování při refreshi (opraveno definitivně)</strong> – předchozí oprava nestačila, protože AuthContext volá <code>setLoading(false)</code> ještě před dokončením <code>fetchProfile()</code> (profil je načítán přes <code>setTimeout(0)</code> kvůli prevenci deadlocku). Takže nastával stav: <code>authLoading=false</code>, <code>user=set</code>, <code>profile=null</code> (fetch stále probíhá) → redirect se spustil. Nyní redirect čeká na všechny tři podmínky: auth hotovo + user přihlášen + profile načten.</li>
+  <li><strong>Fix: Dovolená – rozhozené sloupce tabulky</strong> – záhlaví a řádky tabulky dovolených nebyly vzájemně zarovnány. Příčinou bylo použití <code>grid</code> s <code>auto</code> sloupci v oddělených <code>div</code> elementech – každý div počítá šířky sloupců nezávisle podle svého obsahu. Opraveno použitím pevných šířek (<code>110px 110px 55px 1fr 36px</code>), které jsou konzistentní napříč záhlavím i daty.</li>
+  <li><strong>Dovolená – badge čekajících žádostí v levém menu</strong> – manažeři a adminové nyní vidí u položky Dovolená v postranním menu červený odznak s počtem čekajících žádostí o dovolenou (stejný styl jako u Fakturace). Odznak se zobrazí automaticky, jakmile někdo z podřízených nebo workspace (admin) podá žádost. Zmizí po jejím schválení nebo zamítnutí.</li>
+</ul>
+
 <h3>v2.7.1 – 4. 3. 2026</h3>
 <ul>
   <li><strong>Fix: Nastavení aplikace – přesměrování při refreshi</strong> – při obnovení stránky <code>/app-settings</code> docházelo k falešnému přesměrování na hlavní stránku. Příčinou byl fakt, že AuthContext inicializuje <code>profile</code> jako <code>null</code> (nikoli <code>undefined</code>), takže stav „načítá se" vypadal jako „nepřihlášen". Opraveno kontrolou <code>authLoading</code> před přesměrováním.</li>

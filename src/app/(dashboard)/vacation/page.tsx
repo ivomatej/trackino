@@ -558,7 +558,7 @@ function VacationContent() {
               <div className="rounded-xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
                 <div
                   className="grid gap-4 px-4 py-2.5 border-b text-xs font-semibold"
-                  style={{ borderColor: 'var(--border)', color: 'var(--text-muted)', gridTemplateColumns: isWorkspaceAdmin && selectedUserId === 'all' ? '1fr auto auto auto auto auto' : 'auto auto auto auto auto' }}
+                  style={{ borderColor: 'var(--border)', color: 'var(--text-muted)', gridTemplateColumns: isWorkspaceAdmin && selectedUserId === 'all' ? '1fr 110px 110px 55px 1fr 36px' : '110px 110px 55px 1fr 36px' }}
                 >
                   {isWorkspaceAdmin && selectedUserId === 'all' && <span>Uživatel</span>}
                   <span>Od</span><span>Do</span><span>Dní</span><span>Poznámka</span><span></span>
@@ -567,7 +567,7 @@ function VacationContent() {
                   <div
                     key={entry.id}
                     className="grid gap-4 px-4 py-3 border-b last:border-b-0 items-center group transition-colors"
-                    style={{ borderColor: 'var(--border)', gridTemplateColumns: isWorkspaceAdmin && selectedUserId === 'all' ? '1fr auto auto auto auto auto' : 'auto auto auto auto auto' }}
+                    style={{ borderColor: 'var(--border)', gridTemplateColumns: isWorkspaceAdmin && selectedUserId === 'all' ? '1fr 110px 110px 55px 1fr 36px' : '110px 110px 55px 1fr 36px' }}
                     onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
                     onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                   >

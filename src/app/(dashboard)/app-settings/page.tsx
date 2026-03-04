@@ -88,7 +88,7 @@ const EMPTY_NOTIF: NotifForm = {
 // ─── hlavní obsah ─────────────────────────────────────────────────────────────
 
 function AppSettingsContent() {
-  const { profile, loading: authLoading } = useAuth();
+  const { profile, loading: authLoading, user } = useAuth();
   const { refreshTariffConfig } = useWorkspace();
   const router = useRouter();
 
@@ -113,13 +113,22 @@ function AppSettingsContent() {
   // Pouze Master Admin
   const isMasterAdmin = profile?.is_master_admin === true;
 
-  // Redirect až po dokončení načítání auth – zabrání falešnému přesměrování
-  // když profile je null v době načítání (AuthContext inicializuje profile jako null, ne undefined)
+  // Redirect logika:
+  // AuthContext volá setLoading(false) PŘED dokončením fetchProfile (setTimeout 0).
+  // Proto nestačí čekat jen na authLoading – musíme čekat i na načtení profile.
+  // Sekvence: authLoading=false, user=set, profile=null (fetch ještě běží)
+  //   → pokud bychom redirectovali tady, Master Admin by byl přesměrován na /
+  // Správná logika:
+  //   1. Pokud se stále načítá auth → čekáme
+  //   2. Pokud auth hotovo ale user je null → přesměrovat (nepřihlášen)
+  //   3. Pokud user je set ale profile je null → profile se ještě načítá → čekáme
+  //   4. Pokud profile načten a není MasterAdmin → přesměrovat
   useEffect(() => {
-    if (!authLoading && !isMasterAdmin) {
-      router.replace('/');
-    }
-  }, [authLoading, isMasterAdmin, router]);
+    if (authLoading) return;               // auth se ještě načítá
+    if (!user) { router.replace('/'); return; } // nepřihlášen
+    if (profile === null) return;          // profile se ještě načítá
+    if (!isMasterAdmin) router.replace('/'); // načteno, ale není MA
+  }, [authLoading, user, profile, isMasterAdmin, router]);
 
   // ── Fetch matice tarifů ──────────────────────────────────────────────────
   const fetchConfig = useCallback(async () => {
