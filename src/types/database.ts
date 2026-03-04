@@ -29,7 +29,9 @@ export type ModuleId =
   | 'knowledge_base'
   | 'documents'
   | 'company_rules'
-  | 'office_rules';
+  | 'office_rules'
+  | 'prompts'
+  | 'bookmarks';
 
 /** Per-uživatelský override modulu (nad rámec tarifu nebo zakázání) */
 export interface UserModuleOverride {
@@ -576,4 +578,83 @@ export interface WorkspaceDocument {
   created_by: string;
   created_at: string;
   updated_at: string;
+}
+
+// ─── PROMPTY ───────────────────────────────────────────────────────────────
+
+export interface PromptFolder {
+  id: string;
+  workspace_id: string;
+  parent_id: string | null;
+  name: string;
+  owner_id: string;
+  is_shared: boolean;
+  created_at: string;
+}
+
+export interface PromptFolderShare {
+  id: string;
+  folder_id: string;
+  user_id: string | null; // null = celý workspace
+  created_at: string;
+}
+
+export interface Prompt {
+  id: string;
+  workspace_id: string;
+  folder_id: string | null;
+  title: string;
+  content: string; // HTML
+  is_shared: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PromptComment {
+  id: string;
+  prompt_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+}
+
+// ─── ZÁLOŽKY ───────────────────────────────────────────────────────────────
+
+export interface BookmarkFolder {
+  id: string;
+  workspace_id: string;
+  parent_id: string | null;
+  name: string;
+  owner_id: string;
+  is_shared: boolean;
+  created_at: string;
+}
+
+export interface BookmarkFolderShare {
+  id: string;
+  folder_id: string;
+  user_id: string | null; // null = celý workspace
+  created_at: string;
+}
+
+export interface Bookmark {
+  id: string;
+  workspace_id: string;
+  folder_id: string | null;
+  title: string;
+  url: string;
+  description: string;
+  is_shared: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BookmarkComment {
+  id: string;
+  bookmark_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
 }

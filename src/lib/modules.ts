@@ -21,6 +21,8 @@ export const ALL_MODULES: { id: ModuleId; label: string; description: string; gr
   { id: 'audit',           label: 'Audit log',          description: 'Protokol změn v systému',              group: 'Správa' },
   { id: 'text_converter',  label: 'Převodník textu',    description: 'Převod formátovaného textu na prostý text nebo Markdown', group: 'Nástroje' },
   { id: 'important_days', label: 'Důležité dny',       description: 'Evidence osobních důležitých dnů a opakujících se událostí', group: 'Nástroje' },
+  { id: 'prompts',        label: 'Prompty',             description: 'Sdílené i soukromé záznamy AI promptů se složkami a hodnocením', group: 'Nástroje' },
+  { id: 'bookmarks',      label: 'Záložky',             description: 'Sdílené i soukromé záložky webových odkazů se složkami a hodnocením', group: 'Nástroje' },
   { id: 'calendar',       label: 'Kalendář',            description: 'Osobní a sdílený kalendář s přehledem událostí, dovolené a důležitých dnů', group: 'Sledování' },
   { id: 'requests',       label: 'Žádosti',             description: 'Podávání a schvalování žádostí (dovolená, software, pracovní cesta aj.)', group: 'Sledování' },
   { id: 'feedback',       label: 'Připomínky',          description: 'Anonymní formulář pro zpětnou vazbu od členů týmu', group: 'Nástroje' },
@@ -66,6 +68,8 @@ export const TARIFF_MODULES: Record<Tariff, ModuleId[]> = {
     'documents',
     'company_rules',
     'office_rules',
+    'prompts',
+    'bookmarks',
   ],
   max: [
     'time_tracker',
@@ -92,6 +96,8 @@ export const TARIFF_MODULES: Record<Tariff, ModuleId[]> = {
     'documents',
     'company_rules',
     'office_rules',
+    'prompts',
+    'bookmarks',
   ],
 };
 

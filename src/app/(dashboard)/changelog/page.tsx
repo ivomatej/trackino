@@ -11,6 +11,12 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.13.0 – 5. 3. 2026</h3>
+<ul>
+  <li><strong>Nový modul Prompty</strong> (NÁSTROJE, tarif Pro+) – evidence AI promptů ve stromové struktuře složek (až 5 úrovní). Formátovaný editor (H2/H3, tučné, kurzíva, podtržení, seznamy, bloky kódu). Kopírování kódu jedním klikem, like systém, oblíbené hvězdičkou, komentáře, sdílení složek (workspace nebo konkrétní uživatelé), řazení a fulltextové vyhledávání.</li>
+  <li><strong>Nový modul Záložky</strong> (NÁSTROJE, tarif Pro+) – záložkovací knihovna URL odkazů. Favicon webu, klikací název, doména, autor, datum. Stejný systém složek, sdílení, liků, oblíbených a komentářů jako u Promptů. URL se otevírají v novém okně.</li>
+</ul>
+
 <h3>v2.12.1 – 4. 3. 2026</h3>
 <ul>
   <li><strong>Nastavení workspace – vertikální navigace</strong> – záložky v Nastavení workspace byly přesunuty z horizontálního pásu (který při 8 sekcích způsoboval posuvník) do <strong>vertikálního levého menu</strong>. Aktivní sekce je zvýrazněna bílým pozadím; obsah se zobrazuje v pravém sloupci. Layout byl rozšířen z max-w-3xl na max-w-5xl pro optimální využití prostoru.</li>

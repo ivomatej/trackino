@@ -131,6 +131,32 @@ const DEFAULT_HELP_CONTENT = `
 </ul>
 <p><strong>Zobrazení v Plánovači:</strong> Důležité dny se zobrazují v záhlaví Plánovače jako barevné proužky přes příslušné sloupce. Vícedenní záznamy tvoří jeden proužek přesahující přes celý rozsah dnů. Opakující se záznamy se zobrazují pro každý odpovídající den. Přehled je personalizovaný – každý uživatel vidí pouze své záznamy.</p>
 
+<h3>Prompty</h3>
+<p>Modul <strong>Prompty</strong> (sekce <strong>NÁSTROJE</strong>, tarif Pro a Max) slouží k evidenci AI promptů ve strukturovaných složkách. Každý prompt obsahuje název, autora, datum vytvoření a formátovaný obsah.</p>
+<ul>
+  <li><strong>Složky</strong> – lze vytvořit libovolnou strukturu až 5 úrovní podsložek (tlačítko + v levém panelu nebo ikonka + na hover nad složkou). Složku může přejmenovat a smazat pouze její majitel. Smazaná složka neodstraní prompty v ní.</li>
+  <li><strong>Sdílení složek</strong> – ikonka sdílení (na hover nad složkou) umožňuje sdílet celou složku buď s celým workspacem nebo jen s konkrétními uživateli. Sdílené složky jsou označeny modrou ikonkou.</li>
+  <li><strong>Soukromé vs. sdílené prompty</strong> – při vytváření promptu lze zaškrtnout „Sdílet s celým workspacem" (i bez sdílené složky)</li>
+  <li><strong>Editor</strong> – toolbar s formátováním: H2, H3, Tučné, Kurzíva, Podtržení, odrážkový a číselný seznam, blok kódu. Kódové bloky mají tmavé pozadí a monospace font.</li>
+  <li><strong>Kopírování</strong> – tlačítko „Kód" kopíruje obsah prvního kódového bloku v promptu; tlačítko se dvěma stránkami kopíruje celý textový obsah (bez HTML)</li>
+  <li><strong>Liky</strong> – každý uživatel může dát jeden like (srdíčko). Počet unikátních liků se zobrazuje u každého promptu. Výpis lze seřadit dle liků.</li>
+  <li><strong>Oblíbené</strong> – hvězdičkou označíte prompt jako oblíbený; v levém panelu se zobrazí sekce „Oblíbené" s počtem</li>
+  <li><strong>Komentáře</strong> – kliknutím na název promptu se rozbalí detail se seznamem komentářů a polem pro nový komentář (Enter nebo tlačítko Odeslat). Komentáře jsou evidovány se jménem autora a datem.</li>
+  <li><strong>Smazání</strong> – prompt může smazat pouze jeho autor (ikona koše)</li>
+</ul>
+
+<h3>Záložky</h3>
+<p>Modul <strong>Záložky</strong> (sekce <strong>NÁSTROJE</strong>, tarif Pro a Max) funguje jako sdílená záložkovací knihovna – uložte si URL článků, videí, webů nebo dokumentů a sdílejte je s týmem.</p>
+<ul>
+  <li><strong>Složky a sdílení</strong> – stejný systém jako u Promptů: až 5 úrovní podsložek, sdílení s workspacem nebo konkrétními uživateli</li>
+  <li><strong>Ve výpisu</strong> – favicon webu, název (klikací odkaz do nového okna), doména (odkaz na homepage webu), iniciály autora, datum, badge Sdílená</li>
+  <li><strong>Všechny URL</strong> se otevírají v novém okně prohlížeče (target=_blank)</li>
+  <li><strong>Popis</strong> – volitelný krátký text k záložce, zobrazí se pod doménou</li>
+  <li><strong>Liky, oblíbené a komentáře</strong> – stejný systém jako u Promptů; komentáře se zobrazují po kliknutí na ikonku bubliny</li>
+  <li><strong>Smazání</strong> – záložku může smazat pouze její autor</li>
+  <li><strong>URL prefix</strong> – při zadání URL bez protokolu se automaticky doplní https://</li>
+</ul>
+
 <h3>Úpravy aplikace</h3>
 <p>Stránka <strong>Úpravy aplikace</strong> je dostupná pouze pro <strong>Master Admina</strong> (odkaz v levém menu pod „Nahlásit chybu"). Slouží jako soukromý úkolník k evidenci nápadů a požadavků na rozvoj aplikace.</p>
 <ul>
@@ -179,8 +205,8 @@ const DEFAULT_HELP_CONTENT = `
 <p>Aplikace je rozdělena do <strong>modulů</strong>, které lze zapnout nebo vypnout. Výchozí sada modulů závisí na tarifu workspace:</p>
 <ul>
   <li><strong>Free</strong> – Měřič, Reporty, Projekty, Klienti, Štítky, Tým</li>
-  <li><strong>Pro</strong> – Free + Plánovač, Dovolená, Fakturace, Přehled hodin, Analýza kategorií, Podřízení, Poznámky, Nastavení, Převodník textu, Důležité dny + funkce <strong>Oblíbené</strong> v levém menu</li>
-  <li><strong>Max</strong> – Pro + Audit log</li>
+  <li><strong>Pro</strong> – Free + Plánovač, Dovolená, Fakturace, Přehled hodin, Analýza kategorií, Podřízení, Poznámky, Nastavení, Převodník textu, Důležité dny, <strong>Prompty</strong>, <strong>Záložky</strong> + funkce <strong>Oblíbené</strong> v levém menu</li>
+  <li><strong>Max</strong> – Pro + Audit log + Kalendář</li>
 </ul>
 <p>Admin může v <strong>Nastavení → Moduly</strong> nastavit výjimky pro jednotlivé uživatele – přidat modul, který není v tarifu, nebo zakázat modul, který v tarifu je. Výjimky mají vždy přednost před výchozím tarifem. Moduly, které uživatel nemá povoleny, se nezobrazují v levém menu.</p>
 <p>Master Admin může v <strong>Nastavení aplikace</strong> (sekce Systém) globálně změnit, které moduly jsou součástí každého tarifu. Konfigurace se okamžitě projeví pro všechny workspace.</p>

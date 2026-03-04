@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 4. 3. 2026 (v2.12.1)
+> Aktualizováno: 5. 3. 2026 (v2.13.0)
 
 ---
 
@@ -448,6 +448,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.13.0 | 5. 3. 2026 | Nový modul Prompty (NÁSTROJE, Pro+): stromová struktura složek (5 úrovní), rich text editor, kódové bloky, liky, oblíbené, komentáře, sdílení složek; Nový modul Záložky (NÁSTROJE, Pro+): záložkovací knihovna URL s faviconem, stejný systém složek/sdílení/liků; 12 nových DB tabulek |
 | v2.12.1 | 4. 3. 2026 | Fix: Nastavení workspace – horizontální tab scrollbar (8 záložek) → vertikální levé menu (w-44) + rozšíření layout na max-w-5xl |
 | v2.12.0 | 4. 3. 2026 | Oslovení (display_nickname v profilu, greeting na Přehledu); Timer always visible (per-user toggle, profile.timer_always_visible); Předplatné v Nastavení (lazy monthly snapshots do trackino_workspace_subscriptions); Kalendář redesign (mini cal + week time grid + settings modal, calendar_day_start/end); App Settings skupina Společnost; Nastavení workspace záložka Společnost (society_modules_enabled JSONB); SQL migrace: ALTER trackino_profiles ADD display_nickname/timer_always_visible/calendar_day_start/calendar_day_end; CREATE TABLE trackino_workspace_subscriptions; ALTER trackino_workspaces ADD society_modules_enabled |
 | v2.11.0 | 4. 3. 2026 | Sekce SPOLEČNOST v sidebaru (Pro+Max) – Znalostní báze (placeholder), Dokumenty (soubory+složky+Storage), Firemní pravidla (rich text editor), Pravidla v kanceláři (rich text editor); Tým – toggle can_manage_documents; Fix: Připomínky layout záhlaví + šířka formuláře; SQL migrace: trackino_workspace_pages, trackino_document_folders, trackino_documents, ALTER workspace_members ADD can_manage_documents |
@@ -953,6 +954,54 @@ style={{
   boxShadow: activeTab === tab.id ? 'var(--shadow-sm)' : 'none',
 }}
 ```
+
+---
+
+## 24. Prompty – architektura (prompts/page.tsx)
+
+### DB tabulky
+| Tabulka | Popis |
+|---------|-------|
+| `trackino_prompt_folders` | Složky pro prompty (parent_id self-ref, owner_id, is_shared) |
+| `trackino_prompt_folder_shares` | Sdílení složky: user_id=NULL=celý workspace, jinak konkrétní user |
+| `trackino_prompts` | Záznamy promptů (title, content HTML, is_shared, folder_id) |
+| `trackino_prompt_comments` | Komentáře k promptu (user_id, content, created_at) |
+| `trackino_prompt_likes` | Liky (PK: prompt_id + user_id) – unikátní per uživatel |
+| `trackino_prompt_favorites` | Oblíbené (PK: prompt_id + user_id) |
+
+### Viditelnost promptů
+Prompt je viditelný pokud: `created_by === userId` OR `is_shared === true` OR `folder_id IN (sdílené složky pro userId nebo workspace)`
+
+### FolderTree komponenta
+- Rekurzivní komponenta, `depth` prop sleduje hloubku (max 5)
+- `expanded: Set<string>` – lokální state pro rozbalení
+- Hover akce na složce: + podsložka, sdílet, přejmenovat, smazat (jen owner)
+- Ikona složky: modrá pokud is_shared, šedá pokud soukromá
+
+### RichEditor komponenta
+- `contenteditable` div s `document.execCommand` pro formátování
+- Kódové bloky: `<pre><code>` s inline stylem pro tmavé pozadí
+- `extractCodeBlocks(html)` – regex extrakce obsahu `<pre><code>` pro kopírování
+
+---
+
+## 25. Záložky – architektura (bookmarks/page.tsx)
+
+### DB tabulky
+| Tabulka | Popis |
+|---------|-------|
+| `trackino_bookmark_folders` | Složky pro záložky (stejná struktura jako prompt_folders) |
+| `trackino_bookmark_folder_shares` | Sdílení složky záložek |
+| `trackino_bookmarks` | Záložky (title, url, description, is_shared, folder_id) |
+| `trackino_bookmark_comments` | Komentáře k záložce |
+| `trackino_bookmark_likes` | Liky (PK: bookmark_id + user_id) |
+| `trackino_bookmark_favorites` | Oblíbené (PK: bookmark_id + user_id) |
+
+### Klíčové funkce
+- `getFaviconUrl(url)` – Google Favicons API: `https://www.google.com/s2/favicons?domain={hostname}&sz=32`
+- `getDomain(url)` – vrací origin URL pro odkaz na homepage
+- URL prefix: pokud url nezačíná `https?://`, automaticky doplní `https://`
+- Všechny URL otevírány s `target="_blank" rel="noopener noreferrer"`
 
 ---
 
