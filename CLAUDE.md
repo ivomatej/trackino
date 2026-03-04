@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 4. 3. 2026 (v2.7.0)
+> Aktualizováno: 4. 3. 2026 (v2.8.0)
 
 ---
 
@@ -27,6 +27,7 @@ src/
       page.tsx        – Přehled (dashboard)
       tracker/        – Time tracker (seznam záznamů)
       planner/        – Plánovač dostupnosti
+      calendar/       – Osobní kalendář (list/week/month pohled)
       vacation/       – Evidence dovolené
       invoices/       – Fakturace
       reports/        – Reporty hodin
@@ -112,6 +113,9 @@ Výchozí policy: `CREATE POLICY "Auth full" ... FOR ALL TO authenticated USING 
 | `trackino_app_changes` | id, workspace_id, title, content, type (bug\|idea\|request\|note), priority, status (open\|in_progress\|solved\|archived), source_bug_id, created_at, updated_at | Požadavky na úpravy aplikace |
 | `trackino_important_days` | id, workspace_id, user_id, title, start_date, end_date, color, is_recurring, recurring_type ('none'\|'weekly'\|'monthly'\|'yearly'), note, created_at, updated_at | Osobní důležité dny a opakující se události |
 | `trackino_system_notifications` | id, title, message, color, is_active, show_from (timestamptz\|null), show_until (timestamptz\|null), created_at, updated_at | Systémová oznámení zobrazená všem uživatelům jako banner (jen Master Admin spravuje) |
+| `trackino_calendars` | id, workspace_id, owner_user_id, name, color, is_default, created_at, updated_at | Osobní kalendáře uživatele (výchozí se vytvoří automaticky) |
+| `trackino_calendar_events` | id, calendar_id, workspace_id, user_id, title, description, start_date (text YYYY-MM-DD), end_date (text), is_all_day, start_time (text\|null), end_time (text\|null), color (text\|null), source ('manual'\|'vacation'\|'important_day'), source_id (uuid\|null), created_at, updated_at | Ruční události v kalendáři; dovolená a důležité dny se čtou přímo z jejich tabulek |
+| `trackino_calendar_shares` | id, calendar_id, shared_with_user_id, can_edit, created_at | Sdílení kalendáře mezi uživateli workspace (UNIQUE calendar_id+shared_with_user_id) |
 
 ### Poznámky k DB
 - `trackino_member_rates.valid_to IS NULL` = aktuálně platná sazba (aktivní rate)
@@ -125,7 +129,7 @@ Výchozí policy: `CREATE POLICY "Auth full" ... FOR ALL TO authenticated USING 
 
 ### ModuleId
 ```typescript
-type ModuleId = 'time_tracker' | 'planner' | 'vacation' | 'invoices' | 'reports' |
+type ModuleId = 'time_tracker' | 'planner' | 'calendar' | 'vacation' | 'invoices' | 'reports' |
   'attendance' | 'category_report' | 'subordinates' | 'notes' | 'projects' |
   'clients' | 'tags' | 'team' | 'settings' | 'audit' | 'text_converter' | 'important_days';
 ```
@@ -150,6 +154,7 @@ type ModuleId = 'time_tracker' | 'planner' | 'vacation' | 'invoices' | 'reports'
 | Audit log (audit) | – | – | ✓ |
 | Převodník textu (text_converter) | – | ✓ | ✓ |
 | Důležité dny (important_days) | – | ✓ | ✓ |
+| Kalendář (calendar) | – | – | ✓ |
 
 ### computeEnabledModules()
 ```
@@ -160,7 +165,7 @@ Základ = TARIFF_MODULES[tariff]
 ```
 
 ### Skupina modulů (pro App Settings)
-- `'Sledování'`: time_tracker, planner, vacation, invoices
+- `'Sledování'`: time_tracker, planner, calendar, vacation, invoices
 - `'Analýza'`: reports, attendance, category_report, subordinates, notes
 - `'Správa'`: projects, clients, tags, team, settings, audit
 - `'Nástroje'`: text_converter, important_days
@@ -229,6 +234,7 @@ SLEDOVÁNÍ
   Přehled (/) [icon]
   Time Tracker (/tracker)
   Plánovač (/planner)
+  Kalendář (/calendar)
   Dovolená (/vacation)
   Fakturace (/invoices)
 ANALÝZA
@@ -415,6 +421,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.8.0 | 4. 3. 2026 | Modul Kalendář (Max) – list/week/month pohled, více kalendářů, auto-sync dovolená+důležité dny, CRUD událostí; Fix: sidebar badge kolize s hvězdičkou oblíbených (pr-8 padding) |
 | v2.7.2 | 4. 3. 2026 | Fix: app-settings redirect (čekání na user+profile, ne jen authLoading); Fix: vacation tabulka rozhozené sloupce (pevné šířky místo auto); Sidebar badge na Dovolené pro manager/admin |
 | v2.7.1 | 4. 3. 2026 | Fix: app-settings falešné přesměrování při refreshi (authLoading guard); Fix: vacation infinite loop (useMemo pro subordinateUserIds); Fix: planner chybějící borderBottom na leading gap buňkách |
 | v2.7.0 | 4. 3. 2026 | Schvalování dovolené (status pending/approved/rejected, tab Žádosti pro managery, sync s Plánovačem jen po schválení); Plánovač – proužky pod záhlavím + today tint jen na headeru; Fix: ikonka v náhledu banneru (items-center) |
@@ -495,6 +502,52 @@ AppChangeStatus = 'open' | 'in_progress' | 'solved' | 'archived'
 - `permanentDeleteSelected()` → bulk DB delete dle `selectedIds: Set<string>`
 - Klik na kartu v archivu = toggle výběru (checkbox)
 - Panel nahoře: "Označit vše" checkbox + "Trvale smazat (N)" tlačítko
+
+---
+
+## 18. Kalendář – architektura (calendar/page.tsx)
+
+### Tabulky
+- `trackino_calendars` – vlastní kalendáře uživatele (auto-vytvoří se výchozí „Můj kalendář")
+- `trackino_calendar_events` – ruční události; pole `source='manual'`, `source_id=null`
+- `trackino_calendar_shares` – sdílení (databáze připravena, UI zatím nezaimplementováno)
+
+### Pohledy
+- `'list'` – chronologický výpis po měsících, 6 měsíců dopředu od začátku aktuálního měsíce
+- `'week'` – 7 sloupců (Po–Ne), `getMonday(currentDate)` jako začátek
+- `'month'` – mřížka; týdny začínají pondělím; dny mimo měsíc jsou šedě podbarveny
+
+### DisplayEvent (lokální typ)
+```typescript
+interface DisplayEvent {
+  id: string; title: string;
+  start_date: string; end_date: string;
+  color: string;
+  source: 'manual' | 'vacation' | 'important_day';
+  source_id: string;
+  calendar_id?: string;
+  description?: string;
+  is_all_day: boolean;
+  start_time?: string | null;
+  end_time?: string | null;
+}
+```
+
+### Zdroje dat (automatická synchronizace)
+- **Ruční události** – `trackino_calendar_events` filtrované dle `selectedCalendarIds`
+- **Dovolená** – `trackino_vacation_entries` kde `status='approved'` a `user_id=user.id`; vždy viditelné (nelze filtrovat dle kalendáře)
+- **Důležité dny** – `trackino_important_days`; opakující se záznamy rozvinout přes `visibleRange` pomocí funkce `getImportantDayOccurrences()`
+
+### Klíčové funkce
+- `fetchData()` – načte calendars, events, vacation, important days; auto-vytvoří výchozí kalendář pokud žádný neexistuje
+- `getImportantDayOccurrences(day, rangeStart, rangeEnd)` – vrátí seznam výskytů v daném rozsahu (zpracovává weekly/monthly/yearly recurrence)
+- `eventsOnDay(day)` – filtruje displayEvents pro konkrétní den (multiday overlap)
+- `openNewEvent(date?)` – otevře formulář s předvyplněným datem
+- `saveEvent()` – INSERT nebo UPDATE do trackino_calendar_events
+- `saveCalendar()` – INSERT nebo UPDATE do trackino_calendars
+
+### SQL migrace (nutno spustit v Supabase)
+Viz Nápověda → Kalendář nebo Help page.tsx pro plný SQL.
 
 ---
 

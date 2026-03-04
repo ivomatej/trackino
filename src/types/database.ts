@@ -22,7 +22,8 @@ export type ModuleId =
   | 'settings'
   | 'audit'
   | 'text_converter'
-  | 'important_days';
+  | 'important_days'
+  | 'calendar';
 
 /** Per-uživatelský override modulu (nad rámec tarifu nebo zakázání) */
 export interface UserModuleOverride {
@@ -415,4 +416,46 @@ export interface ImportantDay {
   note: string;
   created_at: string;
   updated_at: string;
+}
+
+// === Kalendář ===
+
+export interface Calendar {
+  id: string;
+  workspace_id: string;
+  owner_user_id: string;
+  name: string;
+  color: string;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type CalendarEventSource = 'manual' | 'vacation' | 'important_day';
+
+export interface CalendarEvent {
+  id: string;
+  calendar_id: string;
+  workspace_id: string;
+  user_id: string;
+  title: string;
+  description: string;
+  start_date: string;    // YYYY-MM-DD
+  end_date: string;      // YYYY-MM-DD
+  is_all_day: boolean;
+  start_time: string | null;  // HH:MM
+  end_time: string | null;    // HH:MM
+  color: string | null;
+  source: CalendarEventSource;
+  source_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CalendarShare {
+  id: string;
+  calendar_id: string;
+  shared_with_user_id: string;
+  can_edit: boolean;
+  created_at: string;
 }

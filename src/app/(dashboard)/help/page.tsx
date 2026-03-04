@@ -73,6 +73,66 @@ const DEFAULT_HELP_CONTENT = `
   ADD COLUMN IF NOT EXISTS reviewed_at timestamptz,
   ADD COLUMN IF NOT EXISTS reviewer_note text DEFAULT '';</code></p>
 
+<h3>Kalendář</h3>
+<p>Stránka <strong>Kalendář</strong> (v sekci Sledování, dostupná v tarifu <strong>Max</strong>) poskytuje přehled všech vašich událostí na jednom místě. Automaticky zobrazuje vaši schválenou dovolenou a záznamy z modulu Důležité dny – bez nutnosti cokoli ručně přidávat.</p>
+<ul>
+  <li><strong>Měsíční pohled</strong> – klasická mřížka celého měsíce (Po–Ne); kliknutím na libovolný den vytvoříte novou událost</li>
+  <li><strong>Týdenní pohled</strong> – sedm sloupců (Po–Ne) s barevnými event pillsy pro každý den; dnešní sloupec je jemně zvýrazněn</li>
+  <li><strong>Listový pohled</strong> – chronologický výpis událostí seskupených po měsících; zobrazuje 6 měsíců dopředu</li>
+  <li><strong>Navigace</strong> – tlačítka ← Dnes → pro přepínání týdnů nebo měsíců; rozsah dat je vždy zobrazen v záhlaví stránky</li>
+</ul>
+<p><strong>Moje kalendáře:</strong> Levý panel zobrazuje seznam vašich kalendářů. Při prvním přístupu se automaticky vytvoří výchozí kalendář „Můj kalendář". Další kalendáře přidáte tlačítkem + vedle nadpisu. Každý kalendář má vlastní barvu; zaškrtnutím/odškrtnutím jej zobrazíte nebo skryjete v pohledu.</p>
+<ul>
+  <li>Ruční události jsou vázány na konkrétní kalendář</li>
+  <li>Dovolená a Důležité dny se zobrazují automaticky (sekce Automaticky v levém panelu) – nejdou odfiltrovat dle kalendáře</li>
+</ul>
+<p><strong>Přidání události:</strong> Klikněte na tlačítko <em>+ Přidat událost</em> nebo klikněte přímo na den v měsíčním nebo týdenním pohledu. Ve formuláři vyplňte název, datum od–do, zda jde o celý den (nebo zadejte čas), volitelný popis a barvu. Událost lze kdykoli editovat kliknutím na ni, nebo smazat z formuláře.</p>
+<p><strong>SQL migrace (nutno spustit v Supabase):</strong> Pro modul Kalendář jsou potřeba tři nové tabulky:</p>
+<pre><code>CREATE TABLE IF NOT EXISTS trackino_calendars (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL,
+  owner_user_id uuid NOT NULL REFERENCES auth.users(id),
+  name text NOT NULL DEFAULT 'Můj kalendář',
+  color text NOT NULL DEFAULT '#3b82f6',
+  is_default boolean NOT NULL DEFAULT false,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+ALTER TABLE trackino_calendars ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Auth full" ON trackino_calendars FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+CREATE TABLE IF NOT EXISTS trackino_calendar_events (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  calendar_id uuid NOT NULL REFERENCES trackino_calendars(id) ON DELETE CASCADE,
+  workspace_id uuid NOT NULL,
+  user_id uuid NOT NULL REFERENCES auth.users(id),
+  title text NOT NULL,
+  description text NOT NULL DEFAULT '',
+  start_date text NOT NULL,
+  end_date text NOT NULL,
+  is_all_day boolean NOT NULL DEFAULT true,
+  start_time text,
+  end_time text,
+  color text,
+  source text NOT NULL DEFAULT 'manual' CHECK (source IN ('manual', 'vacation', 'important_day')),
+  source_id uuid,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+ALTER TABLE trackino_calendar_events ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Auth full" ON trackino_calendar_events FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+CREATE TABLE IF NOT EXISTS trackino_calendar_shares (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  calendar_id uuid NOT NULL REFERENCES trackino_calendars(id) ON DELETE CASCADE,
+  shared_with_user_id uuid NOT NULL REFERENCES auth.users(id),
+  can_edit boolean NOT NULL DEFAULT false,
+  created_at timestamptz DEFAULT now(),
+  UNIQUE(calendar_id, shared_with_user_id)
+);
+ALTER TABLE trackino_calendar_shares ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Auth full" ON trackino_calendar_shares FOR ALL TO authenticated USING (true) WITH CHECK (true);</code></pre>
+
 <h3>Přiřazení manažerů (Tým → Manažeři)</h3>
 <p>Admin workspace může v záložce <strong>Manažeři</strong> (v sekci Tým) definovat, kdo je čí Team Manažer. Kliknutím na tlačítko manažera se toto přiřazení okamžitě aktivuje nebo odebere. Každý člen může mít více manažerů. Přiřazení se promítá do stránky <strong>Podřízení</strong>, kde manažer vidí záznamy svých podřízených.</p>
 

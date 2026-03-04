@@ -11,6 +11,15 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.8.0 – 4. 3. 2026</h3>
+<ul>
+  <li><strong>Nový modul: Kalendář</strong> (tarif Max) – komplexní osobní kalendář s třemi pohledy: <em>Měsíční</em> (klasická mřížka), <em>Týdenní</em> (sedmisloupcový přehled) a <em>Listový</em> (chronologický výpis po měsících). Navigace pomocí tlačítek ← Dnes → pro přechod mezi týdny nebo měsíci. Přidávání ručních událostí formulářem nebo přímým kliknutím na den v mřížce.</li>
+  <li><strong>Více kalendářů</strong> – každý uživatel může mít více vlastních pojmenovaných kalendářů s různými barvami. Při prvním přístupu vznikne automaticky výchozí kalendář „Můj kalendář". Jednotlivé kalendáře lze zobrazit/skrýt zaškrtnutím v levém panelu.</li>
+  <li><strong>Automatická synchronizace</strong> – Dovolená (schválená) a Důležité dny se automaticky propisují do Kalendáře bez nutnosti ručního zadávání. Jsou barevně odlišeny a označeny štítkem zdroje; nelze je editovat přímo v Kalendáři.</li>
+  <li><strong>Připraveno pro budoucí rozšíření</strong> – architektura počítá s napojením na externí kalendáře (Google, Apple, Microsoft) a sdílením kalendáře s kolegy; databázová struktura je vytvořena (trackino_calendars, trackino_calendar_events, trackino_calendar_shares). SQL migrace viz Nápověda → Kalendář.</li>
+  <li><strong>Fix: Sidebar – kolize badge s hvězdičkou Oblíbených</strong> – červené badgeky u položek Dovolená a Fakturace se přestaly překrývat s hvězdičkou oblíbených. Odkaz nyní dostane dostatečný odsazení zprava (32 px) pro tarify Pro/Max.</li>
+</ul>
+
 <h3>v2.7.2 – 4. 3. 2026</h3>
 <ul>
   <li><strong>Fix: Nastavení aplikace – přesměrování při refreshi (opraveno definitivně)</strong> – předchozí oprava nestačila, protože AuthContext volá <code>setLoading(false)</code> ještě před dokončením <code>fetchProfile()</code> (profil je načítán přes <code>setTimeout(0)</code> kvůli prevenci deadlocku). Takže nastával stav: <code>authLoading=false</code>, <code>user=set</code>, <code>profile=null</code> (fetch stále probíhá) → redirect se spustil. Nyní redirect čeká na všechny tři podmínky: auth hotovo + user přihlášen + profile načten.</li>
