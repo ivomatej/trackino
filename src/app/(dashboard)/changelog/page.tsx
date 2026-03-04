@@ -11,6 +11,12 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v1.9.8 – 4. 3. 2026</h3>
+<ul>
+  <li><strong>Nastavení workspace – optimální šíře</strong> – stránka Nastavení workspace má nyní nastaven rozumný maximální rozměr (max-w-3xl); záložky se nezalamují a obsah karet je pohodlně editovatelný</li>
+  <li><strong>Sjednocení ikony smazání</strong> – v Projektech a Klientech byla ikona koše sjednocena s ikonou používanou ve Štítcích (detailnější provedení s vnitřními čarami, zaoblené konce)</li>
+</ul>
+
 <h3>v1.9.7 – 4. 3. 2026</h3>
 <ul>
   <li><strong>Nastavení aplikace (Master Admin)</strong> – nová stránka v sekci Systém umožňuje Master Adminovi konfigurovat, které moduly jsou dostupné v každém tarifu (Free / Pro / Max). Změny se okamžitě projeví v celé aplikaci. Konfigurace se ukládá do DB tabulky <code>trackino_tariff_config</code>; pokud není nastavena, použijí se výchozí hodnoty ze systému. Vyžaduje SQL migraci – viz Nápověda.</li>

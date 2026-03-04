@@ -400,7 +400,7 @@ function SettingsContent() {
 
   return (
     <DashboardLayout>
-      <div>
+      <div className="max-w-3xl">
         <h1 className="text-xl font-bold mb-6" style={{ color: 'var(--text-primary)' }}>Nastavení workspace</h1>
 
         {/* Taby */}
