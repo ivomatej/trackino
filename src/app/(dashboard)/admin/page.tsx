@@ -6,8 +6,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { WorkspaceProvider, useWorkspace } from '@/contexts/WorkspaceContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import DashboardLayout from '@/components/DashboardLayout';
-import WorkspaceSelector from '@/components/WorkspaceSelector';
 import { useRouter } from 'next/navigation';
+import { formatPhone } from '@/lib/utils';
 import type { Workspace, WorkspaceMember, Profile, Tariff, UserRole } from '@/types/database';
 
 const TARIFF_LABELS: Record<Tariff, string> = {
@@ -30,12 +30,75 @@ const ROLE_LABELS: Record<string, string> = {
   member: 'Člen',
 };
 
-interface WorkspaceWithMembers extends Workspace {
-  memberCount?: number;
+type WsTab = 'active' | 'archived' | 'deleted';
+
+interface WorkspaceExt extends Workspace {
+  memberCount: number;
+  activeCount: number;
+  adminProfile: Profile | null;
 }
 
 interface MemberWithProfile extends WorkspaceMember {
   profile?: Profile;
+}
+
+function fmtDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'numeric', year: 'numeric' });
+}
+
+function copyToClipboard(text: string) {
+  try {
+    navigator.clipboard.writeText(text);
+  } catch {
+    const el = document.createElement('textarea');
+    el.value = text;
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand('copy');
+    document.body.removeChild(el);
+  }
+}
+
+function CopyBtn({
+  value,
+  id,
+  activeId,
+  setActiveId,
+  size = 13,
+}: {
+  value: string;
+  id: string;
+  activeId: string | null;
+  setActiveId: (v: string | null) => void;
+  size?: number;
+}) {
+  const copied = activeId === id;
+  return (
+    <button
+      onClick={e => {
+        e.stopPropagation();
+        copyToClipboard(value);
+        setActiveId(id);
+        setTimeout(() => setActiveId(null), 2000);
+      }}
+      title={copied ? 'Zkopírováno!' : 'Kopírovat'}
+      className="p-0.5 rounded transition-colors flex-shrink-0"
+      style={{ color: copied ? '#16a34a' : 'var(--text-muted)' }}
+      onMouseEnter={e => { if (!copied) e.currentTarget.style.color = 'var(--primary)'; }}
+      onMouseLeave={e => { if (!copied) e.currentTarget.style.color = copied ? '#16a34a' : 'var(--text-muted)'; }}
+    >
+      {copied ? (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+      ) : (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+        </svg>
+      )}
+    </button>
+  );
 }
 
 function AdminContent() {
@@ -44,8 +107,13 @@ function AdminContent() {
   const { isMasterAdmin } = usePermissions();
   const router = useRouter();
 
-  const [workspaces, setWorkspaces] = useState<WorkspaceWithMembers[]>([]);
+  const [workspaces, setWorkspaces] = useState<WorkspaceExt[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<WsTab>('active');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  // Edit modal
   const [editingWorkspace, setEditingWorkspace] = useState<Workspace | null>(null);
   const [editName, setEditName] = useState('');
   const [editTariff, setEditTariff] = useState<Tariff>('free');
@@ -82,20 +150,73 @@ function AdminContent() {
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (data) {
-      const ws = data as Workspace[];
-      // Načteme počty členů
-      const counts = await Promise.all(
-        ws.map(w =>
-          supabase
-            .from('trackino_workspace_members')
-            .select('id', { count: 'exact', head: true })
-            .eq('workspace_id', w.id)
-            .eq('approved', true)
-        )
-      );
-      setWorkspaces(ws.map((w, i) => ({ ...w, memberCount: counts[i].count ?? 0 })));
+    if (!data) { setLoading(false); return; }
+
+    const ws = data as WorkspaceExt[];
+    const wsIds = ws.map(w => w.id);
+
+    // Počty schválených členů
+    const countResults = await Promise.all(
+      ws.map(w =>
+        supabase
+          .from('trackino_workspace_members')
+          .select('id', { count: 'exact', head: true })
+          .eq('workspace_id', w.id)
+          .eq('approved', true)
+      )
+    );
+
+    // Aktivní členové za posledních 30 dní (vytvořili time entry)
+    const monthAgo = new Date();
+    monthAgo.setDate(monthAgo.getDate() - 30);
+    const { data: activeEntries } = await supabase
+      .from('trackino_time_entries')
+      .select('workspace_id, user_id')
+      .in('workspace_id', wsIds)
+      .gte('created_at', monthAgo.toISOString());
+
+    const activeMap: Record<string, Set<string>> = {};
+    (activeEntries ?? []).forEach((row: { workspace_id: string; user_id: string }) => {
+      if (!activeMap[row.workspace_id]) activeMap[row.workspace_id] = new Set();
+      activeMap[row.workspace_id].add(row.user_id);
+    });
+
+    // Owner / admin profily pro každý workspace
+    const { data: adminMembersRaw } = await supabase
+      .from('trackino_workspace_members')
+      .select('workspace_id, user_id, role')
+      .in('workspace_id', wsIds)
+      .in('role', ['owner', 'admin'])
+      .eq('approved', true);
+
+    const adminMembers = (adminMembersRaw ?? []) as { workspace_id: string; user_id: string; role: string }[];
+    const adminUserIds = [...new Set(adminMembers.map(m => m.user_id))];
+    let profileMap: Record<string, Profile> = {};
+    if (adminUserIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('trackino_profiles')
+        .select('*')
+        .in('id', adminUserIds);
+      (profiles ?? []).forEach((p: Profile) => { profileMap[p.id] = p; });
     }
+
+    // Owner má přednost před adminem
+    const sorted = [...adminMembers].sort(a => (a.role === 'owner' ? -1 : 1));
+    const adminByWs: Record<string, Profile | null> = {};
+    sorted.forEach(m => {
+      if (!adminByWs[m.workspace_id]) {
+        adminByWs[m.workspace_id] = profileMap[m.user_id] ?? null;
+      }
+    });
+
+    setWorkspaces(ws.map((w, i) => ({
+      ...w,
+      archived_at: w.archived_at ?? null,
+      deleted_at: w.deleted_at ?? null,
+      memberCount: countResults[i].count ?? 0,
+      activeCount: activeMap[w.id]?.size ?? 0,
+      adminProfile: adminByWs[w.id] ?? null,
+    })));
     setLoading(false);
   }, []);
 
@@ -166,14 +287,34 @@ function AdminContent() {
     fetchWorkspaces();
   };
 
-  const toggleLock = async (ws: Workspace) => {
+  const toggleLock = async (ws: WorkspaceExt) => {
     const newLocked = !ws.locked;
-    const label = newLocked ? 'zamknout' : 'odemknout';
-    if (!confirm(`Opravdu chcete ${label} workspace "${ws.name}"?`)) return;
-    await supabase
-      .from('trackino_workspaces')
-      .update({ locked: newLocked })
-      .eq('id', ws.id);
+    if (!confirm(`Opravdu chcete ${newLocked ? 'zamknout' : 'odemknout'} workspace "${ws.name}"?`)) return;
+    await supabase.from('trackino_workspaces').update({ locked: newLocked }).eq('id', ws.id);
+    fetchWorkspaces();
+  };
+
+  const archiveWorkspace = async (ws: WorkspaceExt) => {
+    if (!confirm(`Archivovat workspace "${ws.name}"? Data zůstanou zachována, workspace půjde obnovit.`)) return;
+    await supabase.from('trackino_workspaces').update({ archived_at: new Date().toISOString() }).eq('id', ws.id);
+    fetchWorkspaces();
+  };
+
+  const restoreWorkspace = async (ws: WorkspaceExt) => {
+    await supabase.from('trackino_workspaces').update({ archived_at: null, deleted_at: null }).eq('id', ws.id);
+    fetchWorkspaces();
+  };
+
+  const softDeleteWorkspace = async (ws: WorkspaceExt) => {
+    if (!confirm(`Přesunout workspace "${ws.name}" do koše? Lze obnovit ze záložky Smazané.`)) return;
+    await supabase.from('trackino_workspaces').update({ deleted_at: new Date().toISOString() }).eq('id', ws.id);
+    fetchWorkspaces();
+  };
+
+  const hardDeleteWorkspace = async (ws: WorkspaceExt) => {
+    if (!confirm(`TRVALE SMAZAT workspace "${ws.name}"?\nTato akce je NEVRATNÁ a odstraní veškerá data.`)) return;
+    if (!confirm(`Potvrzení: Workspace "${ws.name}" bude nenávratně smazán.`)) return;
+    await supabase.from('trackino_workspaces').delete().eq('id', ws.id);
     fetchWorkspaces();
   };
 
@@ -196,15 +337,12 @@ function AdminContent() {
   const addMemberByCode = async () => {
     if (!editingWorkspace || !inviteEmail.trim()) return;
     setInviting(true);
-    // Zkusit najít uživatele podle emailu
     const { data: foundProfile } = await supabase
       .from('trackino_profiles')
       .select('id')
       .eq('email', inviteEmail.trim().toLowerCase())
       .single();
-
     if (foundProfile) {
-      // Přidat přímo
       const existing = wsMembers.find(m => m.user_id === foundProfile.id);
       if (existing) {
         alert('Tento uživatel je již členem workspace.');
@@ -222,7 +360,6 @@ function AdminContent() {
         openEdit(editingWorkspace);
       }
     } else {
-      // Uložit pozvánku s kódem
       const token = generateInviteCode();
       await supabase.from('trackino_invitations').insert({
         workspace_id: editingWorkspace.id,
@@ -239,6 +376,21 @@ function AdminContent() {
   const inputStyle = { borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' };
   const selectCls = 'w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] appearance-none';
 
+  const tabCounts = {
+    active:   workspaces.filter(w => !w.archived_at && !w.deleted_at).length,
+    archived: workspaces.filter(w =>  !!w.archived_at && !w.deleted_at).length,
+    deleted:  workspaces.filter(w => !!w.deleted_at).length,
+  };
+
+  const filteredWorkspaces = workspaces
+    .filter(ws => {
+      if (activeTab === 'active')   return !ws.archived_at && !ws.deleted_at;
+      if (activeTab === 'archived') return !!ws.archived_at && !ws.deleted_at;
+      if (activeTab === 'deleted')  return !!ws.deleted_at;
+      return true;
+    })
+    .filter(ws => !searchQuery.trim() || ws.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
   if (!isMasterAdmin) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -249,7 +401,8 @@ function AdminContent() {
 
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-5">
         <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Správa workspace</h1>
         <button
           onClick={() => { setShowNewWs(v => !v); setNewWsName(''); setNewWsTariff('free'); }}
@@ -260,6 +413,7 @@ function AdminContent() {
         </button>
       </div>
 
+      {/* Formulář nového workspace */}
       {showNewWs && (
         <div className="rounded-xl border p-4 mb-4" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
           <div className="text-sm font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>Nový workspace</div>
@@ -270,14 +424,14 @@ function AdminContent() {
               onChange={(e) => setNewWsName(e.target.value)}
               placeholder="Název workspace"
               className="flex-1 min-w-0 px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-              style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+              style={inputStyle}
             />
             <div className="relative flex-shrink-0">
               <select
                 value={newWsTariff}
                 onChange={(e) => setNewWsTariff(e.target.value as Tariff)}
                 className="pl-3 pr-8 py-2 rounded-lg border text-sm appearance-none cursor-pointer"
-                style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                style={inputStyle}
               >
                 <option value="free">Free</option>
                 <option value="pro">Pro</option>
@@ -290,7 +444,16 @@ function AdminContent() {
             <div className="text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Barva workspace</div>
             <div className="flex flex-wrap gap-1.5">
               {WS_COLORS.map(c => (
-                <button key={c} onClick={() => setNewWsColor(c)} className="w-5 h-5 rounded-full flex-shrink-0" style={{ background: c, outline: newWsColor === c ? '2px solid #000' : 'none', outlineOffset: '2px' }} />
+                <button
+                  key={c}
+                  onClick={() => setNewWsColor(c)}
+                  className="w-5 h-5 rounded-full flex-shrink-0 transition-all"
+                  style={{
+                    background: c,
+                    transform: newWsColor === c ? 'scale(1.2)' : 'scale(1)',
+                    boxShadow: newWsColor === c ? `0 0 0 2px var(--bg-card), 0 0 0 4px ${c}` : 'none',
+                  }}
+                />
               ))}
             </div>
           </div>
@@ -314,64 +477,241 @@ function AdminContent() {
         </div>
       )}
 
+      {/* Vyhledávání */}
+      <div className="relative mb-3">
+        <svg className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)' }}>
+          <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          placeholder="Hledat workspace…"
+          className="w-full pl-9 pr-8 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+          style={inputStyle}
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded"
+            style={{ color: 'var(--text-muted)' }}
+            onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-primary)')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+          </button>
+        )}
+      </div>
+
+      {/* Záložky */}
+      <div className="flex gap-1 rounded-xl p-1 mb-4" style={{ background: 'var(--bg-hover)' }}>
+        {([
+          { key: 'active' as WsTab,   label: 'Aktivní',      count: tabCounts.active },
+          { key: 'archived' as WsTab, label: 'Archivované',  count: tabCounts.archived },
+          { key: 'deleted' as WsTab,  label: 'Smazané',      count: tabCounts.deleted },
+        ]).map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className="flex-1 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5"
+            style={{
+              background: activeTab === tab.key ? 'var(--bg-card)' : 'transparent',
+              color: activeTab === tab.key ? 'var(--text-primary)' : 'var(--text-muted)',
+              boxShadow: activeTab === tab.key ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+            }}
+          >
+            {tab.label}
+            <span
+              className="text-[10px] min-w-[18px] px-1 py-0.5 rounded-full text-center"
+              style={{
+                background: activeTab === tab.key ? 'var(--bg-hover)' : 'transparent',
+                color: activeTab === tab.key ? 'var(--text-secondary)' : 'var(--text-muted)',
+              }}
+            >
+              {tab.count}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* Seznam workspace */}
       {loading ? (
-        <div className="text-sm" style={{ color: 'var(--text-muted)' }}>Načítám...</div>
+        <div className="text-sm" style={{ color: 'var(--text-muted)' }}>Načítám…</div>
       ) : (
         <div className="space-y-3">
-          {workspaces.length === 0 && (
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Žádné workspace.</p>
+          {filteredWorkspaces.length === 0 && (
+            <p className="text-sm text-center py-8" style={{ color: 'var(--text-muted)' }}>
+              {searchQuery ? 'Žádné workspace neodpovídá hledání.' : 'Žádné workspace v této kategorii.'}
+            </p>
           )}
-          {workspaces.map(ws => (
+
+          {filteredWorkspaces.map(ws => (
             <div
               key={ws.id}
               className="rounded-xl border p-4"
               style={{ borderColor: 'var(--border)', background: 'var(--bg-card)' }}
             >
-              <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-start gap-3">
+                {/* Barevný avatar */}
                 <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                  className="w-9 h-9 rounded-lg flex items-center justify-center text-white text-sm font-bold flex-shrink-0 mt-0.5"
                   style={{ background: ws.color ?? 'var(--primary)' }}
                 >
                   {ws.name.charAt(0).toUpperCase()}
                 </div>
+
+                {/* Obsah */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
+                  {/* Název + badges */}
+                  <div className="flex items-center gap-2 flex-wrap mb-1.5">
                     <span className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>{ws.name}</span>
-                    <span
-                      className="text-[10px] px-2 py-0.5 rounded-full font-medium"
-                      style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}
-                    >
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>
                       {TARIFF_LABELS[ws.tariff]}
                     </span>
                     {ws.locked && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-600">
-                        Zamčeno
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-600">Zamčeno</span>
+                    )}
+                    {ws.archived_at && !ws.deleted_at && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ background: '#f0fdf4', color: '#15803d' }}>
+                        Archivováno {fmtDate(ws.archived_at)}
+                      </span>
+                    )}
+                    {ws.deleted_at && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ background: '#fef2f2', color: '#dc2626' }}>
+                        Smazáno {fmtDate(ws.deleted_at)}
                       </span>
                     )}
                   </div>
-                  <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                    {ws.memberCount} {ws.memberCount === 1 ? 'člen' : ws.memberCount && ws.memberCount < 5 ? 'členové' : 'členů'} · kód: <span className="font-mono">{ws.join_code}</span>
+
+                  {/* Stats */}
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs mb-2" style={{ color: 'var(--text-muted)' }}>
+                    {/* Kód + copy */}
+                    <span className="inline-flex items-center gap-1">
+                      <span>Kód:</span>
+                      <span className="font-mono font-medium" style={{ color: 'var(--text-secondary)' }}>{ws.join_code}</span>
+                      <CopyBtn value={ws.join_code} id={`code-${ws.id}`} activeId={copiedId} setActiveId={setCopiedId} size={12} />
+                    </span>
+                    <span style={{ color: 'var(--border)' }}>·</span>
+                    <span>Vytvořeno {fmtDate(ws.created_at)}</span>
+                    <span style={{ color: 'var(--border)' }}>·</span>
+                    <span>
+                      {ws.memberCount} {ws.memberCount === 1 ? 'člen' : ws.memberCount < 5 ? 'členové' : 'členů'}
+                    </span>
+                    <span style={{ color: 'var(--border)' }}>·</span>
+                    <span className="inline-flex items-center gap-1">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+                      </svg>
+                      {ws.activeCount} aktivních / 30 dní
+                    </span>
                   </div>
+
+                  {/* Admin profil */}
+                  {ws.adminProfile && (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <div
+                        className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0"
+                        style={{ background: ws.adminProfile.avatar_color ?? '#6366f1' }}
+                      >
+                        {(ws.adminProfile.display_name ?? ws.adminProfile.email ?? '?')[0].toUpperCase()}
+                      </div>
+                      <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
+                        {ws.adminProfile.display_name ?? ws.adminProfile.email}
+                      </span>
+                      {ws.adminProfile.email && (
+                        <span className="inline-flex items-center gap-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+                          <span>{ws.adminProfile.email}</span>
+                          <CopyBtn value={ws.adminProfile.email} id={`email-${ws.id}`} activeId={copiedId} setActiveId={setCopiedId} size={11} />
+                        </span>
+                      )}
+                      {ws.adminProfile.phone && (
+                        <span className="inline-flex items-center gap-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+                          <span>{formatPhone(ws.adminProfile.phone)}</span>
+                          <CopyBtn value={ws.adminProfile.phone} id={`phone-${ws.id}`} activeId={copiedId} setActiveId={setCopiedId} size={11} />
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => toggleLock(ws)}
-                    className="px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors"
-                    style={{ borderColor: 'var(--border)', color: ws.locked ? '#16a34a' : '#dc2626' }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-hover)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                  >
-                    {ws.locked ? 'Odemknout' : 'Zamknout'}
-                  </button>
-                  <button
-                    onClick={() => openEdit(ws)}
-                    className="px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-colors"
-                    style={{ background: 'var(--primary)' }}
-                    onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.85')}
-                    onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
-                  >
-                    Upravit
-                  </button>
+
+                {/* Akční tlačítka */}
+                <div className="flex flex-col gap-1.5 items-end flex-shrink-0">
+                  {!ws.deleted_at && (
+                    <>
+                      <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                        <button
+                          onClick={() => toggleLock(ws)}
+                          className="px-2.5 py-1 rounded-lg border text-xs font-medium transition-colors"
+                          style={{ borderColor: 'var(--border)', color: ws.locked ? '#16a34a' : '#dc2626' }}
+                          onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+                          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                        >
+                          {ws.locked ? 'Odemknout' : 'Zamknout'}
+                        </button>
+                        {!ws.archived_at ? (
+                          <button
+                            onClick={() => archiveWorkspace(ws)}
+                            className="px-2.5 py-1 rounded-lg border text-xs font-medium transition-colors"
+                            style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
+                            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                          >
+                            Archivovat
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => restoreWorkspace(ws)}
+                            className="px-2.5 py-1 rounded-lg border text-xs font-medium transition-colors"
+                            style={{ borderColor: '#16a34a', color: '#16a34a' }}
+                            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                          >
+                            Obnovit
+                          </button>
+                        )}
+                        <button
+                          onClick={() => softDeleteWorkspace(ws)}
+                          className="px-2.5 py-1 rounded-lg border text-xs font-medium transition-colors"
+                          style={{ borderColor: 'var(--border)', color: '#dc2626' }}
+                          onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+                          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                        >
+                          Smazat
+                        </button>
+                        <button
+                          onClick={() => openEdit(ws)}
+                          className="px-2.5 py-1 rounded-lg text-xs font-medium text-white transition-colors"
+                          style={{ background: 'var(--primary)' }}
+                          onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+                          onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+                        >
+                          Upravit
+                        </button>
+                      </div>
+                    </>
+                  )}
+                  {ws.deleted_at && (
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => restoreWorkspace(ws)}
+                        className="px-2.5 py-1 rounded-lg border text-xs font-medium transition-colors"
+                        style={{ borderColor: '#16a34a', color: '#16a34a' }}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                      >
+                        Obnovit
+                      </button>
+                      <button
+                        onClick={() => hardDeleteWorkspace(ws)}
+                        className="px-2.5 py-1 rounded-lg text-xs font-medium text-white transition-colors"
+                        style={{ background: '#dc2626' }}
+                        onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+                        onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+                      >
+                        Trvale smazat
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -393,9 +733,12 @@ function AdminContent() {
             {/* Header */}
             <div className="flex items-center justify-between px-6 pt-6 pb-4 flex-shrink-0">
               <h2 className="text-base font-semibold">Upravit workspace</h2>
-              <button onClick={() => setEditingWorkspace(null)} className="p-1 rounded-lg" style={{ color: 'var(--text-muted)' }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-hover)')}
-                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+              <button
+                onClick={() => setEditingWorkspace(null)}
+                className="p-1 rounded-lg"
+                style={{ color: 'var(--text-muted)' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
               </button>
@@ -441,7 +784,16 @@ function AdminContent() {
                 </label>
                 <div className="flex flex-wrap gap-1.5">
                   {WS_COLORS.map(c => (
-                    <button key={c} onClick={() => setEditColor(c)} className="w-5 h-5 rounded-full flex-shrink-0" style={{ background: c, outline: editColor === c ? '2px solid #000' : 'none', outlineOffset: '2px' }} />
+                    <button
+                      key={c}
+                      onClick={() => setEditColor(c)}
+                      className="w-5 h-5 rounded-full flex-shrink-0 transition-all"
+                      style={{
+                        background: c,
+                        transform: editColor === c ? 'scale(1.2)' : 'scale(1)',
+                        boxShadow: editColor === c ? `0 0 0 2px var(--bg-card), 0 0 0 4px ${c}` : 'none',
+                      }}
+                    />
                   ))}
                 </div>
               </div>
@@ -450,7 +802,7 @@ function AdminContent() {
               <div>
                 <div className="text-xs font-semibold mb-2 uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Členové</div>
                 {membersLoading ? (
-                  <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Načítám...</div>
+                  <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Načítám…</div>
                 ) : wsMembers.length === 0 ? (
                   <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Žádní členové.</div>
                 ) : (
@@ -487,8 +839,8 @@ function AdminContent() {
                           onClick={() => removeMember(m.id, m.profile?.display_name ?? m.profile?.email ?? '?')}
                           className="flex-shrink-0 p-1 rounded transition-colors"
                           style={{ color: 'var(--text-muted)' }}
-                          onMouseEnter={(e) => (e.currentTarget.style.color = '#dc2626')}
-                          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
+                          onMouseEnter={e => (e.currentTarget.style.color = '#dc2626')}
+                          onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
                         >
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6M14 11v6" /><path d="M9 6V4h6v2" />
@@ -531,7 +883,7 @@ function AdminContent() {
                     className="px-3 py-2 rounded-lg text-xs font-medium text-white transition-colors disabled:opacity-50"
                     style={{ background: 'var(--primary)' }}
                   >
-                    {inviting ? '...' : 'Přidat'}
+                    {inviting ? '…' : 'Přidat'}
                   </button>
                 </div>
                 {inviteCode && (
@@ -563,7 +915,7 @@ function AdminContent() {
                 className="flex-1 py-2 rounded-lg text-sm font-medium text-white transition-colors disabled:opacity-50"
                 style={{ background: 'var(--primary)' }}
               >
-                {editSaving ? 'Ukládám...' : 'Uložit změny'}
+                {editSaving ? 'Ukládám…' : 'Uložit změny'}
               </button>
             </div>
           </div>

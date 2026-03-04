@@ -29,6 +29,8 @@ export interface Workspace {
   locked: boolean;
   color: string | null;
   created_at: string;
+  archived_at: string | null;
+  deleted_at: string | null;
 }
 
 export interface HelpContent {

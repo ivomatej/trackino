@@ -11,6 +11,13 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v1.9.4 – 4. 3. 2026</h3>
+<ul>
+  <li><strong>Správa workspace – redesign</strong> – karty workspace nyní zobrazují: kód (s ikonkou kopírování), datum vytvoření, počet členů, počet aktivních členů za posledních 30 dní a kontakt na vlastníka/admina (jméno, e-mail, telefon – vše kopírovatelné); přidáno vyhledávací pole pro filtrování dle názvu</li>
+  <li><strong>Správa workspace – archivace a mazání</strong> – záložky Aktivní / Archivované / Smazané; workspace lze archivovat (data zachována, obnovitelné) nebo přesunout do koše (Smazané); ze záložky Smazané lze obnovit nebo trvale odstranit. Vyžaduje SQL migraci – viz Nápověda.</li>
+  <li><strong>Plánovač – ikonka poznámky</strong> – ikonka indikující přítomnost poznámky v buňce je nyní výraznější (vyšší opacity, větší ikona)</li>
+</ul>
+
 <h3>v1.9.3 – 4. 3. 2026</h3>
 <ul>
   <li><strong>Time Tracker – kategorie a úkol u záznamu</strong> – pod popisem každého záznamu se nyní zobrazuje přiřazená kategorie a úkol (světle šedě, vpravo od projektu); pokud je vyplněna kategorie i úkol, jsou odděleny tečkou</li>

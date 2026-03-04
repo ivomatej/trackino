@@ -82,6 +82,17 @@ const DEFAULT_HELP_CONTENT = `
 <p>V <strong>Nastavení → Fakturační údaje</strong> lze vytvořit více fakturačních profilů (např. pro různé právní subjekty). Každý profil obsahuje: název společnosti, jméno jednatele, adresu (ulice + číslo popisné), PSČ, město, stát, IČO, DIČ, příznak plátce DPH, e-mail, telefon a poznámku k fakturaci. Jeden profil lze označit jako výchozí.</p>
 <p>V <strong>Tým → editace člena → sekce Fakturace</strong> lze každému členovi přiřadit konkrétní fakturační profil. Pokud není přiřazen žádný, použije se výchozí profil workspace. Přiřazený profil se uživateli zobrazí při podání žádosti o fakturaci v pravém panelu formuláře.</p>
 
+<h3>Správa workspace (Master Admin)</h3>
+<p>Stránka <strong>Správa workspace</strong> (sekce Systém, viditelná pouze pro Master Adminy) zobrazuje přehled všech workspace na platformě. Každá karta workspace obsahuje:</p>
+<ul>
+  <li><strong>Kód workspace</strong> s ikonkou pro rychlé zkopírování</li>
+  <li><strong>Datum vytvoření</strong>, počet schválených členů a počet <strong>aktivních členů za posledních 30 dní</strong> (uživatelé, kteří vytvořili alespoň jeden time entry)</li>
+  <li><strong>Kontakt na vlastníka/admina</strong> – jméno, e-mail a telefon s ikonkami kopírování</li>
+  <li><strong>Archivace</strong> – workspace lze archivovat (data zůstanou zachována, jde obnovit) nebo <strong>přesunout do koše</strong> (smazat); smazané workspace jsou viditelné v záložce Smazané a lze je obnovit nebo trvale odstranit</li>
+</ul>
+<p>Záložky přepínají mezi <strong>Aktivními</strong>, <strong>Archivovanými</strong> a <strong>Smazanými</strong> workspace. Nad kartami je vyhledávací pole pro filtrování podle názvu.</p>
+<p><strong>SQL migrace (nutno spustit v Supabase):</strong> Pro funkci archivace a smazání jsou potřeba dva nové sloupce:<br/><code>ALTER TABLE trackino_workspaces ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ NULL;<br/>ALTER TABLE trackino_workspaces ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ NULL;</code></p>
+
 <h3>Audit log</h3>
 <p>Stránka <strong>Audit log</strong> (dostupná Adminum, Master Adminům a uživatelům s oprávněním „Audit log") zobrazuje historii úprav, které manažeři nebo admini provedli na záznamech podřízených. Každý záznam obsahuje: kdo úpravu provedl, pro koho, jakou akci vykonal, datum a čas úpravy a detail záznamu (datum, čas od–do, délka, popis). Oprávnění se nastavuje v Tým → editace člena.</p>
 
@@ -110,7 +121,7 @@ const DEFAULT_HELP_CONTENT = `
   <li><strong>Stavy dostupnosti</strong> – admin/Master Admin si definuje vlastní stavy (např. V kanceláři, Home office, Dovolená) s libovolnou barvou v sekci „Spravovat stavy"</li>
   <li><strong>Nastavení dostupnosti</strong> – kliknutím na buňku se otevře picker se stavy; každý uživatel edituje svůj vlastní řádek; admin a manažer mohou editovat i ostatní uživatele</li>
   <li><strong>Rozdělení na DOP / ODP</strong> – každá buňka má při najetí myší v pravém rohu ikonku rozdělení. Kliknutím se buňka rozdělí na dopoledne (DOP) a odpoledne (ODP) – každá půlka má vlastní stav i poznámku. Ikonkou sloučení lze opět vrátit na celý den (zachová se stav z dopoledne).</li>
-  <li><strong>Poznámka</strong> – ke každé buňce (celý den i DOP/ODP) lze přidat volitelnou poznámku zobrazenou při najetí myší</li>
+  <li><strong>Poznámka</strong> – ke každé buňce (celý den i DOP/ODP) lze přidat volitelnou poznámku zobrazenou při najetí myší; přítomnost poznámky indikuje výraznější ikonka v pravém rohu buňky</li>
   <li><strong>Navigace týdnem</strong> – šipky vlevo/vpravo přepínají mezi týdny; tlačítko „Dnes" skočí na aktuální týden</li>
   <li><strong>Připnutí kolegů</strong> – kliknutím na hvězdičku vedle jména lze kolegu „připnout" na začátek seznamu pro rychlý přístup</li>
   <li><strong>Viditelnost</strong> – Admin/Master Admin vidí všechny členy; Team Manager vidí sebe a svůj tým; Member vidí sebe a spoluhráče se stejným manažerem</li>
