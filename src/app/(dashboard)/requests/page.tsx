@@ -67,7 +67,7 @@ type ActiveTab = 'mine' | 'pending';
 
 function RequestsContent() {
   const { user } = useAuth();
-  const { currentWorkspace, currentMembership, hasModule } = useWorkspace();
+  const { currentWorkspace, currentMembership, hasModule, loading: wsLoading } = useWorkspace();
   const { isWorkspaceAdmin, isManager, isMasterAdmin } = usePermissions();
   const router = useRouter();
 
@@ -103,10 +103,10 @@ function RequestsContent() {
     return computeWorkingDays(formVacStart, formVacEnd);
   }, [formType, formVacStart, formVacEnd]);
 
-  // Redirect pokud modul není dostupný
+  // Redirect pokud modul není dostupný (čekáme na načtení workspace)
   useEffect(() => {
-    if (!hasModule('requests')) router.replace('/');
-  }, [hasModule, router]);
+    if (!wsLoading && !hasModule('requests')) router.replace('/');
+  }, [wsLoading, hasModule, router]);
 
   // ── Fetch dat ──────────────────────────────────────────────────────────────
 

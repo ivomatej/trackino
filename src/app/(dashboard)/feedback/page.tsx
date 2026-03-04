@@ -13,7 +13,7 @@ import type { FeedbackEntry } from '@/types/database';
 
 function FeedbackContent() {
   const { user } = useAuth();
-  const { currentWorkspace, currentMembership, hasModule } = useWorkspace();
+  const { currentWorkspace, currentMembership, hasModule, loading: wsLoading } = useWorkspace();
   const { isWorkspaceAdmin, isMasterAdmin } = usePermissions();
   const router = useRouter();
 
@@ -32,10 +32,10 @@ function FeedbackContent() {
     [isMasterAdmin, isWorkspaceAdmin, currentMembership]
   );
 
-  // Redirect pokud modul není dostupný
+  // Redirect pokud modul není dostupný (čekáme na načtení workspace)
   useEffect(() => {
-    if (!hasModule('feedback')) router.replace('/');
-  }, [hasModule, router]);
+    if (!wsLoading && !hasModule('feedback')) router.replace('/');
+  }, [wsLoading, hasModule, router]);
 
   // ── Fetch dat ──────────────────────────────────────────────────────────────
 
