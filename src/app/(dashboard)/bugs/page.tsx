@@ -26,6 +26,34 @@ interface UserInfo {
   email: string;
 }
 
+function ChevronDown({ open }: { open: boolean }) {
+  return (
+    <svg
+      width="14" height="14" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+      style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', color: 'var(--text-muted)', flexShrink: 0 }}
+    >
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  );
+}
+
+function SelectWrap({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="relative inline-flex items-center">
+      {children}
+      <svg
+        className="pointer-events-none absolute right-2.5"
+        width="12" height="12" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+        style={{ color: 'var(--text-muted)' }}
+      >
+        <polyline points="6 9 12 15 18 9" />
+      </svg>
+    </div>
+  );
+}
+
 function ToolbarButtons({ onCmd }: { onCmd: (cmd: string) => void }) {
   return (
     <div className="px-3 py-2 border-b flex flex-wrap gap-1" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
@@ -59,6 +87,8 @@ function BugsContent() {
   const { isMasterAdmin } = usePermissions();
 
   const [bugs, setBugs] = useState<BugReport[]>([]);
+  const [movedBugIds, setMovedBugIds] = useState<Set<string>>(new Set());
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
@@ -69,6 +99,7 @@ function BugsContent() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [workspaces, setWorkspaces] = useState<{ id: string; name: string }[]>([]);
   const [userProfiles, setUserProfiles] = useState<Record<string, UserInfo>>({});
+  const [movingId, setMovingId] = useState<string | null>(null);
 
   const editorRef = useRef<HTMLDivElement>(null);
   const editEditorRef = useRef<HTMLDivElement>(null);
@@ -107,6 +138,24 @@ function BugsContent() {
       setUserProfiles(profileMap);
     }
 
+    // Načíst přesunuté bugy (které mají záznam v app_changes s source_bug_id)
+    if (bugList.length > 0) {
+      const bugIds = bugList.map(b => b.id);
+      const { data: moved } = await supabase
+        .from('trackino_app_changes')
+        .select('source_bug_id')
+        .in('source_bug_id', bugIds);
+
+      const movedSet = new Set<string>(
+        (moved ?? [])
+          .map((r: { source_bug_id: string | null }) => r.source_bug_id)
+          .filter(Boolean) as string[]
+      );
+      setMovedBugIds(movedSet);
+    } else {
+      setMovedBugIds(new Set());
+    }
+
     setLoading(false);
   }, [currentWorkspace, isMasterAdmin, workspaceFilter, statusFilter]);
 
@@ -126,7 +175,6 @@ function BugsContent() {
     if (!currentWorkspace) { setSubmitError('Nebyl načten workspace – zkuste obnovit stránku.'); return; }
 
     const content = editorRef.current?.innerHTML ?? '';
-    // Ověř, že je skutečný text (odstraní HTML tagy)
     const textOnly = editorRef.current?.innerText?.replace(/\n/g, '').trim() ?? '';
     if (!textOnly) { setSubmitError('Vyplňte prosím popis chyby.'); return; }
 
@@ -184,9 +232,9 @@ function BugsContent() {
   };
 
   /** Přesune bug report do Úprav aplikace (Master Admin) */
-  const [movingId, setMovingId] = useState<string | null>(null);
   const moveBugToAppChanges = async (bug: BugReport) => {
     setMovingId(bug.id);
+
     // Extrahovat prostý text jako název (prvních 100 znaků)
     const tempDiv = typeof document !== 'undefined' ? document.createElement('div') : null;
     let title = bug.content;
@@ -196,17 +244,25 @@ function BugsContent() {
     }
     title = title.slice(0, 100).replace(/\n+/g, ' ').trim() || 'Bug z Bug logu';
 
+    // Sestavit obsah včetně případné Master Admin poznámky
+    const plainContent = bug.content.replace(/<[^>]+>/g, '').trim();
+    const noteSection = bug.master_note?.trim() ? `\n\nPoznámka: ${bug.master_note.trim()}` : '';
+    const fullContent = plainContent + noteSection;
+
     const { error } = await supabase.from('trackino_app_changes').insert({
       title,
-      content: bug.content.replace(/<[^>]+>/g, '').trim(),
+      content: fullContent,
       type: 'bug',
       priority: 'medium',
       status: 'open',
       source_bug_id: bug.id,
     });
+
     setMovingId(null);
     if (error) { alert('Chyba při přesunu: ' + error.message); return; }
-    alert('Bug přesunut do Úprav aplikace ✓');
+
+    // Lokálně označit jako přesunutý (bez dalšího fetch)
+    setMovedBugIds(prev => new Set(prev).add(bug.id));
   };
 
   const execCmd = (cmd: string) => { document.execCommand(cmd, false); editorRef.current?.focus(); };
@@ -224,30 +280,71 @@ function BugsContent() {
     const userName = userInfo?.display_name || userInfo?.email || 'Neznámý';
     const isEditing = editingId === bug.id;
     const isEditingNote = noteEditId === bug.id;
+    const isExpanded = expandedId === bug.id || isEditing;
+    const isMoved = movedBugIds.has(bug.id);
+    const statusColor = STATUS_COLORS[bug.status];
 
     return (
-      <div className="rounded-xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
-        <div className="p-4">
-          {/* Header */}
-          <div className="flex items-start justify-between gap-3 mb-3">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="px-2 py-0.5 rounded-full text-xs font-semibold text-white" style={{ background: STATUS_COLORS[bug.status] }}>
+      <div
+        className="rounded-xl border overflow-hidden"
+        style={{
+          background: 'var(--bg-card)',
+          borderColor: 'var(--border)',
+          borderLeft: `4px solid ${statusColor}`,
+        }}
+      >
+        {/* Klikatelný header */}
+        <div
+          className="px-4 py-3 cursor-pointer select-none"
+          onClick={() => {
+            if (isEditing) return;
+            setExpandedId(isExpanded ? null : bug.id);
+          }}
+        >
+          <div className="flex items-center justify-between gap-3">
+            {/* Levá část: badges + info */}
+            <div className="flex items-center gap-2 flex-wrap min-w-0">
+              <span
+                className="px-2 py-0.5 rounded-full text-xs font-semibold text-white flex-shrink-0"
+                style={{ background: statusColor }}
+              >
                 {STATUS_LABELS[bug.status]}
               </span>
-              <span className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{userName}</span>
-              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{formatDate(bug.created_at)}</span>
+              <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{userName}</span>
+              <span className="text-xs flex-shrink-0" style={{ color: 'var(--text-muted)' }}>
+                {formatDate(bug.created_at)}
+              </span>
               {isMasterAdmin && workspaces.length > 0 && (
-                <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>
+                <span
+                  className="text-xs px-1.5 py-0.5 rounded flex-shrink-0"
+                  style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}
+                >
                   {workspaces.find(w => w.id === bug.workspace_id)?.name ?? '—'}
                 </span>
               )}
+              {isMoved && (
+                <span
+                  className="px-2 py-0.5 rounded-full text-xs font-semibold flex-shrink-0"
+                  style={{ background: '#dcfce7', color: '#15803d' }}
+                >
+                  Přesunuto ✓
+                </span>
+              )}
             </div>
-            <div className="flex gap-1.5 flex-shrink-0">
+
+            {/* Pravá část: akční tlačítka + chevron */}
+            <div
+              className="flex items-center gap-1.5 flex-shrink-0"
+              onClick={(e) => e.stopPropagation()}
+            >
               {isOwn && !isEditing && (
                 <button
                   onClick={() => {
+                    setExpandedId(bug.id);
                     setEditingId(bug.id);
-                    setTimeout(() => { if (editEditorRef.current) editEditorRef.current.innerHTML = bug.content; }, 0);
+                    setTimeout(() => {
+                      if (editEditorRef.current) editEditorRef.current.innerHTML = bug.content;
+                    }, 0);
                   }}
                   className="px-2 py-1 rounded text-xs border"
                   style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
@@ -268,102 +365,159 @@ function BugsContent() {
                   Smazat
                 </button>
               )}
+              <div onClick={(e) => { e.stopPropagation(); if (!isEditing) setExpandedId(isExpanded ? null : bug.id); }}>
+                <ChevronDown open={isExpanded} />
+              </div>
             </div>
           </div>
+        </div>
 
-          {/* Content */}
-          {isEditing ? (
-            <div className="rounded-lg border overflow-hidden mb-3" style={{ borderColor: 'var(--border)' }}>
-              <ToolbarButtons onCmd={execCmdEdit} />
+        {/* Rozbalitelný obsah */}
+        {isExpanded && (
+          <div className="px-4 pb-4 border-t" style={{ borderColor: 'var(--border)' }}>
+            {/* Content / Editor */}
+            {isEditing ? (
+              <div className="rounded-lg border overflow-hidden mt-3 mb-3" style={{ borderColor: 'var(--border)' }}>
+                <ToolbarButtons onCmd={execCmdEdit} />
+                <div
+                  ref={editEditorRef}
+                  contentEditable
+                  suppressContentEditableWarning
+                  className="prose prose-sm max-w-none p-3 focus:outline-none"
+                  style={{ color: 'var(--text-primary)', minHeight: '100px' }}
+                />
+              </div>
+            ) : (
               <div
-                ref={editEditorRef}
-                contentEditable
-                suppressContentEditableWarning
-                className="prose prose-sm max-w-none p-3 focus:outline-none"
-                style={{ color: 'var(--text-primary)', minHeight: '100px' }}
+                className="prose prose-sm max-w-none mt-3"
+                dangerouslySetInnerHTML={{ __html: bug.content }}
               />
-            </div>
-          ) : (
-            <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: bug.content }} />
-          )}
+            )}
 
-          {isEditing && (
-            <div className="flex gap-2 mt-2">
-              <button onClick={() => setEditingId(null)} className="px-3 py-1.5 rounded-lg border text-sm" style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}>Zrušit</button>
-              <button onClick={() => saveEdit(bug.id)} className="px-4 py-1.5 rounded-lg text-white text-sm font-medium" style={{ background: 'var(--primary)' }}>Uložit</button>
-            </div>
-          )}
-
-          {/* Master Admin sekce */}
-          {isMasterAdmin && !isEditing && (
-            <div className="mt-3 pt-3 border-t" style={{ borderColor: 'var(--border)' }}>
-              <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
-                <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Stav:</span>
-                {(['open', 'in_progress', 'solved'] as BugStatus[]).map(s => (
-                  <button
-                    key={s}
-                    onClick={() => updateStatus(bug.id, s)}
-                    className="px-2 py-0.5 rounded-full text-xs font-medium border transition-colors"
-                    style={{
-                      background: bug.status === s ? STATUS_COLORS[s] : 'transparent',
-                      color: bug.status === s ? 'white' : 'var(--text-secondary)',
-                      borderColor: STATUS_COLORS[s],
-                    }}
-                  >
-                    {STATUS_LABELS[s]}
-                  </button>
-                ))}
-                </div>
-                {/* Tlačítko: Přesunout do Úprav aplikace */}
+            {isEditing && (
+              <div className="flex gap-2 mt-2">
                 <button
-                  onClick={() => moveBugToAppChanges(bug)}
-                  disabled={movingId === bug.id}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs font-medium transition-colors disabled:opacity-50"
+                  onClick={() => { setEditingId(null); }}
+                  className="px-3 py-1.5 rounded-lg border text-sm"
                   style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                  title="Přidat do seznamu Úpravy aplikace"
                 >
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
-                  </svg>
-                  {movingId === bug.id ? 'Přesouvám…' : 'Úpravy aplikace'}
+                  Zrušit
+                </button>
+                <button
+                  onClick={() => saveEdit(bug.id)}
+                  className="px-4 py-1.5 rounded-lg text-white text-sm font-medium"
+                  style={{ background: 'var(--primary)' }}
+                >
+                  Uložit
                 </button>
               </div>
+            )}
 
-              {bug.master_note && !isEditingNote && (
-                <div className="mt-2 p-2 rounded-lg text-xs" style={{ background: 'var(--bg-hover)', color: 'var(--text-secondary)' }}>
-                  <strong style={{ color: 'var(--text-primary)' }}>Poznámka:</strong> {bug.master_note}
-                </div>
-              )}
+            {/* Master Admin sekce */}
+            {isMasterAdmin && !isEditing && (
+              <div className="mt-3 pt-3 border-t" style={{ borderColor: 'var(--border)' }}>
+                {/* Status + Přesun tlačítko */}
+                <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Stav:</span>
+                    {(['open', 'in_progress', 'solved'] as BugStatus[]).map(s => (
+                      <button
+                        key={s}
+                        onClick={() => updateStatus(bug.id, s)}
+                        className="px-2 py-0.5 rounded-full text-xs font-medium border transition-colors"
+                        style={{
+                          background: bug.status === s ? STATUS_COLORS[s] : 'transparent',
+                          color: bug.status === s ? 'white' : 'var(--text-secondary)',
+                          borderColor: STATUS_COLORS[s],
+                        }}
+                      >
+                        {STATUS_LABELS[s]}
+                      </button>
+                    ))}
+                  </div>
 
-              {isEditingNote ? (
-                <div className="mt-2 flex gap-2">
-                  <input
-                    value={noteText}
-                    onChange={(e) => setNoteText(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') saveNote(bug.id); if (e.key === 'Escape') setNoteEditId(null); }}
-                    className="flex-1 px-2 py-1.5 rounded border text-xs focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
-                    style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
-                    placeholder="Poznámka pro uživatele..."
-                    autoFocus
-                  />
-                  <button onClick={() => setNoteEditId(null)} className="px-2 py-1 rounded text-xs border" style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}>Zrušit</button>
-                  <button onClick={() => saveNote(bug.id)} className="px-3 py-1 rounded text-xs text-white" style={{ background: 'var(--primary)' }}>Uložit</button>
+                  {/* Přesun do Úprav aplikace – pokud přesunuto, zobraz badge; jinak tlačítko */}
+                  {isMoved ? (
+                    <span
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs font-medium"
+                      style={{ borderColor: '#22c55e', color: '#15803d', background: '#f0fdf4' }}
+                    >
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                      Přesunuto
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => moveBugToAppChanges(bug)}
+                      disabled={movingId === bug.id}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs font-medium transition-colors disabled:opacity-50"
+                      style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                      title="Přidat do seznamu Úpravy aplikace"
+                    >
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
+                      </svg>
+                      {movingId === bug.id ? 'Přesouvám…' : 'Úpravy aplikace'}
+                    </button>
+                  )}
                 </div>
-              ) : (
-                <button
-                  onClick={() => { setNoteEditId(bug.id); setNoteText(bug.master_note ?? ''); }}
-                  className="mt-2 text-xs"
-                  style={{ color: 'var(--primary)' }}
-                >
-                  {bug.master_note ? 'Upravit poznámku' : '+ Přidat poznámku'}
-                </button>
-              )}
-            </div>
-          )}
-        </div>
+
+                {/* Poznámka (zobrazení) */}
+                {bug.master_note && !isEditingNote && (
+                  <div
+                    className="mt-2 p-2 rounded-lg text-xs"
+                    style={{ background: 'var(--bg-hover)', color: 'var(--text-secondary)' }}
+                  >
+                    <strong style={{ color: 'var(--text-primary)' }}>Poznámka:</strong> {bug.master_note}
+                  </div>
+                )}
+
+                {/* Poznámka (editace) */}
+                {isEditingNote ? (
+                  <div className="mt-2 flex gap-2">
+                    <input
+                      value={noteText}
+                      onChange={(e) => setNoteText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') saveNote(bug.id);
+                        if (e.key === 'Escape') setNoteEditId(null);
+                      }}
+                      className="flex-1 px-2 py-1.5 rounded border text-xs focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
+                      style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                      placeholder="Poznámka pro uživatele..."
+                      autoFocus
+                    />
+                    <button
+                      onClick={() => setNoteEditId(null)}
+                      className="px-2 py-1 rounded text-xs border"
+                      style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
+                    >
+                      Zrušit
+                    </button>
+                    <button
+                      onClick={() => saveNote(bug.id)}
+                      className="px-3 py-1 rounded text-xs text-white"
+                      style={{ background: 'var(--primary)' }}
+                    >
+                      Uložit
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => { setNoteEditId(bug.id); setNoteText(bug.master_note ?? ''); }}
+                    className="mt-2 text-xs"
+                    style={{ color: 'var(--primary)' }}
+                  >
+                    {bug.master_note ? 'Upravit poznámku' : '+ Přidat poznámku'}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     );
   };
@@ -411,26 +565,30 @@ function BugsContent() {
         {isMasterAdmin && (
           <div className="flex gap-3 flex-wrap items-center">
             <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>FILTRY</span>
-            <select
-              value={workspaceFilter}
-              onChange={(e) => setWorkspaceFilter(e.target.value)}
-              className="px-3 py-1.5 rounded-lg border text-sm focus:outline-none"
-              style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
-            >
-              <option value="all">Všechny workspace</option>
-              {workspaces.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-            </select>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-1.5 rounded-lg border text-sm focus:outline-none"
-              style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
-            >
-              <option value="all">Všechny stavy</option>
-              <option value="open">Otevřeno</option>
-              <option value="in_progress">Řeší se</option>
-              <option value="solved">Vyřešeno</option>
-            </select>
+            <SelectWrap>
+              <select
+                value={workspaceFilter}
+                onChange={(e) => setWorkspaceFilter(e.target.value)}
+                className="appearance-none pl-3 pr-8 py-1.5 rounded-lg border text-sm focus:outline-none"
+                style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+              >
+                <option value="all">Všechny workspace</option>
+                {workspaces.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+              </select>
+            </SelectWrap>
+            <SelectWrap>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="appearance-none pl-3 pr-8 py-1.5 rounded-lg border text-sm focus:outline-none"
+                style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+              >
+                <option value="all">Všechny stavy</option>
+                <option value="open">Otevřeno</option>
+                <option value="in_progress">Řeší se</option>
+                <option value="solved">Vyřešeno</option>
+              </select>
+            </SelectWrap>
           </div>
         )}
 
@@ -448,7 +606,7 @@ function BugsContent() {
             {myBugs.length > 0 && (
               <div>
                 <div className="text-[10px] font-semibold tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>MOJE REPORTY</div>
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {myBugs.map(bug => <BugCard key={bug.id} bug={bug} isOwn={true} />)}
                 </div>
               </div>
@@ -456,7 +614,7 @@ function BugsContent() {
             {isMasterAdmin && otherBugs.length > 0 && (
               <div>
                 <div className="text-[10px] font-semibold tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>OSTATNÍ REPORTY</div>
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {otherBugs.map(bug => <BugCard key={bug.id} bug={bug} isOwn={false} />)}
                 </div>
               </div>
@@ -473,7 +631,6 @@ function BugsContent() {
         .prose ol { margin: 0.3rem 0 0.3rem 1.5rem; list-style-type: decimal; }
         .prose li { margin: 0.15rem 0; color: var(--text-secondary); }
         .prose strong { font-weight: 700; color: var(--text-primary); }
-        /* V editoru – text má být primární barvy, ne sekundární */
         [contenteditable] { color: var(--text-primary); }
         [contenteditable] p { color: var(--text-primary); }
         [contenteditable] li { color: var(--text-primary); }

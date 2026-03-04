@@ -11,6 +11,14 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.1.1 – 4. 3. 2026</h3>
+<ul>
+  <li><strong>Bug log – skládací karty</strong> – každý bug report je nyní zobrazen jako skládací karta (kliknutím na header se rozbalí detail). Header vždy zobrazuje stav, autora, datum a případně workspace. Levý barevný pruh indikuje stav (červená = Otevřeno, žlutá = Řeší se, zelená = Vyřešeno) – shodný vizuální styl s Úpravami aplikace.</li>
+  <li><strong>Bug log – označení přesunutých bugů</strong> – bug přesunutý do Úprav aplikace je v headeru okamžitě označen zeleným štítkem <em>„Přesunuto ✓"</em> a tlačítko přesunu je nahrazeno statusovým prkem. Znovu přesunutý bug nelze.</li>
+  <li><strong>Bug log – přenos poznámky</strong> – obsah pole <em>Poznámka</em> (Master Admin) se při přesunu do Úprav aplikace automaticky zahrne do popisu položky.</li>
+  <li><strong>Bug log – opraveny šipky ve filtrech</strong> – rozbalovací šipky u filtrů Workspace a Stav jsou nyní správně zarovnány pomocí vlastní SVG šipky (konzistentní s ostatními stránkami).</li>
+</ul>
+
 <h3>v2.1.0 – 4. 3. 2026</h3>
 <ul>
   <li><strong>Převodník textu</strong> (tarif Max) – nový modul v sekci Analýza. Vložte naformátovaný text z Wordu nebo webu a převeďte ho na <strong>Prostý text</strong> (bez jakéhokoli formátování, zachována odřádkování) nebo <strong>Markdown</strong> (konverze nadpisů, tučného/kurzívy, seznamů, odkazů aj.). Každý výstupní panel má tlačítko Kopírovat. Spodní panel ukazuje přehled podporovaných Markdown prvků. Modul je dostupný v tarifu Max; workspace s jiným tarifem vidí informaci o uzamčení.</li>
