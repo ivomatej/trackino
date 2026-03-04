@@ -47,12 +47,30 @@ const STATUS_COLORS: Record<AppChangeStatus, string> = {
   solved: '#22c55e',
 };
 
-// Levý border barvy podle priority
 const PRIORITY_BORDER: Record<AppChangePriority, string> = {
   low: '#6b7280',
   medium: '#f59e0b',
   high: '#ef4444',
 };
+
+// ─── Pomocné komponenty ────────────────────────────────────────────────────────
+
+function ChevronDown({ open }: { open: boolean }) {
+  return (
+    <svg
+      width="14" height="14" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+      style={{
+        transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+        transition: 'transform 0.2s',
+        color: 'var(--text-muted)',
+        flexShrink: 0,
+      }}
+    >
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  );
+}
 
 // ─── Formulář pro přidání/editaci ─────────────────────────────────────────────
 
@@ -77,12 +95,13 @@ const EMPTY_FORM: FormState = {
 function AppChangesContent() {
   const { isMasterAdmin } = usePermissions();
   const router = useRouter();
-  useAuth(); // ensure auth is loaded
+  useAuth();
 
   const [items, setItems] = useState<AppChange[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterTab, setFilterTab] = useState<'all' | AppChangeType | 'solved'>('all');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   // Modal stav
   const [showForm, setShowForm] = useState(false);
@@ -93,9 +112,7 @@ function AppChangesContent() {
 
   // Redirect non-master-admin
   useEffect(() => {
-    if (!isMasterAdmin) {
-      router.push('/');
-    }
+    if (!isMasterAdmin) router.push('/');
   }, [isMasterAdmin, router]);
 
   const fetchItems = useCallback(async () => {
@@ -110,7 +127,6 @@ function AppChangesContent() {
 
   useEffect(() => { fetchItems(); }, [fetchItems]);
 
-  // Otevřít formulář pro přidání
   const openAdd = () => {
     setEditingItem(null);
     setForm(EMPTY_FORM);
@@ -118,7 +134,6 @@ function AppChangesContent() {
     setShowForm(true);
   };
 
-  // Otevřít formulář pro editaci
   const openEdit = (item: AppChange) => {
     setEditingItem(item);
     setForm({
@@ -161,6 +176,8 @@ function AppChangesContent() {
   const deleteItem = async (id: string) => {
     if (!confirm('Smazat tuto položku?')) return;
     await supabase.from('trackino_app_changes').delete().eq('id', id);
+    // Zavři rozbalenout kartu pokud se smazala
+    if (expandedId === id) setExpandedId(null);
     fetchItems();
   };
 
@@ -172,17 +189,14 @@ function AppChangesContent() {
   const formatDate = (iso: string) =>
     new Date(iso).toLocaleDateString('cs-CZ', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-  // Filtrování
   const filtered = items.filter(item => {
     const matchSearch = !search ||
       item.title.toLowerCase().includes(search.toLowerCase()) ||
       item.content.toLowerCase().includes(search.toLowerCase());
-
     const matchTab =
       filterTab === 'all' ? item.status !== 'solved' :
       filterTab === 'solved' ? item.status === 'solved' :
       item.type === filterTab && item.status !== 'solved';
-
     return matchSearch && matchTab;
   });
 
@@ -218,9 +232,8 @@ function AppChangesContent() {
           </button>
         </div>
 
-        {/* Vyhledávání + Záložky filtrování */}
+        {/* Vyhledávání + Záložky */}
         <div className="mb-4 space-y-3">
-          {/* Vyhledávání */}
           <div className="relative">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)' }}>
               <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
@@ -235,7 +248,6 @@ function AppChangesContent() {
             />
           </div>
 
-          {/* Záložky filtrování */}
           <div className="flex gap-1 p-1 rounded-lg overflow-x-auto" style={{ background: 'var(--bg-hover)' }}>
             {([
               { key: 'all', label: 'Vše (otevřené)', count: items.filter(i => i.status !== 'solved').length },
@@ -285,46 +297,53 @@ function AppChangesContent() {
           </div>
         ) : (
           <div className="space-y-2">
-            {filtered.map(item => (
-              <div
-                key={item.id}
-                className="rounded-xl border overflow-hidden"
-                style={{
-                  background: 'var(--bg-card)',
-                  borderColor: 'var(--border)',
-                  borderLeft: `4px solid ${PRIORITY_BORDER[item.priority]}`,
-                }}
-              >
-                <div className="p-4">
-                  {/* Hlavička karty */}
-                  <div className="flex items-start gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap mb-1">
+            {filtered.map(item => {
+              const isExpanded = expandedId === item.id;
+              const isSolved = item.status === 'solved';
+
+              return (
+                <div
+                  key={item.id}
+                  className="rounded-xl border overflow-hidden"
+                  style={{
+                    background: 'var(--bg-card)',
+                    borderColor: 'var(--border)',
+                    borderLeft: `4px solid ${PRIORITY_BORDER[item.priority]}`,
+                  }}
+                >
+                  {/* Klikatelný header */}
+                  <div
+                    className="px-4 py-3 cursor-pointer select-none"
+                    onClick={() => setExpandedId(isExpanded ? null : item.id)}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      {/* Badges + datum */}
+                      <div className="flex items-center gap-2 flex-wrap min-w-0">
                         {/* Typ */}
                         <span
-                          className="px-2 py-0.5 rounded-full text-xs font-semibold text-white"
+                          className="px-2 py-0.5 rounded-full text-xs font-semibold text-white flex-shrink-0"
                           style={{ background: TYPE_COLORS[item.type] }}
                         >
                           {TYPE_LABELS[item.type]}
                         </span>
                         {/* Priorita */}
                         <span
-                          className="px-2 py-0.5 rounded-full text-xs font-medium border"
+                          className="px-2 py-0.5 rounded-full text-xs font-medium border flex-shrink-0"
                           style={{ borderColor: PRIORITY_COLORS[item.priority], color: PRIORITY_COLORS[item.priority] }}
                         >
                           {PRIORITY_LABELS[item.priority]}
                         </span>
-                        {/* Status */}
+                        {/* Stav */}
                         <span
-                          className="px-2 py-0.5 rounded-full text-xs font-semibold text-white"
+                          className="px-2 py-0.5 rounded-full text-xs font-semibold text-white flex-shrink-0"
                           style={{ background: STATUS_COLORS[item.status] }}
                         >
                           {STATUS_LABELS[item.status]}
                         </span>
-                        {/* Badge "Z Bug logu" */}
+                        {/* Z Bug logu */}
                         {item.source_bug_id && (
                           <span
-                            className="px-2 py-0.5 rounded-full text-xs font-medium border flex items-center gap-1"
+                            className="px-2 py-0.5 rounded-full text-xs font-medium border flex items-center gap-1 flex-shrink-0"
                             style={{ borderColor: 'var(--border)', color: 'var(--text-muted)', background: 'var(--bg-hover)' }}
                           >
                             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -334,93 +353,104 @@ function AppChangesContent() {
                           </span>
                         )}
                         {/* Datum */}
-                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                        <span className="text-xs flex-shrink-0" style={{ color: 'var(--text-muted)' }}>
                           {formatDate(item.created_at)}
                         </span>
                       </div>
-                      {/* Název */}
-                      <p
-                        className="font-medium text-sm"
-                        style={{
-                          color: 'var(--text-primary)',
-                          textDecoration: item.status === 'solved' ? 'line-through' : 'none',
-                          opacity: item.status === 'solved' ? 0.6 : 1,
-                        }}
-                      >
-                        {item.title}
-                      </p>
+                      {/* Chevron */}
+                      <ChevronDown open={isExpanded} />
+                    </div>
+
+                    {/* Název (vždy viditelný) */}
+                    <p
+                      className="font-medium text-sm mt-2"
+                      style={{
+                        color: 'var(--text-primary)',
+                        textDecoration: isSolved ? 'line-through' : 'none',
+                        opacity: isSolved ? 0.6 : 1,
+                      }}
+                    >
+                      {item.title}
+                    </p>
+                  </div>
+
+                  {/* Rozbalitelný obsah */}
+                  {isExpanded && (
+                    <div className="px-4 pb-4 border-t" style={{ borderColor: 'var(--border)' }}>
                       {/* Popis */}
                       {item.content && (
-                        <p className="text-xs mt-1 whitespace-pre-wrap" style={{ color: 'var(--text-secondary)' }}>
+                        <p className="text-xs mt-3 whitespace-pre-wrap" style={{ color: 'var(--text-secondary)' }}>
                           {item.content}
                         </p>
                       )}
-                    </div>
 
-                    {/* Akční tlačítka */}
-                    <div className="flex gap-1.5 flex-shrink-0">
-                      <button
-                        onClick={() => openEdit(item)}
-                        className="px-2 py-1 rounded text-xs border transition-colors"
-                        style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
-                        onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                        title="Upravit"
-                      >
-                        Upravit
-                      </button>
-                      <button
-                        onClick={() => deleteItem(item.id)}
-                        className="px-2 py-1 rounded text-xs border transition-colors"
-                        style={{ borderColor: 'var(--border)', color: 'var(--danger)' }}
-                        onMouseEnter={(e) => e.currentTarget.style.background = 'var(--danger-light)'}
-                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                        title="Smazat"
-                      >
-                        Smazat
-                      </button>
+                      {/* Stav + Akce */}
+                      <div className="mt-3 pt-3 border-t flex items-center justify-between gap-2 flex-wrap" style={{ borderColor: 'var(--border)' }}>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Stav:</span>
+                          {(['open', 'in_progress', 'solved'] as AppChangeStatus[]).map(s => (
+                            <button
+                              key={s}
+                              onClick={() => changeStatus(item.id, s)}
+                              className="px-2 py-0.5 rounded-full text-xs font-medium border transition-all"
+                              style={{
+                                background: item.status === s ? STATUS_COLORS[s] : 'transparent',
+                                color: item.status === s ? 'white' : 'var(--text-secondary)',
+                                borderColor: STATUS_COLORS[s],
+                              }}
+                            >
+                              {STATUS_LABELS[s]}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="flex gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            onClick={() => openEdit(item)}
+                            className="px-2 py-1 rounded text-xs border transition-colors"
+                            style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                          >
+                            Upravit
+                          </button>
+                          <button
+                            onClick={() => deleteItem(item.id)}
+                            className="px-2 py-1 rounded text-xs border transition-colors"
+                            style={{ borderColor: 'var(--border)', color: 'var(--danger)' }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--danger-light)'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                          >
+                            Smazat
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-
-                  {/* Přepínač stavu */}
-                  <div className="mt-3 pt-3 border-t flex items-center gap-2 flex-wrap" style={{ borderColor: 'var(--border)' }}>
-                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Stav:</span>
-                    {(['open', 'in_progress', 'solved'] as AppChangeStatus[]).map(s => (
-                      <button
-                        key={s}
-                        onClick={() => changeStatus(item.id, s)}
-                        className="px-2 py-0.5 rounded-full text-xs font-medium border transition-all"
-                        style={{
-                          background: item.status === s ? STATUS_COLORS[s] : 'transparent',
-                          color: item.status === s ? 'white' : 'var(--text-secondary)',
-                          borderColor: STATUS_COLORS[s],
-                        }}
-                      >
-                        {STATUS_LABELS[s]}
-                      </button>
-                    ))}
-                  </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
         {/* ─── Modal: Přidat / Upravit ─── */}
         {showForm && (
-          <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 px-4" style={{ background: 'rgba(0,0,0,0.5)' }}>
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center px-4 py-8"
+            style={{ background: 'rgba(0,0,0,0.5)' }}
+            onClick={(e) => { if (e.target === e.currentTarget) setShowForm(false); }}
+          >
             <div
-              className="w-full max-w-lg rounded-2xl border shadow-xl overflow-hidden"
-              style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}
+              className="w-full max-w-2xl rounded-2xl border shadow-xl flex flex-col"
+              style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', maxHeight: '90vh' }}
             >
               {/* Modal hlavička */}
-              <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
-                <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+              <div className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
+                <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>
                   {editingItem ? 'Upravit položku' : 'Přidat položku'}
                 </h2>
                 <button
                   onClick={() => setShowForm(false)}
-                  className="p-1 rounded-lg transition-colors"
+                  className="p-1.5 rounded-lg transition-colors"
                   style={{ color: 'var(--text-muted)' }}
                   onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
                   onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
@@ -431,8 +461,8 @@ function AppChangesContent() {
                 </button>
               </div>
 
-              {/* Modal tělo */}
-              <div className="px-5 py-4 space-y-4">
+              {/* Modal tělo – scrollovatelné */}
+              <div className="px-6 py-5 space-y-5 overflow-y-auto flex-1">
                 {/* Název */}
                 <div>
                   <label className={labelCls} style={{ color: 'var(--text-secondary)' }}>Název *</label>
@@ -447,20 +477,26 @@ function AppChangesContent() {
                   />
                 </div>
 
-                {/* Popis */}
+                {/* Popis – auto-expanding */}
                 <div>
                   <label className={labelCls} style={{ color: 'var(--text-secondary)' }}>Popis (volitelné)</label>
                   <textarea
                     value={form.content}
-                    onChange={(e) => setForm(f => ({ ...f, content: e.target.value }))}
-                    rows={4}
-                    className={inputCls + ' resize-none'}
-                    style={inputStyle}
+                    onChange={(e) => {
+                      setForm(f => ({ ...f, content: e.target.value }));
+                      // Auto-expand
+                      const ta = e.target;
+                      ta.style.height = 'auto';
+                      ta.style.height = Math.min(ta.scrollHeight, 500) + 'px';
+                    }}
+                    rows={7}
+                    className={inputCls + ' resize-none overflow-hidden'}
+                    style={{ ...inputStyle, minHeight: '160px' }}
                     placeholder="Podrobnější popis, kroky k reprodukci, návrh řešení..."
                   />
                 </div>
 
-                {/* Typ + Priorita + Stav ve třech sloupcích */}
+                {/* Typ + Priorita + Stav */}
                 <div className="grid grid-cols-3 gap-3">
                   <div>
                     <label className={labelCls} style={{ color: 'var(--text-secondary)' }}>Typ</label>
@@ -532,7 +568,7 @@ function AppChangesContent() {
               </div>
 
               {/* Modal footer */}
-              <div className="flex justify-end gap-2 px-5 py-4 border-t" style={{ borderColor: 'var(--border)' }}>
+              <div className="flex justify-end gap-2 px-6 py-4 border-t flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
                 <button
                   onClick={() => setShowForm(false)}
                   className="px-4 py-2 rounded-lg border text-sm"

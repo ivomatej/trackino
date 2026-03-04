@@ -123,12 +123,12 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
     const canManageBilling = currentMembership?.can_manage_billing ?? false;
 
     const trackingItems: NavItem[] = [
-      { label: 'Dashboard', href: '/', icon: ICONS.dashboard },
+      { label: 'Přehled', href: '/', icon: ICONS.dashboard },
     ];
 
     // Time Tracker
     if (hasModule('time_tracker')) {
-      trackingItems.push({ label: 'Time Tracker', href: '/tracker', icon: ICONS.timer });
+      trackingItems.push({ label: 'Měřič', href: '/tracker', icon: ICONS.timer });
     }
 
     // Plánovač

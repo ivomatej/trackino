@@ -83,20 +83,27 @@ const DEFAULT_HELP_CONTENT = `
 <p>V <strong>Tým → editace člena → sekce Fakturace</strong> lze každému členovi přiřadit konkrétní fakturační profil. Pokud není přiřazen žádný, použije se výchozí profil workspace. Přiřazený profil se uživateli zobrazí při podání žádosti o fakturaci v pravém panelu formuláře.</p>
 
 <h3>Převodník textu</h3>
-<p>Modul <strong>Převodník textu</strong> (dostupný v tarifu <strong>Max</strong>, sekce Analýza) umožňuje převést formátovaný text z Wordu, webu nebo jiných zdrojů do čistého formátu:</p>
+<p>Modul <strong>Převodník textu</strong> (dostupný v tarifu <strong>Max</strong>, sekce Analýza) podporuje dva směry konverze:</p>
+<p><strong>Mód 1: Formátovaný text → Text / Markdown</strong> – vložte naformátovaný text z Wordu nebo webu (Ctrl+V) do levého panelu. Výstupní záložky:</p>
 <ul>
-  <li><strong>Prostý text</strong> – odstraní veškeré formátování, zachová pouze odřádkování. Vhodný pro kopírování do formulářů, e-mailů nebo nástrojů bez podpory HTML.</li>
-  <li><strong>Markdown</strong> – zachová strukturu a převede nadpisy H1–H6, tučné, kurzívu, přeškrtnutí, kód, seznamy a hypertextové odkazy na odpovídající Markdown syntaxi.</li>
+  <li><strong>Prostý text</strong> – odstraní veškeré formátování, zachová pouze odřádkování.</li>
+  <li><strong>Markdown</strong> – zachová strukturu: nadpisy H1–H6, tučné, kurzívu, přeškrtnutí, kód, seznamy, odkazy.</li>
 </ul>
-<p>Do levého panelu vložte text Ctrl+V (formátování se zachová). Pravý panel ihned zobrazí výsledek. Záložkami <em>Prostý text / Markdown</em> přepínáte výstupní formát, tlačítkem <em>Kopírovat</em> zkopírujete výsledek do schránky.</p>
+<p><strong>Mód 2: Markdown → Formátovaný text / Prostý text</strong> – zadejte nebo vložte Markdown do levého panelu (editovatelné textové pole). Výstupní záložky:</p>
+<ul>
+  <li><strong>Formátovaný text</strong> – vizuální náhled vyrenderovaného Markdownu (nadpisy, tučné, seznamy…); tlačítko „Kopírovat HTML" zkopíruje zdrojový HTML kód.</li>
+  <li><strong>Prostý text</strong> – text bez jakéhokoli formátování.</li>
+</ul>
+<p>Přepínač módu se nachází v horní části stránky. Tlačítko <em>Kopírovat</em> v každé záložce zkopíruje výstup do schránky. Tlačítko <em>Vymazat vše</em> vyčistí oba panely.</p>
 
 <h3>Úpravy aplikace</h3>
 <p>Stránka <strong>Úpravy aplikace</strong> je dostupná pouze pro <strong>Master Admina</strong> (odkaz v levém menu pod „Nahlásit chybu"). Slouží jako soukromý úkolník k evidenci nápadů a požadavků na rozvoj aplikace.</p>
 <ul>
   <li><strong>Bug / Nápad / Požadavek</strong> – typ položky</li>
   <li><strong>Priorita</strong> – Nízká (šedý pruh) / Střední (žlutý pruh) / Vysoká (červený pruh)</li>
-  <li><strong>Stav</strong> – Otevřeno / Řeší se / Hotovo (sjednoceno se stavem Bug logu)</li>
+  <li><strong>Stav</strong> – Otevřeno / Řeší se / Hotovo</li>
 </ul>
+<p>Každá položka je zobrazena jako <strong>skládací karta</strong> – header ukazuje typ, prioritu, stav, datum a název; kliknutím se rozbalí popis a ovládací prvky (změna stavu, Upravit, Smazat). Formulář pro přidání/úpravu má větší pole pro popis, které se automaticky rozrůstá při psaní.</p>
 <p>Filtrování: záložky Vše / Bug / Nápad / Požadavek / Hotové + vyhledávání podle názvu nebo popisu. Hotové položky jsou přeškrtnuty a odděleny záložkou „Hotové".</p>
 <p><strong>Přesun z Bug logu:</strong> V sekci Nahlásit chybu (Master Admin vidí tlačítko <strong>→ Úpravy aplikace</strong> u každého reportu po rozbalení karty) se kliknutím automaticky vytvoří položka v Úpravách. Obsah pole Poznámka se přenese do popisu. Přesunuté bugy jsou okamžitě označeny zeleným štítkem <em>„Přesunuto ✓"</em> v headeru karty a nelze je přesunout znovu. Přesunuté položky v Úpravách aplikace jsou označeny štítkem <em>„Z Bug logu"</em>. Původní report zůstane v Bug logu nezměněn.</p>
 <p><strong>Poznámka Master Admina:</strong> Poznámka se zobrazuje v šedém poli. Na pravém kraji řádku jsou dvě ikonky – <em>tužka</em> (upravit) a <em>koš</em> (smazat). Pokud poznámka dosud neexistuje, zobrazuje se odkaz „+ Přidat poznámku".</p>

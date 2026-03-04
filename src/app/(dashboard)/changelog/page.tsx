@@ -11,6 +11,14 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.2.0 – 4. 3. 2026</h3>
+<ul>
+  <li><strong>Sidebar – přejmenování položek</strong> – „Dashboard" přejmenováno na <em>Přehled</em>, „Time Tracker" přejmenováno na <em>Měřič</em>.</li>
+  <li><strong>Úpravy aplikace – skládací karty</strong> – každá položka je nyní zobrazena jako skládací karta (jako Bug log). Header vždy ukazuje typ, prioritu, stav, datum a název; kliknutím se rozbalí popis a ovládací prvky (změna stavu, Upravit, Smazat).</li>
+  <li><strong>Úpravy aplikace – větší formulář</strong> – dialog pro přidání/úpravu položky je nyní širší (<code>max-w-2xl</code>) a pole Popis se automaticky rozrůstá s délkou textu (min. 160px, max. 500px). Kliknutím mimo dialog se zavírá.</li>
+  <li><strong>Převodník textu – reverzní mód</strong> – přibyl přepínač <em>Markdown → Formátovaný text / Prostý text</em>. V tomto módu zadáte Markdown do levého panelu a v pravém vidíte vizuální náhled (záložka Formátovaný text) nebo prostý text (záložka Prostý text). Implementovaná konverze: nadpisy H1–H6, tučné, kurzíva, přeškrtnuté, kód, blokové citace, nečíslované a číslované seznamy, hypertextové odkazy.</li>
+</ul>
+
 <h3>v2.1.2 – 4. 3. 2026</h3>
 <ul>
   <li><strong>Oprava Převodníku textu – viditelnost modulu</strong> – nové moduly přidané do kódu po nastavení DB konfigurace tarifů se nyní zobrazují správně. Logika <code>computeEnabledModules()</code> byla upravena: základ je vždy hardcoded seznam dle tarifu; DB config aplikuje jen explicitní výjimky. Tím se zamezí situaci, kdy nový modul zmizí jen proto, že DB konfigurace vznikla před jeho přidáním do aplikace.</li>
