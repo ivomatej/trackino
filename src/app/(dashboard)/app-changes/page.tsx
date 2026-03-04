@@ -101,8 +101,8 @@ type FilterTab = 'all' | AppChangeType | 'solved' | 'archived';
 
 function AppChangesContent() {
   const { isMasterAdmin } = usePermissions();
+  const { loading: authLoading, profile, user } = useAuth();
   const router = useRouter();
-  useAuth();
 
   const [items, setItems] = useState<AppChange[]>([]);
   const [loading, setLoading] = useState(true);
@@ -121,10 +121,25 @@ function AppChangesContent() {
   const [formError, setFormError] = useState('');
   const descTextareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Redirect non-master-admin
+  // SQL banner dismiss (localStorage)
+  const [sqlBannerDismissed, setSqlBannerDismissed] = useState(false);
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setSqlBannerDismissed(localStorage.getItem('trackino_app_changes_sql_done') === '1');
+    }
+  }, []);
+  const dismissSqlBanner = () => {
+    localStorage.setItem('trackino_app_changes_sql_done', '1');
+    setSqlBannerDismissed(true);
+  };
+
+  // Redirect non-master-admin – čeká, dokud se auth a profil nenačtou
+  useEffect(() => {
+    if (authLoading) return;           // auth se ještě načítá
+    if (!user) { router.push('/'); return; } // nepřihlášen
+    if (profile === null) return;      // profil se ještě načítá
     if (!isMasterAdmin) router.push('/');
-  }, [isMasterAdmin, router]);
+  }, [authLoading, user, profile, isMasterAdmin, router]);
 
   const fetchItems = useCallback(async () => {
     setLoading(true);
@@ -303,25 +318,37 @@ function AppChangesContent() {
 
   const isArchiveTab = filterTab === 'archived';
 
+  // Zobrazit loading, dokud se auth a profil nenačtou
+  if (authLoading || !user || profile === null) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center py-20">
+          <div className="w-6 h-6 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   if (!isMasterAdmin) return null;
 
   return (
     <DashboardLayout>
       <div className="max-w-4xl">
 
-        {/* SQL migrace – upozornění (vždy viditelné, dokud si uživatel nezavře) */}
-        <details className="mb-5 rounded-xl border" style={{ borderColor: '#f59e0b44', background: '#fffbeb' }}>
-          <summary className="px-4 py-3 cursor-pointer text-sm font-medium flex items-center gap-2" style={{ color: '#92400e' }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-            </svg>
-            Vyžadována SQL migrace v Supabase – klikni pro zobrazení
-          </summary>
-          <div className="px-4 pb-4">
-            <p className="text-xs mb-2 mt-1" style={{ color: '#78350f' }}>
-              Aby fungovaly nové stavy <strong>Archiv</strong> a typ <strong>Poznámka</strong>, musíš spustit tuto migraci v Supabase → SQL Editor:
-            </p>
-            <pre className="text-xs rounded-lg p-3 overflow-x-auto" style={{ background: '#1e1e2e', color: '#cdd6f4', fontFamily: 'monospace' }}>{`-- Oprav CHECK constraints pro trackino_app_changes
+        {/* SQL migrace – upozornění (skryje se po kliknutí „Hotovo") */}
+        {!sqlBannerDismissed && (
+          <details className="mb-5 rounded-xl border" style={{ borderColor: '#f59e0b44', background: '#fffbeb' }}>
+            <summary className="px-4 py-3 cursor-pointer text-sm font-medium flex items-center gap-2" style={{ color: '#92400e' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+              Vyžadována SQL migrace v Supabase – klikni pro zobrazení
+            </summary>
+            <div className="px-4 pb-4">
+              <p className="text-xs mb-2 mt-1" style={{ color: '#78350f' }}>
+                Aby fungovaly nové stavy <strong>Archiv</strong> a typ <strong>Poznámka</strong>, musíš spustit tuto migraci v Supabase → SQL Editor:
+              </p>
+              <pre className="text-xs rounded-lg p-3 overflow-x-auto" style={{ background: '#1e1e2e', color: '#cdd6f4', fontFamily: 'monospace' }}>{`-- Oprav CHECK constraints pro trackino_app_changes
 ALTER TABLE trackino_app_changes
   DROP CONSTRAINT IF EXISTS trackino_app_changes_type_check,
   DROP CONSTRAINT IF EXISTS trackino_app_changes_status_check;
@@ -331,9 +358,24 @@ ALTER TABLE trackino_app_changes
     CHECK (type IN ('bug', 'idea', 'request', 'note')),
   ADD CONSTRAINT trackino_app_changes_status_check
     CHECK (status IN ('open', 'in_progress', 'solved', 'archived'));`}</pre>
-            <p className="text-xs mt-2" style={{ color: '#92400e' }}>Po spuštění migrace bude Archiv a typ Poznámka funkční.</p>
-          </div>
-        </details>
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <p className="text-xs" style={{ color: '#92400e' }}>Po spuštění migrace bude Archiv a typ Poznámka funkční.</p>
+                <button
+                  onClick={dismissSqlBanner}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white flex-shrink-0"
+                  style={{ background: '#92400e' }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = '#78350f'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = '#92400e'}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  Migrace spuštěna – skrýt
+                </button>
+              </div>
+            </div>
+          </details>
+        )}
 
         {/* Hlavička */}
         <div className="flex items-center justify-between mb-6">
