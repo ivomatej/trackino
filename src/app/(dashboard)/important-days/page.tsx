@@ -46,6 +46,18 @@ function ImportantDaysContent() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
 
+  // SQL banner dismiss (localStorage)
+  const [sqlBannerDismissed, setSqlBannerDismissed] = useState(false);
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setSqlBannerDismissed(localStorage.getItem('trackino_important_days_sql_done') === '1');
+    }
+  }, []);
+  const dismissSqlBanner = () => {
+    localStorage.setItem('trackino_important_days_sql_done', '1');
+    setSqlBannerDismissed(true);
+  };
+
   // Formulář
   const [fTitle, setFTitle] = useState('');
   const [fStartDate, setFStartDate] = useState('');
@@ -163,28 +175,29 @@ function ImportantDaysContent() {
   return (
     <div style={{ maxWidth: 720, margin: '0 auto' }}>
 
-      {/* SQL migrace banner */}
-      <details
-        className="mb-5 rounded-xl border overflow-hidden"
-        style={{ borderColor: '#f59e0b66', background: 'var(--bg-card)' }}
-      >
-        <summary
-          className="cursor-pointer px-4 py-3 text-sm font-medium flex items-center gap-2"
-          style={{ color: '#d97706', listStyle: 'none' }}
+      {/* SQL migrace banner (skryje se po kliknutí „Migrace spuštěna – skrýt") */}
+      {!sqlBannerDismissed && (
+        <details
+          className="mb-5 rounded-xl border overflow-hidden"
+          style={{ borderColor: '#f59e0b66', background: 'var(--bg-card)' }}
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
-          </svg>
-          Vyžadována SQL migrace v Supabase – klikni pro zobrazení
-        </summary>
-        <div className="px-4 pb-4 pt-1">
-          <p className="text-xs mb-2" style={{ color: 'var(--text-secondary)' }}>
-            Zkopíruj a spusť v Supabase SQL editoru:
-          </p>
-          <pre
-            className="rounded-lg p-3 text-xs overflow-x-auto"
-            style={{ background: 'var(--bg-hover)', color: 'var(--text-primary)', fontFamily: 'monospace' }}
-          >{`CREATE TABLE IF NOT EXISTS trackino_important_days (
+          <summary
+            className="cursor-pointer px-4 py-3 text-sm font-medium flex items-center gap-2"
+            style={{ color: '#d97706', listStyle: 'none' }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            Vyžadována SQL migrace v Supabase – klikni pro zobrazení
+          </summary>
+          <div className="px-4 pb-4 pt-1">
+            <p className="text-xs mb-2" style={{ color: 'var(--text-secondary)' }}>
+              Zkopíruj a spusť v Supabase SQL editoru:
+            </p>
+            <pre
+              className="rounded-lg p-3 text-xs overflow-x-auto"
+              style={{ background: 'var(--bg-hover)', color: 'var(--text-primary)', fontFamily: 'monospace' }}
+            >{`CREATE TABLE IF NOT EXISTS trackino_important_days (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id uuid NOT NULL REFERENCES trackino_workspaces(id) ON DELETE CASCADE,
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -202,8 +215,24 @@ function ImportantDaysContent() {
 ALTER TABLE trackino_important_days ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Auth full" ON trackino_important_days
   FOR ALL TO authenticated USING (true) WITH CHECK (true);`}</pre>
-        </div>
-      </details>
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Po spuštění migrace bude stránka plně funkční.</p>
+              <button
+                onClick={dismissSqlBanner}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white flex-shrink-0"
+                style={{ background: '#d97706' }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#b45309'}
+                onMouseLeave={(e) => e.currentTarget.style.background = '#d97706'}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                Migrace spuštěna – skrýt
+              </button>
+            </div>
+          </div>
+        </details>
+      )}
 
       {/* Hlavička */}
       <div className="flex items-center justify-between mb-6">
@@ -368,17 +397,24 @@ CREATE POLICY "Auth full" ON trackino_important_days
               {/* Opakování */}
               <div>
                 <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Opakování</label>
-                <select
-                  value={fRecurring}
-                  onChange={e => setFRecurring(e.target.value as ImportantDayRecurring)}
-                  className="w-full px-3 py-2 rounded-lg border text-sm"
-                  style={{ borderColor: 'var(--border)', background: 'var(--bg-input, var(--bg-hover))', color: 'var(--text-primary)' }}
-                >
-                  <option value="none">Jednorázově</option>
-                  <option value="weekly">Každý týden (stejný den v týdnu)</option>
-                  <option value="monthly">Každý měsíc (stejný den v měsíci)</option>
-                  <option value="yearly">Každý rok (stejné datum)</option>
-                </select>
+                <div className="relative">
+                  <select
+                    value={fRecurring}
+                    onChange={e => setFRecurring(e.target.value as ImportantDayRecurring)}
+                    className="w-full px-3 py-2 pr-8 rounded-lg border text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
+                    style={{ borderColor: 'var(--border)', background: 'var(--bg-input, var(--bg-hover))', color: 'var(--text-primary)' }}
+                  >
+                    <option value="none">Jednorázově</option>
+                    <option value="weekly">Každý týden (stejný den v týdnu)</option>
+                    <option value="monthly">Každý měsíc (stejný den v měsíci)</option>
+                    <option value="yearly">Každý rok (stejné datum)</option>
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: 'var(--text-muted)' }}>
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </div>
+                </div>
               </div>
 
               {/* Datum(a) */}
@@ -434,12 +470,11 @@ CREATE POLICY "Auth full" ON trackino_important_days
                     <button
                       key={c}
                       onClick={() => setFColor(c)}
-                      className="w-7 h-7 rounded-full transition-transform hover:scale-110"
+                      className="w-7 h-7 rounded-full transition-all hover:scale-110"
                       style={{
                         background: c,
-                        outline: fColor === c ? `3px solid ${c}` : 'none',
+                        outline: fColor === c ? '2px solid #000' : 'none',
                         outlineOffset: '2px',
-                        border: fColor === c ? '2px solid white' : 'none',
                       }}
                       title={c}
                     />
