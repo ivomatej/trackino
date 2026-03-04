@@ -52,7 +52,7 @@ const ICONS = {
 export default function Sidebar({ open, onClose }: SidebarProps) {
   const pathname = usePathname();
   const { user, profile, signOut } = useAuth();
-  const { currentWorkspace, userRole, currentMembership } = useWorkspace();
+  const { currentWorkspace, userRole, currentMembership, hasModule } = useWorkspace();
   const [showUserPanel, setShowUserPanel] = useState(false);
 
   // Stav sbalení sekcí – persistováno v localStorage
@@ -105,7 +105,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
       });
   }, [user, currentWorkspace, canInvoice]);
 
-  // Dynamicky sestavit navigaci dle oprávnění
+  // Dynamicky sestavit navigaci dle oprávnění a povolených modulů
   const navGroups = useMemo<NavGroup[]>(() => {
     const isAdmin = checkWsAdmin(userRole);
     const isManagerOrAdmin = checkIsManager(userRole) || isAdmin;
@@ -117,71 +117,96 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
     const canManageBilling = currentMembership?.can_manage_billing ?? false;
 
     const trackingItems: NavItem[] = [
-      { label: 'Dashboard', href: '/dashboard', icon: ICONS.dashboard },
-      { label: 'Time Tracker', href: '/', icon: ICONS.timer },
-      { label: 'Plánovač', href: '/planner', icon: ICONS.planner },
+      { label: 'Dashboard', href: '/', icon: ICONS.dashboard },
     ];
 
+    // Time Tracker
+    if (hasModule('time_tracker')) {
+      trackingItems.push({ label: 'Time Tracker', href: '/tracker', icon: ICONS.timer });
+    }
+
+    // Plánovač
+    if (hasModule('planner')) {
+      trackingItems.push({ label: 'Plánovač', href: '/planner', icon: ICONS.planner });
+    }
+
     // Dovolená – viditelné pro uživatele s nárokem nebo adminy
-    if (canUseVacation || isAdmin) {
+    if (hasModule('vacation') && (canUseVacation || isAdmin)) {
       trackingItems.push({ label: 'Dovolená', href: '/vacation', icon: ICONS.vacation });
     }
 
     // Fakturace – viditelné pro uživatele s can_invoice, can_manage_billing nebo managery/adminy
-    if (canInvoice || canManageBilling || isManagerOrAdmin) {
+    if (hasModule('invoices') && (canInvoice || canManageBilling || isManagerOrAdmin)) {
       trackingItems.push({ label: 'Fakturace', href: '/invoices', icon: ICONS.invoice });
     }
 
-    // ANALÝZA – Reporty + Podřízení + Poznámky (jen pro managery a adminy)
-    const analyzeItems: NavItem[] = [
-      { label: 'Reporty', href: '/reports', icon: ICONS.reports },
-    ];
-    if (isManagerOrAdmin) {
+    // ANALÝZA
+    const analyzeItems: NavItem[] = [];
+
+    if (hasModule('reports')) {
+      analyzeItems.push({ label: 'Reporty', href: '/reports', icon: ICONS.reports });
+    }
+    if (hasModule('subordinates') && isManagerOrAdmin) {
       analyzeItems.push({ label: 'Podřízení', href: '/subordinates', icon: ICONS.subordinates });
+    }
+    if (hasModule('notes') && isManagerOrAdmin) {
       analyzeItems.push({ label: 'Poznámky', href: '/notes', icon: ICONS.notes });
     }
-    analyzeItems.push({ label: 'Přehled hodin', href: '/attendance', icon: ICONS.attendance });
-    analyzeItems.push({ label: 'Analýza kategorií', href: '/category-report', icon: ICONS.categoryReport });
+    if (hasModule('attendance')) {
+      analyzeItems.push({ label: 'Přehled hodin', href: '/attendance', icon: ICONS.attendance });
+    }
+    if (hasModule('category_report')) {
+      analyzeItems.push({ label: 'Analýza kategorií', href: '/category-report', icon: ICONS.categoryReport });
+    }
 
-    const spravaManagedItems: NavItem[] = [
-      { label: 'Projekty', href: '/projects', icon: ICONS.projects },
-      { label: 'Klienti', href: '/clients', icon: ICONS.clients },
-    ];
+    // SPRÁVA
+    const spravaManagedItems: NavItem[] = [];
+
+    if (hasModule('projects')) {
+      spravaManagedItems.push({ label: 'Projekty', href: '/projects', icon: ICONS.projects });
+    }
+    if (hasModule('clients')) {
+      spravaManagedItems.push({ label: 'Klienti', href: '/clients', icon: ICONS.clients });
+    }
 
     // Štítky – skryté pro běžné členy pokud je zapnuto hide_tags_globally
-    if (!hideTagsGlobally || isAdmin) {
+    if (hasModule('tags') && (!hideTagsGlobally || isAdmin)) {
       spravaManagedItems.push({ label: 'Štítky', href: '/tags', icon: ICONS.tags });
     }
 
-    spravaManagedItems.push({ label: 'Tým', href: '/team', icon: ICONS.team });
+    if (hasModule('team')) {
+      spravaManagedItems.push({ label: 'Tým', href: '/team', icon: ICONS.team });
+    }
+
+    // Nastavení – pouze pro admin/owner
+    if (hasModule('settings') && isAdmin) {
+      spravaManagedItems.push({ label: 'Nastavení', href: '/settings', icon: ICONS.settings });
+    }
+
+    // Audit log – Master Admin, Workspace Admin nebo uživatel s can_view_audit
+    if (hasModule('audit') && showAudit) {
+      spravaManagedItems.push({ label: 'Audit log', href: '/audit', icon: ICONS.audit });
+    }
 
     const groups: NavGroup[] = [
       {
         title: 'SLEDOVÁNÍ',
         items: trackingItems,
       },
-      {
-        title: 'ANALÝZA',
-        items: analyzeItems,
-      },
-      {
-        title: 'SPRÁVA',
-        items: spravaManagedItems,
-      },
     ];
 
-    // Nastavení – pouze pro admin/owner
-    if (isAdmin) {
-      groups[2].items.push(
-        { label: 'Nastavení', href: '/settings', icon: ICONS.settings },
-      );
+    if (analyzeItems.length > 0) {
+      groups.push({
+        title: 'ANALÝZA',
+        items: analyzeItems,
+      });
     }
 
-    // Audit log – Master Admin, Workspace Admin nebo uživatel s can_view_audit
-    if (showAudit) {
-      groups[2].items.push(
-        { label: 'Audit log', href: '/audit', icon: ICONS.audit },
-      );
+    if (spravaManagedItems.length > 0) {
+      groups.push({
+        title: 'SPRÁVA',
+        items: spravaManagedItems,
+      });
     }
 
     // Správa systému – jen pro Master Admin
@@ -195,7 +220,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
     }
 
     return groups;
-  }, [userRole, profile, currentWorkspace?.tariff, currentWorkspace?.hide_tags_globally, currentMembership?.can_use_vacation, currentMembership?.can_invoice, currentMembership?.can_manage_billing]);
+  }, [userRole, profile, currentWorkspace?.tariff, currentWorkspace?.hide_tags_globally, currentMembership?.can_use_vacation, currentMembership?.can_invoice, currentMembership?.can_manage_billing, hasModule]);
 
   const initials = profile?.display_name
     ? profile.display_name.split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2)
@@ -255,7 +280,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
       >
         {/* Logo + Workspace */}
         <div className="flex items-center gap-3 px-4 h-[var(--topbar-height)] border-b" style={{ borderColor: 'var(--border)' }}>
-          <Link href="/dashboard" onClick={onClose} className="flex items-center gap-3 flex-1 min-w-0">
+          <Link href="/" onClick={onClose} className="flex items-center gap-3 flex-1 min-w-0">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-xs flex-shrink-0" style={{ background: 'var(--primary)' }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />

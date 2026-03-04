@@ -4,6 +4,34 @@ export type UserRole = 'owner' | 'admin' | 'manager' | 'member';
 
 export type Tariff = 'free' | 'pro' | 'max';
 
+/** Identifikátory modulů aplikace */
+export type ModuleId =
+  | 'time_tracker'
+  | 'planner'
+  | 'vacation'
+  | 'invoices'
+  | 'reports'
+  | 'attendance'
+  | 'category_report'
+  | 'subordinates'
+  | 'notes'
+  | 'projects'
+  | 'clients'
+  | 'tags'
+  | 'team'
+  | 'settings'
+  | 'audit';
+
+/** Per-uživatelský override modulu (nad rámec tarifu nebo zakázání) */
+export interface UserModuleOverride {
+  id: string;
+  workspace_id: string;
+  user_id: string;
+  module_id: ModuleId;
+  enabled: boolean;
+  created_at: string;
+}
+
 export interface RequiredFields {
   project: boolean;
   category: boolean;

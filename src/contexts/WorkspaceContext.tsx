@@ -1,9 +1,10 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, ReactNode, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './AuthContext';
-import type { Workspace, WorkspaceMember, UserRole, ManagerAssignment } from '@/types/database';
+import type { Workspace, WorkspaceMember, UserRole, ManagerAssignment, ModuleId } from '@/types/database';
+import { computeEnabledModules } from '@/lib/modules';
 
 interface WorkspaceContextType {
   workspaces: Workspace[];
@@ -23,6 +24,10 @@ interface WorkspaceContextType {
   isManagerOf: (userId: string) => boolean;
   /** Znovu načíst workspace data (po uložení nastavení apod.) */
   refreshWorkspace: () => Promise<void>;
+  /** Množina povolených modulů pro aktuálního uživatele (tarif + overrides) */
+  enabledModules: Set<ModuleId>;
+  /** Kontroluje, zda má aktuální uživatel přístup k danému modulu */
+  hasModule: (moduleId: ModuleId) => boolean;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
@@ -35,6 +40,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [currentWorkspace, setCurrentWorkspace] = useState<Workspace | null>(null);
   const [currentMembership, setCurrentMembership] = useState<WorkspaceMember | null>(null);
   const [managerAssignments, setManagerAssignments] = useState<ManagerAssignment[]>([]);
+  const [moduleOverrides, setModuleOverrides] = useState<{ module_id: ModuleId; enabled: boolean }[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Načtení manager assignments pro aktuální workspace
@@ -50,6 +56,23 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setManagerAssignments((data ?? []) as ManagerAssignment[]);
     } catch {
       setManagerAssignments([]);
+    }
+  }, [user]);
+
+  // Načtení module overrides pro aktuálního uživatele
+  const fetchModuleOverrides = useCallback(async (workspaceId: string) => {
+    if (!user) return;
+    try {
+      const { data } = await supabase
+        .from('trackino_user_module_overrides')
+        .select('module_id, enabled')
+        .eq('workspace_id', workspaceId)
+        .eq('user_id', user.id);
+
+      setModuleOverrides((data ?? []) as { module_id: ModuleId; enabled: boolean }[]);
+    } catch {
+      // Tabulka ještě nemusí existovat – ignorujeme
+      setModuleOverrides([]);
     }
   }, [user]);
 
@@ -215,6 +238,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
       // Načíst manager assignments
       await fetchManagerAssignments(workspace.id);
+      // Načíst module overrides
+      await fetchModuleOverrides(workspace.id);
     }
   }
 
@@ -292,6 +317,16 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     return managerAssignments.some(a => a.member_user_id === userId);
   }, [managerAssignments]);
 
+  // Výpočet povolených modulů (tarif workspace + user overrides)
+  const enabledModules = useMemo<Set<ModuleId>>(() => {
+    const tariff = currentWorkspace?.tariff ?? 'free';
+    return computeEnabledModules(tariff, moduleOverrides);
+  }, [currentWorkspace?.tariff, moduleOverrides]);
+
+  const hasModule = useCallback((moduleId: ModuleId): boolean => {
+    return enabledModules.has(moduleId);
+  }, [enabledModules]);
+
   useEffect(() => {
     fetchWorkspaces();
   }, [fetchWorkspaces]);
@@ -311,6 +346,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         managerAssignments,
         isManagerOf,
         refreshWorkspace,
+        enabledModules,
+        hasModule,
       }}
     >
       {children}

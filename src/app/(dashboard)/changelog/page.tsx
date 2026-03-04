@@ -11,6 +11,12 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v1.9.6 – 4. 3. 2026</h3>
+<ul>
+  <li><strong>Modulární systém</strong> – části aplikace jsou nyní organizovány jako moduly, které lze zapnout nebo vypnout. Výchozí sada modulů závisí na tarifu workspace (Free / Pro / Max). Admin může v Nastavení → Moduly přidat konkrétnímu uživateli modul, který není zahrnut v tarifu, nebo naopak modul zakázat. Sidebar zobrazuje pouze povolené moduly. Vyžaduje SQL migraci – viz Nápověda.</li>
+  <li><strong>URL routing – Dashboard na hlavní stránce</strong> – Dashboard byl přesunut na URL <code>/</code> (hlavní stránka); Time Tracker má nyní URL <code>/tracker</code>. Staré záložky na <code>/dashboard</code> jsou přesměrovány automaticky.</li>
+</ul>
+
 <h3>v1.9.5 – 4. 3. 2026</h3>
 <ul>
   <li><strong>Master Admin – skrytí v Tým → Členové</strong> – Master Admin je nyní skryt ze seznamu členů pro všechny ostatní uživatele; sám Master Admin vidí seznam kompletně; v záložce Manažeři je Master Admin také skryt</li>

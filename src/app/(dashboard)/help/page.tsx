@@ -82,6 +82,27 @@ const DEFAULT_HELP_CONTENT = `
 <p>V <strong>Nastavení → Fakturační údaje</strong> lze vytvořit více fakturačních profilů (např. pro různé právní subjekty). Každý profil obsahuje: název společnosti, jméno jednatele, adresu (ulice + číslo popisné), PSČ, město, stát, IČO, DIČ, příznak plátce DPH, e-mail, telefon a poznámku k fakturaci. Jeden profil lze označit jako výchozí.</p>
 <p>V <strong>Tým → editace člena → sekce Fakturace</strong> lze každému členovi přiřadit konkrétní fakturační profil. Pokud není přiřazen žádný, použije se výchozí profil workspace. Přiřazený profil se uživateli zobrazí při podání žádosti o fakturaci v pravém panelu formuláře.</p>
 
+<h3>Modulární systém</h3>
+<p>Aplikace je rozdělena do <strong>modulů</strong>, které lze zapnout nebo vypnout. Výchozí sada modulů závisí na tarifu workspace:</p>
+<ul>
+  <li><strong>Free</strong> – Time Tracker, Reporty, Projekty, Klienti, Štítky, Tým</li>
+  <li><strong>Pro</strong> – Free + Plánovač, Dovolená, Fakturace, Přehled hodin, Analýza kategorií, Podřízení, Poznámky, Nastavení</li>
+  <li><strong>Max</strong> – Pro + Audit log</li>
+</ul>
+<p>Admin může v <strong>Nastavení → Moduly</strong> nastavit přepisy pro jednotlivé uživatele – přidat modul, který není v tarifu, nebo zakázat modul, který v tarifu je. Přepisy mají vždy přednost před výchozím tarifem. Moduly, které uživatel nemá povoleny, se nezobrazují v levém menu.</p>
+<p><strong>SQL migrace (nutno spustit v Supabase):</strong> Pro modulární systém je potřeba nová tabulka:<br/>
+<code>CREATE TABLE IF NOT EXISTS trackino_user_module_overrides (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES trackino_workspaces(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  module_id text NOT NULL,
+  enabled boolean NOT NULL DEFAULT true,
+  created_at timestamptz DEFAULT now(),
+  UNIQUE(workspace_id, user_id, module_id)
+);
+ALTER TABLE trackino_user_module_overrides ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Auth full" ON trackino_user_module_overrides FOR ALL TO authenticated USING (true) WITH CHECK (true);</code></p>
+
 <h3>Správa workspace (Master Admin)</h3>
 <p>Stránka <strong>Správa workspace</strong> (sekce Systém, viditelná pouze pro Master Adminy) zobrazuje přehled všech workspace na platformě. Každá karta workspace obsahuje:</p>
 <ul>
