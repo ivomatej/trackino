@@ -13,8 +13,8 @@ import type { Calendar, CalendarEvent, VacationEntry, ImportantDay } from '@/typ
 interface DisplayEvent {
   id: string;
   title: string;
-  start_date: string;   // YYYY-MM-DD
-  end_date: string;     // YYYY-MM-DD
+  start_date: string;
+  end_date: string;
   color: string;
   source: 'manual' | 'vacation' | 'important_day';
   source_id: string;
@@ -81,7 +81,6 @@ const DEFAULT_COLORS = [
   '#8b5cf6', '#ec4899', '#14b8a6', '#f97316',
 ];
 
-// Vrátí všechny výskyty opakujícího se Důležitého dne v daném rozsahu
 function getImportantDayOccurrences(
   day: ImportantDay,
   rangeStart: Date,
@@ -130,7 +129,6 @@ function getImportantDayOccurrences(
   return result;
 }
 
-// Zjistí, zda událost zasahuje do daného dne
 function eventOnDay(ev: DisplayEvent, day: Date): boolean {
   const start = parseDate(ev.start_date);
   const end = parseDate(ev.end_date);
@@ -147,10 +145,10 @@ function sourceBadgeLabel(source: DisplayEvent['source']): string {
   return '';
 }
 
-// ─── Vnitřní komponenta (přístup k WorkspaceContext) ─────────────────────────
+// ─── Vnitřní komponenta ───────────────────────────────────────────────────────
 
 function CalendarContent() {
-  const { user } = useAuth();
+  const { user, profile, updateProfile } = useAuth();
   const { currentWorkspace } = useWorkspace();
   const today = useMemo(() => new Date(), []);
 
@@ -162,6 +160,14 @@ function CalendarContent() {
   const [importantDays, setImportantDays] = useState<ImportantDay[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCalendarIds, setSelectedCalendarIds] = useState<Set<string>>(new Set());
+
+  // Mini kalendář + nastavení
+  const [miniCalDate, setMiniCalDate] = useState<Date>(() => new Date());
+  const [calDayStart, setCalDayStart] = useState(8);
+  const [calDayEnd, setCalDayEnd] = useState(18);
+  const [showCalSettings, setShowCalSettings] = useState(false);
+  const [savingCalSettings, setSavingCalSettings] = useState(false);
+  const [calSettingsForm, setCalSettingsForm] = useState({ dayStart: 8, dayEnd: 18 });
 
   // Formulář události
   const [showEventForm, setShowEventForm] = useState(false);
@@ -186,8 +192,19 @@ function CalendarContent() {
   const [calendarForm, setCalendarForm] = useState({ name: '', color: '#3b82f6' });
   const [savingCalendar, setSavingCalendar] = useState(false);
 
-  // Příznak pro inicializaci výběru kalendářů
   const initializedRef = useRef(false);
+
+  // ── Sync nastavení kalendáře z profilu ────────────────────────────────────
+
+  useEffect(() => {
+    if (profile) {
+      const start = profile.calendar_day_start ?? 8;
+      const end = profile.calendar_day_end ?? 18;
+      setCalDayStart(start);
+      setCalDayEnd(end);
+      setCalSettingsForm({ dayStart: start, dayEnd: end });
+    }
+  }, [profile]);
 
   // ── Načtení dat ──────────────────────────────────────────────────────────
 
@@ -195,7 +212,6 @@ function CalendarContent() {
     if (!user || !currentWorkspace) return;
     setLoading(true);
     try {
-      // Moje kalendáře
       const { data: cals } = await supabase
         .from('trackino_calendars')
         .select('*')
@@ -205,7 +221,6 @@ function CalendarContent() {
 
       let calList = (cals ?? []) as Calendar[];
 
-      // Automaticky vytvoř výchozí kalendář při prvním přístupu
       if (calList.length === 0) {
         const { data: newCal } = await supabase
           .from('trackino_calendars')
@@ -223,7 +238,6 @@ function CalendarContent() {
 
       setCalendars(calList);
 
-      // Inicializuj výběr jen poprvé – při dalším načtení přidej nové, nemazej existující výběr
       if (!initializedRef.current) {
         initializedRef.current = true;
         setSelectedCalendarIds(new Set(calList.map(c => c.id)));
@@ -235,7 +249,6 @@ function CalendarContent() {
         });
       }
 
-      // Události z mých kalendářů
       if (calList.length > 0) {
         const calIds = calList.map(c => c.id);
         const { data: evs } = await supabase
@@ -248,7 +261,6 @@ function CalendarContent() {
         setEvents([]);
       }
 
-      // Schválená dovolená
       const { data: vacs } = await supabase
         .from('trackino_vacation_entries')
         .select('*')
@@ -257,7 +269,6 @@ function CalendarContent() {
         .eq('status', 'approved');
       setVacationEntries((vacs ?? []) as VacationEntry[]);
 
-      // Důležité dny
       const { data: days } = await supabase
         .from('trackino_important_days')
         .select('*')
@@ -393,26 +404,42 @@ function CalendarContent() {
     await fetchData();
   }
 
+  // ── Nastavení kalendáře ───────────────────────────────────────────────────
+
+  async function saveCalSettings() {
+    setSavingCalSettings(true);
+    await updateProfile({
+      calendar_day_start: calSettingsForm.dayStart,
+      calendar_day_end: calSettingsForm.dayEnd,
+    });
+    setCalDayStart(calSettingsForm.dayStart);
+    setCalDayEnd(calSettingsForm.dayEnd);
+    setSavingCalSettings(false);
+    setShowCalSettings(false);
+  }
+
   // ── Navigace ──────────────────────────────────────────────────────────────
 
-  function goToday() { setCurrentDate(new Date()); }
+  function goToday() {
+    const t = new Date();
+    setCurrentDate(t);
+    setMiniCalDate(t);
+  }
 
   function goPrev() {
-    setCurrentDate(d => {
-      const n = new Date(d);
-      if (view === 'week') n.setDate(n.getDate() - 7);
-      else n.setMonth(n.getMonth() - 1);
-      return n;
-    });
+    const d = new Date(currentDate);
+    if (view === 'week') d.setDate(d.getDate() - 7);
+    else d.setMonth(d.getMonth() - 1);
+    setCurrentDate(d);
+    setMiniCalDate(d);
   }
 
   function goNext() {
-    setCurrentDate(d => {
-      const n = new Date(d);
-      if (view === 'week') n.setDate(n.getDate() + 7);
-      else n.setMonth(n.getMonth() + 1);
-      return n;
-    });
+    const d = new Date(currentDate);
+    if (view === 'week') d.setDate(d.getDate() + 7);
+    else d.setMonth(d.getMonth() + 1);
+    setCurrentDate(d);
+    setMiniCalDate(d);
   }
 
   // ── Rozsah pro opakující se záznamy ──────────────────────────────────────
@@ -426,7 +453,6 @@ function CalendarContent() {
       const end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
       return { start: addDays(getMonday(start), -7), end: addDays(end, 14) };
     } else {
-      // list – 6 měsíců dopředu od začátku aktuálního měsíce
       const start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
       const end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 6, 0);
       return { start, end };
@@ -438,7 +464,6 @@ function CalendarContent() {
   const displayEvents = useMemo<DisplayEvent[]>(() => {
     const result: DisplayEvent[] = [];
 
-    // Ruční události (filtrovány podle vybraných kalendářů)
     for (const ev of events) {
       if (!selectedCalendarIds.has(ev.calendar_id)) continue;
       const cal = calendars.find(c => c.id === ev.calendar_id);
@@ -458,7 +483,6 @@ function CalendarContent() {
       });
     }
 
-    // Schválená dovolená
     for (const v of vacationEntries) {
       result.push({
         id: `vacation-${v.id}`,
@@ -473,7 +497,6 @@ function CalendarContent() {
       });
     }
 
-    // Důležité dny (s opakováním)
     for (const day of importantDays) {
       const occs = getImportantDayOccurrences(day, visibleRange.start, visibleRange.end);
       for (const occ of occs) {
@@ -518,6 +541,28 @@ function CalendarContent() {
     return weeks;
   }, [currentDate]);
 
+  // ── Mřížka mini kalendáře ─────────────────────────────────────────────────
+
+  const miniCalGrid = useMemo(() => {
+    const year = miniCalDate.getFullYear();
+    const month = miniCalDate.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const gridStart = getMonday(firstDay);
+    const weeks: Date[][] = [];
+    let cur = new Date(gridStart);
+    while (true) {
+      const week: Date[] = [];
+      for (let i = 0; i < 7; i++) {
+        week.push(new Date(cur));
+        cur = addDays(cur, 1);
+      }
+      weeks.push(week);
+      if (cur > lastDay && weeks.length >= 4) break;
+    }
+    return weeks;
+  }, [miniCalDate]);
+
   const weekDays = useMemo(() => {
     const monday = getMonday(currentDate);
     return Array.from({ length: 7 }, (_, i) => addDays(monday, i));
@@ -557,8 +602,6 @@ function CalendarContent() {
       });
   }, [displayEvents, visibleRange]);
 
-  // ── Popis rozsahu dat ─────────────────────────────────────────────────────
-
   const dateRangeLabel = useMemo(() => {
     if (view === 'week') {
       const monday = getMonday(currentDate);
@@ -568,7 +611,7 @@ function CalendarContent() {
     return formatMonthYear(currentDate);
   }, [view, currentDate]);
 
-  // ── Event pill – kompaktní zobrazení události ─────────────────────────────
+  // ── Event pill ────────────────────────────────────────────────────────────
 
   function EventPill({ ev, compact = false }: { ev: DisplayEvent; compact?: boolean }) {
     const isClickable = ev.source === 'manual';
@@ -606,6 +649,8 @@ function CalendarContent() {
     </DashboardLayout>
   );
 
+  const ROW_H = 60; // px per hour in week view
+
   return (
     <DashboardLayout>
     <div className="h-full flex flex-col" style={{ minHeight: 0 }}>
@@ -613,23 +658,6 @@ function CalendarContent() {
       {/* ── Záhlaví ──────────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center gap-3 px-6 pt-6 pb-4 flex-shrink-0">
         <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Kalendář</h1>
-
-        {/* Přepínač pohledu */}
-        <div className="flex rounded-lg overflow-hidden border" style={{ borderColor: 'var(--border)' }}>
-          {(['list', 'week', 'month'] as ViewType[]).map(v => (
-            <button
-              key={v}
-              onClick={() => setView(v)}
-              className="px-3 py-1.5 text-sm font-medium transition-colors"
-              style={{
-                background: view === v ? 'var(--primary)' : 'var(--bg-card)',
-                color: view === v ? 'white' : 'var(--text-secondary)',
-              }}
-            >
-              {v === 'list' ? 'Seznam' : v === 'week' ? 'Týden' : 'Měsíc'}
-            </button>
-          ))}
-        </div>
 
         {/* Navigace */}
         <div className="flex items-center gap-1">
@@ -689,127 +717,213 @@ function CalendarContent() {
       {/* ── Hlavní obsah ─────────────────────────────────────────────────── */}
       <div className="flex flex-1 overflow-hidden">
 
-        {/* ── Levý panel – Moje kalendáře ──────────────────────────────── */}
+        {/* ── Levý panel ───────────────────────────────────────────────── */}
         <div
-          className="w-52 flex-shrink-0 border-r overflow-y-auto px-4 py-4"
+          className="w-56 flex-shrink-0 border-r overflow-y-auto flex flex-col"
           style={{ borderColor: 'var(--border)' }}
         >
-          {/* Moje kalendáře */}
-          <div className="mb-5">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-semibold tracking-wider" style={{ color: 'var(--text-muted)' }}>
-                MÉ KALENDÁŘE
+          {/* Mini kalendář */}
+          <div className="px-3 pt-3 pb-2">
+            {/* Navigace mini kalu */}
+            <div className="flex items-center justify-between mb-1.5">
+              <button
+                onClick={() => setMiniCalDate(d => { const n = new Date(d); n.setMonth(n.getMonth() - 1); return n; })}
+                className="p-1 rounded transition-colors"
+                style={{ color: 'var(--text-muted)' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+              >
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="15 18 9 12 15 6" />
+                </svg>
+              </button>
+              <span className="text-[11px] font-semibold capitalize" style={{ color: 'var(--text-primary)' }}>
+                {MONTH_NAMES[miniCalDate.getMonth()]} {miniCalDate.getFullYear()}
               </span>
               <button
-                onClick={openNewCalendar}
-                className="p-0.5 rounded transition-colors"
-                title="Přidat kalendář"
+                onClick={() => setMiniCalDate(d => { const n = new Date(d); n.setMonth(n.getMonth() + 1); return n; })}
+                className="p-1 rounded transition-colors"
                 style={{ color: 'var(--text-muted)' }}
-                onMouseEnter={e => (e.currentTarget.style.color = 'var(--primary)')}
-                onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="9 18 15 12 9 6" />
                 </svg>
               </button>
             </div>
-            {calendars.map(cal => (
-              <div key={cal.id} className="flex items-center gap-2 py-1 group/cal">
-                <input
-                  type="checkbox"
-                  checked={selectedCalendarIds.has(cal.id)}
-                  onChange={e => {
-                    setSelectedCalendarIds(prev => {
-                      const next = new Set(prev);
-                      if (e.target.checked) next.add(cal.id);
-                      else next.delete(cal.id);
-                      return next;
-                    });
-                  }}
-                  className="w-3.5 h-3.5 rounded cursor-pointer"
-                  style={{ accentColor: cal.color }}
-                />
-                <div
-                  className="w-3 h-3 rounded-sm flex-shrink-0"
-                  style={{ background: cal.color }}
-                />
-                <span className="text-sm flex-1 truncate" style={{ color: 'var(--text-primary)' }}>
-                  {cal.name}
-                </span>
-                <button
-                  onClick={() => openEditCalendar(cal)}
-                  className="opacity-0 group-hover/cal:opacity-60 hover:!opacity-100 transition-opacity p-0.5 rounded"
-                  style={{ color: 'var(--text-muted)' }}
-                  title="Upravit"
-                >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                  </svg>
-                </button>
+
+            {/* Day name headers */}
+            <div className="grid grid-cols-7 mb-0.5">
+              {DAY_NAMES_SHORT.map(d => (
+                <div key={d} className="text-center text-[9px] font-semibold py-0.5" style={{ color: 'var(--text-muted)' }}>
+                  {d.charAt(0)}
+                </div>
+              ))}
+            </div>
+
+            {/* Day grid */}
+            {miniCalGrid.map((week, wi) => (
+              <div key={wi} className="grid grid-cols-7">
+                {week.map((day, di) => {
+                  const isToday = isSameDay(day, today);
+                  const isCurMonth = day.getMonth() === miniCalDate.getMonth();
+                  const isSelected = isSameDay(day, currentDate);
+                  return (
+                    <div key={di} className="flex items-center justify-center py-0.5">
+                      <button
+                        onClick={() => {
+                          setCurrentDate(day);
+                          setMiniCalDate(day);
+                        }}
+                        className="w-6 h-6 flex items-center justify-center rounded-full text-[10px] font-medium transition-colors"
+                        style={{
+                          background: isToday ? 'var(--primary)' : isSelected ? 'var(--bg-active)' : 'transparent',
+                          color: isToday ? 'white' : isSelected ? 'var(--primary)' : isCurMonth ? 'var(--text-primary)' : 'var(--text-muted)',
+                        }}
+                        onMouseEnter={e => { if (!isToday) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = isToday ? 'var(--primary)' : isSelected ? 'var(--bg-active)' : 'transparent'; }}
+                      >
+                        {day.getDate()}
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             ))}
           </div>
 
-          {/* Automatické zdroje */}
-          <div>
-            <div className="mb-2">
-              <span className="text-[10px] font-semibold tracking-wider" style={{ color: 'var(--text-muted)' }}>
-                AUTOMATICKY
-              </span>
+          {/* Přepínač pohledu */}
+          <div className="px-3 pb-3">
+            <div className="flex rounded-lg overflow-hidden border" style={{ borderColor: 'var(--border)' }}>
+              {(['list', 'week', 'month'] as ViewType[]).map(v => (
+                <button
+                  key={v}
+                  onClick={() => setView(v)}
+                  className="flex-1 py-1.5 text-[11px] font-medium transition-colors"
+                  style={{
+                    background: view === v ? 'var(--primary)' : 'var(--bg-card)',
+                    color: view === v ? 'white' : 'var(--text-secondary)',
+                  }}
+                >
+                  {v === 'list' ? 'Sez.' : v === 'week' ? 'Týd.' : 'Měs.'}
+                </button>
+              ))}
             </div>
-            <div className="flex items-center gap-2 py-1">
-              <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ background: '#0ea5e9' }} />
-              <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Dovolená</span>
+          </div>
+
+          {/* Moje kalendáře */}
+          <div className="px-3 border-t flex-1" style={{ borderColor: 'var(--border)' }}>
+            <div className="mt-3 mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-semibold tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                  MÉ KALENDÁŘE
+                </span>
+                <button
+                  onClick={openNewCalendar}
+                  className="p-0.5 rounded transition-colors"
+                  title="Přidat kalendář"
+                  style={{ color: 'var(--text-muted)' }}
+                  onMouseEnter={e => (e.currentTarget.style.color = 'var(--primary)')}
+                  onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                </button>
+              </div>
+              {calendars.map(cal => (
+                <div key={cal.id} className="flex items-center gap-2 py-1 group/cal">
+                  <input
+                    type="checkbox"
+                    checked={selectedCalendarIds.has(cal.id)}
+                    onChange={e => {
+                      setSelectedCalendarIds(prev => {
+                        const next = new Set(prev);
+                        if (e.target.checked) next.add(cal.id);
+                        else next.delete(cal.id);
+                        return next;
+                      });
+                    }}
+                    className="w-3.5 h-3.5 rounded cursor-pointer"
+                    style={{ accentColor: cal.color }}
+                  />
+                  <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ background: cal.color }} />
+                  <span className="text-sm flex-1 truncate" style={{ color: 'var(--text-primary)' }}>
+                    {cal.name}
+                  </span>
+                  <button
+                    onClick={() => openEditCalendar(cal)}
+                    className="opacity-0 group-hover/cal:opacity-60 hover:!opacity-100 transition-opacity p-0.5 rounded"
+                    style={{ color: 'var(--text-muted)' }}
+                    title="Upravit"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
             </div>
-            <div className="flex items-center gap-2 py-1">
-              <div
-                className="w-3 h-3 rounded-sm flex-shrink-0"
-                style={{ background: 'linear-gradient(135deg, #f59e0b, #8b5cf6)' }}
-              />
-              <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Důležité dny</span>
+
+            {/* Automatické zdroje */}
+            <div className="mb-3">
+              <div className="mb-2">
+                <span className="text-[10px] font-semibold tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                  AUTOMATICKY
+                </span>
+              </div>
+              <div className="flex items-center gap-2 py-1">
+                <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ background: '#0ea5e9' }} />
+                <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Dovolená</span>
+              </div>
+              <div className="flex items-center gap-2 py-1">
+                <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ background: 'linear-gradient(135deg, #f59e0b, #8b5cf6)' }} />
+                <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Důležité dny</span>
+              </div>
+            </div>
+
+            {/* Nastavení kalendáře */}
+            <div className="border-t pt-3 pb-3" style={{ borderColor: 'var(--border)' }}>
+              <button
+                onClick={() => { setCalSettingsForm({ dayStart: calDayStart, dayEnd: calDayEnd }); setShowCalSettings(true); }}
+                className="flex items-center gap-2 w-full py-1 px-1 text-xs transition-colors rounded"
+                style={{ color: 'var(--text-muted)' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                </svg>
+                Nastavení kalendáře
+              </button>
             </div>
           </div>
         </div>
 
         {/* ── Zobrazení kalendáře ───────────────────────────────────────── */}
-        <div className="flex-1 overflow-auto p-4">
+        <div className="flex-1 overflow-auto">
           {loading ? (
             <div className="flex items-center justify-center h-48">
-              <div
-                className="w-6 h-6 border-2 rounded-full animate-spin"
-                style={{ borderColor: 'var(--primary)', borderTopColor: 'transparent' }}
-              />
+              <div className="w-6 h-6 border-2 rounded-full animate-spin" style={{ borderColor: 'var(--primary)', borderTopColor: 'transparent' }} />
             </div>
           ) : (
             <>
-
               {/* ══ MĚSÍČNÍ POHLED ═══════════════════════════════════════════ */}
               {view === 'month' && (
-                <div className="min-w-[560px]">
-                  {/* Záhlaví dnů */}
+                <div className="min-w-[560px] p-4">
                   <div className="grid grid-cols-7 mb-1">
                     {DAY_NAMES_SHORT.map(d => (
-                      <div
-                        key={d}
-                        className="text-center text-xs font-semibold py-1"
-                        style={{ color: 'var(--text-muted)' }}
-                      >
+                      <div key={d} className="text-center text-xs font-semibold py-1" style={{ color: 'var(--text-muted)' }}>
                         {d}
                       </div>
                     ))}
                   </div>
-                  {/* Týdny */}
-                  <div
-                    className="border rounded-xl overflow-hidden"
-                    style={{ borderColor: 'var(--border)' }}
-                  >
+                  <div className="border rounded-xl overflow-hidden" style={{ borderColor: 'var(--border)' }}>
                     {monthGrid.map((week, wi) => (
-                      <div
-                        key={wi}
-                        className={`grid grid-cols-7 ${wi < monthGrid.length - 1 ? 'border-b' : ''}`}
-                        style={{ borderColor: 'var(--border)' }}
-                      >
+                      <div key={wi} className={`grid grid-cols-7 ${wi < monthGrid.length - 1 ? 'border-b' : ''}`} style={{ borderColor: 'var(--border)' }}>
                         {week.map((day, di) => {
                           const isCurrentMonth = day.getMonth() === currentDate.getMonth();
                           const isToday = isSameDay(day, today);
@@ -821,16 +935,10 @@ function CalendarContent() {
                               className="min-h-[90px] p-1.5 cursor-pointer border-r last:border-r-0 transition-colors"
                               style={{
                                 borderColor: 'var(--border)',
-                                background: !isCurrentMonth
-                                  ? 'color-mix(in srgb, var(--bg-sidebar) 60%, transparent)'
-                                  : 'var(--bg-card)',
+                                background: !isCurrentMonth ? 'color-mix(in srgb, var(--bg-sidebar) 60%, transparent)' : 'var(--bg-card)',
                               }}
                               onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
-                              onMouseLeave={e => (
-                                e.currentTarget.style.background = !isCurrentMonth
-                                  ? 'color-mix(in srgb, var(--bg-sidebar) 60%, transparent)'
-                                  : 'var(--bg-card)'
-                              )}
+                              onMouseLeave={e => (e.currentTarget.style.background = !isCurrentMonth ? 'color-mix(in srgb, var(--bg-sidebar) 60%, transparent)' : 'var(--bg-card)')}
                             >
                               <div
                                 className="w-6 h-6 flex items-center justify-center rounded-full text-xs font-medium mb-1"
@@ -846,10 +954,7 @@ function CalendarContent() {
                                   <EventPill key={ev.id} ev={ev} compact />
                                 ))}
                                 {dayEvs.length > 3 && (
-                                  <div
-                                    className="text-[10px] px-1"
-                                    style={{ color: 'var(--text-muted)' }}
-                                  >
+                                  <div className="text-[10px] px-1" style={{ color: 'var(--text-muted)' }}>
                                     +{dayEvs.length - 3} další
                                   </div>
                                 )}
@@ -865,21 +970,26 @@ function CalendarContent() {
 
               {/* ══ TÝDENNÍ POHLED ════════════════════════════════════════════ */}
               {view === 'week' && (
-                <div className="min-w-[500px]">
+                <div className="flex flex-col h-full" style={{ minWidth: 520 }}>
                   {/* Záhlaví dnů */}
-                  <div className="grid grid-cols-7 gap-1 mb-2">
+                  <div className="flex border-b flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
+                    <div className="flex-shrink-0 border-r" style={{ width: 56, borderColor: 'var(--border)' }} />
                     {weekDays.map((day, i) => {
                       const isToday = isSameDay(day, today);
                       return (
-                        <div key={i} className="text-center">
-                          <div
-                            className="text-xs font-medium mb-1"
-                            style={{ color: 'var(--text-muted)' }}
-                          >
+                        <div
+                          key={i}
+                          className="flex-1 text-center py-2 border-r last:border-r-0"
+                          style={{
+                            borderColor: 'var(--border)',
+                            background: isToday ? 'color-mix(in srgb, var(--primary) 5%, transparent)' : 'transparent',
+                          }}
+                        >
+                          <div className="text-[10px] font-semibold uppercase mb-0.5" style={{ color: 'var(--text-muted)' }}>
                             {DAY_NAMES_SHORT[i]}
                           </div>
                           <div
-                            className="w-8 h-8 mx-auto flex items-center justify-center rounded-full text-sm font-semibold"
+                            className="w-7 h-7 mx-auto flex items-center justify-center rounded-full text-sm font-semibold"
                             style={{
                               background: isToday ? 'var(--primary)' : 'transparent',
                               color: isToday ? 'white' : 'var(--text-primary)',
@@ -891,34 +1001,125 @@ function CalendarContent() {
                       );
                     })}
                   </div>
-                  {/* Sloupce dnů */}
-                  <div
-                    className="grid grid-cols-7 gap-1 border rounded-xl p-2"
-                    style={{ borderColor: 'var(--border)', background: 'var(--bg-card)' }}
-                  >
-                    {weekDays.map((day, i) => {
-                      const dayEvs = eventsOnDay(day);
+
+                  {/* Pás celodennních událostí */}
+                  {(() => {
+                    const allDayRows = weekDays.map(day =>
+                      eventsOnDay(day).filter(ev => ev.is_all_day || !ev.start_time)
+                    );
+                    const hasAny = allDayRows.some(r => r.length > 0);
+                    if (!hasAny) return null;
+                    return (
+                      <div className="flex border-b flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
+                        <div
+                          className="flex-shrink-0 border-r flex items-center justify-end pr-1.5"
+                          style={{ width: 56, borderColor: 'var(--border)' }}
+                        >
+                          <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>celý den</span>
+                        </div>
+                        {weekDays.map((day, i) => {
+                          const isToday = isSameDay(day, today);
+                          return (
+                            <div
+                              key={i}
+                              className="flex-1 border-r last:border-r-0 p-0.5 min-h-[28px] space-y-0.5"
+                              style={{
+                                borderColor: 'var(--border)',
+                                background: isToday ? 'color-mix(in srgb, var(--primary) 5%, transparent)' : 'transparent',
+                              }}
+                            >
+                              {allDayRows[i].map(ev => (
+                                <EventPill key={ev.id} ev={ev} compact />
+                              ))}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Časová mřížka */}
+                  <div className="flex overflow-auto flex-1">
+                    {/* Sloupec hodin */}
+                    <div className="flex-shrink-0 border-r" style={{ width: 56, borderColor: 'var(--border)' }}>
+                      {Array.from({ length: calDayEnd - calDayStart }, (_, i) => (
+                        <div
+                          key={i}
+                          className="relative border-b"
+                          style={{ height: ROW_H, borderColor: 'var(--border)' }}
+                        >
+                          <span className="absolute text-[10px] right-1.5 -top-2" style={{ color: 'var(--text-muted)' }}>
+                            {String(calDayStart + i).padStart(2, '0')}:00
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Sloupce dnů */}
+                    {weekDays.map((day, dayIdx) => {
+                      const timedEvs = eventsOnDay(day).filter(ev => !ev.is_all_day && ev.start_time);
                       const isToday = isSameDay(day, today);
                       return (
                         <div
-                          key={i}
-                          onClick={() => openNewEvent(toDateStr(day))}
-                          className="min-h-[200px] rounded-lg p-1.5 cursor-pointer transition-colors space-y-0.5"
+                          key={dayIdx}
+                          className="flex-1 border-r last:border-r-0 relative"
                           style={{
-                            background: isToday
-                              ? 'color-mix(in srgb, var(--primary) 6%, transparent)'
-                              : 'transparent',
+                            borderColor: 'var(--border)',
+                            background: isToday ? 'color-mix(in srgb, var(--primary) 3%, transparent)' : 'transparent',
                           }}
-                          onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
-                          onMouseLeave={e => (
-                            e.currentTarget.style.background = isToday
-                              ? 'color-mix(in srgb, var(--primary) 6%, transparent)'
-                              : 'transparent'
-                          )}
                         >
-                          {dayEvs.map(ev => (
-                            <EventPill key={ev.id} ev={ev} />
+                          {/* Hodinové linky */}
+                          {Array.from({ length: calDayEnd - calDayStart }, (_, i) => (
+                            <div
+                              key={i}
+                              className="border-b cursor-pointer transition-colors"
+                              style={{ height: ROW_H, borderColor: 'var(--border)' }}
+                              onClick={() => openNewEvent(toDateStr(day))}
+                              onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+                              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                            />
                           ))}
+
+                          {/* Timed events – absolutně pozicovány */}
+                          {timedEvs.map(ev => {
+                            const parts = (ev.start_time ?? '00:00').split(':');
+                            const sh = parseInt(parts[0] ?? '0', 10);
+                            const sm = parseInt(parts[1] ?? '0', 10);
+                            const startMin = sh * 60 + sm;
+                            const dayStartMin = calDayStart * 60;
+                            const topPx = Math.max(0, (startMin - dayStartMin) * (ROW_H / 60));
+                            let endMin = startMin + 60;
+                            if (ev.end_time) {
+                              const eParts = ev.end_time.split(':');
+                              endMin = parseInt(eParts[0] ?? '0', 10) * 60 + parseInt(eParts[1] ?? '0', 10);
+                            }
+                            const heightPx = Math.max(20, (endMin - startMin) * (ROW_H / 60));
+                            return (
+                              <div
+                                key={ev.id}
+                                className="absolute left-0.5 right-0.5 rounded px-1 py-0.5 text-[10px] font-medium overflow-hidden cursor-pointer"
+                                style={{
+                                  top: topPx,
+                                  height: heightPx,
+                                  background: ev.color + '33',
+                                  color: ev.color,
+                                  border: `1px solid ${ev.color}66`,
+                                  lineHeight: '13px',
+                                }}
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  const orig = events.find(x => x.id === ev.source_id);
+                                  if (orig) openEditEvent(orig);
+                                }}
+                                title={ev.title}
+                              >
+                                <div className="font-semibold truncate">{ev.start_time?.slice(0, 5)} {ev.title}</div>
+                                {heightPx > 30 && ev.end_time && (
+                                  <div className="opacity-70 truncate">{ev.end_time.slice(0, 5)}</div>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       );
                     })}
@@ -928,32 +1129,19 @@ function CalendarContent() {
 
               {/* ══ LISTOVÝ POHLED ════════════════════════════════════════════ */}
               {view === 'list' && (
-                <div className="max-w-2xl">
+                <div className="max-w-2xl p-4">
                   {listGroups.length === 0 ? (
                     <div className="text-center py-16">
-                      <div
-                        className="w-14 h-14 mx-auto mb-4 rounded-full flex items-center justify-center"
-                        style={{ background: 'var(--bg-hover)' }}
-                      >
-                        <svg
-                          width="26" height="26" viewBox="0 0 24 24" fill="none"
-                          stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                          style={{ color: 'var(--text-muted)' }}
-                        >
+                      <div className="w-14 h-14 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ background: 'var(--bg-hover)' }}>
+                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)' }}>
                           <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
                           <line x1="16" y1="2" x2="16" y2="6" />
                           <line x1="8" y1="2" x2="8" y2="6" />
                           <line x1="3" y1="10" x2="21" y2="10" />
                         </svg>
                       </div>
-                      <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>
-                        Žádné události v tomto období
-                      </p>
-                      <button
-                        onClick={() => openNewEvent()}
-                        className="px-4 py-2 rounded-lg text-sm font-medium text-white"
-                        style={{ background: 'var(--primary)' }}
-                      >
+                      <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>Žádné události v tomto období</p>
+                      <button onClick={() => openNewEvent()} className="px-4 py-2 rounded-lg text-sm font-medium text-white" style={{ background: 'var(--primary)' }}>
                         Přidat první událost
                       </button>
                     </div>
@@ -961,10 +1149,7 @@ function CalendarContent() {
                     <div className="space-y-6">
                       {listGroups.map(group => (
                         <div key={group.key}>
-                          <h3
-                            className="text-sm font-semibold capitalize mb-2 pb-1 border-b"
-                            style={{ color: 'var(--text-muted)', borderColor: 'var(--border)' }}
-                          >
+                          <h3 className="text-sm font-semibold capitalize mb-2 pb-1 border-b" style={{ color: 'var(--text-muted)', borderColor: 'var(--border)' }}>
                             {group.label}
                           </h3>
                           <div className="space-y-2">
@@ -976,43 +1161,18 @@ function CalendarContent() {
                               return (
                                 <div
                                   key={ev.id}
-                                  onClick={() => {
-                                    if (isClickable) {
-                                      const orig = events.find(x => x.id === ev.source_id);
-                                      if (orig) openEditEvent(orig);
-                                    }
-                                  }}
+                                  onClick={() => { if (isClickable) { const orig = events.find(x => x.id === ev.source_id); if (orig) openEditEvent(orig); } }}
                                   className="flex items-start gap-3 p-3 rounded-lg border transition-colors"
-                                  style={{
-                                    borderColor: 'var(--border)',
-                                    background: 'var(--bg-card)',
-                                    cursor: isClickable ? 'pointer' : 'default',
-                                  }}
-                                  onMouseEnter={e => {
-                                    if (isClickable) e.currentTarget.style.background = 'var(--bg-hover)';
-                                  }}
-                                  onMouseLeave={e => {
-                                    e.currentTarget.style.background = 'var(--bg-card)';
-                                  }}
+                                  style={{ borderColor: 'var(--border)', background: 'var(--bg-card)', cursor: isClickable ? 'pointer' : 'default' }}
+                                  onMouseEnter={e => { if (isClickable) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                                  onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-card)'; }}
                                 >
-                                  {/* Barevný proužek */}
-                                  <div
-                                    className="w-1 self-stretch rounded-full flex-shrink-0"
-                                    style={{ background: ev.color }}
-                                  />
+                                  <div className="w-1 self-stretch rounded-full flex-shrink-0" style={{ background: ev.color }} />
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 flex-wrap">
-                                      <span
-                                        className="font-medium text-sm"
-                                        style={{ color: 'var(--text-primary)' }}
-                                      >
-                                        {ev.title}
-                                      </span>
+                                      <span className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>{ev.title}</span>
                                       {ev.source !== 'manual' && (
-                                        <span
-                                          className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
-                                          style={{ background: ev.color + '22', color: ev.color }}
-                                        >
+                                        <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: ev.color + '22', color: ev.color }}>
                                           {sourceBadgeLabel(ev.source)}
                                         </span>
                                       )}
@@ -1022,17 +1182,10 @@ function CalendarContent() {
                                         ? `${evStart.toLocaleDateString('cs-CZ')} – ${evEnd.toLocaleDateString('cs-CZ')}`
                                         : evStart.toLocaleDateString('cs-CZ', { weekday: 'long', day: 'numeric', month: 'long' })
                                       }
-                                      {!ev.is_all_day && ev.start_time
-                                        ? ` · ${ev.start_time.slice(0, 5)}${ev.end_time ? `–${ev.end_time.slice(0, 5)}` : ''}`
-                                        : ''}
+                                      {!ev.is_all_day && ev.start_time ? ` · ${ev.start_time.slice(0, 5)}${ev.end_time ? `–${ev.end_time.slice(0, 5)}` : ''}` : ''}
                                     </div>
                                     {ev.description && (
-                                      <div
-                                        className="text-xs mt-1 truncate"
-                                        style={{ color: 'var(--text-muted)' }}
-                                      >
-                                        {ev.description}
-                                      </div>
+                                      <div className="text-xs mt-1 truncate" style={{ color: 'var(--text-muted)' }}>{ev.description}</div>
                                     )}
                                   </div>
                                 </div>
@@ -1050,7 +1203,71 @@ function CalendarContent() {
         </div>
       </div>
 
-      {/* ══ MODAL – Nová / Upravit událost ═══════════════════════════════════ */}
+      {/* ══ MODAL – Nastavení kalendáře ════════════════════════════════════════ */}
+      {showCalSettings && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="w-full max-w-sm rounded-2xl shadow-2xl p-6" style={{ background: 'var(--bg-card)' }}>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Nastavení kalendáře</h2>
+              <button onClick={() => setShowCalSettings(false)} className="p-1 rounded" style={{ color: 'var(--text-muted)' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+            <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>
+              Nastavení rozsahu hodin pro týdenní zobrazení kalendáře.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Začátek dne</label>
+                <select
+                  value={calSettingsForm.dayStart}
+                  onChange={e => setCalSettingsForm(f => ({ ...f, dayStart: parseInt(e.target.value) }))}
+                  className="w-full px-3 py-2 rounded-lg border text-sm"
+                  style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
+                >
+                  {Array.from({ length: 24 }, (_, i) => (
+                    <option key={i} value={i}>{String(i).padStart(2, '0')}:00</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Konec dne</label>
+                <select
+                  value={calSettingsForm.dayEnd}
+                  onChange={e => setCalSettingsForm(f => ({ ...f, dayEnd: parseInt(e.target.value) }))}
+                  className="w-full px-3 py-2 rounded-lg border text-sm"
+                  style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
+                >
+                  {Array.from({ length: 24 }, (_, i) => i + 1).filter(h => h > calSettingsForm.dayStart).map(h => (
+                    <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end mt-6">
+              <button
+                onClick={() => setShowCalSettings(false)}
+                className="px-4 py-2 rounded-lg text-sm border"
+                style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
+              >
+                Zrušit
+              </button>
+              <button
+                onClick={saveCalSettings}
+                disabled={savingCalSettings || calSettingsForm.dayEnd <= calSettingsForm.dayStart}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50"
+                style={{ background: 'var(--primary)' }}
+              >
+                {savingCalSettings ? 'Ukládám...' : 'Uložit'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══ MODAL – Nová / Upravit událost ════════════════════════════════════ */}
       {showEventForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="w-full max-w-md rounded-2xl shadow-2xl p-6" style={{ background: 'var(--bg-card)' }}>
@@ -1058,11 +1275,7 @@ function CalendarContent() {
               <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
                 {editingEvent ? 'Upravit událost' : 'Nová událost'}
               </h2>
-              <button
-                onClick={() => setShowEventForm(false)}
-                className="p-1 rounded"
-                style={{ color: 'var(--text-muted)' }}
-              >
+              <button onClick={() => setShowEventForm(false)} className="p-1 rounded" style={{ color: 'var(--text-muted)' }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
@@ -1070,11 +1283,8 @@ function CalendarContent() {
             </div>
 
             <div className="space-y-4">
-              {/* Název */}
               <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>
-                  Název *
-                </label>
+                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Název *</label>
                 <input
                   type="text"
                   value={eventForm.title}
@@ -1086,12 +1296,9 @@ function CalendarContent() {
                 />
               </div>
 
-              {/* Kalendář */}
               {calendars.length > 1 && (
                 <div>
-                  <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>
-                    Kalendář
-                  </label>
+                  <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Kalendář</label>
                   <select
                     value={eventForm.calendar_id}
                     onChange={e => setEventForm(f => ({ ...f, calendar_id: e.target.value }))}
@@ -1105,18 +1312,13 @@ function CalendarContent() {
                 </div>
               )}
 
-              {/* Datum od–do */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Od *</label>
                   <input
                     type="date"
                     value={eventForm.start_date}
-                    onChange={e => setEventForm(f => ({
-                      ...f,
-                      start_date: e.target.value,
-                      end_date: f.end_date < e.target.value ? e.target.value : f.end_date,
-                    }))}
+                    onChange={e => setEventForm(f => ({ ...f, start_date: e.target.value, end_date: f.end_date < e.target.value ? e.target.value : f.end_date }))}
                     className="w-full px-3 py-2 rounded-lg border text-sm"
                     style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
                   />
@@ -1134,7 +1336,6 @@ function CalendarContent() {
                 </div>
               </div>
 
-              {/* Celý den */}
               <div className="flex items-center gap-2">
                 <input
                   type="checkbox"
@@ -1144,16 +1345,11 @@ function CalendarContent() {
                   className="w-4 h-4 rounded cursor-pointer"
                   style={{ accentColor: 'var(--primary)' }}
                 />
-                <label
-                  htmlFor="cal_is_all_day"
-                  className="text-sm cursor-pointer"
-                  style={{ color: 'var(--text-secondary)' }}
-                >
+                <label htmlFor="cal_is_all_day" className="text-sm cursor-pointer" style={{ color: 'var(--text-secondary)' }}>
                   Celý den
                 </label>
               </div>
 
-              {/* Čas */}
               {!eventForm.is_all_day && (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -1179,7 +1375,6 @@ function CalendarContent() {
                 </div>
               )}
 
-              {/* Popis */}
               <div>
                 <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Popis</label>
                 <textarea
@@ -1192,18 +1387,13 @@ function CalendarContent() {
                 />
               </div>
 
-              {/* Barva */}
               <div>
                 <label className="block text-xs font-medium mb-2" style={{ color: 'var(--text-muted)' }}>Barva</label>
                 <div className="flex items-center gap-2 flex-wrap">
                   <button
                     onClick={() => setEventForm(f => ({ ...f, color: '' }))}
                     className="w-6 h-6 rounded-full border-2 flex items-center justify-center text-[10px] font-bold"
-                    style={{
-                      borderColor: !eventForm.color ? 'var(--primary)' : 'var(--border)',
-                      color: 'var(--text-muted)',
-                      background: 'var(--bg-hover)',
-                    }}
+                    style={{ borderColor: !eventForm.color ? 'var(--primary)' : 'var(--border)', color: 'var(--text-muted)', background: 'var(--bg-hover)' }}
                     title="Barva dle kalendáře"
                   >
                     ○
@@ -1227,11 +1417,7 @@ function CalendarContent() {
             <div className="flex items-center justify-between mt-6">
               {editingEvent ? (
                 <button
-                  onClick={async () => {
-                    if (confirm('Opravdu smazat tuto událost?')) {
-                      await deleteEvent(editingEvent.id);
-                    }
-                  }}
+                  onClick={async () => { if (confirm('Opravdu smazat tuto událost?')) { await deleteEvent(editingEvent.id); } }}
                   disabled={deletingEventId === editingEvent.id}
                   className="px-3 py-2 rounded-lg text-sm transition-colors disabled:opacity-50"
                   style={{ color: '#ef4444' }}
@@ -1241,13 +1427,8 @@ function CalendarContent() {
                   Smazat
                 </button>
               ) : <div />}
-
               <div className="flex gap-2">
-                <button
-                  onClick={() => setShowEventForm(false)}
-                  className="px-4 py-2 rounded-lg text-sm border transition-colors"
-                  style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
-                >
+                <button onClick={() => setShowEventForm(false)} className="px-4 py-2 rounded-lg text-sm border transition-colors" style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}>
                   Zrušit
                 </button>
                 <button
@@ -1272,11 +1453,7 @@ function CalendarContent() {
               <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
                 {editingCalendar ? 'Upravit kalendář' : 'Nový kalendář'}
               </h2>
-              <button
-                onClick={() => setShowCalendarForm(false)}
-                className="p-1 rounded"
-                style={{ color: 'var(--text-muted)' }}
-              >
+              <button onClick={() => setShowCalendarForm(false)} className="p-1 rounded" style={{ color: 'var(--text-muted)' }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
@@ -1316,10 +1493,7 @@ function CalendarContent() {
             </div>
 
             {editingCalendar && (
-              <div
-                className="mt-4 p-3 rounded-lg text-xs"
-                style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}
-              >
+              <div className="mt-4 p-3 rounded-lg text-xs" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>
                 💡 Budoucí verze umožní sdílení kalendáře s ostatními členy workspace.
               </div>
             )}
@@ -1327,12 +1501,7 @@ function CalendarContent() {
             <div className="flex items-center justify-between mt-6">
               {editingCalendar && !editingCalendar.is_default ? (
                 <button
-                  onClick={async () => {
-                    if (confirm('Smazat tento kalendář? Budou smazány i všechny jeho události.')) {
-                      await deleteCalendar(editingCalendar.id);
-                      setShowCalendarForm(false);
-                    }
-                  }}
+                  onClick={async () => { if (confirm('Smazat tento kalendář? Budou smazány i všechny jeho události.')) { await deleteCalendar(editingCalendar.id); setShowCalendarForm(false); } }}
                   className="px-3 py-2 rounded-lg text-sm transition-colors"
                   style={{ color: '#ef4444' }}
                   onMouseEnter={e => (e.currentTarget.style.background = '#fee2e244')}
@@ -1341,13 +1510,8 @@ function CalendarContent() {
                   Smazat
                 </button>
               ) : <div />}
-
               <div className="flex gap-2">
-                <button
-                  onClick={() => setShowCalendarForm(false)}
-                  className="px-4 py-2 rounded-lg text-sm border"
-                  style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
-                >
+                <button onClick={() => setShowCalendarForm(false)} className="px-4 py-2 rounded-lg text-sm border" style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}>
                   Zrušit
                 </button>
                 <button
@@ -1368,7 +1532,7 @@ function CalendarContent() {
   );
 }
 
-// ─── Vnější komponenta – obaluje WorkspaceProvider ───────────────────────────
+// ─── Vnější komponenta ────────────────────────────────────────────────────────
 
 export default function CalendarPage() {
   const { user, loading: authLoading } = useAuth();

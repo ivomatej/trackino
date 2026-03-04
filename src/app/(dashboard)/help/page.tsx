@@ -70,16 +70,18 @@ const DEFAULT_HELP_CONTENT = `
 <p>Stránka <strong>Kalendář</strong> (v sekci Sledování, dostupná v tarifu <strong>Max</strong>) poskytuje přehled všech vašich událostí na jednom místě. Automaticky zobrazuje vaši schválenou dovolenou a záznamy z modulu Důležité dny – bez nutnosti cokoli ručně přidávat.</p>
 <ul>
   <li><strong>Měsíční pohled</strong> – klasická mřížka celého měsíce (Po–Ne); kliknutím na libovolný den vytvoříte novou událost</li>
-  <li><strong>Týdenní pohled</strong> – sedm sloupců (Po–Ne) s barevnými event pillsy pro každý den; dnešní sloupec je jemně zvýrazněn</li>
+  <li><strong>Týdenní pohled</strong> – časová osa vlevo (hodiny), záhlaví dnů nahoře, pás celodennních událostí a klikatelná mřížka hodin. Události s konkrétním časem se zobrazují jako bloky přímo v odpovídající hodině; dnešní sloupec je jemně zvýrazněn</li>
   <li><strong>Pohled Seznam</strong> – chronologický výpis událostí seskupených po měsících; zobrazuje 6 měsíců dopředu</li>
   <li><strong>Navigace</strong> – tlačítka ← Dnes → pro přepínání týdnů nebo měsíců; rozsah dat je vždy zobrazen v záhlaví stránky</li>
 </ul>
-<p><strong>Moje kalendáře:</strong> Levý panel zobrazuje seznam vašich kalendářů. Při prvním přístupu se automaticky vytvoří výchozí kalendář „Můj kalendář". Další kalendáře přidáte tlačítkem + vedle nadpisu. Každý kalendář má vlastní barvu; zaškrtnutím/odškrtnutím jej zobrazíte nebo skryjete v pohledu.</p>
+<p><strong>Levý panel:</strong> Obsahuje mini měsíční kalendář s vlastní navigací (◀ Měsíc RRRR ▶) pro rychlé přeskakování na libovolný den. Pod mini kalendářem je přepínač pohledu (Seznam / Týden / Měsíc), seznam Mých kalendářů a tlačítko Nastavení kalendáře.</p>
+<p><strong>Moje kalendáře:</strong> Při prvním přístupu se automaticky vytvoří výchozí kalendář „Můj kalendář". Další kalendáře přidáte tlačítkem + vedle nadpisu. Každý kalendář má vlastní barvu; zaškrtnutím/odškrtnutím jej zobrazíte nebo skryjete v pohledu.</p>
 <ul>
   <li>Ruční události jsou vázány na konkrétní kalendář</li>
-  <li>Dovolená a Důležité dny se zobrazují automaticky (sekce Automaticky v levém panelu) – nejdou odfiltrovat dle kalendáře</li>
+  <li>Dovolená a Důležité dny se zobrazují automaticky (sekce Automaticky v levém panelu)</li>
 </ul>
-<p><strong>Přidání události:</strong> Klikněte na tlačítko <em>+ Přidat událost</em> nebo klikněte přímo na den v měsíčním nebo týdenním pohledu. Ve formuláři vyplňte název, datum od–do, zda jde o celý den (nebo zadejte čas), volitelný popis a barvu. Událost lze kdykoli editovat kliknutím na ni, nebo smazat z formuláře.</p>
+<p><strong>Nastavení kalendáře:</strong> Tlačítko ⚙ v levém panelu otevře nastavení rozsahu hodin pro týdenní pohled. Nastavte „Začátek dne" a „Konec dne" (např. 8:00–18:00). Nastavení se ukládá do vašeho profilu a přetrvává i po odhlášení.</p>
+<p><strong>Přidání události:</strong> Klikněte na tlačítko <em>+ Přidat událost</em> nebo klikněte přímo na den v měsíčním pohledu či na časový slot v týdenním pohledu. Ve formuláři vyplňte název, datum od–do, zda jde o celý den (nebo zadejte čas), volitelný popis a barvu. Událost lze kdykoli editovat kliknutím na ni, nebo smazat z formuláře.</p>
 
 <h3>Přiřazení manažerů (Tým → Manažeři)</h3>
 <p>Admin workspace může v záložce <strong>Manažeři</strong> (v sekci Tým) definovat, kdo je čí Team Manažer. Kliknutím na tlačítko manažera se toto přiřazení okamžitě aktivuje nebo odebere. Každý člen může mít více manažerů. Přiřazení se promítá do stránky <strong>Podřízení</strong>, kde manažer vidí záznamy svých podřízených.</p>
@@ -229,6 +231,31 @@ const DEFAULT_HELP_CONTENT = `
 
 <h3>Detailní nastavení (osobní profil)</h3>
 <p>V levém dolním rohu sidebaru je panel přihlášeného uživatele. Kliknutím na něj se rozbalí možnosti: odkaz <strong>Detailní nastavení</strong> (profil, jméno, e-mail, telefon, barva avataru, barevný režim) a tlačítko <strong>Odhlásit se</strong>. Pole <strong>Pozice</strong> v profilu je editovatelné pouze pro adminy – ostatní vidí hodnotu nastavenou adminem.</p>
+
+<h3>Oslovení (jak vás aplikace oslovuje)</h3>
+<p>V <strong>Detailní nastavení → Profil</strong> najdete pole <em>„Jak tě má aplikace oslovovat"</em> (max 30 znaků). Oslovení se zobrazuje v úvodním pozdravení na stránce Přehled (např. „Dobré ráno, Honzo!"). Při prvním uložení profilu se pole předvyplní křestním jménem z Zobrazovaného jména. Oslovení může být přezdívka, zkrácené jméno nebo jiná forma oslovení.</p>
+
+<h3>Měřič v záhlaví na všech stránkách</h3>
+<p>Ve výchozím nastavení je Měřič (timer) viditelný pouze na stránce Měřič. Pokud chcete mít přístup k timeru i na ostatních stránkách (Přehled, Reporty, Tým apod.), zapněte v <strong>Detailní nastavení → Zobrazení aplikace</strong> přepínač <em>„Zobrazovat Měřič v záhlaví na všech stránkách"</em>. Toto nastavení je per-uživatel a nijak neovlivňuje ostatní členy workspace.</p>
+
+<h3>Předplatné workspace</h3>
+<p>Záložka <strong>Předplatné</strong> v Nastavení workspace zobrazuje informace o aktuálním tarifu a historii fakturace. Dostupná pro adminy a vlastníky workspace.</p>
+<ul>
+  <li><strong>Aktuální plán</strong> – zobrazuje aktivní tarif (Free / Pro / Max) s popisem</li>
+  <li><strong>Platební údaje</strong> – sekce pro budoucí nastavení platební metody</li>
+  <li><strong>Historie</strong> – tabulka měsíčních snapshotů: datum, tarif a počet aktivních uživatelů v daném měsíci. Snapshot za aktuální měsíc se vygeneruje automaticky při prvním zobrazení záložky.</li>
+  <li><strong>Přechod na Free</strong> – vlastník workspace a Master Admin mohou downgraduovat na tarif Free (po potvrzení); funkce je dostupná pouze pokud je aktuální tarif vyšší než Free</li>
+</ul>
+
+<h3>Sekce Společnost – nastavení per workspace</h3>
+<p>V záložce <strong>Společnost</strong> v Nastavení workspace (dostupná adminům) lze zapínat a vypínat jednotlivé moduly sekce Společnost pro daný workspace:</p>
+<ul>
+  <li><strong>Znalostní báze</strong> – interní wiki a firemní znalosti</li>
+  <li><strong>Dokumenty</strong> – centrální úložiště firemních souborů a odkazů</li>
+  <li><strong>Firemní pravidla</strong> – rich-text stránka se směrnicemi workspace</li>
+  <li><strong>Pravidla v kanceláři</strong> – provozní řád a každodenní kancelářská pravidla</li>
+</ul>
+<p>Modul je přístupný pouze tehdy, pokud je zapnutý v záložce Společnost <em>a zároveň</em> povolen v tarifové matici (App Settings). Globální nastavení tarifu má přednost.</p>
 
 <h3>Pozvánky</h3>
 <p>Nové členy workspace lze přidat v sekci <strong>Tým → Členové</strong>: sdílejte kód pro připojení, nový člen ho zadá při registraci a čeká na schválení adminem.</p>

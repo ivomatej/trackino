@@ -37,7 +37,7 @@ const TIMEZONE_OPTIONS: { value: string; label: string }[] = [
   { value: 'Australia/Sydney',     label: 'Sydney (UTC+10/+11)' },
 ];
 import { useRouter } from 'next/navigation';
-import type { WorkspaceBilling, RequiredFields, Tariff, VacationAllowance, CooperationType, ModuleId } from '@/types/database';
+import type { WorkspaceBilling, RequiredFields, Tariff, VacationAllowance, CooperationType, ModuleId, WorkspaceSubscription } from '@/types/database';
 import { ALL_MODULES, TARIFF_MODULES } from '@/lib/modules';
 
 // Typy pro správu modulů
@@ -51,11 +51,11 @@ interface MemberModuleInfo {
 }
 
 function SettingsContent() {
-  const { currentWorkspace, loading, refreshWorkspace } = useWorkspace();
+  const { currentWorkspace, currentMembership, loading, refreshWorkspace } = useWorkspace();
   const { canAccessSettings, isMasterAdmin } = usePermissions();
   const router = useRouter();
 
-  const [activeTab, setActiveTab] = useState<'general' | 'billing' | 'fields' | 'vacation' | 'cooperation' | 'modules'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'subscription' | 'billing' | 'fields' | 'vacation' | 'cooperation' | 'modules' | 'society'>('general');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
 
@@ -104,6 +104,17 @@ function SettingsContent() {
   const [addModuleId, setAddModuleId] = useState<ModuleId | ''>('');
   const [addModuleEnabled, setAddModuleEnabled] = useState(true);
 
+  // Předplatné (subscription billing history)
+  const [subscriptions, setSubscriptions] = useState<WorkspaceSubscription[]>([]);
+  const [subLoading, setSubLoading] = useState(false);
+  const [changingTariff, setChangingTariff] = useState(false);
+
+  // Společnost – per-workspace modulové nastavení
+  const [societyModules, setSocietyModules] = useState({
+    knowledge_base: true, documents: true, company_rules: true, office_rules: true,
+  });
+  const [savingSociety, setSavingSociety] = useState(false);
+
   useEffect(() => {
     if (currentWorkspace) {
       setWsName(currentWorkspace.name);
@@ -115,6 +126,13 @@ function SettingsContent() {
       setRequiredFields(currentWorkspace.required_fields);
       setHideTagsGlobally(currentWorkspace.hide_tags_globally ?? false);
       setTimezone(currentWorkspace.timezone ?? 'Europe/Prague');
+      const sc = currentWorkspace.society_modules_enabled ?? {};
+      setSocietyModules({
+        knowledge_base: sc.knowledge_base !== false,
+        documents: sc.documents !== false,
+        company_rules: sc.company_rules !== false,
+        office_rules: sc.office_rules !== false,
+      });
       fetchBillingProfiles(currentWorkspace.id);
       fetchVacationAllowances(currentWorkspace.id);
       fetchCooperationTypes(currentWorkspace.id);
@@ -247,6 +265,81 @@ function SettingsContent() {
     fetchBillingProfiles(currentWorkspace.id);
   }
 
+  // ── Předplatné (subscription) ────────────────────────────────────────────
+  async function fetchSubscriptions(workspaceId: string) {
+    setSubLoading(true);
+    try {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = now.getMonth() + 1;
+
+      // Zkontroluj existenci záznamu pro aktuální měsíc
+      const { data: existing } = await supabase
+        .from('trackino_workspace_subscriptions')
+        .select('id')
+        .eq('workspace_id', workspaceId)
+        .eq('year', y)
+        .eq('month', m)
+        .single();
+
+      if (!existing) {
+        // Spočti aktivní členy
+        const { count } = await supabase
+          .from('trackino_workspace_members')
+          .select('id', { count: 'exact', head: true })
+          .eq('workspace_id', workspaceId)
+          .eq('approved', true);
+
+        // Vlož snapshot
+        await supabase.from('trackino_workspace_subscriptions').insert({
+          workspace_id: workspaceId,
+          year: y,
+          month: m,
+          tariff: currentWorkspace!.tariff,
+          active_members: count ?? 0,
+        });
+      }
+
+      // Načti historii
+      const { data } = await supabase
+        .from('trackino_workspace_subscriptions')
+        .select('*')
+        .eq('workspace_id', workspaceId)
+        .order('year', { ascending: false })
+        .order('month', { ascending: false });
+
+      setSubscriptions((data ?? []) as WorkspaceSubscription[]);
+    } catch {
+      setSubscriptions([]);
+    }
+    setSubLoading(false);
+  }
+
+  async function changeTariff(newTariff: Tariff) {
+    if (!currentWorkspace) return;
+    if (!confirm(`Přejít na tarif ${newTariff.toUpperCase()}? Tato akce změní dostupné funkce workspace.`)) return;
+    setChangingTariff(true);
+    await supabase.from('trackino_workspaces').update({ tariff: newTariff }).eq('id', currentWorkspace.id);
+    await refreshWorkspace();
+    setChangingTariff(false);
+    setMessage(`Tarif změněn na ${newTariff.toUpperCase()}.`);
+    setTimeout(() => setMessage(''), 3000);
+  }
+
+  // ── Společnost moduly ────────────────────────────────────────────────────
+  async function saveSocietyModules() {
+    if (!currentWorkspace) return;
+    setSavingSociety(true);
+    await supabase
+      .from('trackino_workspaces')
+      .update({ society_modules_enabled: societyModules })
+      .eq('id', currentWorkspace.id);
+    await refreshWorkspace();
+    setSavingSociety(false);
+    setMessage('Nastavení sekce Společnost uloženo.');
+    setTimeout(() => setMessage(''), 3000);
+  }
+
   // Načtení dat pro záložku Moduly
   const fetchModuleData = useCallback(async () => {
     if (!currentWorkspace) return;
@@ -304,7 +397,11 @@ function SettingsContent() {
     if (activeTab === 'modules') {
       fetchModuleData();
     }
-  }, [activeTab, fetchModuleData]);
+    if (activeTab === 'subscription' && currentWorkspace) {
+      fetchSubscriptions(currentWorkspace.id);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, fetchModuleData, currentWorkspace?.id]);
 
   async function addModuleOverride(userId: string) {
     if (!currentWorkspace || !addModuleId) return;
@@ -407,6 +504,8 @@ function SettingsContent() {
 
   const tabs = [
     { id: 'general' as const, label: 'Obecné' },
+    { id: 'society' as const, label: 'Společnost' },
+    { id: 'subscription' as const, label: 'Předplatné' },
     { id: 'billing' as const, label: 'Fakturace' },
     { id: 'fields' as const, label: 'Povinná pole' },
     { id: 'vacation' as const, label: 'Dovolená' },
@@ -1215,6 +1314,168 @@ function SettingsContent() {
                   })}
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* ── TAB: Předplatné ── */}
+        {activeTab === 'subscription' && (
+          <div className="space-y-5">
+            {/* Aktuální plán */}
+            <div className="rounded-2xl border p-5" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+              <div className="flex items-start justify-between gap-4 flex-wrap">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                    style={{ background: currentWorkspace.tariff === 'max' ? '#7c3aed22' : currentWorkspace.tariff === 'pro' ? '#2563eb22' : '#6b728022' }}>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+                      style={{ color: currentWorkspace.tariff === 'max' ? '#7c3aed' : currentWorkspace.tariff === 'pro' ? '#2563eb' : '#6b7280' }}>
+                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>
+                      {currentWorkspace.tariff === 'max' ? 'Max plan' : currentWorkspace.tariff === 'pro' ? 'Pro plan' : 'Free plan'}
+                    </h3>
+                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                      {currentWorkspace.tariff === 'max' ? 'Plná sada funkcí + audit log'
+                        : currentWorkspace.tariff === 'pro' ? 'Rozšířené funkce pro týmy'
+                        : 'Základní funkce zdarma'}
+                    </p>
+                  </div>
+                </div>
+                {(isMasterAdmin || currentWorkspace.tariff !== 'max') && (
+                  <div className="flex gap-2 flex-wrap">
+                    {(['free', 'pro', 'max'] as Tariff[]).filter(t => t !== currentWorkspace.tariff).map(t => (
+                      <button
+                        key={t}
+                        onClick={() => changeTariff(t)}
+                        disabled={changingTariff}
+                        className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors disabled:opacity-50"
+                        style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                      >
+                        Přejít na {t.charAt(0).toUpperCase() + t.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Platební údaje – placeholder */}
+            <div className="rounded-2xl border p-5" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+              <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>Platební metoda</h3>
+              <div className="flex items-center gap-3 p-3 rounded-xl" style={{ background: 'var(--bg-hover)' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ color: 'var(--text-muted)' }}>
+                  <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/>
+                </svg>
+                <span className="text-sm" style={{ color: 'var(--text-muted)' }}>Správa platebních metod – připravujeme</span>
+              </div>
+            </div>
+
+            {/* Historie */}
+            <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+              <div className="px-5 py-3 border-b" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
+                <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Historie faktur</h3>
+              </div>
+              {subLoading ? (
+                <div className="py-8 text-center">
+                  <div className="w-5 h-5 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin mx-auto" />
+                </div>
+              ) : subscriptions.length === 0 ? (
+                <p className="px-5 py-6 text-sm text-center" style={{ color: 'var(--text-muted)' }}>Zatím žádná historie.</p>
+              ) : (
+                <div>
+                  <div className="grid px-5 py-2 text-xs font-semibold uppercase tracking-wider border-b"
+                    style={{ gridTemplateColumns: '1fr 120px 140px', color: 'var(--text-muted)', borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
+                    <span>Období</span><span>Tarif</span><span>Aktivní uživatelé</span>
+                  </div>
+                  {subscriptions.map(sub => (
+                    <div key={sub.id} className="grid px-5 py-3 border-b last:border-b-0 text-sm"
+                      style={{ gridTemplateColumns: '1fr 120px 140px', borderColor: 'var(--border)', color: 'var(--text-primary)' }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>
+                        {new Date(sub.year, sub.month - 1).toLocaleDateString('cs-CZ', { month: 'long', year: 'numeric' })}
+                      </span>
+                      <span className="font-medium capitalize">{sub.tariff}</span>
+                      <span>{sub.active_members} uživatelů</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Zrušení */}
+            {currentWorkspace.tariff !== 'free' && (isMasterAdmin || currentMembership?.role === 'owner') && (
+              <div className="rounded-2xl border p-5" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+                <h3 className="text-sm font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Zrušení tarifu</h3>
+                <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>
+                  Přechod na Free plán omezí dostupné funkce workspace. Záznamy a data zůstanou zachovány.
+                </p>
+                <button
+                  onClick={() => changeTariff('free')}
+                  disabled={changingTariff}
+                  className="px-4 py-2 rounded-lg text-sm font-medium border transition-colors disabled:opacity-50"
+                  style={{ borderColor: '#ef4444', color: '#ef4444' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = '#fee2e2'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                >
+                  Přejít na Free plán
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── TAB: Společnost ── */}
+        {activeTab === 'society' && (
+          <div className="space-y-5">
+            <div className="rounded-2xl border p-5" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+              <h2 className="text-sm font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Sekce Společnost</h2>
+              <p className="text-xs mb-5" style={{ color: 'var(--text-muted)' }}>
+                Sekce Společnost obsahuje firemní dokumenty, pravidla a znalostní bázi. Moduly jsou dostupné od tarifu Pro.
+                Jako správce workspace můžete jednotlivé moduly vypnout – uživatelé je pak neuvidí v navigaci.
+              </p>
+
+              <div className="space-y-3">
+                {[
+                  { key: 'knowledge_base' as const, label: 'Znalostní báze', desc: 'Interní wiki a znalostní databáze týmu' },
+                  { key: 'documents' as const, label: 'Dokumenty', desc: 'Správa firemních dokumentů, souborů a odkazů' },
+                  { key: 'company_rules' as const, label: 'Firemní pravidla', desc: 'Editovatelná textová stránka s firemními pravidly' },
+                  { key: 'office_rules' as const, label: 'Pravidla v kanceláři', desc: 'Editovatelná textová stránka s kancelářskými pravidly' },
+                ].map(mod => (
+                  <label
+                    key={mod.key}
+                    className="flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-colors"
+                    style={{
+                      background: societyModules[mod.key] ? 'var(--bg-active)' : 'var(--bg-hover)',
+                      border: `1px solid ${societyModules[mod.key] ? 'var(--primary)' : 'var(--border)'}`,
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={societyModules[mod.key]}
+                      onChange={e => setSocietyModules(prev => ({ ...prev, [mod.key]: e.target.checked }))}
+                      className="mt-0.5 flex-shrink-0 w-4 h-4 accent-[var(--primary)]"
+                    />
+                    <div>
+                      <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{mod.label}</span>
+                      <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{mod.desc}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+
+              <div className="mt-5">
+                <button
+                  onClick={saveSocietyModules}
+                  disabled={savingSociety}
+                  className="px-5 py-2 rounded-lg text-white text-sm font-medium disabled:opacity-50"
+                  style={{ background: 'var(--primary)' }}
+                >
+                  {savingSociety ? 'Ukládám...' : 'Uložit nastavení'}
+                </button>
+              </div>
             </div>
           </div>
         )}

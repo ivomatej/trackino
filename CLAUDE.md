@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 4. 3. 2026 (v2.11.0)
+> Aktualizováno: 4. 3. 2026 (v2.12.0)
 
 ---
 
@@ -92,8 +92,9 @@ Výchozí policy: `CREATE POLICY "Auth full" ... FOR ALL TO authenticated USING 
 
 | Tabulka | Klíčové sloupce | Popis |
 |---------|----------------|-------|
-| `trackino_profiles` | id, display_name, email, avatar_color, is_master_admin | Profily uživatelů (rozšíření auth.users) |
-| `trackino_workspaces` | id, name, owner_id, tariff, logo_url, week_start_day, date_format, number_format, currency, required_fields | Workspace nastavení |
+| `trackino_profiles` | id, display_name, display_nickname, email, avatar_color, is_master_admin, timer_always_visible, calendar_day_start, calendar_day_end | Profily uživatelů (rozšíření auth.users) |
+| `trackino_workspaces` | id, name, owner_id, tariff, logo_url, week_start_day, date_format, number_format, currency, required_fields, society_modules_enabled | Workspace nastavení |
+| `trackino_workspace_subscriptions` | id, workspace_id, year, month, tariff, active_members, created_at | Měsíční snapshoty tarifu a počtu aktivních členů (lazy-generated) |
 | `trackino_workspace_members` | workspace_id, user_id, role, can_use_vacation, hide_tags, can_view_audit, hourly_rate (zastaralý) | Členství ve workspace |
 | `trackino_workspace_billing` | workspace_id, company_name, ico, dic, email, address, ... | Fakturační údaje workspace |
 | `trackino_manager_assignments` | workspace_id, member_user_id, manager_user_id | Multi-manager přiřazení |
@@ -447,6 +448,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.12.0 | 4. 3. 2026 | Oslovení (display_nickname v profilu, greeting na Přehledu); Timer always visible (per-user toggle, profile.timer_always_visible); Předplatné v Nastavení (lazy monthly snapshots do trackino_workspace_subscriptions); Kalendář redesign (mini cal + week time grid + settings modal, calendar_day_start/end); App Settings skupina Společnost; Nastavení workspace záložka Společnost (society_modules_enabled JSONB); SQL migrace: ALTER trackino_profiles ADD display_nickname/timer_always_visible/calendar_day_start/calendar_day_end; CREATE TABLE trackino_workspace_subscriptions; ALTER trackino_workspaces ADD society_modules_enabled |
 | v2.11.0 | 4. 3. 2026 | Sekce SPOLEČNOST v sidebaru (Pro+Max) – Znalostní báze (placeholder), Dokumenty (soubory+složky+Storage), Firemní pravidla (rich text editor), Pravidla v kanceláři (rich text editor); Tým – toggle can_manage_documents; Fix: Připomínky layout záhlaví + šířka formuláře; SQL migrace: trackino_workspace_pages, trackino_document_folders, trackino_documents, ALTER workspace_members ADD can_manage_documents |
 | v2.10.0 | 4. 3. 2026 | Dokumentace skryta (jen MasterAdmin + Max tarif); Žádosti – 13 nových kategorií + průvodce kategoriemi (collapsible panel); Fix: select arrow + header layout v Žádostech |
 | v2.9.0 | 4. 3. 2026 | Nový modul Žádosti (Pro+Max); Nový modul Připomínky anonymní (Pro+Max); Tým – toggles can_process_requests + can_receive_feedback; Kalendář – přejmenování Liste→Seznam + fix color picker; Nastavení – české názvy rolí; Přehled hodin – celá jména bez ořezu; Měřič – záhlaví dnů jako v Reportech |
@@ -810,6 +812,112 @@ CREATE POLICY "Auth full" ON trackino_documents
 ALTER TABLE trackino_workspace_members
   ADD COLUMN IF NOT EXISTS can_manage_documents boolean NOT NULL DEFAULT false;
 ```
+
+---
+
+## 18. Oslovení (nickname) – architektura
+
+### DB sloupec
+`trackino_profiles.display_nickname text NOT NULL DEFAULT ''`
+
+### Inicializace při zobrazení profilu
+```typescript
+setDisplayNickname(profile.display_nickname?.trim()
+  ? profile.display_nickname
+  : (profile.display_name?.split(' ')[0] ?? ''));
+```
+
+### Použití na homepage (page.tsx)
+```typescript
+const nickname = profile?.display_nickname?.trim()
+  || profile?.display_name?.split(' ')[0]
+  || 'uživateli';
+// Zobrazeno jako: {greetingPrefix}, {nickname}!
+```
+
+---
+
+## 19. Timer always visible – architektura
+
+### DB sloupec
+`trackino_profiles.timer_always_visible boolean NOT NULL DEFAULT false`
+
+### DashboardLayout.tsx (podmínka renderu TimerBaru)
+```tsx
+{(showTimer || (profile?.timer_always_visible ?? false)) && !isPendingApproval && !showLockedScreen ? (
+  <div className="flex-1 min-w-0">
+    <TimerBar ... />
+  </div>
+) : (
+  <div className="flex-1" />
+)}
+```
+`profile` je dostupný přes `useAuth()` přímo v `DashboardLayout` – není potřeba předávat prop.
+
+---
+
+## 20. WorkspaceSubscription – architektura
+
+### Tabulka `trackino_workspace_subscriptions`
+| Sloupec | Typ | Popis |
+|---------|-----|-------|
+| id | uuid | PK |
+| workspace_id | uuid | FK na trackino_workspaces |
+| year | int | Rok snapshotu |
+| month | int | Měsíc snapshotu (1–12) |
+| tariff | text | Tarif v daném měsíci |
+| active_members | int | Počet aktivních členů |
+| created_at | timestamptz | Čas vytvoření |
+
+### Lazy snapshot (settings/page.tsx, záložka Předplatné)
+1. Zkontroluj, zda záznam pro aktuální year+month existuje
+2. Pokud ne → spočítej `COUNT(trackino_workspace_members WHERE approved=true)` → INSERT snapshot
+3. Načti historii ORDER BY year DESC, month DESC
+
+---
+
+## 21. Kalendář – week view s časovou osou
+
+### DB sloupce (trackino_profiles)
+- `calendar_day_start int NOT NULL DEFAULT 8` – začátek dne (0–23)
+- `calendar_day_end int NOT NULL DEFAULT 18` – konec dne (1–24)
+
+### Architektura week view (calendar/page.tsx)
+- `ROW_H = 60` px per hour
+- **Záhlaví dnů** – 7 sloupců s názvem dne + číslem dne, today zvýrazněn primární barvou
+- **All-day strip** – renderuje se pouze pokud existují celodennní události; zobrazuje EventPill komponenty
+- **Časová mřížka** – `Array.from({ length: calDayEnd - calDayStart }, ...)` → `height: ROW_H` pro každou hodinu
+- **Timed events** – `position: absolute`, `top = (startMin - dayStartMin) * (ROW_H/60)`, `height = (endMin - startMin) * (ROW_H/60)`
+
+### Mini kalendář
+- State `miniCalDate` – nezávislá navigace mini kalendáře
+- Při navigaci (goPrev/goNext/goToday) se `currentDate` a `miniCalDate` synchronizují
+- Kliknutím na den v mini kalu: `setCurrentDate(day); setMiniCalDate(day);`
+- `miniCalGrid` = useMemo, stejná logika jako `monthGrid` ale pro `miniCalDate`
+
+---
+
+## 22. Workspace society_modules_enabled – architektura
+
+### DB sloupec
+`trackino_workspaces.society_modules_enabled jsonb NOT NULL DEFAULT '{"knowledge_base":true,"documents":true,"company_rules":true,"office_rules":true}'`
+
+### WorkspaceContext.tsx (enabledModules useMemo)
+Po `computeEnabledModules()` se aplikuje filtr:
+```typescript
+const SOCIETY_MODS = ['knowledge_base', 'documents', 'company_rules', 'office_rules'] as const;
+const sConfig = currentWorkspace?.society_modules_enabled ?? {};
+for (const mod of SOCIETY_MODS) {
+  if (sConfig[mod] === false) {
+    modules.delete(mod as ModuleId);
+  }
+}
+```
+Globální tariffConfig má vždy přednost – society toggle může pouze vypnout, nikdy zapnout modul který není povolen tarifem.
+
+### Nastavení workspace → záložka Společnost
+- Načítání: z `currentWorkspace.society_modules_enabled` v useEffect
+- Uložení: `supabase.from('trackino_workspaces').update({ society_modules_enabled: societyModules })` + `refreshWorkspace()`
 
 ---
 

@@ -282,7 +282,7 @@ function AppSettingsContent() {
 
   const inputStyle = { borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' };
   const inputCls = 'w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]';
-  const groups = ['Sledování', 'Analýza', 'Správa', 'Nástroje'];
+  const groups = ['Sledování', 'Analýza', 'Správa', 'Nástroje', 'Společnost'];
 
   return (
     <DashboardLayout>

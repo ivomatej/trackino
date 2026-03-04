@@ -66,9 +66,20 @@ export interface Workspace {
   locked: boolean;
   color: string | null;
   timezone: string; // IANA timezone, např. 'Europe/Prague'
+  society_modules_enabled: Record<string, boolean>; // per-workspace zapnutí Společnost modulů
   created_at: string;
   archived_at: string | null;
   deleted_at: string | null;
+}
+
+export interface WorkspaceSubscription {
+  id: string;
+  workspace_id: string;
+  year: number;
+  month: number;      // 1–12
+  tariff: Tariff;
+  active_members: number;
+  created_at: string;
 }
 
 export interface HelpContent {
@@ -124,6 +135,7 @@ export interface SystemNotification {
 export interface Profile {
   id: string;
   display_name: string;
+  display_nickname: string;    // oslovení v aplikaci (max 30 znaků)
   email: string;
   avatar_color: string;
   language: 'cs' | 'en';
@@ -132,6 +144,9 @@ export interface Profile {
   is_master_admin: boolean;
   phone: string;      // telefonní číslo
   position: string;   // pracovní pozice (nastavuje admin)
+  timer_always_visible: boolean; // zobrazit Měřič ve všech stránkách
+  calendar_day_start: number;    // začátek pracovního dne (0–23)
+  calendar_day_end: number;      // konec pracovního dne (1–24)
   created_at: string;
 }
 

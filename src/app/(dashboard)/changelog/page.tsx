@@ -11,6 +11,17 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.12.0 – 4. 3. 2026</h3>
+<ul>
+  <li><strong>Oslovení (nickname)</strong> – v Detailním nastavení přibyl nový vstupní řádek „Jak tě má aplikace oslovovat" (max 30 znaků). Při prvním uložení se předvyplní křestním jménem z Zobrazovaného jména. Oslovení se zobrazuje v úvodním pozdravení na stránce Přehled místo celého jména.</li>
+  <li><strong>Měřič ve všech stránkách</strong> – v Detailním nastavení → Zobrazení aplikace přibyl přepínač „Zobrazovat Měřič v záhlaví na všech stránkách". Ve výchozím nastavení je timer viditelný pouze na stránce Měřič; zapnutím tohoto přepínače se zobrazí trvale v horním záhlaví na libovolné stránce.</li>
+  <li><strong>Předplatné – nová záložka v Nastavení</strong> – záložka „Předplatné" zobrazuje aktuální tarif, platební sekci (placeholder) a historii měsíčních snapshotů (tarif + počet aktivních uživatelů). Snapshot se automaticky vygeneruje při prvním zobrazení záložky v daném měsíci. Vlastník workspace a Master Admin mohou přejít na tarif Free.</li>
+  <li><strong>Kalendář – redesign týdenního pohledu</strong> – Levý panel kalendáře nově obsahuje mini měsíční kalendář s nezávislou navigací (◀ Měsíc RRRR ▶), přepínač pohledu (Seznam / Týden / Měsíc) a tlačítko Nastavení kalendáře. Týdenní pohled má časovou osu vlevo (hodiny), pás celodennních událostí nahoře a klikatelnou časovou mřížku pro události s konkrétním časem (absolutní pozicování).</li>
+  <li><strong>Nastavení kalendáře</strong> – v levém panelu Kalendáře nové tlačítko ⚙ Nastavení kalendáře. Uživatel si může nastavit začátek a konec pracovního dne (rozsah hodin zobrazený v týdenním pohledu). Nastavení se ukládá do profilu a přetrvává napříč relacemi.</li>
+  <li><strong>Nastavení workspace – záložka Společnost</strong> – nová záložka mezi Obecné a Fakturace umožňuje per-workspace zapínání/vypínání čtyř modulů sekce Společnost: Znalostní báze, Dokumenty, Firemní pravidla, Pravidla v kanceláři. Tyto moduly jsou i nadále filtrovány dle tarifu v App Settings.</li>
+  <li><strong>App Settings – skupina Společnost</strong> – v tarifové matici modulů (App Settings) přibyla skupina <em>Společnost</em> zahrnující všechny čtyři moduly sekce Společnost.</li>
+</ul>
+
 <h3>v2.11.0 – 4. 3. 2026</h3>
 <ul>
   <li><strong>Nová sekce SPOLEČNOST</strong> v levém menu (tarif Pro a Max) – čtyři nové moduly pro správu firemní dokumentace a pravidel: <em>Znalostní báze</em> (připravujeme), <em>Dokumenty</em>, <em>Firemní pravidla</em> a <em>Pravidla v kanceláři</em>.</li>

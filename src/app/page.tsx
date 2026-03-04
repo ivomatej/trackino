@@ -161,7 +161,9 @@ function DashboardContent() {
   // Pozdrav dle části dne
   const hour = today.getHours();
   const greetingPrefix = hour < 12 ? 'Dobré ráno' : hour < 17 ? 'Dobrý den' : 'Dobrý večer';
-  const firstName = profile?.display_name?.split(' ')[0] ?? profile?.display_name ?? 'uživateli';
+  const nickname = profile?.display_nickname?.trim()
+    || profile?.display_name?.split(' ')[0]
+    || 'uživateli';
 
   const currency = currentWorkspace?.currency ?? 'CZK';
 
@@ -181,7 +183,7 @@ function DashboardContent() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <h1 className="text-xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>
-              {greetingPrefix}, {firstName}!
+              {greetingPrefix}, {nickname}!
             </h1>
             <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
               Tady máš přehled aktivit. Ať ti jde práce od ruky!

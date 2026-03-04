@@ -300,7 +300,8 @@ export default function DashboardLayout({ children, showTimer = false, onTimerEn
             </button>
 
             {/* Timer v hlavičce - jen pro schválené a nečekající uživatele */}
-            {showTimer && !isPendingApproval && !showLockedScreen ? (
+            {/* showTimer = předáno stránkou Měřič; timer_always_visible = per-user nastavení */}
+            {(showTimer || (profile?.timer_always_visible ?? false)) && !isPendingApproval && !showLockedScreen ? (
               <div className="flex-1 min-w-0">
                 <TimerBar onEntryChanged={onTimerEntryChanged} playData={timerPlayData} />
               </div>

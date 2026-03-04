@@ -343,11 +343,22 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     return managerAssignments.some(a => a.member_user_id === userId);
   }, [managerAssignments]);
 
-  // Výpočet povolených modulů (DB tariff config + tarif workspace + user overrides)
+  // Výpočet povolených modulů (DB tariff config + tarif workspace + user overrides + society)
   const enabledModules = useMemo<Set<ModuleId>>(() => {
     const tariff = currentWorkspace?.tariff ?? 'free';
-    return computeEnabledModules(tariff, moduleOverrides, tariffConfig);
-  }, [currentWorkspace?.tariff, moduleOverrides, tariffConfig]);
+    const modules = computeEnabledModules(tariff, moduleOverrides, tariffConfig);
+
+    // Aplikuj per-workspace society modules (owner/admin může vypnout jednotlivé Společnost moduly)
+    const SOCIETY_MODS = ['knowledge_base', 'documents', 'company_rules', 'office_rules'] as const;
+    const sConfig = currentWorkspace?.society_modules_enabled ?? {};
+    for (const mod of SOCIETY_MODS) {
+      if (sConfig[mod] === false) {
+        modules.delete(mod as ModuleId);
+      }
+    }
+
+    return modules;
+  }, [currentWorkspace?.tariff, currentWorkspace?.society_modules_enabled, moduleOverrides, tariffConfig]);
 
   const hasModule = useCallback((moduleId: ModuleId): boolean => {
     return enabledModules.has(moduleId);

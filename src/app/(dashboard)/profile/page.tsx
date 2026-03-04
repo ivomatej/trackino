@@ -22,20 +22,26 @@ function ProfileContent() {
   const { theme, setTheme } = useTheme();
 
   const [displayName, setDisplayName] = useState('');
+  const [displayNickname, setDisplayNickname] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [position, setPosition] = useState('');
   const [avatarColor, setAvatarColor] = useState(AVATAR_COLORS[0]);
+  const [timerAlwaysVisible, setTimerAlwaysVisible] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     if (profile) {
       setDisplayName(profile.display_name ?? '');
+      setDisplayNickname(profile.display_nickname?.trim()
+        ? profile.display_nickname
+        : (profile.display_name?.split(' ')[0] ?? ''));
       setEmail(profile.email ?? '');
       setPhone(profile.phone ?? '');
       setPosition(profile.position ?? '');
       setAvatarColor(profile.avatar_color ?? AVATAR_COLORS[0]);
+      setTimerAlwaysVisible(profile.timer_always_visible ?? false);
     }
   }, [profile]);
 
@@ -46,9 +52,11 @@ function ProfileContent() {
     setSaving(true);
     const updates: Partial<Profile> = {
       display_name: displayName.trim(),
+      display_nickname: displayNickname.trim().slice(0, 30),
       email: email.trim(),
       phone: normalizePhone(phone),
       avatar_color: avatarColor,
+      timer_always_visible: timerAlwaysVisible,
     };
     if (canEditPosition) {
       updates.position = position.trim();
@@ -124,6 +132,26 @@ function ProfileContent() {
               </div>
               <div>
                 <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                  Jak tě má aplikace oslovovat
+                  <span className="ml-1.5 font-normal" style={{ color: 'var(--text-muted)' }}>
+                    ({displayNickname.length}/30)
+                  </span>
+                </label>
+                <input
+                  type="text"
+                  value={displayNickname}
+                  onChange={(e) => setDisplayNickname(e.target.value.slice(0, 30))}
+                  placeholder="Např. Honzo, Petro, Davide…"
+                  maxLength={30}
+                  className={inputCls}
+                  style={inputStyle}
+                />
+                <p className="text-[11px] mt-1" style={{ color: 'var(--text-muted)' }}>
+                  Zobrazuje se v úvodním pozdravení na stránce Přehled
+                </p>
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
                   E-mail
                 </label>
                 <input
@@ -193,6 +221,30 @@ function ProfileContent() {
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* ── Zobrazení aplikace ── */}
+          <div className="rounded-2xl border p-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+            <h2 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Zobrazení aplikace</h2>
+            <label
+              className="flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-colors"
+              style={{ background: timerAlwaysVisible ? 'var(--bg-active)' : 'var(--bg-hover)', border: `1px solid ${timerAlwaysVisible ? 'var(--primary)' : 'var(--border)'}` }}
+            >
+              <input
+                type="checkbox"
+                checked={timerAlwaysVisible}
+                onChange={(e) => setTimerAlwaysVisible(e.target.checked)}
+                className="mt-0.5 flex-shrink-0 w-4 h-4 accent-[var(--primary)]"
+              />
+              <div>
+                <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                  Zobrazovat Měřič v záhlaví na všech stránkách
+                </span>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                  Ve výchozím nastavení je Měřič viditelný pouze na stránce Měřič. Zapnutím se zobrazí trvale v horním záhlaví.
+                </p>
+              </div>
+            </label>
           </div>
 
           {/* ── Info o účtu ── */}
