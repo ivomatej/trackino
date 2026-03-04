@@ -11,6 +11,14 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.10.0 – 4. 3. 2026</h3>
+<ul>
+  <li><strong>Dokumentace skryta pro běžné uživatele</strong> – odkaz na Dokumentaci (changelog) v levém menu je nyní viditelný pouze pro Master Admina a uživatele s tarifem <em>Max</em>. Ostatní tarify jej nevidí.</li>
+  <li><strong>Žádosti – nové kategorie (13)</strong> – původní typy (Dovolená, Software, Pracovní cesta, Firemní karta, Jiné) nahrazeny 13 kategorickými oblastmi: <em>Hardware a zařízení, Software a licence, Přístupy a oprávnění, Pracovní prostor a vybavení, Finanční žádosti, HR a personální žádosti, Vzdělávání a rozvoj, Cestování a služební cesty, Benefity a odměňování, Nábor a posílení týmu, Bezpečnost a compliance, Technická podpora a IT servis, Právní a administrativní</em>.</li>
+  <li><strong>Žádosti – průvodce kategoriemi</strong> – na stránce Žádosti přibyl rozkliknutelný panel <em>„Průvodce kategoriemi – co kam spadá"</em>. Každá kategorie obsahuje přehled konkrétních příkladů žádostí, které do ní patří.</li>
+  <li><strong>Žádosti – opravy UI</strong> – záhlaví stránky opraven layout (tlačítko „Nová žádost" má pevnou šířku, nekryje se se subtitlem); formulář pro novou žádost má opravenou šipku v roletce (nativní šipka nahrazena vlastní SVG ikonou).</li>
+</ul>
+
 <h3>v2.9.0 – 4. 3. 2026</h3>
 <ul>
   <li><strong>Nový modul: Žádosti</strong> (tarif Pro a Max) – zaměstnanci mohou podávat formální žádosti svému manažerovi: dovolená, software, pracovní cesta, firemní karta nebo jiné. Každá žádost prochází schvalovacím procesem (Čeká na schválení → Schváleno / Zamítnuto). Záložka <em>Žádosti</em> je viditelná jen pro uživatele s oprávněním zpracovávat žádosti (nastavují admin/vlastník v sekci Tým). Při schválení žádosti o dovolenou se automaticky vytvoří záznam v modulu Dovolená a zapíše se do Plánovače. Zamítnuté žádosti zůstávají viditelné s poznámkou recenzenta.</li>

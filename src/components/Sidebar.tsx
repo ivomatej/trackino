@@ -340,8 +340,8 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
     { label: 'Nápověda', href: '/help', icon: ICONS.help },
     { label: 'Nahlásit chybu', href: '/bugs', icon: ICONS.bug },
     ...(isMasterAdminSidebar ? [{ label: 'Úpravy aplikace', href: '/app-changes', icon: ICONS.appChanges }] : []),
-    { label: 'Dokumentace', href: '/changelog', icon: ICONS.docs },
-  ], [isMasterAdminSidebar]);
+    ...(isMasterAdminSidebar || currentWorkspace?.tariff === 'max' ? [{ label: 'Dokumentace', href: '/changelog', icon: ICONS.docs }] : []),
+  ], [isMasterAdminSidebar, currentWorkspace?.tariff]);
 
   // Všechny položky dostupné pro oblíbené (navGroups + bottomItems)
   const allNavItems = useMemo<NavItem[]>(() => [

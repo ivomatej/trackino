@@ -12,43 +12,56 @@ import type { TrackingRequest, RequestType, Profile } from '@/types/database';
 // ─── Konstanty ───────────────────────────────────────────────────────────────
 
 const REQUEST_TYPE_LABELS: Record<RequestType, string> = {
-  vacation: 'Dovolená',
-  software: 'Nový software',
-  business_trip: 'Pracovní cesta',
-  company_card: 'Firemní karta',
-  other: 'Jiné',
+  hardware:    'Hardware a zařízení',
+  software:    'Software a licence',
+  access:      'Přístupy a oprávnění',
+  office:      'Pracovní prostor a vybavení',
+  financial:   'Finanční žádosti',
+  hr:          'HR a personální žádosti',
+  education:   'Vzdělávání a rozvoj',
+  travel:      'Cestování a služební cesty',
+  benefits:    'Benefity a odměňování',
+  recruitment: 'Nábor a posílení týmu',
+  security:    'Bezpečnost a compliance',
+  it_support:  'Technická podpora a IT servis',
+  legal:       'Právní a administrativní',
 };
 
 const REQUEST_TYPE_OPTIONS: { value: RequestType; label: string }[] = [
-  { value: 'vacation',      label: 'Dovolená' },
-  { value: 'software',      label: 'Nový software' },
-  { value: 'business_trip', label: 'Pracovní cesta' },
-  { value: 'company_card',  label: 'Firemní karta' },
-  { value: 'other',         label: 'Jiné' },
+  { value: 'hardware',    label: 'Hardware a zařízení' },
+  { value: 'software',    label: 'Software a licence' },
+  { value: 'access',      label: 'Přístupy a oprávnění' },
+  { value: 'office',      label: 'Pracovní prostor a vybavení' },
+  { value: 'financial',   label: 'Finanční žádosti' },
+  { value: 'hr',          label: 'HR a personální žádosti' },
+  { value: 'education',   label: 'Vzdělávání a rozvoj' },
+  { value: 'travel',      label: 'Cestování a služební cesty' },
+  { value: 'benefits',    label: 'Benefity a odměňování' },
+  { value: 'recruitment', label: 'Nábor a posílení týmu' },
+  { value: 'security',    label: 'Bezpečnost a compliance' },
+  { value: 'it_support',  label: 'Technická podpora a IT servis' },
+  { value: 'legal',       label: 'Právní a administrativní' },
+];
+
+// ─── Průvodce kategoriemi ──────────────────────────────────────────────────
+
+const CATEGORY_GUIDE: { title: string; desc: string }[] = [
+  { title: 'Hardware a zařízení', desc: 'Počítače, monitory, klávesnice, myši, telefony, tablety, tiskárny, headset, webkamery, externí disky, UPS záložní zdroje, ergonomické vybavení (podložky, stojany na monitor).' },
+  { title: 'Software a licence', desc: 'Nové aplikace, rozšíření stávajících licencí, upgrady verzí, přístupy k SaaS nástrojům (Notion, Asana, Adobe, AI nástroje…), vývojářské nástroje, antivirus.' },
+  { title: 'Přístupy a oprávnění', desc: 'Přístup do systémů, sdílených složek, databází, adminská práva, VPN, přístupy k externím službám a API, zrušení přístupů při odchodu.' },
+  { title: 'Pracovní prostor a vybavení kanceláře', desc: 'Kancelářský nábytek, stůl/křeslo, kuchyňské vybavení, úprava pracovního místa, klimatizace/topení, parkovací místo.' },
+  { title: 'Finanční žádosti', desc: 'Proplacení výdajů (cestovné, ubytování, nákupy), zálohy na akce nebo projekty, navýšení rozpočtu projektu, nákupy nad rámec běžného schválení.' },
+  { title: 'HR a personální žádosti', desc: 'Změna pracovní doby nebo úvazku, práce z domova (home office), dovolená nad rámec standardu, studijní volno, osobní volno, přestup na jinou pozici, žádost o přidání člověka do týmu.' },
+  { title: 'Vzdělávání a rozvoj', desc: 'Kurzy, školení, certifikace, konference, knihy a vzdělávací materiály, mentoring, jazykové kurzy.' },
+  { title: 'Cestování a služební cesty', desc: 'Schválení služební cesty, letenky, ubytování, pronájem auta, denní diety, žádost o firemní kartu.' },
+  { title: 'Benefity a odměňování', desc: 'Žádost o benefit (Multisport, stravenky, penzijní příspěvek…), změna benefitů, mimořádná odměna/bonus, žádost o navýšení mzdy.' },
+  { title: 'Nábor a posílení týmu', desc: 'Žádost o nového zaměstnance nebo externisty, rozšíření kapacity týmu, schválení spolupráce s agenturou nebo freelancerem.' },
+  { title: 'Bezpečnost a compliance', desc: 'Hlášení bezpečnostního incidentu, žádost o bezpečnostní audit, změna přístupových hesel systémů, GDPR žádosti.' },
+  { title: 'Technická podpora a IT servis', desc: 'Oprava nebo výměna zařízení, servisní zásah, obnova dat, pomoc s nastavením systému.' },
+  { title: 'Právní a administrativní', desc: 'Žádost o potvrzení zaměstnání, výplatní páska, pracovní smlouva, souhlas s vedlejší výdělečnou činností.' },
 ];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function computeWorkingDays(start: string, end: string): number {
-  let count = 0;
-  const s = new Date(start + 'T12:00:00');
-  const e = new Date(end + 'T12:00:00');
-  const cur = new Date(s);
-  while (cur <= e) {
-    const dow = cur.getDay();
-    if (dow !== 0 && dow !== 6) count++;
-    cur.setDate(cur.getDate() + 1);
-  }
-  return count;
-}
-
-function fmtDate(iso: string): string {
-  return new Date(iso + 'T12:00:00').toLocaleDateString('cs-CZ', { day: 'numeric', month: 'long', year: 'numeric' });
-}
-
-function fmtDateShort(iso: string): string {
-  return new Date(iso + 'T12:00:00').toLocaleDateString('cs-CZ', { day: 'numeric', month: 'numeric', year: 'numeric' });
-}
 
 function initials(name: string): string {
   return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
@@ -79,29 +92,23 @@ function RequestsContent() {
   const [saving, setSaving] = useState(false);
 
   // Form
-  const [formType, setFormType] = useState<RequestType>('vacation');
+  const [formType, setFormType] = useState<RequestType>('hardware');
   const [formTitle, setFormTitle] = useState('');
   const [formNote, setFormNote] = useState('');
-  const [formVacStart, setFormVacStart] = useState('');
-  const [formVacEnd, setFormVacEnd] = useState('');
 
   // Reject modal
   const [rejectModal, setRejectModal] = useState<{ id: string; note: string } | null>(null);
   const [rejecting, setRejecting] = useState(false);
   const [approving, setApproving] = useState<string | null>(null);
 
+  // Průvodce kategoriemi – rozbalení
+  const [showGuide, setShowGuide] = useState(false);
+
   // Oprávnění – kdo může zpracovávat žádosti
   const canProcessRequests = useMemo(
     () => isWorkspaceAdmin || isManager || isMasterAdmin || (currentMembership?.can_process_requests ?? false),
     [isWorkspaceAdmin, isManager, isMasterAdmin, currentMembership]
   );
-
-  // Počet pracovních dnů
-  const computedVacDays = useMemo(() => {
-    if (formType !== 'vacation' || !formVacStart || !formVacEnd) return 0;
-    if (formVacEnd < formVacStart) return 0;
-    return computeWorkingDays(formVacStart, formVacEnd);
-  }, [formType, formVacStart, formVacEnd]);
 
   // Redirect pokud modul není dostupný (čekáme na načtení workspace)
   useEffect(() => {
@@ -167,102 +174,38 @@ function RequestsContent() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // ── Synchronizace dovolené do Plánovače ────────────────────────────────────
-
-  async function syncVacationToPlanner(startDate: string, endDate: string, userId: string, workspaceId: string) {
-    const { data: statusData } = await supabase
-      .from('trackino_availability_statuses')
-      .select('id, name')
-      .eq('workspace_id', workspaceId);
-    const vacStatus = (statusData ?? []).find((s: { id: string; name: string }) =>
-      s.name.trim().toLowerCase() === 'dovolená'
-    );
-    if (!vacStatus) return;
-
-    const start = new Date(startDate + 'T12:00:00');
-    const end = new Date(endDate + 'T12:00:00');
-    const cur = new Date(start);
-    while (cur <= end) {
-      const y = cur.getFullYear();
-      const m = String(cur.getMonth() + 1).padStart(2, '0');
-      const d = String(cur.getDate()).padStart(2, '0');
-      const dateStr = `${y}-${m}-${d}`;
-      await supabase.from('trackino_availability').upsert({
-        workspace_id: workspaceId,
-        user_id: userId,
-        date: dateStr,
-        half: 'full',
-        status_id: vacStatus.id,
-        note: '',
-      }, { onConflict: 'workspace_id,user_id,date,half' });
-      cur.setDate(cur.getDate() + 1);
-    }
-  }
-
   // ── Akce ──────────────────────────────────────────────────────────────────
 
   const submitRequest = async () => {
     if (!user || !currentWorkspace) return;
     if (!formTitle.trim()) return;
-    if (formType === 'vacation' && (!formVacStart || !formVacEnd || formVacEnd < formVacStart)) return;
 
     setSaving(true);
-    const payload: Record<string, unknown> = {
+    await supabase.from('trackino_requests').insert({
       workspace_id: currentWorkspace.id,
       user_id: user.id,
       type: formType,
       title: formTitle.trim(),
       note: formNote.trim(),
       status: 'pending',
-    };
-    if (formType === 'vacation') {
-      payload.vacation_start_date = formVacStart;
-      payload.vacation_end_date = formVacEnd;
-      payload.vacation_days = computedVacDays;
-    }
-    await supabase.from('trackino_requests').insert(payload);
+    });
     setSaving(false);
     setShowForm(false);
     setFormTitle('');
     setFormNote('');
-    setFormVacStart('');
-    setFormVacEnd('');
-    setFormType('vacation');
+    setFormType('hardware');
     fetchData();
   };
 
   const approveRequest = async (req: RequestWithProfile) => {
     if (!user || !currentWorkspace) return;
     setApproving(req.id);
-    const now = new Date().toISOString();
     await supabase.from('trackino_requests').update({
       status: 'approved',
       reviewed_by: user.id,
-      reviewed_at: now,
+      reviewed_at: new Date().toISOString(),
       reviewer_note: '',
     }).eq('id', req.id);
-
-    // Pro žádost o dovolenou vytvořit záznam v dovolené + sync s plánovačem
-    if (req.type === 'vacation' && req.vacation_start_date && req.vacation_end_date) {
-      const days = req.vacation_days ?? computeWorkingDays(req.vacation_start_date, req.vacation_end_date);
-      const { data: vacData } = await supabase.from('trackino_vacation_entries').insert({
-        workspace_id: currentWorkspace.id,
-        user_id: req.user_id,
-        start_date: req.vacation_start_date,
-        end_date: req.vacation_end_date,
-        days,
-        note: req.note || '',
-        status: 'approved',
-        reviewed_by: user.id,
-        reviewed_at: now,
-        reviewer_note: '',
-      }).select().single();
-
-      if (vacData) {
-        await supabase.from('trackino_requests').update({ vacation_entry_id: vacData.id }).eq('id', req.id);
-        await syncVacationToPlanner(req.vacation_start_date, req.vacation_end_date, req.user_id, currentWorkspace.id);
-      }
-    }
     setApproving(null);
     fetchData();
   };
@@ -327,16 +270,16 @@ function RequestsContent() {
     <DashboardLayout>
       <div className="max-w-3xl mx-auto">
         {/* Záhlaví */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-start justify-between mb-6 gap-4">
           <div>
             <h1 className="text-xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>Žádosti</h1>
             <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-              Podávejte žádosti o dovolenou, software nebo jiné potřeby
+              Podávejte formální žádosti svému nadřízenému ke schválení
             </p>
           </div>
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white flex-shrink-0"
             style={{ background: 'var(--primary)' }}
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -344,6 +287,36 @@ function RequestsContent() {
             </svg>
             Nová žádost
           </button>
+        </div>
+
+        {/* Průvodce kategoriemi */}
+        <div className="mb-5 rounded-xl border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
+          <button
+            onClick={() => setShowGuide(g => !g)}
+            className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium transition-colors"
+            style={{ background: 'var(--bg-hover)', color: 'var(--text-secondary)' }}
+          >
+            <div className="flex items-center gap-2">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              Průvodce kategoriemi – co kam spadá
+            </div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+              style={{ transform: showGuide ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+          {showGuide && (
+            <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
+              {CATEGORY_GUIDE.map(cat => (
+                <div key={cat.title} className="px-4 py-3" style={{ background: 'var(--bg-card)' }}>
+                  <p className="text-xs font-semibold mb-0.5" style={{ color: 'var(--text-primary)' }}>{cat.title}</p>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{cat.desc}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Záložky */}
@@ -399,14 +372,6 @@ function RequestsContent() {
                       {new Date(req.created_at).toLocaleDateString('cs-CZ')}
                     </span>
                   </div>
-
-                  {/* Dovolená detail */}
-                  {req.type === 'vacation' && req.vacation_start_date && req.vacation_end_date && (
-                    <div className="text-xs mb-2" style={{ color: 'var(--text-secondary)' }}>
-                      {fmtDateShort(req.vacation_start_date)} – {fmtDateShort(req.vacation_end_date)}
-                      {req.vacation_days != null && <span className="ml-1 font-medium">({req.vacation_days} {req.vacation_days === 1 ? 'pracovní den' : req.vacation_days < 5 ? 'pracovní dny' : 'pracovních dnů'})</span>}
-                    </div>
-                  )}
 
                   {req.note && (
                     <p className="text-xs mb-2" style={{ color: 'var(--text-secondary)' }}>{req.note}</p>
@@ -488,14 +453,6 @@ function RequestsContent() {
 
                   <h3 className="font-semibold text-sm mb-1" style={{ color: 'var(--text-primary)' }}>{req.title}</h3>
 
-                  {/* Dovolená detail */}
-                  {req.type === 'vacation' && req.vacation_start_date && req.vacation_end_date && (
-                    <div className="text-xs mb-2" style={{ color: 'var(--text-secondary)' }}>
-                      {fmtDate(req.vacation_start_date)} – {fmtDate(req.vacation_end_date)}
-                      {req.vacation_days != null && <span className="ml-1 font-medium">({req.vacation_days} {req.vacation_days === 1 ? 'pracovní den' : req.vacation_days < 5 ? 'pracovní dny' : 'pracovních dnů'})</span>}
-                    </div>
-                  )}
-
                   {req.note && (
                     <p className="text-xs mb-3" style={{ color: 'var(--text-secondary)' }}>{req.note}</p>
                   )}
@@ -547,17 +504,24 @@ function RequestsContent() {
             <div className="space-y-4">
               {/* Typ */}
               <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Typ žádosti</label>
-                <select
-                  value={formType}
-                  onChange={e => setFormType(e.target.value as RequestType)}
-                  className={inputCls}
-                  style={inputStyle}
-                >
-                  {REQUEST_TYPE_OPTIONS.map(o => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </select>
+                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Kategorie žádosti</label>
+                <div className="relative">
+                  <select
+                    value={formType}
+                    onChange={e => setFormType(e.target.value as RequestType)}
+                    className={inputCls + ' appearance-none pr-9'}
+                    style={inputStyle}
+                  >
+                    {REQUEST_TYPE_OPTIONS.map(o => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3" style={{ color: 'var(--text-muted)' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </div>
+                </div>
               </div>
 
               {/* Název */}
@@ -567,49 +531,12 @@ function RequestsContent() {
                   type="text"
                   value={formTitle}
                   onChange={e => setFormTitle(e.target.value)}
-                  placeholder={
-                    formType === 'vacation' ? 'např. Letní dovolená'
-                    : formType === 'software' ? 'např. Adobe Photoshop licence'
-                    : formType === 'business_trip' ? 'např. Konference Praha'
-                    : 'Název žádosti'
-                  }
+                  placeholder="Stručný název žádosti"
                   className={inputCls}
                   style={inputStyle}
                   autoFocus
                 />
               </div>
-
-              {/* Dovolená – datum */}
-              {formType === 'vacation' && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Od *</label>
-                    <input
-                      type="date"
-                      value={formVacStart}
-                      onChange={e => setFormVacStart(e.target.value)}
-                      className={inputCls}
-                      style={inputStyle}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Do *</label>
-                    <input
-                      type="date"
-                      value={formVacEnd}
-                      onChange={e => setFormVacEnd(e.target.value)}
-                      min={formVacStart}
-                      className={inputCls}
-                      style={inputStyle}
-                    />
-                  </div>
-                  {computedVacDays > 0 && (
-                    <div className="col-span-2 text-xs font-medium" style={{ color: 'var(--primary)' }}>
-                      {computedVacDays} {computedVacDays === 1 ? 'pracovní den' : computedVacDays < 5 ? 'pracovní dny' : 'pracovních dnů'}
-                    </div>
-                  )}
-                </div>
-              )}
 
               {/* Poznámka */}
               <div>
@@ -618,7 +545,7 @@ function RequestsContent() {
                   value={formNote}
                   onChange={e => setFormNote(e.target.value)}
                   rows={3}
-                  placeholder="Doplňující informace..."
+                  placeholder="Doplňující informace, zdůvodnění žádosti..."
                   className={inputCls}
                   style={{ ...inputStyle, resize: 'none' }}
                 />
@@ -635,7 +562,7 @@ function RequestsContent() {
               </button>
               <button
                 onClick={submitRequest}
-                disabled={saving || !formTitle.trim() || (formType === 'vacation' && (!formVacStart || !formVacEnd || formVacEnd < formVacStart))}
+                disabled={saving || !formTitle.trim()}
                 className="px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50"
                 style={{ background: 'var(--primary)' }}
               >

@@ -269,15 +269,15 @@ const DEFAULT_HELP_CONTENT = `
 </ul>
 
 <h3>Žádosti</h3>
-<p>Modul <strong>Žádosti</strong> (sekce Sledování, tarif Pro a Max) umožňuje zaměstnancům podávat různé typy žádostí a manažerům/adminům je schvalovat nebo zamítat.</p>
+<p>Modul <strong>Žádosti</strong> (sekce Sledování, tarif Pro a Max) umožňuje zaměstnancům podávat formální žádosti svému nadřízenému ke schválení. Stránka obsahuje průvodce kategoriemi přímo v aplikaci.</p>
 <ul>
-  <li><strong>Typy žádostí</strong> – Dovolená, Nový software, Pracovní cesta, Firemní karta, Jiné</li>
-  <li><strong>Podání žádosti</strong> – vyplňte typ, název a popis žádosti; u dovolené zadejte také datum od–do (počet dnů se vypočítá automaticky)</li>
+  <li><strong>Kategorie žádostí</strong> – Hardware a zařízení, Software a licence, Přístupy a oprávnění, Pracovní prostor a vybavení, Finanční žádosti, HR a personální žádosti, Vzdělávání a rozvoj, Cestování a služební cesty, Benefity a odměňování, Nábor a posílení týmu, Bezpečnost a compliance, Technická podpora a IT servis, Právní a administrativní</li>
+  <li><strong>Podání žádosti</strong> – vyberte kategorii, zadejte stručný název a doplňující poznámku; klikněte „Odeslat žádost"</li>
+  <li><strong>Průvodce kategoriemi</strong> – rozkliknutelný panel přímo na stránce Žádosti popisuje, co do které kategorie spadá</li>
   <li><strong>Stav žádosti</strong> – Čeká na vyřízení (žlutý štítek), Schváleno (zelený štítek), Zamítnuto (červený štítek s poznámkou)</li>
   <li><strong>Záložka Moje žádosti</strong> – přehled všech vašich žádostí s aktuálním stavem; zamítnuté žádosti zobrazují poznámku od nadřízeného</li>
   <li><strong>Záložka Ke zpracování</strong> – viditelná pro manažery a adminy; přehled čekajících žádostí od podřízených s tlačítky Schválit a Zamítnout</li>
   <li><strong>Kdo zpracovává žádosti</strong> – primárně přímý manažer; admini vidí žádosti všech; konfiguruje se v Tým → Členové (příznak „Zpracovává žádosti")</li>
-  <li><strong>Propojení s Dovolená</strong> – schválená žádost o dovolenou automaticky vytvoří záznam na stránce Dovolená a synchronizuje se s Plánovačem</li>
 </ul>
 
 <h3>Připomínky (anonymní formulář)</h3>

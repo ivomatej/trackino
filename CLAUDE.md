@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 4. 3. 2026 (v2.9.0)
+> Aktualizováno: 4. 3. 2026 (v2.10.0)
 
 ---
 
@@ -117,7 +117,7 @@ Výchozí policy: `CREATE POLICY "Auth full" ... FOR ALL TO authenticated USING 
 | `trackino_system_notifications` | id, title, message, color, is_active, show_from (timestamptz\|null), show_until (timestamptz\|null), created_at, updated_at | Systémová oznámení zobrazená všem uživatelům jako banner (jen Master Admin spravuje) |
 | `trackino_calendars` | id, workspace_id, owner_user_id, name, color, is_default, created_at, updated_at | Osobní kalendáře uživatele (výchozí se vytvoří automaticky) |
 | `trackino_calendar_events` | id, calendar_id, workspace_id, user_id, title, description, start_date (text YYYY-MM-DD), end_date (text), is_all_day, start_time (text\|null), end_time (text\|null), color (text\|null), source ('manual'\|'vacation'\|'important_day'), source_id (uuid\|null), created_at, updated_at | Ruční události v kalendáři; dovolená a důležité dny se čtou přímo z jejich tabulek |
-| `trackino_requests` | id, workspace_id, user_id, type ('vacation'\|'software'\|'business_trip'\|'company_card'\|'other'), title, note, status ('pending'\|'approved'\|'rejected'), reviewed_by (uuid\|null), reviewed_at (timestamptz\|null), reviewer_note, vacation_start_date (text\|null), vacation_end_date (text\|null), vacation_days (int\|null), vacation_entry_id (uuid\|null), created_at, updated_at | Žádosti zaměstnanců ke schválení (dovolená, SW, cestovní příkaz, atd.) |
+| `trackino_requests` | id, workspace_id, user_id, type ('hardware'\|'software'\|'access'\|'office'\|'financial'\|'hr'\|'education'\|'travel'\|'benefits'\|'recruitment'\|'security'\|'it_support'\|'legal'), title, note, status ('pending'\|'approved'\|'rejected'), reviewed_by (uuid\|null), reviewed_at (timestamptz\|null), reviewer_note, vacation_start_date (text\|null), vacation_end_date (text\|null), vacation_days (int\|null), vacation_entry_id (uuid\|null), created_at, updated_at | Žádosti zaměstnanců ke schválení – 13 kategorií |
 | `trackino_feedback` | id, workspace_id, message, is_resolved (bool), created_at | Anonymní připomínky – bez user_id záměrně (plná anonymita) |
 | `trackino_calendar_shares` | id, calendar_id, shared_with_user_id, can_edit, created_at | Sdílení kalendáře mezi uživateli workspace (UNIQUE calendar_id+shared_with_user_id) |
 
@@ -432,6 +432,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 |-------|-------|---------------|
 | v2.8.0 | 4. 3. 2026 | Modul Kalendář (Max) – list/week/month pohled, více kalendářů, auto-sync dovolená+důležité dny, CRUD událostí; Fix: sidebar badge kolize s hvězdičkou oblíbených (pr-8 padding) |
 | v2.7.2 | 4. 3. 2026 | Fix: app-settings redirect (čekání na user+profile, ne jen authLoading); Fix: vacation tabulka rozhozené sloupce (pevné šířky místo auto); Sidebar badge na Dovolené pro manager/admin |
+| v2.10.0 | 4. 3. 2026 | Dokumentace skryta (jen MasterAdmin + Max tarif); Žádosti – 13 nových kategorií + průvodce kategoriemi (collapsible panel); Fix: select arrow + header layout v Žádostech |
 | v2.9.0 | 4. 3. 2026 | Nový modul Žádosti (Pro+Max); Nový modul Připomínky anonymní (Pro+Max); Tým – toggles can_process_requests + can_receive_feedback; Kalendář – přejmenování Liste→Seznam + fix color picker; Nastavení – české názvy rolí; Přehled hodin – celá jména bez ořezu; Měřič – záhlaví dnů jako v Reportech |
 | v2.8.0 | 4. 3. 2026 | Nový modul Kalendář (Max tarif) – 3 pohledy (Měsíční/Týdenní/Seznam), sync s Dovolenou a Důležitými dny; Fix: Sidebar – kolize badge s hvězdičkou Oblíbených |
 | v2.7.2 | 4. 3. 2026 | Fix: app-settings přesměrování při refreshi (definitivní); Fix: Dovolená rozhozené sloupce (pevné šířky); Badge čekajících žádostí o dovolenou v Sidebaru |

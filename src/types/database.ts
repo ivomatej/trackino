@@ -466,7 +466,20 @@ export interface CalendarShare {
 
 // === Žádosti ===
 
-export type RequestType = 'vacation' | 'software' | 'business_trip' | 'company_card' | 'other';
+export type RequestType =
+  | 'hardware'
+  | 'software'
+  | 'access'
+  | 'office'
+  | 'financial'
+  | 'hr'
+  | 'education'
+  | 'travel'
+  | 'benefits'
+  | 'recruitment'
+  | 'security'
+  | 'it_support'
+  | 'legal';
 export type RequestStatus = 'pending' | 'approved' | 'rejected';
 
 export interface TrackingRequest {
