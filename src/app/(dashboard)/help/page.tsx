@@ -82,6 +82,25 @@ const DEFAULT_HELP_CONTENT = `
 <p>V <strong>Nastavení → Fakturační údaje</strong> lze vytvořit více fakturačních profilů (např. pro různé právní subjekty). Každý profil obsahuje: název společnosti, jméno jednatele, adresu (ulice + číslo popisné), PSČ, město, stát, IČO, DIČ, příznak plátce DPH, e-mail, telefon a poznámku k fakturaci. Jeden profil lze označit jako výchozí.</p>
 <p>V <strong>Tým → editace člena → sekce Fakturace</strong> lze každému členovi přiřadit konkrétní fakturační profil. Pokud není přiřazen žádný, použije se výchozí profil workspace. Přiřazený profil se uživateli zobrazí při podání žádosti o fakturaci v pravém panelu formuláře.</p>
 
+<h3>Převodník textu</h3>
+<p>Modul <strong>Převodník textu</strong> (dostupný v tarifu <strong>Max</strong>, sekce Analýza) umožňuje převést formátovaný text z Wordu, webu nebo jiných zdrojů do čistého formátu:</p>
+<ul>
+  <li><strong>Prostý text</strong> – odstraní veškeré formátování, zachová pouze odřádkování. Vhodný pro kopírování do formulářů, e-mailů nebo nástrojů bez podpory HTML.</li>
+  <li><strong>Markdown</strong> – zachová strukturu a převede nadpisy H1–H6, tučné, kurzívu, přeškrtnutí, kód, seznamy a hypertextové odkazy na odpovídající Markdown syntaxi.</li>
+</ul>
+<p>Do levého panelu vložte text Ctrl+V (formátování se zachová). Pravý panel ihned zobrazí výsledek. Záložkami <em>Prostý text / Markdown</em> přepínáte výstupní formát, tlačítkem <em>Kopírovat</em> zkopírujete výsledek do schránky.</p>
+
+<h3>Úpravy aplikace</h3>
+<p>Stránka <strong>Úpravy aplikace</strong> je dostupná pouze pro <strong>Master Admina</strong> (odkaz v levém menu pod „Nahlásit chybu"). Slouží jako soukromý úkolník k evidenci nápadů a požadavků na rozvoj aplikace.</p>
+<ul>
+  <li><strong>Bug / Nápad / Požadavek</strong> – typ položky</li>
+  <li><strong>Priorita</strong> – Nízká (šedý pruh) / Střední (žlutý pruh) / Vysoká (červený pruh)</li>
+  <li><strong>Stav</strong> – Otevřeno / Řeší se / Hotovo (sjednoceno se stavem Bug logu)</li>
+</ul>
+<p>Filtrování: záložky Vše / Bug / Nápad / Požadavek / Hotové + vyhledávání podle názvu nebo popisu. Hotové položky jsou přeškrtnuty a odděleny záložkou „Hotové".</p>
+<p><strong>Přesun z Bug logu:</strong> V sekci Nahlásit chybu (Master Admin vidí tlačítko <strong>→ Úpravy aplikace</strong> u každého reportu) se kliknutím automaticky vytvoří položka v Úpravách. Přesunuté položky jsou označeny štítkem <em>„Z Bug logu"</em>. Původní report zůstane v Bug logu nezměněn.</p>
+<p><strong>SQL migrace (nutno spustit v Supabase):</strong><br/><code>CREATE TABLE IF NOT EXISTS trackino_app_changes (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), title text NOT NULL, content text DEFAULT '', type text NOT NULL DEFAULT 'idea' CHECK (type IN ('bug', 'idea', 'request')), priority text NOT NULL DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high')), status text NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'solved')), source_bug_id uuid REFERENCES trackino_bug_reports(id) ON DELETE SET NULL, created_at timestamptz DEFAULT now(), updated_at timestamptz DEFAULT now()); ALTER TABLE trackino_app_changes ENABLE ROW LEVEL SECURITY; CREATE POLICY "Auth full" ON trackino_app_changes FOR ALL TO authenticated USING (true) WITH CHECK (true);</code></p>
+
 <h3>Časová zóna workspace</h3>
 <p>V <strong>Nastavení → Obecné</strong> lze nastavit <strong>Časovou zónu</strong> workspace. Tato zóna určuje, co celá aplikace považuje za „dnešní datum" – bez ohledu na to, z jaké země se člen týmu právě přihlásí.</p>
 <p><strong>Co ovlivňuje:</strong></p>

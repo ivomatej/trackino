@@ -183,6 +183,32 @@ function BugsContent() {
     fetchBugs();
   };
 
+  /** Přesune bug report do Úprav aplikace (Master Admin) */
+  const [movingId, setMovingId] = useState<string | null>(null);
+  const moveBugToAppChanges = async (bug: BugReport) => {
+    setMovingId(bug.id);
+    // Extrahovat prostý text jako název (prvních 100 znaků)
+    const tempDiv = typeof document !== 'undefined' ? document.createElement('div') : null;
+    let title = bug.content;
+    if (tempDiv) {
+      tempDiv.innerHTML = bug.content;
+      title = (tempDiv.innerText ?? tempDiv.textContent ?? '').trim();
+    }
+    title = title.slice(0, 100).replace(/\n+/g, ' ').trim() || 'Bug z Bug logu';
+
+    const { error } = await supabase.from('trackino_app_changes').insert({
+      title,
+      content: bug.content.replace(/<[^>]+>/g, '').trim(),
+      type: 'bug',
+      priority: 'medium',
+      status: 'open',
+      source_bug_id: bug.id,
+    });
+    setMovingId(null);
+    if (error) { alert('Chyba při přesunu: ' + error.message); return; }
+    alert('Bug přesunut do Úprav aplikace ✓');
+  };
+
   const execCmd = (cmd: string) => { document.execCommand(cmd, false); editorRef.current?.focus(); };
   const execCmdEdit = (cmd: string) => { document.execCommand(cmd, false); editEditorRef.current?.focus(); };
 
@@ -271,7 +297,8 @@ function BugsContent() {
           {/* Master Admin sekce */}
           {isMasterAdmin && !isEditing && (
             <div className="mt-3 pt-3 border-t" style={{ borderColor: 'var(--border)' }}>
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
+                <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Stav:</span>
                 {(['open', 'in_progress', 'solved'] as BugStatus[]).map(s => (
                   <button
@@ -287,6 +314,22 @@ function BugsContent() {
                     {STATUS_LABELS[s]}
                   </button>
                 ))}
+                </div>
+                {/* Tlačítko: Přesunout do Úprav aplikace */}
+                <button
+                  onClick={() => moveBugToAppChanges(bug)}
+                  disabled={movingId === bug.id}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs font-medium transition-colors disabled:opacity-50"
+                  style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                  title="Přidat do seznamu Úpravy aplikace"
+                >
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
+                  </svg>
+                  {movingId === bug.id ? 'Přesouvám…' : 'Úpravy aplikace'}
+                </button>
               </div>
 
               {bug.master_note && !isEditingNote && (

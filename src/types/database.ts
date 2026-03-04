@@ -20,7 +20,8 @@ export type ModuleId =
   | 'tags'
   | 'team'
   | 'settings'
-  | 'audit';
+  | 'audit'
+  | 'text_converter';
 
 /** Per-uživatelský override modulu (nad rámec tarifu nebo zakázání) */
 export interface UserModuleOverride {
@@ -78,6 +79,23 @@ export interface BugReport {
   content: string;
   status: BugStatus;
   master_note: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Úpravy aplikace – úkolník pro Master Admina
+export type AppChangeType = 'bug' | 'idea' | 'request';
+export type AppChangePriority = 'low' | 'medium' | 'high';
+export type AppChangeStatus = 'open' | 'in_progress' | 'solved';
+
+export interface AppChange {
+  id: string;
+  title: string;
+  content: string;
+  type: AppChangeType;
+  priority: AppChangePriority;
+  status: AppChangeStatus;
+  source_bug_id: string | null; // odkaz na původní bug report (pokud přesunut z Bug logu)
   created_at: string;
   updated_at: string;
 }

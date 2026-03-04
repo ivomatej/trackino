@@ -11,6 +11,13 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.1.0 – 4. 3. 2026</h3>
+<ul>
+  <li><strong>Převodník textu</strong> (tarif Max) – nový modul v sekci Analýza. Vložte naformátovaný text z Wordu nebo webu a převeďte ho na <strong>Prostý text</strong> (bez jakéhokoli formátování, zachována odřádkování) nebo <strong>Markdown</strong> (konverze nadpisů, tučného/kurzívy, seznamů, odkazů aj.). Každý výstupní panel má tlačítko Kopírovat. Spodní panel ukazuje přehled podporovaných Markdown prvků. Modul je dostupný v tarifu Max; workspace s jiným tarifem vidí informaci o uzamčení.</li>
+  <li><strong>Úpravy aplikace</strong> (pouze Master Admin) – nová sekce dostupná z levého menu pod „Nahlásit chybu". Slouží jako osobní úkolník/poznámky k rozvoji aplikace. Každá položka má: název, popis, typ (<em>Bug / Nápad / Požadavek</em>), prioritu (<em>Nízká / Střední / Vysoká</em>) a stav (<em>Otevřeno / Řeší se / Hotovo</em>). Nad seznamem je vyhledávání a záložky filtrování. Levý barevný pruh indikuje prioritu (šedá / žlutá / červená). Položky označené „Hotovo" jsou přeškrtnuty a odděleny záložkou „Hotové".</li>
+  <li><strong>Propojení Bug logu s Úpravami aplikace</strong> – u každého bug reportu se Master Adminovi zobrazuje tlačítko <strong>→ Úpravy aplikace</strong>. Kliknutím se obsah reportu automaticky zkopíruje do nové položky v Úpravách aplikace (typ Bug, priorita Střední). Přesunuté položky jsou označeny štítkem <em>„Z Bug logu"</em>.</li>
+</ul>
+
 <h3>v2.0.0 – 4. 3. 2026</h3>
 <ul>
   <li><strong>Časová zóna workspace</strong> – v Nastavení → Obecné přibyl picker <strong>Časová zóna</strong>. Workspace může mít nastavenou libovolnou IANA časovou zónu (výchozí: <em>Praha / Bratislava UTC+1/+2</em>). Vybraná zóna určuje, co je v celé aplikaci považováno za „dnešní datum" – zvýraznění dnešního sloupce v Plánovači a Přehledu hodin, počáteční rozsah v Analýze kategorií a výchozí rok na stránce Dovolená. Funkce <code>getWorkspaceToday()</code> v <code>src/lib/utils.ts</code> používá <code>Intl.DateTimeFormat</code> s locale <code>sv-SE</code>, který přirozeně produkuje formát YYYY-MM-DD. Vyžaduje SQL migraci – viz Nápověda.</li>

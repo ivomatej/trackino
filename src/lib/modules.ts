@@ -19,6 +19,7 @@ export const ALL_MODULES: { id: ModuleId; label: string; description: string; gr
   { id: 'team',            label: 'Tým',                description: 'Správa členů týmu',                    group: 'Správa' },
   { id: 'settings',        label: 'Nastavení',          description: 'Nastavení workspace (jen admin)',       group: 'Správa' },
   { id: 'audit',           label: 'Audit log',          description: 'Protokol změn v systému',              group: 'Správa' },
+  { id: 'text_converter',  label: 'Převodník textu',    description: 'Převod formátovaného textu na prostý text nebo Markdown', group: 'Nástroje' },
 ];
 
 /**
@@ -66,6 +67,7 @@ export const TARIFF_MODULES: Record<Tariff, ModuleId[]> = {
     'team',
     'settings',
     'audit',
+    'text_converter',
   ],
 };
 

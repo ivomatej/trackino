@@ -48,6 +48,8 @@ const ICONS = {
   profile: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" /></svg>,
   attendance: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18" /><path d="M3 15h18" /><path d="M9 3v18" /><path d="M15 3v18" /></svg>,
   categoryReport: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83" /><path d="M22 12A10 10 0 0 0 12 2v10z" /></svg>,
+  textConverter: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 7 4 4 20 4 20 7" /><line x1="9" y1="20" x2="15" y2="20" /><line x1="12" y1="4" x2="12" y2="20" /></svg>,
+  appChanges: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg>,
 };
 
 export default function Sidebar({ open, onClose }: SidebarProps) {
@@ -55,6 +57,9 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
   const { user, profile, signOut } = useAuth();
   const { currentWorkspace, userRole, currentMembership, hasModule } = useWorkspace();
   const [showUserPanel, setShowUserPanel] = useState(false);
+
+  // Master Admin – computed at component level for use in both navGroups and bottomItems
+  const isMasterAdminSidebar = useMemo(() => checkMasterAdmin(profile ?? null), [profile]);
 
   // Stav sbalení sekcí – persistováno v localStorage
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => {
@@ -159,6 +164,9 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
     if (hasModule('category_report')) {
       analyzeItems.push({ label: 'Analýza kategorií', href: '/category-report', icon: ICONS.categoryReport });
     }
+    if (hasModule('text_converter')) {
+      analyzeItems.push({ label: 'Převodník textu', href: '/text-converter', icon: ICONS.textConverter });
+    }
 
     // SPRÁVA
     const spravaManagedItems: NavItem[] = [];
@@ -258,11 +266,12 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
     );
   };
 
-  const bottomItems: NavItem[] = [
+  const bottomItems = useMemo<NavItem[]>(() => [
     { label: 'Nápověda', href: '/help', icon: ICONS.help },
     { label: 'Nahlásit chybu', href: '/bugs', icon: ICONS.bug },
+    ...(isMasterAdminSidebar ? [{ label: 'Úpravy aplikace', href: '/app-changes', icon: ICONS.appChanges }] : []),
     { label: 'Dokumentace', href: '/changelog', icon: ICONS.docs },
-  ];
+  ], [isMasterAdminSidebar]);
 
   return (
     <>
