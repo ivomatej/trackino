@@ -89,8 +89,9 @@ const DEFAULT_HELP_CONTENT = `
   <li><strong>Pro</strong> – Free + Plánovač, Dovolená, Fakturace, Přehled hodin, Analýza kategorií, Podřízení, Poznámky, Nastavení</li>
   <li><strong>Max</strong> – Pro + Audit log</li>
 </ul>
-<p>Admin může v <strong>Nastavení → Moduly</strong> nastavit přepisy pro jednotlivé uživatele – přidat modul, který není v tarifu, nebo zakázat modul, který v tarifu je. Přepisy mají vždy přednost před výchozím tarifem. Moduly, které uživatel nemá povoleny, se nezobrazují v levém menu.</p>
-<p><strong>SQL migrace (nutno spustit v Supabase):</strong> Pro modulární systém je potřeba nová tabulka:<br/>
+<p>Admin může v <strong>Nastavení → Moduly</strong> nastavit výjimky pro jednotlivé uživatele – přidat modul, který není v tarifu, nebo zakázat modul, který v tarifu je. Výjimky mají vždy přednost před výchozím tarifem. Moduly, které uživatel nemá povoleny, se nezobrazují v levém menu.</p>
+<p>Master Admin může v <strong>Nastavení aplikace</strong> (sekce Systém) globálně změnit, které moduly jsou součástí každého tarifu. Konfigurace se uloží do DB a okamžitě se projeví pro všechny workspace. Pokud konfigurace nebyla nastavena, použijí se výchozí hodnoty ze systému.</p>
+<p><strong>SQL migrace (nutno spustit v Supabase):</strong> Pro modulární systém jsou potřeba dvě nové tabulky:<br/>
 <code>CREATE TABLE IF NOT EXISTS trackino_user_module_overrides (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id uuid NOT NULL REFERENCES trackino_workspaces(id) ON DELETE CASCADE,
@@ -101,7 +102,16 @@ const DEFAULT_HELP_CONTENT = `
   UNIQUE(workspace_id, user_id, module_id)
 );
 ALTER TABLE trackino_user_module_overrides ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Auth full" ON trackino_user_module_overrides FOR ALL TO authenticated USING (true) WITH CHECK (true);</code></p>
+CREATE POLICY "Auth full" ON trackino_user_module_overrides FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+CREATE TABLE IF NOT EXISTS trackino_tariff_config (
+  tariff text NOT NULL CHECK (tariff IN ('free','pro','max')),
+  module_id text NOT NULL,
+  enabled boolean NOT NULL DEFAULT true,
+  PRIMARY KEY (tariff, module_id)
+);
+ALTER TABLE trackino_tariff_config ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Auth full" ON trackino_tariff_config FOR ALL TO authenticated USING (true) WITH CHECK (true);</code></p>
 
 <h3>Správa workspace (Master Admin)</h3>
 <p>Stránka <strong>Správa workspace</strong> (sekce Systém, viditelná pouze pro Master Adminy) zobrazuje přehled všech workspace na platformě. Každá karta workspace obsahuje:</p>
@@ -113,6 +123,15 @@ CREATE POLICY "Auth full" ON trackino_user_module_overrides FOR ALL TO authentic
 </ul>
 <p>Záložky přepínají mezi <strong>Aktivními</strong>, <strong>Archivovanými</strong> a <strong>Smazanými</strong> workspace. Nad kartami je vyhledávací pole pro filtrování podle názvu.</p>
 <p><strong>SQL migrace (nutno spustit v Supabase):</strong> Pro funkci archivace a smazání jsou potřeba dva nové sloupce:<br/><code>ALTER TABLE trackino_workspaces ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ NULL;<br/>ALTER TABLE trackino_workspaces ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ NULL;</code></p>
+
+<h3>Nastavení aplikace (Master Admin)</h3>
+<p>Stránka <strong>Nastavení aplikace</strong> (sekce Systém, viditelná pouze pro Master Adminy) slouží ke konfiguraci tarifů na platformní úrovni. Zobrazuje matici modulů × tarifů (Free / Pro / Max), kde lze zaškrtnutím nebo odškrtnutím každého políčka definovat, které moduly jsou v daném tarifu dostupné.</p>
+<ul>
+  <li><strong>Uložit konfiguraci</strong> – uloží aktuální nastavení do DB; změny se projeví pro nové přihlášení nebo obnovení stránky u ostatních uživatelů</li>
+  <li><strong>Obnovit výchozí</strong> – smaže konfiguraci z DB a obnoví hardcoded výchozí hodnoty (tlačítko se zobrazí pouze pokud je konfigurace uložena v DB)</li>
+  <li>Individuální výjimky nastavené v <strong>Nastavení workspace → Moduly</strong> mají vždy přednost před tarifní konfigurací</li>
+</ul>
+<p><strong>SQL migrace (nutno spustit v Supabase):</strong> Viz sekce Modulární systém výše.</p>
 
 <h3>Audit log</h3>
 <p>Stránka <strong>Audit log</strong> (dostupná Adminum, Master Adminům a uživatelům s oprávněním „Audit log") zobrazuje historii úprav, které manažeři nebo admini provedli na záznamech podřízených. Každý záznam obsahuje: kdo úpravu provedl, pro koho, jakou akci vykonal, datum a čas úpravy a detail záznamu (datum, čas od–do, délka, popis). Oprávnění se nastavuje v Tým → editace člena.</p>

@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useState, useCallback, ReactNode,
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './AuthContext';
 import type { Workspace, WorkspaceMember, UserRole, ManagerAssignment, ModuleId } from '@/types/database';
-import { computeEnabledModules } from '@/lib/modules';
+import { computeEnabledModules, type TariffConfigMap } from '@/lib/modules';
 
 interface WorkspaceContextType {
   workspaces: Workspace[];
@@ -28,6 +28,8 @@ interface WorkspaceContextType {
   enabledModules: Set<ModuleId>;
   /** Kontroluje, zda má aktuální uživatel přístup k danému modulu */
   hasModule: (moduleId: ModuleId) => boolean;
+  /** Znovu načíst konfiguraci tarifů z DB (po změně v Nastavení aplikace) */
+  refreshTariffConfig: () => Promise<void>;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
@@ -41,6 +43,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [currentMembership, setCurrentMembership] = useState<WorkspaceMember | null>(null);
   const [managerAssignments, setManagerAssignments] = useState<ManagerAssignment[]>([]);
   const [moduleOverrides, setModuleOverrides] = useState<{ module_id: ModuleId; enabled: boolean }[]>([]);
+  const [tariffConfig, setTariffConfig] = useState<TariffConfigMap>(new Map());
   const [loading, setLoading] = useState(true);
 
   // Načtení manager assignments pro aktuální workspace
@@ -58,6 +61,29 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setManagerAssignments([]);
     }
   }, [user]);
+
+  // Načtení konfigurace tarifů z DB (platformová, ne per-workspace)
+  const fetchTariffConfig = useCallback(async () => {
+    try {
+      const { data } = await supabase
+        .from('trackino_tariff_config')
+        .select('tariff, module_id, enabled');
+
+      if (data && data.length > 0) {
+        const map: TariffConfigMap = new Map();
+        for (const row of data as { tariff: string; module_id: string; enabled: boolean }[]) {
+          map.set(`${row.tariff}:${row.module_id}`, row.enabled);
+        }
+        setTariffConfig(map);
+      } else {
+        // Prázdná = použijí se hardcoded defaults
+        setTariffConfig(new Map());
+      }
+    } catch {
+      // Tabulka ještě nemusí existovat
+      setTariffConfig(new Map());
+    }
+  }, []);
 
   // Načtení module overrides pro aktuálního uživatele
   const fetchModuleOverrides = useCallback(async (workspaceId: string) => {
@@ -317,11 +343,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     return managerAssignments.some(a => a.member_user_id === userId);
   }, [managerAssignments]);
 
-  // Výpočet povolených modulů (tarif workspace + user overrides)
+  // Výpočet povolených modulů (DB tariff config + tarif workspace + user overrides)
   const enabledModules = useMemo<Set<ModuleId>>(() => {
     const tariff = currentWorkspace?.tariff ?? 'free';
-    return computeEnabledModules(tariff, moduleOverrides);
-  }, [currentWorkspace?.tariff, moduleOverrides]);
+    return computeEnabledModules(tariff, moduleOverrides, tariffConfig);
+  }, [currentWorkspace?.tariff, moduleOverrides, tariffConfig]);
 
   const hasModule = useCallback((moduleId: ModuleId): boolean => {
     return enabledModules.has(moduleId);
@@ -329,6 +355,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     fetchWorkspaces();
+    fetchTariffConfig();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchWorkspaces]);
 
   return (
@@ -348,6 +376,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         refreshWorkspace,
         enabledModules,
         hasModule,
+        refreshTariffConfig: fetchTariffConfig,
       }}
     >
       {children}

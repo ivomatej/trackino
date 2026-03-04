@@ -22,7 +22,7 @@ export const ALL_MODULES: { id: ModuleId; label: string; description: string; gr
 ];
 
 /**
- * Výchozí moduly dle tarifu.
+ * Výchozí (fallback) moduly dle tarifu – používají se pokud DB tariff config není nastaven.
  * Dashboard je vždy dostupný (není modul).
  */
 export const TARIFF_MODULES: Record<Tariff, ModuleId[]> = {
@@ -70,15 +70,37 @@ export const TARIFF_MODULES: Record<Tariff, ModuleId[]> = {
 };
 
 /**
+ * Tariff config z DB: map "tariff:module_id" -> enabled.
+ * Pokud je prázdná (size === 0), použijí se hardcoded TARIFF_MODULES.
+ */
+export type TariffConfigMap = Map<string, boolean>;
+
+/**
  * Vypočítá sadu povolených modulů pro uživatele.
- * @param tariff   tarif workspace
- * @param overrides  pole override záznamů z DB pro tohoto uživatele
+ * @param tariff         tarif workspace
+ * @param overrides      pole override záznamů z DB pro tohoto uživatele
+ * @param tariffConfig   tariff config z DB (pokud prázdná, použijí se hardcoded defaults)
  */
 export function computeEnabledModules(
   tariff: Tariff,
-  overrides: { module_id: ModuleId; enabled: boolean }[]
+  overrides: { module_id: ModuleId; enabled: boolean }[],
+  tariffConfig?: TariffConfigMap
 ): Set<ModuleId> {
-  const base = new Set<ModuleId>(TARIFF_MODULES[tariff] ?? TARIFF_MODULES.free);
+  let base: Set<ModuleId>;
+
+  if (tariffConfig && tariffConfig.size > 0) {
+    // Použij DB tariff config
+    base = new Set<ModuleId>();
+    for (const mod of ALL_MODULES) {
+      const key = `${tariff}:${mod.id}`;
+      if (tariffConfig.get(key) === true) {
+        base.add(mod.id);
+      }
+    }
+  } else {
+    // Fallback na hardcoded defaults
+    base = new Set<ModuleId>(TARIFF_MODULES[tariff] ?? TARIFF_MODULES.free);
+  }
 
   for (const o of overrides) {
     if (o.enabled) {

@@ -364,7 +364,7 @@ function SettingsContent() {
   if (!canAccessSettings) {
     return (
       <DashboardLayout>
-        <div className="max-w-2xl">
+        <div>
           <h1 className="text-xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>Nastavení</h1>
           <p style={{ color: 'var(--text-muted)' }}>Nemáte oprávnění k nastavení workspace.</p>
         </div>
@@ -400,16 +400,16 @@ function SettingsContent() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-2xl">
+      <div>
         <h1 className="text-xl font-bold mb-6" style={{ color: 'var(--text-primary)' }}>Nastavení workspace</h1>
 
         {/* Taby */}
-        <div className="flex gap-1 mb-6 p-1 rounded-lg" style={{ background: 'var(--bg-hover)' }}>
+        <div className="flex gap-1 mb-6 p-1 rounded-lg overflow-x-auto" style={{ background: 'var(--bg-hover)' }}>
           {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => { setActiveTab(tab.id); setMessage(''); }}
-              className="px-4 py-2 rounded-md text-sm font-medium transition-colors flex-1"
+              className="px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0"
               style={{
                 background: activeTab === tab.id ? 'var(--bg-card)' : 'transparent',
                 color: activeTab === tab.id ? 'var(--text-primary)' : 'var(--text-muted)',
@@ -1009,7 +1009,7 @@ function SettingsContent() {
 
             {/* Per-user overrides */}
             <div>
-              <h2 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>Přepisy modulů pro uživatele</h2>
+              <h2 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>Individuální moduly pro uživatele</h2>
 
               {moduleLoading ? (
                 <div className="py-8 text-center">
@@ -1049,7 +1049,7 @@ function SettingsContent() {
                           </div>
                           {member.overrides.length > 0 && (
                             <span className="text-[11px] px-2 py-0.5 rounded-full font-medium" style={{ background: 'var(--bg-active)', color: 'var(--primary)' }}>
-                              {member.overrides.length} {member.overrides.length === 1 ? 'přepis' : member.overrides.length < 5 ? 'přepisy' : 'přepisů'}
+                              {member.overrides.length} {member.overrides.length === 1 ? 'výjimka' : member.overrides.length < 5 ? 'výjimky' : 'výjimek'}
                             </span>
                           )}
                           <svg
@@ -1064,11 +1064,11 @@ function SettingsContent() {
                         {isExpanded && (
                           <div className="px-4 pb-4 border-t" style={{ borderColor: 'var(--border)' }}>
                             <p className="text-xs mt-3 mb-2" style={{ color: 'var(--text-muted)' }}>
-                              Přepisy modulů pro tohoto uživatele (mají přednost před výchozím tarifem):
+                              Výjimky modulů pro tohoto uživatele (mají přednost před výchozím tarifem):
                             </p>
 
                             {member.overrides.length === 0 ? (
-                              <p className="text-xs italic mb-3" style={{ color: 'var(--text-muted)' }}>Žádné přepisy – platí výchozí tarif.</p>
+                              <p className="text-xs italic mb-3" style={{ color: 'var(--text-muted)' }}>Žádné výjimky – platí výchozí tarif.</p>
                             ) : (
                               <div className="flex flex-wrap gap-2 mb-3">
                                 {member.overrides.map(o => {
@@ -1095,7 +1095,7 @@ function SettingsContent() {
                                       <button
                                         onClick={() => removeModuleOverride(o.id)}
                                         className="ml-1 opacity-60 hover:opacity-100 transition-opacity"
-                                        title="Odebrat přepis"
+                                        title="Odebrat výjimku"
                                       >
                                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                                           <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
@@ -1107,7 +1107,7 @@ function SettingsContent() {
                               </div>
                             )}
 
-                            {/* Přidat přepis */}
+                            {/* Přidat výjimku */}
                             {addModuleUserId === member.user_id ? (
                               <div className="flex items-center gap-2 flex-wrap">
                                 <select
@@ -1155,7 +1155,7 @@ function SettingsContent() {
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                                   <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
                                 </svg>
-                                Přidat přepis modulu
+                                Přidat výjimku modulu
                               </button>
                             )}
                           </div>

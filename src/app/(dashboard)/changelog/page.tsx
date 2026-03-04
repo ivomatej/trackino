@@ -11,6 +11,13 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v1.9.7 – 4. 3. 2026</h3>
+<ul>
+  <li><strong>Nastavení aplikace (Master Admin)</strong> – nová stránka v sekci Systém umožňuje Master Adminovi konfigurovat, které moduly jsou dostupné v každém tarifu (Free / Pro / Max). Změny se okamžitě projeví v celé aplikaci. Konfigurace se ukládá do DB tabulky <code>trackino_tariff_config</code>; pokud není nastavena, použijí se výchozí hodnoty ze systému. Vyžaduje SQL migraci – viz Nápověda.</li>
+  <li><strong>Nastavení workspace – plná šíře</strong> – stránka Nastavení workspace nyní využívá plnou šíři dostupného prostoru; záložky (Obecné, Dovolené, Spolupráce, Moduly, Fakturační údaje, Povinná pole) se nezalamují do více řádků a při potřebě scrollují horizontálně</li>
+  <li><strong>Přejmenování: Přepisy → Výjimky</strong> – sekce v Nastavení → Moduly přejmenována na „Individuální moduly pro uživatele"; terminologie „přepis" nahrazena za „výjimka" pro lepší srozumitelnost</li>
+</ul>
+
 <h3>v1.9.6 – 4. 3. 2026</h3>
 <ul>
   <li><strong>Modulární systém</strong> – části aplikace jsou nyní organizovány jako moduly, které lze zapnout nebo vypnout. Výchozí sada modulů závisí na tarifu workspace (Free / Pro / Max). Admin může v Nastavení → Moduly přidat konkrétnímu uživateli modul, který není zahrnut v tarifu, nebo naopak modul zakázat. Sidebar zobrazuje pouze povolené moduly. Vyžaduje SQL migraci – viz Nápověda.</li>
