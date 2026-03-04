@@ -88,7 +88,7 @@ const EMPTY_NOTIF: NotifForm = {
 // ─── hlavní obsah ─────────────────────────────────────────────────────────────
 
 function AppSettingsContent() {
-  const { profile } = useAuth();
+  const { profile, loading: authLoading } = useAuth();
   const { refreshTariffConfig } = useWorkspace();
   const router = useRouter();
 
@@ -113,11 +113,13 @@ function AppSettingsContent() {
   // Pouze Master Admin
   const isMasterAdmin = profile?.is_master_admin === true;
 
+  // Redirect až po dokončení načítání auth – zabrání falešnému přesměrování
+  // když profile je null v době načítání (AuthContext inicializuje profile jako null, ne undefined)
   useEffect(() => {
-    if (profile !== undefined && !isMasterAdmin) {
+    if (!authLoading && !isMasterAdmin) {
       router.replace('/');
     }
-  }, [profile, isMasterAdmin, router]);
+  }, [authLoading, isMasterAdmin, router]);
 
   // ── Fetch matice tarifů ──────────────────────────────────────────────────
   const fetchConfig = useCallback(async () => {

@@ -11,6 +11,13 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.7.1 – 4. 3. 2026</h3>
+<ul>
+  <li><strong>Fix: Nastavení aplikace – přesměrování při refreshi</strong> – při obnovení stránky <code>/app-settings</code> docházelo k falešnému přesměrování na hlavní stránku. Příčinou byl fakt, že AuthContext inicializuje <code>profile</code> jako <code>null</code> (nikoli <code>undefined</code>), takže stav „načítá se" vypadal jako „nepřihlášen". Opraveno kontrolou <code>authLoading</code> před přesměrováním.</li>
+  <li><strong>Fix: Dovolená – nekonečné načítání (cyklus)</strong> – stránka se neustále točila v cyklu načítání. Příčinou bylo pole <code>subordinateUserIds</code> počítané inline bez memoizace – každý render vytvořilo nové pole, což způsobilo neustálou změnu reference v <code>useCallback</code>, spouštění <code>useEffect</code> a opětovné volání <code>fetchData()</code>. Opraveno přidáním <code>useMemo</code>.</li>
+  <li><strong>Fix: Plánovač – chybějící linka u předchozích dní</strong> – spodní oddělující čára pod záhlavím dnů chyběla pro sloupce, které předcházely prvnímu proužku (důležitý den / svátek) v daném řádku. Opraveno přidáním <code>borderBottom</code> i na mezery (gap buňky) před prvním proužkem.</li>
+</ul>
+
 <h3>v2.7.0 – 4. 3. 2026</h3>
 <ul>
   <li><strong>Schvalování dovolené</strong> – dovolená delší než 3 pracovní dny nyní vyžaduje schválení přímého nadřízeného (managera). Po podání žádosti se záznam zobrazí se žlutým štítkem „Čeká na schválení" v záložce Záznamy → sekce Moje žádosti. Do statistiky čerpání se počítají pouze schválené záznamy. Manager a Admin mají novou záložku <strong>Žádosti</strong> se seznamem čekajících žádostí od podřízených – každou lze Schválit (zelené tlačítko, spustí sync s Plánovačem) nebo Zamítnout (červené tlačítko, otevře pole pro volitelnou poznámku). Zamítnutá žádost zůstane viditelná s červeným štítkem a poznámkou; uživatel ji může smazat. Dovolená ≤ 3 dní a veškerá dovolená přidaná adminem se schvaluje okamžitě. Vyžaduje SQL migraci – viz Nápověda → Dovolená.</li>

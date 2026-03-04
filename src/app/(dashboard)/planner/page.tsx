@@ -948,7 +948,7 @@ function PlannerContent() {
                         if (strip.startCol > col) {
                           cells.push(
                             <th key={`gap-${laneIdx}-${col}`} colSpan={strip.startCol - col}
-                              style={{ padding: '2px 0', background: 'var(--bg-card)' }} />
+                              style={{ padding: '2px 0', background: 'var(--bg-card)', borderBottom: laneIdx === stripLanes.length - 1 ? '1px solid var(--border)' : 'none' }} />
                           );
                         }
                         const span = strip.endCol - strip.startCol + 1;

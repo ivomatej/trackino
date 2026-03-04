@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWorkspace, WorkspaceProvider } from '@/contexts/WorkspaceContext';
@@ -48,10 +48,14 @@ function VacationContent() {
 
   const currentYear = new Date().getFullYear();
 
-  // ID podřízených aktuálního managera
-  const subordinateUserIds = (managerAssignments ?? [])
-    .filter((a: ManagerAssignment) => a.manager_user_id === user?.id)
-    .map((a: ManagerAssignment) => a.member_user_id);
+  // ID podřízených aktuálního managera – useMemo zabrání vzniku nového pole při každém renderu,
+  // které by jinak způsobilo nekonečný cyklus useCallback → useEffect → setState → render
+  const subordinateUserIds = useMemo(() =>
+    (managerAssignments ?? [])
+      .filter((a: ManagerAssignment) => a.manager_user_id === user?.id)
+      .map((a: ManagerAssignment) => a.member_user_id),
+    [managerAssignments, user]
+  );
 
   // Tab Žádosti vidí admin i manager
   const canSeeRequests = isWorkspaceAdmin || isManager;
