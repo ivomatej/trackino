@@ -55,6 +55,10 @@ const ICONS = {
   calendar: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5" /><path d="M16 2v4" /><path d="M8 2v4" /><path d="M3 10h5" /><circle cx="17" cy="17" r="4" /><path d="M17 15v2l1 1" /></svg>,
   requests: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="9" y1="13" x2="15" y2="13" /><line x1="9" y1="17" x2="11" y2="17" /></svg>,
   feedback: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>,
+  knowledgeBase: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /><line x1="12" y1="7" x2="16" y2="7" /><line x1="12" y1="11" x2="16" y2="11" /><line x1="12" y1="15" x2="14" y2="15" /></svg>,
+  documents: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /><line x1="12" y1="11" x2="12" y2="17" /><line x1="9" y1="14" x2="15" y2="14" /></svg>,
+  companyRules: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg>,
+  officeRules: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></svg>,
 };
 
 // Ikonka hvězdičky pro tlačítko oblíbených (inline SVG pro různé stavy)
@@ -319,6 +323,27 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
       groups.push({
         title: 'SPRÁVA',
         items: spravaManagedItems,
+      });
+    }
+
+    // SPOLEČNOST (Pro+, 4 moduly)
+    const spolecnostItems: NavItem[] = [];
+    if (hasModule('knowledge_base')) {
+      spolecnostItems.push({ label: 'Znalostní báze', href: '/knowledge-base', icon: ICONS.knowledgeBase });
+    }
+    if (hasModule('documents')) {
+      spolecnostItems.push({ label: 'Dokumenty', href: '/documents', icon: ICONS.documents });
+    }
+    if (hasModule('company_rules')) {
+      spolecnostItems.push({ label: 'Firemní pravidla', href: '/company-rules', icon: ICONS.companyRules });
+    }
+    if (hasModule('office_rules')) {
+      spolecnostItems.push({ label: 'Pravidla v kanceláři', href: '/office-rules', icon: ICONS.officeRules });
+    }
+    if (spolecnostItems.length > 0) {
+      groups.push({
+        title: 'SPOLEČNOST',
+        items: spolecnostItems,
       });
     }
 

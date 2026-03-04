@@ -24,6 +24,10 @@ export const ALL_MODULES: { id: ModuleId; label: string; description: string; gr
   { id: 'calendar',       label: 'Kalendář',            description: 'Osobní a sdílený kalendář s přehledem událostí, dovolené a důležitých dnů', group: 'Sledování' },
   { id: 'requests',       label: 'Žádosti',             description: 'Podávání a schvalování žádostí (dovolená, software, pracovní cesta aj.)', group: 'Sledování' },
   { id: 'feedback',       label: 'Připomínky',          description: 'Anonymní formulář pro zpětnou vazbu od členů týmu', group: 'Nástroje' },
+  { id: 'knowledge_base', label: 'Znalostní báze',      description: 'Interní wiki a znalostní databáze týmu',           group: 'Společnost' },
+  { id: 'documents',      label: 'Dokumenty',           description: 'Správa firemních dokumentů a souborů',             group: 'Společnost' },
+  { id: 'company_rules',  label: 'Firemní pravidla',    description: 'Textová stránka s firemními pravidly a směrnicemi', group: 'Společnost' },
+  { id: 'office_rules',   label: 'Pravidla v kanceláři', description: 'Textová stránka s pravidly provozu kanceláře',    group: 'Společnost' },
 ];
 
 /**
@@ -58,6 +62,10 @@ export const TARIFF_MODULES: Record<Tariff, ModuleId[]> = {
     'important_days',
     'requests',
     'feedback',
+    'knowledge_base',
+    'documents',
+    'company_rules',
+    'office_rules',
   ],
   max: [
     'time_tracker',
@@ -80,6 +88,10 @@ export const TARIFF_MODULES: Record<Tariff, ModuleId[]> = {
     'important_days',
     'requests',
     'feedback',
+    'knowledge_base',
+    'documents',
+    'company_rules',
+    'office_rules',
   ],
 };
 

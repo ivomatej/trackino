@@ -25,7 +25,11 @@ export type ModuleId =
   | 'important_days'
   | 'calendar'
   | 'requests'
-  | 'feedback';
+  | 'feedback'
+  | 'knowledge_base'
+  | 'documents'
+  | 'company_rules'
+  | 'office_rules';
 
 /** Per-uživatelský override modulu (nad rámec tarifu nebo zakázání) */
 export interface UserModuleOverride {
@@ -150,6 +154,7 @@ export interface WorkspaceMember {
   can_view_audit: boolean;      // může vidět audit log
   can_process_requests: boolean; // zpracovává žádosti (schvaluje/zamítá)
   can_receive_feedback: boolean; // přijímá anonymní připomínky
+  can_manage_documents: boolean; // může spravovat dokumenty (nahrávat, mazat, editovat složky)
 }
 
 export interface ManagerAssignment {
@@ -512,4 +517,48 @@ export interface FeedbackEntry {
   message: string;
   is_resolved: boolean;
   created_at: string;
+}
+
+// === Textové stránky workspace (Firemní pravidla, Pravidla v kanceláři) ===
+
+export interface WorkspacePage {
+  id: string;
+  workspace_id: string;
+  slug: string;    // 'company-rules' | 'office-rules'
+  content: string; // HTML obsah
+  updated_at: string;
+  updated_by: string | null;
+}
+
+// === Dokumenty ===
+
+export interface DocumentFolder {
+  id: string;
+  workspace_id: string;
+  name: string;
+  color: string;
+  sort_order: number;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export type DocumentItemType = 'file' | 'link';
+
+export interface WorkspaceDocument {
+  id: string;
+  workspace_id: string;
+  folder_id: string | null;
+  name: string;
+  type: DocumentItemType;
+  // Pro soubory: cesta v Supabase Storage
+  file_path: string | null;
+  file_size: number | null;     // v bajtech
+  file_mime: string | null;
+  // Pro odkazy: URL
+  url: string | null;
+  description: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
 }

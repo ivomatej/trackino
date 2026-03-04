@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 4. 3. 2026 (v2.10.0)
+> Aktualizováno: 4. 3. 2026 (v2.11.0)
 
 ---
 
@@ -45,6 +45,10 @@ src/
       important-days/ – Důležité dny (tarif Pro a Max)
       requests/       – Žádosti (tarif Pro a Max)
       feedback/       – Připomínky – anonymní (tarif Pro a Max)
+      knowledge-base/ – Znalostní báze (tarif Pro a Max, připravujeme)
+      documents/      – Dokumenty – správa souborů a složek (tarif Pro a Max)
+      company-rules/  – Firemní pravidla – editovatelná textová stránka (tarif Pro a Max)
+      office-rules/   – Pravidla v kanceláři – editovatelná textová stránka (tarif Pro a Max)
       app-settings/   – Nastavení modulů dle tarifu (admin)
       app-changes/    – Úpravy aplikace (admin)
       bugs/           – Hlášení chyb
@@ -120,6 +124,9 @@ Výchozí policy: `CREATE POLICY "Auth full" ... FOR ALL TO authenticated USING 
 | `trackino_requests` | id, workspace_id, user_id, type ('hardware'\|'software'\|'access'\|'office'\|'financial'\|'hr'\|'education'\|'travel'\|'benefits'\|'recruitment'\|'security'\|'it_support'\|'legal'), title, note, status ('pending'\|'approved'\|'rejected'), reviewed_by (uuid\|null), reviewed_at (timestamptz\|null), reviewer_note, vacation_start_date (text\|null), vacation_end_date (text\|null), vacation_days (int\|null), vacation_entry_id (uuid\|null), created_at, updated_at | Žádosti zaměstnanců ke schválení – 13 kategorií |
 | `trackino_feedback` | id, workspace_id, message, is_resolved (bool), created_at | Anonymní připomínky – bez user_id záměrně (plná anonymita) |
 | `trackino_calendar_shares` | id, calendar_id, shared_with_user_id, can_edit, created_at | Sdílení kalendáře mezi uživateli workspace (UNIQUE calendar_id+shared_with_user_id) |
+| `trackino_workspace_pages` | id, workspace_id, slug ('company-rules'\|'office-rules'), content (HTML), updated_at, updated_by | Per-workspace editovatelné textové stránky (UNIQUE workspace_id+slug) |
+| `trackino_document_folders` | id, workspace_id, name, color, sort_order, created_by, created_at, updated_at | Složky pro organizaci dokumentů |
+| `trackino_documents` | id, workspace_id, folder_id (uuid\|null), name, type ('file'\|'link'), file_path (text\|null), file_size (int\|null), file_mime (text\|null), url (text\|null), description, created_by, created_at, updated_at | Firemní dokumenty a odkazy; soubory uloženy v Supabase Storage bucket `trackino-documents` |
 
 ### Poznámky k DB
 - `trackino_member_rates.valid_to IS NULL` = aktuálně platná sazba (aktivní rate)
@@ -136,7 +143,7 @@ Výchozí policy: `CREATE POLICY "Auth full" ... FOR ALL TO authenticated USING 
 type ModuleId = 'time_tracker' | 'planner' | 'calendar' | 'vacation' | 'invoices' | 'reports' |
   'attendance' | 'category_report' | 'subordinates' | 'notes' | 'projects' |
   'clients' | 'tags' | 'team' | 'settings' | 'audit' | 'text_converter' | 'important_days' |
-  'requests' | 'feedback';
+  'requests' | 'feedback' | 'knowledge_base' | 'documents' | 'company_rules' | 'office_rules';
 ```
 
 ### Výchozí moduly dle tarifu (hardcoded TARIFF_MODULES)
@@ -161,6 +168,10 @@ type ModuleId = 'time_tracker' | 'planner' | 'calendar' | 'vacation' | 'invoices
 | Důležité dny (important_days) | – | ✓ | ✓ |
 | Žádosti (requests) | – | ✓ | ✓ |
 | Připomínky (feedback) | – | ✓ | ✓ |
+| Znalostní báze (knowledge_base) | – | ✓ | ✓ |
+| Dokumenty (documents) | – | ✓ | ✓ |
+| Firemní pravidla (company_rules) | – | ✓ | ✓ |
+| Pravidla v kanceláři (office_rules) | – | ✓ | ✓ |
 | Kalendář (calendar) | – | – | ✓ |
 
 ### computeEnabledModules()
@@ -175,7 +186,8 @@ Základ = TARIFF_MODULES[tariff]
 - `'Sledování'`: time_tracker, planner, calendar, vacation, invoices
 - `'Analýza'`: reports, attendance, category_report, subordinates, notes
 - `'Správa'`: projects, clients, tags, team, settings, audit
-- `'Nástroje'`: text_converter, important_days
+- `'Nástroje'`: text_converter, important_days, requests, feedback
+- `'Společnost'`: knowledge_base, documents, company_rules, office_rules
 
 ---
 
@@ -376,6 +388,11 @@ TARIFF_MODULES: Record<Tariff, ModuleId[]>
 | **Důležité dny** | – | ✓ | ✓ |
 | **Žádosti** | – | ✓ | ✓ |
 | **Připomínky (anonymní)** | – | ✓ | ✓ |
+| **Sekce SPOLEČNOST** | – | ✓ | ✓ |
+| &nbsp;&nbsp;Znalostní báze (připravujeme) | – | ✓ | ✓ |
+| &nbsp;&nbsp;Dokumenty (soubory + složky) | – | ✓ | ✓ |
+| &nbsp;&nbsp;Firemní pravidla (rich text editor) | – | ✓ | ✓ |
+| &nbsp;&nbsp;Pravidla v kanceláři (rich text editor) | – | ✓ | ✓ |
 
 ---
 
@@ -430,8 +447,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
-| v2.8.0 | 4. 3. 2026 | Modul Kalendář (Max) – list/week/month pohled, více kalendářů, auto-sync dovolená+důležité dny, CRUD událostí; Fix: sidebar badge kolize s hvězdičkou oblíbených (pr-8 padding) |
-| v2.7.2 | 4. 3. 2026 | Fix: app-settings redirect (čekání na user+profile, ne jen authLoading); Fix: vacation tabulka rozhozené sloupce (pevné šířky místo auto); Sidebar badge na Dovolené pro manager/admin |
+| v2.11.0 | 4. 3. 2026 | Sekce SPOLEČNOST v sidebaru (Pro+Max) – Znalostní báze (placeholder), Dokumenty (soubory+složky+Storage), Firemní pravidla (rich text editor), Pravidla v kanceláři (rich text editor); Tým – toggle can_manage_documents; Fix: Připomínky layout záhlaví + šířka formuláře; SQL migrace: trackino_workspace_pages, trackino_document_folders, trackino_documents, ALTER workspace_members ADD can_manage_documents |
 | v2.10.0 | 4. 3. 2026 | Dokumentace skryta (jen MasterAdmin + Max tarif); Žádosti – 13 nových kategorií + průvodce kategoriemi (collapsible panel); Fix: select arrow + header layout v Žádostech |
 | v2.9.0 | 4. 3. 2026 | Nový modul Žádosti (Pro+Max); Nový modul Připomínky anonymní (Pro+Max); Tým – toggles can_process_requests + can_receive_feedback; Kalendář – přejmenování Liste→Seznam + fix color picker; Nastavení – české názvy rolí; Přehled hodin – celá jména bez ořezu; Měřič – záhlaví dnů jako v Reportech |
 | v2.8.0 | 4. 3. 2026 | Nový modul Kalendář (Max tarif) – 3 pohledy (Měsíční/Týdenní/Seznam), sync s Dovolenou a Důležitými dny; Fix: Sidebar – kolize badge s hvězdičkou Oblíbených |
@@ -712,6 +728,87 @@ CREATE TABLE IF NOT EXISTS trackino_feedback (
 ALTER TABLE trackino_feedback ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Auth full" ON trackino_feedback
   FOR ALL TO authenticated USING (true) WITH CHECK (true);
+```
+
+---
+
+## 20. Sekce SPOLEČNOST – architektura
+
+### Moduly
+- `knowledge_base` → `/knowledge-base` – placeholder (připravujeme)
+- `documents` → `/documents` – správa souborů a složek
+- `company_rules` → `/company-rules` – textová stránka (rich text editor)
+- `office_rules` → `/office-rules` – textová stránka (rich text editor)
+
+### Dokumenty (documents/page.tsx)
+- **Tabulky:** `trackino_document_folders`, `trackino_documents`
+- **Storage:** Supabase bucket `trackino-documents` (private); signed URL (60s) pro čtení
+- **Oprávnění:** `canManage = isMasterAdmin || isWorkspaceAdmin || currentMembership?.can_manage_documents`
+- **Typy souborů:** MIME whitelist (PDF, Word, Excel, PPT, obrázky, ZIP, TXT, CSV); max 20 MB
+- **Cesta souboru:** `{workspace_id}/{uuid}.{ext}` v bucketu
+- **Složky:** barva, pořadí (sort_order), filtrování v levém panelu; `null` folder_id = bez složky
+
+### Textové stránky (company-rules, office-rules)
+- **Tabulka:** `trackino_workspace_pages` s UNIQUE `(workspace_id, slug)`
+- **Slug:** `'company-rules'` nebo `'office-rules'`
+- **Editor:** contentEditable div + `document.execCommand()` (H2/H3/B/I/U/lists/links)
+- **Oprávnění editace:** `isWorkspaceAdmin || isMasterAdmin`
+- **Fallback:** DEFAULT_CONTENT (statický HTML) pokud záznam v DB neexistuje
+
+### SQL migrace (poskytnout uživateli)
+```sql
+-- Textové stránky workspace
+CREATE TABLE IF NOT EXISTS trackino_workspace_pages (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES trackino_workspaces(id) ON DELETE CASCADE,
+  slug text NOT NULL,
+  content text NOT NULL DEFAULT '',
+  updated_at timestamptz DEFAULT now(),
+  updated_by uuid REFERENCES auth.users(id),
+  UNIQUE (workspace_id, slug)
+);
+ALTER TABLE trackino_workspace_pages ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Auth full" ON trackino_workspace_pages
+  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- Složky dokumentů
+CREATE TABLE IF NOT EXISTS trackino_document_folders (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES trackino_workspaces(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  color text NOT NULL DEFAULT '#6366f1',
+  sort_order integer NOT NULL DEFAULT 0,
+  created_by uuid NOT NULL REFERENCES auth.users(id),
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+ALTER TABLE trackino_document_folders ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Auth full" ON trackino_document_folders
+  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- Dokumenty
+CREATE TABLE IF NOT EXISTS trackino_documents (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES trackino_workspaces(id) ON DELETE CASCADE,
+  folder_id uuid REFERENCES trackino_document_folders(id) ON DELETE SET NULL,
+  name text NOT NULL,
+  type text NOT NULL DEFAULT 'file' CHECK (type IN ('file','link')),
+  file_path text,
+  file_size bigint,
+  file_mime text,
+  url text,
+  description text NOT NULL DEFAULT '',
+  created_by uuid NOT NULL REFERENCES auth.users(id),
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+ALTER TABLE trackino_documents ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Auth full" ON trackino_documents
+  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- Nové oprávnění na member
+ALTER TABLE trackino_workspace_members
+  ADD COLUMN IF NOT EXISTS can_manage_documents boolean NOT NULL DEFAULT false;
 ```
 
 ---

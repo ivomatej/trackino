@@ -288,6 +288,26 @@ const DEFAULT_HELP_CONTENT = `
   <li><strong>Zobrazení připomínek</strong> – přijaté připomínky vidí uživatelé s příznakem „Přijímá připomínky" (nastavuje admin v Tým → Členové) a Master Admin vždy</li>
   <li><strong>Správa připomínek</strong> – přijímatelé vidí seznam zpráv seřazených od nejnovější; každou připomínku lze označit jako vyřízenou nebo smazat</li>
 </ul>
+
+<h3>Sekce SPOLEČNOST</h3>
+<p>Od tarifu <strong>Pro</strong> je v levém menu dostupná sekce <strong>SPOLEČNOST</strong> se čtyřmi moduly pro správu firemních znalostí a dokumentace:</p>
+<ul>
+  <li><strong>Znalostní báze</strong> – připravovaný modul pro interní wiki a sdílení firemních znalostí a postupů</li>
+  <li><strong>Dokumenty</strong> – správa firemních souborů a odkazů; dokumenty lze organizovat do barevných složek; všichni členové workspace vidí dokumenty, správci (admin nebo uživatel s příznakem „Spravuje dokumenty") mohou nahrávat, mazat a spravovat složky</li>
+  <li><strong>Firemní pravidla</strong> – editovatelná textová stránka s firemními směrnicemi a pravidly; obsah upravuje admin/owner workspace; členové vidí aktuální obsah</li>
+  <li><strong>Pravidla v kanceláři</strong> – editovatelná textová stránka s provozním řádem a pravidly kanceláře; stejný editor jako Firemní pravidla</li>
+</ul>
+
+<h3>Dokumenty – správa souborů a složek</h3>
+<p>Modul <strong>Dokumenty</strong> (sekce Společnost) slouží jako centrální úložiště firemních materiálů dostupných všem členům workspace.</p>
+<ul>
+  <li><strong>Složky</strong> – dokumenty lze organizovat do barevných složek; složky vytváří a spravuje admin nebo uživatel s oprávněním „Spravuje dokumenty"; levý panel zobrazuje všechny složky s počtem dokumentů; kliknutím filtrujete zobrazení</li>
+  <li><strong>Typy dokumentů</strong> – soubory (PDF, Word, Excel, PowerPoint, obrázky, ZIP, TXT, CSV; max 20 MB) nebo webové odkazy (URL)</li>
+  <li><strong>Nahrání souboru</strong> – klikněte Přidat → záložka Soubor → vyberte soubor, zadejte název, popis a složku → klikněte Přidat</li>
+  <li><strong>Přidání odkazu</strong> – klikněte Přidat → záložka Odkaz (URL) → zadejte URL adresu, název a složku → klikněte Přidat</li>
+  <li><strong>Otevření dokumentu</strong> – klikněte na název nebo ikonu otevření; soubory se otevírají v novém okně pomocí podepsané URL (platné 60 sekund)</li>
+  <li><strong>Správa přístupu</strong> – nastavuje se v Tým → Členové → editace → příznak „Spravuje dokumenty"</li>
+</ul>
 `;
 
 function HelpContent() {

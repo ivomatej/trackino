@@ -11,6 +11,16 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.11.0 – 4. 3. 2026</h3>
+<ul>
+  <li><strong>Nová sekce SPOLEČNOST</strong> v levém menu (tarif Pro a Max) – čtyři nové moduly pro správu firemní dokumentace a pravidel: <em>Znalostní báze</em> (připravujeme), <em>Dokumenty</em>, <em>Firemní pravidla</em> a <em>Pravidla v kanceláři</em>.</li>
+  <li><strong>Dokumenty</strong> – centrální úložiště firemních souborů a odkazů. Dokumenty lze organizovat do barevných složek. Všichni členové workspace vidí dokumenty; správci (admin nebo člen s příznakem „Spravuje dokumenty") mohou nahrávat, mazat a spravovat složky. Podporované typy: PDF, Word, Excel, PowerPoint, obrázky, ZIP, TXT, CSV (max 20 MB) nebo webové URL.</li>
+  <li><strong>Firemní pravidla</strong> – textová editovatelná stránka se směrnicemi a pravidly workspace. Obsah upravuje admin nebo vlastník workspace pomocí Rich Text editoru (nadpisy, tučné, seznamy, odkazy). Všichni členové vidí aktuální obsah.</li>
+  <li><strong>Pravidla v kanceláři</strong> – stejný vzor jako Firemní pravidla, určeno pro provozní řád a každodenní kancelářská pravidla.</li>
+  <li><strong>Tým – nové oprávnění „Spravuje dokumenty"</strong> – v dialogu úpravy člena přibyl příznak pro oprávnění nahrávat, mazat a spravovat složky v modulu Dokumenty (bez nutnosti být admin).</li>
+  <li><strong>Fix: Připomínky – layout záhlaví a šířka formuláře</strong> – text subtitulu se nyní nedotýká tlačítka „Nová připomínka" (přidána mezera a obalení textu). Formulář pro novou připomínku se již nerozšiřuje za původní šířku stránky.</li>
+</ul>
+
 <h3>v2.10.0 – 4. 3. 2026</h3>
 <ul>
   <li><strong>Dokumentace skryta pro běžné uživatele</strong> – odkaz na Dokumentaci (changelog) v levém menu je nyní viditelný pouze pro Master Admina a uživatele s tarifem <em>Max</em>. Ostatní tarify jej nevidí.</li>

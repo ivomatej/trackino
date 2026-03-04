@@ -89,6 +89,7 @@ function TeamContent() {
   const [editCanViewAudit, setEditCanViewAudit] = useState(false);
   const [editCanProcessRequests, setEditCanProcessRequests] = useState(false);
   const [editCanReceiveFeedback, setEditCanReceiveFeedback] = useState(false);
+  const [editCanManageDocuments, setEditCanManageDocuments] = useState(false);
   const [editCooperationTypeId, setEditCooperationTypeId] = useState<string>('');
   const [editBillingProfileId, setEditBillingProfileId] = useState<string>('');
   const [editSaving, setEditSaving] = useState(false);
@@ -307,6 +308,7 @@ function TeamContent() {
     setEditCanViewAudit(member.can_view_audit ?? false);
     setEditCanProcessRequests(member.can_process_requests ?? false);
     setEditCanReceiveFeedback(member.can_receive_feedback ?? false);
+    setEditCanManageDocuments(member.can_manage_documents ?? false);
     setEditCooperationTypeId(member.cooperation_type_id ?? '');
     setEditBillingProfileId(member.billing_profile_id ?? '');
     setMemberRates([]);
@@ -343,6 +345,7 @@ function TeamContent() {
         can_view_audit: editCanViewAudit,
         can_process_requests: editCanProcessRequests,
         can_receive_feedback: editCanReceiveFeedback,
+        can_manage_documents: editCanManageDocuments,
         cooperation_type_id: editCooperationTypeId || null,
         billing_profile_id: editBillingProfileId || null,
       }).eq('id', editingMember.id),
@@ -1201,6 +1204,24 @@ function TeamContent() {
                   <div>
                     <span className="text-sm block" style={{ color: 'var(--text-primary)' }}>Přijímá připomínky</span>
                     <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Může zobrazit anonymní připomínky od kolegů</span>
+                  </div>
+                </label>
+                <label
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors"
+                  style={{ background: editCanManageDocuments ? 'var(--bg-active)' : 'var(--bg-hover)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = editCanManageDocuments ? 'var(--bg-active)' : 'var(--bg-hover)'}
+                >
+                  <input
+                    type="checkbox"
+                    checked={editCanManageDocuments}
+                    onChange={(e) => setEditCanManageDocuments(e.target.checked)}
+                    className="w-4 h-4 rounded flex-shrink-0"
+                    style={{ accentColor: 'var(--primary)' }}
+                  />
+                  <div>
+                    <span className="text-sm block" style={{ color: 'var(--text-primary)' }}>Spravuje dokumenty</span>
+                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Může nahrávat, mazat a spravovat složky v Dokumentech</span>
                   </div>
                 </label>
 
