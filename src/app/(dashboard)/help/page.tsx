@@ -15,7 +15,7 @@ const DEFAULT_HELP_CONTENT = `
 <h3>Základní funkce</h3>
 <ul>
   <li><strong>Dashboard</strong> – úvodní přehledová stránka s personalizovaným pozdravem, souhrnem výdělku, odpracovaných hodin, zbývajících dní a svátků pro aktuální měsíc</li>
-  <li><strong>Time Tracker</strong> – spouštějte a zastavujte timer pro sledování odpracovaného času; po výběru projektu a kategorie/úkolu se zobrazuje čitelný breadcrumb místo ikonek; každý záznam má tlačítko ▶ pro opětovné spuštění se stejnými údaji (projekt, kategorie, štítky); u každého záznamu se zobrazuje také přiřazená kategorie a úkol (světle šedě vpravo od projektu)</li>
+  <li><strong>Měřič</strong> – spouštějte a zastavujte timer pro sledování odpracovaného času; po výběru projektu a kategorie/úkolu se zobrazuje čitelný breadcrumb místo ikonek; každý záznam má tlačítko ▶ pro opětovné spuštění se stejnými údaji (projekt, kategorie, štítky); u každého záznamu se zobrazuje také přiřazená kategorie a úkol (světle šedě vpravo od projektu)</li>
   <li><strong>Projekty</strong> – organizujte záznamy do projektů a přiřazujte klienty; seznam projektů lze prohledávat pomocí vyhledávacího pole nad seznamem</li>
   <li><strong>Klienti</strong> – spravujte klienty a propojujte je s projekty; seznam klientů lze filtrovat vyhledávacím polem</li>
   <li><strong>Štítky</strong> – označujte záznamy štítky pro lepší kategorizaci</li>
@@ -109,6 +109,19 @@ const DEFAULT_HELP_CONTENT = `
 <p><strong>Poznámka Master Admina:</strong> Poznámka se zobrazuje v šedém poli. Na pravém kraji řádku jsou dvě ikonky – <em>tužka</em> (upravit) a <em>koš</em> (smazat). Pokud poznámka dosud neexistuje, zobrazuje se odkaz „+ Přidat poznámku".</p>
 <p><strong>SQL migrace (nutno spustit v Supabase):</strong><br/><code>CREATE TABLE IF NOT EXISTS trackino_app_changes (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), title text NOT NULL, content text DEFAULT '', type text NOT NULL DEFAULT 'idea' CHECK (type IN ('bug', 'idea', 'request')), priority text NOT NULL DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high')), status text NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'solved')), source_bug_id uuid REFERENCES trackino_bug_reports(id) ON DELETE SET NULL, created_at timestamptz DEFAULT now(), updated_at timestamptz DEFAULT now()); ALTER TABLE trackino_app_changes ENABLE ROW LEVEL SECURITY; CREATE POLICY "Auth full" ON trackino_app_changes FOR ALL TO authenticated USING (true) WITH CHECK (true);</code></p>
 
+<h3>Oblíbené v levém menu</h3>
+<p>Funkce <strong>Oblíbené</strong> je dostupná pro tarify <strong>Pro a Max</strong>. Umožňuje přidat libovolnou položku z levého menu do sekce <strong>OBLÍBENÉ</strong>, která se zobrazuje úplně nahoře v navigaci.</p>
+<ul>
+  <li><strong>Přidání do oblíbených</strong> – na pravém okraji každé položky v menu je velmi světlá hvězdička. Po najetí myší se zvýrazní. Kliknutím se položka přidá do sekce OBLÍBENÉ (hvězdička zežloutne).</li>
+  <li><strong>Odebrání z oblíbených</strong> – v sekci OBLÍBENÉ se u každé položky na hover zobrazí křížek. Kliknutím na křížek se položka ze sekce odebere (ale v původní sekci zůstane).</li>
+  <li><strong>Uložení</strong> – oblíbené se ukládají v prohlížeči (localStorage) per workspace; jsou tedy dostupné i po obnovení stránky.</li>
+  <li><strong>Sekce je sbalitelná</strong> stejně jako ostatní skupiny v levém menu.</li>
+</ul>
+
+<h3>České státní svátky v Plánovači</h3>
+<p>V <strong>Plánovači</strong> se nad záhlavím každého dne zobrazují <strong>státní svátky ČR</strong>. Pokud je daný den svátek, zobrazí se pod datumem červený text s emoji 🎉 a názvem svátku (zkrácený pokud je příliš dlouhý, plný název se zobrazí v tooltip po najetí myší).</p>
+<p>Plánovač zobrazuje všechny státní svátky ČR: Nový rok, Velký pátek, Velikonoční pondělí, Svátek práce, Den vítězství, Den Cyrila a Metoděje, Den Jana Husa, Den české státnosti, Den vzniku ČSR, Den boje za svobodu a demokracii, Štědrý den, 1. a 2. svátek vánoční.</p>
+
 <h3>Časová zóna workspace</h3>
 <p>V <strong>Nastavení → Obecné</strong> lze nastavit <strong>Časovou zónu</strong> workspace. Tato zóna určuje, co celá aplikace považuje za „dnešní datum" – bez ohledu na to, z jaké země se člen týmu právě přihlásí.</p>
 <p><strong>Co ovlivňuje:</strong></p>
@@ -125,9 +138,9 @@ const DEFAULT_HELP_CONTENT = `
 <h3>Modulární systém</h3>
 <p>Aplikace je rozdělena do <strong>modulů</strong>, které lze zapnout nebo vypnout. Výchozí sada modulů závisí na tarifu workspace:</p>
 <ul>
-  <li><strong>Free</strong> – Time Tracker, Reporty, Projekty, Klienti, Štítky, Tým</li>
-  <li><strong>Pro</strong> – Free + Plánovač, Dovolená, Fakturace, Přehled hodin, Analýza kategorií, Podřízení, Poznámky, Nastavení</li>
-  <li><strong>Max</strong> – Pro + Audit log</li>
+  <li><strong>Free</strong> – Měřič, Reporty, Projekty, Klienti, Štítky, Tým</li>
+  <li><strong>Pro</strong> – Free + Plánovač, Dovolená, Fakturace, Přehled hodin, Analýza kategorií, Podřízení, Poznámky, Nastavení + funkce <strong>Oblíbené</strong> v levém menu</li>
+  <li><strong>Max</strong> – Pro + Audit log, Převodník textu</li>
 </ul>
 <p>Admin může v <strong>Nastavení → Moduly</strong> nastavit výjimky pro jednotlivé uživatele – přidat modul, který není v tarifu, nebo zakázat modul, který v tarifu je. Výjimky mají vždy přednost před výchozím tarifem. Moduly, které uživatel nemá povoleny, se nezobrazují v levém menu.</p>
 <p>Master Admin může v <strong>Nastavení aplikace</strong> (sekce Systém) globálně změnit, které moduly jsou součástí každého tarifu. Konfigurace se uloží do DB a okamžitě se projeví pro všechny workspace. Pokud konfigurace nebyla nastavena, použijí se výchozí hodnoty ze systému.</p>

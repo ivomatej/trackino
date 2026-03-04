@@ -4,7 +4,7 @@ import type { ModuleId, Tariff } from '@/types/database';
 
 /** Všechny dostupné moduly s metadaty */
 export const ALL_MODULES: { id: ModuleId; label: string; description: string; group: string }[] = [
-  { id: 'time_tracker',    label: 'Time Tracker',      description: 'Záznam a správa odpracovaných hodin',   group: 'Sledování' },
+  { id: 'time_tracker',    label: 'Měřič',             description: 'Záznam a správa odpracovaných hodin',   group: 'Sledování' },
   { id: 'planner',         label: 'Plánovač',           description: 'Týdenní plánování dostupnosti členů',   group: 'Sledování' },
   { id: 'vacation',        label: 'Dovolená',           description: 'Evidence a správa čerpání dovolené',    group: 'Sledování' },
   { id: 'invoices',        label: 'Fakturace',          description: 'Vystavování a správa faktur',           group: 'Sledování' },

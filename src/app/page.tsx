@@ -184,7 +184,7 @@ function DashboardContent() {
               {greetingPrefix}, {firstName}!
             </h1>
             <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-              Tady máš souhrn aktivit. Ať ti jde práce od ruky!
+              Tady máš přehled aktivit. Ať ti jde práce od ruky!
             </p>
           </div>
           <div className="text-right">

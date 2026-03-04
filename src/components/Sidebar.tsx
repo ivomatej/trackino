@@ -50,7 +50,31 @@ const ICONS = {
   categoryReport: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83" /><path d="M22 12A10 10 0 0 0 12 2v10z" /></svg>,
   textConverter: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 7 4 4 20 4 20 7" /><line x1="9" y1="20" x2="15" y2="20" /><line x1="12" y1="4" x2="12" y2="20" /></svg>,
   appChanges: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg>,
+  favorites: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>,
 };
+
+// Ikonka hvězdičky pro tlačítko oblíbených (inline SVG pro různé stavy)
+function StarIcon({ filled, size = 13 }: { filled: boolean; size?: number }) {
+  return (
+    <svg
+      width={size} height={size} viewBox="0 0 24 24"
+      fill={filled ? 'currentColor' : 'none'}
+      stroke="currentColor" strokeWidth="2"
+      strokeLinecap="round" strokeLinejoin="round"
+    >
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
+  );
+}
+
+// Ikonka křížku pro odebrání z oblíbených
+function RemoveIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  );
+}
 
 export default function Sidebar({ open, onClose }: SidebarProps) {
   const pathname = usePathname();
@@ -76,6 +100,33 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
       if (next.has(title)) next.delete(title);
       else next.add(title);
       try { localStorage.setItem('sidebar_collapsed_groups', JSON.stringify([...next])); } catch { /* ignore */ }
+      return next;
+    });
+  };
+
+  // ── Oblíbené ──────────────────────────────────────────────────────────────
+  // Dostupné jen pro tarif Pro a Max
+  const canUseFavorites = currentWorkspace?.tariff === 'pro' || currentWorkspace?.tariff === 'max';
+  const [favorites, setFavorites] = useState<string[]>([]);
+
+  // Načti oblíbené z localStorage po změně workspace
+  useEffect(() => {
+    if (!currentWorkspace) return;
+    try {
+      const key = `trackino_favorites_${currentWorkspace.id}`;
+      const saved = localStorage.getItem(key);
+      setFavorites(saved ? (JSON.parse(saved) as string[]) : []);
+    } catch { setFavorites([]); }
+  }, [currentWorkspace?.id]);
+
+  const toggleFavorite = (href: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!currentWorkspace || !canUseFavorites) return;
+    const key = `trackino_favorites_${currentWorkspace.id}`;
+    setFavorites(prev => {
+      const next = prev.includes(href) ? prev.filter(h => h !== href) : [...prev, href];
+      try { localStorage.setItem(key, JSON.stringify(next)); } catch { /* ignore */ }
       return next;
     });
   };
@@ -232,46 +283,112 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
     return groups;
   }, [userRole, profile, currentWorkspace?.tariff, currentWorkspace?.hide_tags_globally, currentMembership?.can_use_vacation, currentMembership?.can_invoice, currentMembership?.can_manage_billing, hasModule]);
 
-  const initials = profile?.display_name
-    ? profile.display_name.split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2)
-    : (profile?.email?.charAt(0).toUpperCase() ?? '?');
-
-  const renderNavItem = (item: NavItem) => {
-    const active = pathname === item.href;
-    const hasReturnedBadge = item.href === '/invoices' && returnedInvoiceCount > 0;
-    return (
-      <Link
-        key={item.href}
-        href={item.href}
-        onClick={onClose}
-        className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
-        style={{
-          color: active ? 'var(--primary)' : 'var(--text-secondary)',
-          background: active ? 'var(--bg-active)' : 'transparent',
-        }}
-        onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = 'var(--bg-hover)'; }}
-        onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = active ? 'var(--bg-active)' : 'transparent'; }}
-      >
-        {item.icon}
-        <span className="flex-1">{item.label}</span>
-        {hasReturnedBadge && (
-          <span
-            className="flex-shrink-0 min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[10px] font-bold text-white"
-            style={{ background: '#ef4444' }}
-          >
-            {returnedInvoiceCount}
-          </span>
-        )}
-      </Link>
-    );
-  };
-
   const bottomItems = useMemo<NavItem[]>(() => [
     { label: 'Nápověda', href: '/help', icon: ICONS.help },
     { label: 'Nahlásit chybu', href: '/bugs', icon: ICONS.bug },
     ...(isMasterAdminSidebar ? [{ label: 'Úpravy aplikace', href: '/app-changes', icon: ICONS.appChanges }] : []),
     { label: 'Dokumentace', href: '/changelog', icon: ICONS.docs },
   ], [isMasterAdminSidebar]);
+
+  // Všechny položky dostupné pro oblíbené (navGroups + bottomItems)
+  const allNavItems = useMemo<NavItem[]>(() => [
+    ...navGroups.flatMap(g => g.items),
+    ...bottomItems,
+  ], [navGroups, bottomItems]);
+
+  // Položky oblíbených s jejich metadaty
+  const favoriteItems = useMemo<NavItem[]>(() => {
+    if (!canUseFavorites) return [];
+    return favorites
+      .map(href => allNavItems.find(item => item.href === href))
+      .filter((item): item is NavItem => item !== undefined);
+  }, [favorites, allNavItems, canUseFavorites]);
+
+  const initials = profile?.display_name
+    ? profile.display_name.split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2)
+    : (profile?.email?.charAt(0).toUpperCase() ?? '?');
+
+  // Render položky s hvězdičkou (pro hlavní navigaci)
+  const renderNavItem = (item: NavItem) => {
+    const active = pathname === item.href;
+    const hasReturnedBadge = item.href === '/invoices' && returnedInvoiceCount > 0;
+    const isFavorited = favorites.includes(item.href);
+
+    return (
+      <div key={item.href} className="relative group/nav">
+        <Link
+          href={item.href}
+          onClick={onClose}
+          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+          style={{
+            color: active ? 'var(--primary)' : 'var(--text-secondary)',
+            background: active ? 'var(--bg-active)' : 'transparent',
+          }}
+          onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+          onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = active ? 'var(--bg-active)' : 'transparent'; }}
+        >
+          {item.icon}
+          <span className="flex-1">{item.label}</span>
+          {hasReturnedBadge && (
+            <span
+              className="flex-shrink-0 min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[10px] font-bold text-white"
+              style={{ background: '#ef4444' }}
+            >
+              {returnedInvoiceCount}
+            </span>
+          )}
+        </Link>
+        {/* Hvězdička oblíbených – zobrazí se jen pro Pro/Max */}
+        {canUseFavorites && (
+          <button
+            onClick={(e) => toggleFavorite(item.href, e)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded transition-all"
+            title={isFavorited ? 'Odebrat z oblíbených' : 'Přidat do oblíbených'}
+            style={{
+              color: isFavorited ? '#f59e0b' : 'var(--text-muted)',
+              opacity: isFavorited ? 0.8 : 0.18,
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.opacity = isFavorited ? '0.8' : '0.18'; }}
+          >
+            <StarIcon filled={isFavorited} />
+          </button>
+        )}
+      </div>
+    );
+  };
+
+  // Render položky v sekci Oblíbené (s křížkem pro odebrání)
+  const renderFavoriteItem = (item: NavItem) => {
+    const active = pathname === item.href;
+    return (
+      <div key={`fav-${item.href}`} className="relative group/fav">
+        <Link
+          href={item.href}
+          onClick={onClose}
+          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+          style={{
+            color: active ? 'var(--primary)' : 'var(--text-secondary)',
+            background: active ? 'var(--bg-active)' : 'transparent',
+          }}
+          onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+          onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = active ? 'var(--bg-active)' : 'transparent'; }}
+        >
+          {item.icon}
+          <span className="flex-1">{item.label}</span>
+        </Link>
+        {/* Křížek pro odebrání z oblíbených */}
+        <button
+          onClick={(e) => toggleFavorite(item.href, e)}
+          className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded transition-all opacity-0 group-hover/fav:opacity-60 hover:!opacity-100"
+          title="Odebrat z oblíbených"
+          style={{ color: 'var(--text-muted)' }}
+        >
+          <RemoveIcon />
+        </button>
+      </div>
+    );
+  };
 
   return (
     <>
@@ -313,6 +430,40 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
 
         {/* Navigace se skupinami */}
         <nav className="flex-1 overflow-y-auto py-2 px-3">
+
+          {/* ── Sekce OBLÍBENÉ (jen Pro+, jen pokud existují oblíbené) ── */}
+          {canUseFavorites && favoriteItems.length > 0 && (
+            <div className="mb-3">
+              <button
+                onClick={() => toggleGroup('OBLÍBENÉ')}
+                className="w-full flex items-center justify-between px-3 py-1 rounded-md transition-colors"
+                style={{ color: 'var(--text-muted)' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+              >
+                <span className="text-[10px] font-semibold tracking-wider flex items-center gap-1.5">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#f59e0b' }}>
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                  </svg>
+                  OBLÍBENÉ
+                </span>
+                <svg
+                  width="12" height="12" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                  style={{ transition: 'transform 0.18s', transform: collapsedGroups.has('OBLÍBENÉ') ? 'rotate(-90deg)' : 'none', flexShrink: 0 }}
+                >
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
+              {!collapsedGroups.has('OBLÍBENÉ') && (
+                <div className="space-y-0.5 mt-0.5">
+                  {favoriteItems.map(renderFavoriteItem)}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Hlavní skupiny navigace */}
           {navGroups.map((group) => {
             const isCollapsed = collapsedGroups.has(group.title);
             return (
@@ -349,22 +500,40 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
             <div className="space-y-0.5">
               {bottomItems.map((item) => {
                 const active = pathname === item.href;
+                const isFavorited = favorites.includes(item.href);
                 return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={onClose}
-                    className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors"
-                    style={{
-                      color: active ? 'var(--primary)' : 'var(--text-muted)',
-                      background: active ? 'var(--bg-active)' : 'transparent',
-                    }}
-                    onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = 'var(--bg-hover)'; }}
-                    onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = active ? 'var(--bg-active)' : 'transparent'; }}
-                  >
-                    {item.icon}
-                    {item.label}
-                  </Link>
+                  <div key={item.href} className="relative group/nav">
+                    <Link
+                      href={item.href}
+                      onClick={onClose}
+                      className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors"
+                      style={{
+                        color: active ? 'var(--primary)' : 'var(--text-muted)',
+                        background: active ? 'var(--bg-active)' : 'transparent',
+                      }}
+                      onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                      onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = active ? 'var(--bg-active)' : 'transparent'; }}
+                    >
+                      {item.icon}
+                      {item.label}
+                    </Link>
+                    {/* Hvězdička oblíbených pro bottom items */}
+                    {canUseFavorites && (
+                      <button
+                        onClick={(e) => toggleFavorite(item.href, e)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded transition-all"
+                        title={isFavorited ? 'Odebrat z oblíbených' : 'Přidat do oblíbených'}
+                        style={{
+                          color: isFavorited ? '#f59e0b' : 'var(--text-muted)',
+                          opacity: isFavorited ? 0.8 : 0.18,
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.opacity = isFavorited ? '0.8' : '0.18'; }}
+                      >
+                        <StarIcon filled={isFavorited} />
+                      </button>
+                    )}
+                  </div>
                 );
               })}
             </div>

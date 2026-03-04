@@ -134,7 +134,7 @@ function AppSettingsContent() {
 
   if (!isMasterAdmin) return null;
 
-  const groups = ['Sledování', 'Analýza', 'Správa'];
+  const groups = ['Sledování', 'Analýza', 'Správa', 'Nástroje'];
 
   return (
     <DashboardLayout>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { WorkspaceProvider } from '@/contexts/WorkspaceContext';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -109,6 +109,7 @@ function AppChangesContent() {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
+  const descTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Redirect non-master-admin
   useEffect(() => {
@@ -126,6 +127,15 @@ function AppChangesContent() {
   }, []);
 
   useEffect(() => { fetchItems(); }, [fetchItems]);
+
+  // Auto-resize textarea když se modal otevře s existujícím textem
+  useEffect(() => {
+    if (showForm && descTextareaRef.current) {
+      const ta = descTextareaRef.current;
+      ta.style.height = 'auto';
+      ta.style.height = Math.min(ta.scrollHeight, 600) + 'px';
+    }
+  }, [showForm, form.content]);
 
   const openAdd = () => {
     setEditingItem(null);
@@ -481,17 +491,18 @@ function AppChangesContent() {
                 <div>
                   <label className={labelCls} style={{ color: 'var(--text-secondary)' }}>Popis (volitelné)</label>
                   <textarea
+                    ref={descTextareaRef}
                     value={form.content}
                     onChange={(e) => {
                       setForm(f => ({ ...f, content: e.target.value }));
                       // Auto-expand
                       const ta = e.target;
                       ta.style.height = 'auto';
-                      ta.style.height = Math.min(ta.scrollHeight, 500) + 'px';
+                      ta.style.height = Math.min(ta.scrollHeight, 600) + 'px';
                     }}
-                    rows={7}
+                    rows={10}
                     className={inputCls + ' resize-none overflow-hidden'}
-                    style={{ ...inputStyle, minHeight: '160px' }}
+                    style={{ ...inputStyle, minHeight: '260px' }}
                     placeholder="Podrobnější popis, kroky k reprodukci, návrh řešení..."
                   />
                 </div>

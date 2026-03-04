@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import type { AvailabilityStatus, AvailabilityEntry } from '@/types/database';
 import { getWorkspaceToday } from '@/lib/utils';
+import { getCzechHolidays, isCzechHoliday } from '@/lib/czech-calendar';
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -279,6 +280,8 @@ function PlannerContent() {
 
   const canAdmin = isWorkspaceAdmin || isMasterAdmin;
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  // České svátky pro viditelný týden (může přesahovat dva roky)
+  const weekHolidays = [...new Set(weekDays.map(d => d.getFullYear()))].flatMap(y => getCzechHolidays(y));
 
   // ── Fetch ────────────────────────────────────────────────────────────────
 
@@ -822,22 +825,34 @@ function PlannerContent() {
                 >
                   Člen
                 </th>
-                {weekDays.map(day => (
-                  <th
-                    key={toDateStr(day)}
-                    className="px-1 py-2.5 text-center text-xs font-semibold"
-                    style={{
-                      color: isToday(day) ? 'var(--primary)' : 'var(--text-muted)',
-                      background: isToday(day)
-                        ? 'color-mix(in srgb, var(--primary) 8%, transparent)'
-                        : 'var(--bg-card)',
-                      minWidth: 90,
-                    }}
-                  >
-                    <div>{formatDayName(day)}</div>
-                    <div className="font-normal mt-0.5">{formatDateShort(day)}</div>
-                  </th>
-                ))}
+                {weekDays.map(day => {
+                  const dayHoliday = isCzechHoliday(day, weekHolidays);
+                  return (
+                    <th
+                      key={toDateStr(day)}
+                      className="px-1 py-2 text-center text-xs font-semibold"
+                      style={{
+                        color: isToday(day) ? 'var(--primary)' : 'var(--text-muted)',
+                        background: isToday(day)
+                          ? 'color-mix(in srgb, var(--primary) 8%, transparent)'
+                          : 'var(--bg-card)',
+                        minWidth: 90,
+                      }}
+                    >
+                      <div>{formatDayName(day)}</div>
+                      <div className="font-normal mt-0.5">{formatDateShort(day)}</div>
+                      {dayHoliday.isHoliday && (
+                        <div
+                          className="font-normal text-[9px] mt-0.5 leading-tight truncate px-1"
+                          style={{ color: '#ef4444', maxWidth: 88 }}
+                          title={dayHoliday.name}
+                        >
+                          🎉 {dayHoliday.name}
+                        </div>
+                      )}
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>

@@ -11,6 +11,16 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.3.0 – 4. 3. 2026</h3>
+<ul>
+  <li><strong>Oblíbené v levém menu</strong> (tarif Pro a Max) – nová sekce <em>OBLÍBENÉ</em> se zobrazuje úplně nahoře v navigaci. Každá položka v sidebaru má na pravém okraji velmi světlou hvězdičku; kliknutím ji přidáte do Oblíbených (sekce se vytvoří automaticky). V sekci Oblíbené se položky zobrazují se křížkem pro odebrání (viditelný na hover). Oblíbené se ukládají v prohlížeči (localStorage) per workspace.</li>
+  <li><strong>České státní svátky v Plánovači</strong> – záhlaví každého dne nyní zobrazuje státní svátek ČR (pokud existuje). Pod datem se v červeném textu zobrazí 🎉 + název svátku. Všechny svátky včetně pohyblivých (Velký pátek, Velikonoční pondělí) jsou počítány automaticky.</li>
+  <li><strong>Nastavení aplikace – skupina Nástroje</strong> – v matici modulů tarifů přibyla nová skupina <em>Nástroje</em> obsahující modul Převodník textu. Všechny moduly nyní mají shodné názvy se Sidebarem.</li>
+  <li><strong>Moduly – opraven název „Time Tracker" → „Měřič"</strong> – název modulu v Nastavení aplikace nyní odpovídá názvu v levém menu.</li>
+  <li><strong>Přehled – upraven text</strong> – uvítací text „Tady máš souhrn aktivit" změněn na „Tady máš přehled aktivit".</li>
+  <li><strong>Úpravy aplikace – větší textarea v modalu</strong> – při otevření formuláře pro úpravu existující položky se pole Popis automaticky rozroste na výšku odpovídající obsahu textu (min. 260px, max. 600px). Pole je přibližně 2× vyšší než dříve.</li>
+</ul>
+
 <h3>v2.2.0 – 4. 3. 2026</h3>
 <ul>
   <li><strong>Sidebar – přejmenování položek</strong> – „Dashboard" přejmenováno na <em>Přehled</em>, „Time Tracker" přejmenováno na <em>Měřič</em>.</li>
