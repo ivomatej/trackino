@@ -513,7 +513,7 @@ export default function TimerBar({ onEntryChanged, playData }: TimerBarProps) {
         value={description}
         onChange={(e) => setDescription(e.target.value)}
         placeholder="Na čem pracuješ?"
-        className="flex-1 min-w-0 px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
+        className="flex-1 min-w-0 px-3 py-1.5 sm:py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
         style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
         onKeyDown={(e) => {
           if (e.key === 'Enter' && !isRunning) startTimer();
@@ -831,7 +831,7 @@ export default function TimerBar({ onEntryChanged, playData }: TimerBarProps) {
       {!isRunning ? (
         <button
           onClick={startTimer}
-          className="px-4 sm:px-6 py-2 rounded-lg text-white font-semibold text-sm transition-colors whitespace-nowrap flex-shrink-0"
+          className="px-3 sm:px-6 py-1.5 sm:py-2 rounded-lg text-white font-semibold text-sm transition-colors whitespace-nowrap flex-shrink-0"
           style={{ background: 'var(--primary)' }}
           onMouseEnter={(e) => e.currentTarget.style.background = 'var(--primary-hover)'}
           onMouseLeave={(e) => e.currentTarget.style.background = 'var(--primary)'}
@@ -842,7 +842,7 @@ export default function TimerBar({ onEntryChanged, playData }: TimerBarProps) {
         <div className="flex gap-1 flex-shrink-0">
           <button
             onClick={stopTimer}
-            className="px-4 sm:px-6 py-2 rounded-lg text-white font-semibold text-sm transition-colors whitespace-nowrap"
+            className="px-3 sm:px-6 py-1.5 sm:py-2 rounded-lg text-white font-semibold text-sm transition-colors whitespace-nowrap"
             style={{ background: 'var(--danger)' }}
             onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
             onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}

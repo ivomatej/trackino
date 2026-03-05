@@ -63,7 +63,7 @@ function RichEditor({ value, onChange }: { value: string; onChange: (v: string) 
     const sel = window.getSelection();
     const selected = sel && sel.rangeCount > 0 ? sel.getRangeAt(0).toString() : '';
     document.execCommand('insertHTML', false,
-      `<pre class="code-block" style="position:relative;background:var(--bg-hover);padding:12px 40px 12px 12px;border-radius:8px;font-family:monospace;font-size:13px;overflow-x:auto;margin:8px 0;border:1px solid var(--border)"><code>${selected || 'kód zde'}</code></pre><p><br></p>`
+      `<pre class="code-block" style="position:relative;background:var(--bg-hover);padding:12px 40px 12px 12px;border-radius:8px;font-family:monospace;font-size:13px;overflow-x:auto;margin:8px 0;border:1px solid var(--border)"><code>${selected || ''}</code></pre><p><br></p>`
     );
     if (ref.current) onChange(ref.current.innerHTML);
   };
@@ -107,17 +107,6 @@ function RichEditor({ value, onChange }: { value: string; onChange: (v: string) 
             }
           }
 
-          // Kliknutí na "kód zde" placeholder → smaž a nastav kurzor
-          if (codeEl && codeEl.textContent === 'kód zde') {
-            codeEl.textContent = '';
-            const range = document.createRange();
-            range.setStart(codeEl, 0);
-            range.collapse(true);
-            const sel = window.getSelection();
-            sel?.removeAllRanges();
-            sel?.addRange(range);
-            if (ref.current) onChange(ref.current.innerHTML);
-          }
         }}
         className="min-h-[200px] p-4 text-sm focus:outline-none prose-editor"
         style={{ color: 'var(--text-primary)', background: 'var(--bg-card)' }}

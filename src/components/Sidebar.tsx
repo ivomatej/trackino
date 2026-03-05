@@ -89,69 +89,11 @@ function RemoveIcon() {
   );
 }
 
-// ─── Workspace Switcher ───────────────────────────────────────────────────────
-function WorkspaceSwitcher() {
-  const { workspaces, currentWorkspace, selectWorkspace } = useWorkspace();
-  const [open, setOpen] = useState(false);
-
-  if (workspaces.length <= 1) return null;
-
-  return (
-    <div className="border-t mt-2 pt-1" style={{ borderColor: 'var(--border)' }}>
-      {/* Rozbalený seznam – inline nad triggerem, stejný styl jako user panel */}
-      {open && (
-        <div className="px-3 py-1 border-b" style={{ borderColor: 'var(--border)' }}>
-          {workspaces.filter(ws => ws.id !== currentWorkspace?.id).map((ws: Workspace) => (
-            <button
-              key={ws.id}
-              onClick={() => { selectWorkspace(ws); setOpen(false); }}
-              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-left transition-colors"
-              style={{ color: 'var(--text-secondary)' }}
-              onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--bg-hover)'}
-              onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-            >
-              <div
-                className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-                style={{ background: ws.color ?? 'var(--primary)' }}
-              >
-                {ws.name.charAt(0).toUpperCase()}
-              </div>
-              <span className="flex-1 truncate">{ws.name}</span>
-            </button>
-          ))}
-        </div>
-      )}
-      {/* Trigger button – stejný styl jako user panel */}
-      <button
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-3 px-4 py-3 transition-colors"
-        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--bg-hover)'}
-        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-      >
-        <div
-          className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
-          style={{ background: currentWorkspace?.color ?? 'var(--primary)' }}
-        >
-          {currentWorkspace?.name.charAt(0).toUpperCase()}
-        </div>
-        <div className="flex-1 min-w-0 text-left">
-          <div className="text-[10px] uppercase tracking-wider font-medium" style={{ color: 'var(--text-muted)' }}>Workspace</div>
-          <div className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{currentWorkspace?.name}</div>
-        </div>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-          style={{ color: 'var(--text-muted)', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }}
-        >
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
-      </button>
-    </div>
-  );
-}
 
 export default function Sidebar({ open, onClose, collapsed = false, onCollapseDesktop }: SidebarProps) {
   const pathname = usePathname();
   const { user, profile, signOut } = useAuth();
-  const { currentWorkspace, userRole, currentMembership, hasModule } = useWorkspace();
+  const { currentWorkspace, workspaces, selectWorkspace, userRole, currentMembership, hasModule } = useWorkspace();
   const [showUserPanel, setShowUserPanel] = useState(false);
 
   // Master Admin – computed at component level for use in both navGroups and bottomItems
@@ -716,14 +658,49 @@ export default function Sidebar({ open, onClose, collapsed = false, onCollapseDe
             </div>
           </div>
 
-          {/* Workspace switcher – pod Dokumentací, scrollovatelný */}
-          <WorkspaceSwitcher />
         </nav>
 
         {/* User panel */}
         <div className="border-t" style={{ borderColor: 'var(--border)' }}>
           {showUserPanel && (
             <div className="px-3 py-2 border-b animate-fade-in" style={{ borderColor: 'var(--border)' }}>
+
+              {/* Workspace přepínač – jen pokud existuje více workspace */}
+              {workspaces.length > 1 && (
+                <>
+                  <div className="px-3 pt-0.5 pb-1">
+                    <span className="text-[10px] uppercase tracking-wider font-medium" style={{ color: 'var(--text-muted)' }}>Workspace</span>
+                  </div>
+                  {workspaces.map((ws: Workspace) => (
+                    <button
+                      key={ws.id}
+                      onClick={() => { selectWorkspace(ws); setShowUserPanel(false); }}
+                      className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-left transition-colors"
+                      style={{
+                        color: ws.id === currentWorkspace?.id ? 'var(--primary)' : 'var(--text-secondary)',
+                        background: ws.id === currentWorkspace?.id ? 'var(--bg-active)' : 'transparent',
+                      }}
+                      onMouseEnter={e => { if (ws.id !== currentWorkspace?.id) (e.currentTarget as HTMLElement).style.background = 'var(--bg-hover)'; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = ws.id === currentWorkspace?.id ? 'var(--bg-active)' : 'transparent'; }}
+                    >
+                      <div
+                        className="w-6 h-6 rounded-md flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                        style={{ background: ws.color ?? 'var(--primary)' }}
+                      >
+                        {ws.name.charAt(0).toUpperCase()}
+                      </div>
+                      <span className="flex-1 truncate">{ws.name}</span>
+                      {ws.id === currentWorkspace?.id && (
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--primary)', flexShrink: 0 }}>
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      )}
+                    </button>
+                  ))}
+                  <div className="mx-2 my-1.5 border-t" style={{ borderColor: 'var(--border)' }} />
+                </>
+              )}
+
               {/* Detailní nastavení */}
               <Link
                 href="/profile"

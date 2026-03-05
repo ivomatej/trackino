@@ -226,7 +226,7 @@ export default function DashboardLayout({ children, showTimer = false, onTimerEn
           ))}
 
           {/* Horní řádek: hamburger + timer */}
-          <div className="flex items-center gap-3 px-4 lg:px-6 py-2.5 sm:py-0 sm:h-[var(--topbar-height)] border-b" style={{ borderColor: 'var(--border)' }}>
+          <div className="flex items-center gap-3 px-4 lg:px-6 py-2 sm:py-0 sm:h-[var(--topbar-height)] border-b" style={{ borderColor: 'var(--border)' }}>
             {/* Hamburger / Collapse toggle */}
             <button
               onClick={() => {
