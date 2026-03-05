@@ -276,7 +276,7 @@ export default function TimeEntryList({ refreshKey, onPlay }: TimeEntryListProps
                           onChange={(e) => setEditDescription(e.target.value)}
                           onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(entry.id); if (e.key === 'Escape') setEditingEntry(null); }}
                           autoFocus
-                          className="flex-1 px-2 py-1 rounded border text-sm focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
+                          className="flex-1 px-2 py-1 rounded border text-base sm:text-sm focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
                           style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
                         />
                         <button
@@ -443,7 +443,7 @@ export default function TimeEntryList({ refreshKey, onPlay }: TimeEntryListProps
                       autoFocus
                       placeholder="Interní poznámka manažera… (Enter = uložit, Shift+Enter = nový řádek)"
                       rows={2}
-                      className="flex-1 px-2.5 py-1.5 rounded-md border text-xs resize-none focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
+                      className="flex-1 px-2.5 py-1.5 rounded-md border text-base sm:text-sm resize-none focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
                       style={{ borderColor: '#f59e0b50', background: '#f59e0b08', color: 'var(--text-primary)' }}
                     />
                     <div className="flex flex-col gap-1">

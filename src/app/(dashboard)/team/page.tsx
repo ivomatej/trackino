@@ -1283,7 +1283,7 @@ function TeamContent() {
                         <input
                           type="number" value={newRateAmount} onChange={(e) => setNewRateAmount(e.target.value)}
                           placeholder="250" min="0" step="1"
-                          className="w-full px-3 py-2 pr-12 rounded-lg border text-sm focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
+                          className="w-full px-3 py-2 pr-12 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
                           style={inputStyle}
                           onKeyDown={(e) => { if (e.key === 'Enter') addMemberRate(); }}
                         />
@@ -1292,7 +1292,7 @@ function TeamContent() {
                       <div className="flex-1">
                         <input
                           type="date" value={newRateFrom} onChange={(e) => setNewRateFrom(e.target.value)}
-                          className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
+                          className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
                           style={inputStyle}
                         />
                       </div>
@@ -1347,7 +1347,7 @@ function TeamContent() {
                               type="date"
                               value={rateValidToEdits[rate.id] ?? ''}
                               onChange={(e) => setRateValidToEdits(prev => ({ ...prev, [rate.id]: e.target.value }))}
-                              className="flex-1 px-2 py-1 rounded-md border text-xs focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
+                              className="flex-1 px-2 py-1 rounded-md border text-base sm:text-sm focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
                               style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
                             />
                             {rateValidToEdits[rate.id] && (

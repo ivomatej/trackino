@@ -119,7 +119,7 @@ export default function WorkspaceSelector() {
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder="např. Four Crowns"
                   autoFocus
-                  className="w-full px-3 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent transition-shadow mb-3"
+                  className="w-full px-3 py-2.5 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent transition-shadow mb-3"
                   style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
                 />
                 <div className="flex gap-2">

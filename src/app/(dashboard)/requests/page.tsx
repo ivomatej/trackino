@@ -585,7 +585,7 @@ function RequestsContent() {
                 onChange={e => setRejectModal(m => m ? { ...m, note: e.target.value } : m)}
                 rows={3}
                 placeholder="Proč se žádost zamítá..."
-                className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
                 style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)', resize: 'none' }}
                 autoFocus
               />

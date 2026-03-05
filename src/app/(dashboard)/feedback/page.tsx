@@ -166,7 +166,7 @@ function FeedbackContent() {
               onChange={e => setMessage(e.target.value)}
               rows={4}
               placeholder="Napište svou připomínku, návrh nebo podnět..."
-              className="w-full px-3 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] mb-4"
+              className="w-full px-3 py-2.5 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] mb-4"
               style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)', resize: 'none' }}
               autoFocus
             />

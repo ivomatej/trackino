@@ -216,7 +216,7 @@ function ClientsContent() {
               placeholder="Hledat klienta..."
               value={clientSearch}
               onChange={e => setClientSearch(e.target.value)}
-              className="w-full pl-9 pr-8 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+              className="w-full pl-9 pr-8 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
               style={{ background: 'var(--bg-input)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
             />
             {clientSearch && (
