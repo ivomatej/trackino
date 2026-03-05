@@ -69,7 +69,7 @@ function TrackerContent() {
         {/* Hlavička stránky */}
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
-            Záznamy
+            Měřič
           </h1>
         </div>
 

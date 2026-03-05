@@ -66,8 +66,8 @@ function NotesContent() {
   const [members, setMembers] = useState<MemberProfile[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Filtr jen s poznámkou
-  const [onlyWithNotes, setOnlyWithNotes] = useState(false);
+  // Filtr jen s poznámkou – výchozí stav je zapnutý
+  const [onlyWithNotes, setOnlyWithNotes] = useState(true);
 
   // Inline editing
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
@@ -221,7 +221,7 @@ function NotesContent() {
       <div className="max-w-4xl space-y-6">
         {/* Záhlaví */}
         <div>
-          <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Poznámky</h1>
+          <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Poznámky manažera</h1>
           <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
             Přidávejte manažerské poznámky k záznamům — klikněte na záznam a napište poznámku
           </p>

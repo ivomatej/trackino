@@ -256,9 +256,10 @@ function ReportsContent() {
   useEffect(() => { fetchProjects(); }, [fetchProjects]);
   useEffect(() => { fetchEntries(); }, [fetchEntries]);
 
-  // Skupiny dle dne
+  // Skupiny dle dne – lokální čas (ne UTC), aby záznamy padaly do správného dne
   const groupedEntries = entries.reduce<Record<string, TimeEntry[]>>((acc, e) => {
-    const day = e.start_time.split('T')[0];
+    const _d = new Date(e.start_time);
+    const day = `${_d.getFullYear()}-${String(_d.getMonth() + 1).padStart(2, '0')}-${String(_d.getDate()).padStart(2, '0')}`;
     if (!acc[day]) acc[day] = [];
     acc[day].push(e);
     return acc;
@@ -280,7 +281,9 @@ function ReportsContent() {
 
   const totalCost = entries.reduce((sum, e) => {
     if (!e.duration) return sum;
-    const rate = getRateForEntry(e.user_id, e.start_time.split('T')[0]);
+    const _cd = new Date(e.start_time);
+    const costDay = `${_cd.getFullYear()}-${String(_cd.getMonth() + 1).padStart(2, '0')}-${String(_cd.getDate()).padStart(2, '0')}`;
+    const rate = getRateForEntry(e.user_id, costDay);
     return rate !== null ? sum + (e.duration / 3600) * rate : sum;
   }, 0);
 
@@ -293,7 +296,9 @@ function ReportsContent() {
           if (!acc[e.user_id]) acc[e.user_id] = { userId: e.user_id, seconds: 0, cost: 0 };
           acc[e.user_id].seconds += e.duration ?? 0;
           if (e.duration) {
-            const rate = getRateForEntry(e.user_id, e.start_time.split('T')[0]);
+            const _pd = new Date(e.start_time);
+            const perDay = `${_pd.getFullYear()}-${String(_pd.getMonth() + 1).padStart(2, '0')}-${String(_pd.getDate()).padStart(2, '0')}`;
+            const rate = getRateForEntry(e.user_id, perDay);
             if (rate !== null) acc[e.user_id].cost += (e.duration / 3600) * rate;
           }
           return acc;
@@ -765,7 +770,9 @@ function ReportsContent() {
                               </div>
                               {(() => {
                                 if (!canSeeOthers || !entry.duration) return null;
-                                const rate = getRateForEntry(entry.user_id, entry.start_time.split('T')[0]);
+                                const _rd = new Date(entry.start_time);
+                                const rateDay = `${_rd.getFullYear()}-${String(_rd.getMonth() + 1).padStart(2, '0')}-${String(_rd.getDate()).padStart(2, '0')}`;
+                                const rate = getRateForEntry(entry.user_id, rateDay);
                                 if (rate === null) return null;
                                 const cost = (entry.duration / 3600) * rate;
                                 return (
