@@ -535,15 +535,15 @@ function SettingsContent() {
       <div className="max-w-5xl">
         <h1 className="text-xl font-bold mb-6" style={{ color: 'var(--text-primary)' }}>Nastavení workspace</h1>
 
-        <div className="flex gap-6 items-start">
-          {/* Levé vertikální menu */}
-          <div className="w-44 flex-shrink-0">
-            <nav className="flex flex-col gap-0.5 p-1 rounded-xl" style={{ background: 'var(--bg-hover)' }}>
+        <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start">
+          {/* Navigační menu – horizontální scroll na mobilu, vertikální na desktopu */}
+          <div className="w-full sm:w-44 flex-shrink-0">
+            <nav className="flex flex-row sm:flex-col gap-0.5 p-1 rounded-xl overflow-x-auto" style={{ background: 'var(--bg-hover)' }}>
               {tabs.map(tab => (
                 <button
                   key={tab.id}
                   onClick={() => { setActiveTab(tab.id); setMessage(''); }}
-                  className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+                  className="flex-shrink-0 sm:w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
                   style={{
                     background: activeTab === tab.id ? 'var(--bg-card)' : 'transparent',
                     color: activeTab === tab.id ? 'var(--text-primary)' : 'var(--text-muted)',

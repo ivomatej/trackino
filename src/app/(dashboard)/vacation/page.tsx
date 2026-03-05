@@ -436,7 +436,7 @@ function VacationContent() {
           <>
             {/* Statistiky */}
             {selectedUserId !== 'all' && (
-              <div className="grid grid-cols-3 gap-4 mb-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
                 <div className="rounded-xl border px-4 py-4 text-center" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
                   <div className="text-2xl font-bold tabular-nums" style={{ color: 'var(--primary)' }}>{usedDays}</div>
                   <div className="text-xs mt-1 font-medium" style={{ color: 'var(--text-muted)' }}>Čerpáno</div>
@@ -556,9 +556,10 @@ function VacationContent() {
               </div>
             ) : (
               <div className="rounded-xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+                <div className="overflow-x-auto">
                 <div
                   className="grid gap-4 px-4 py-2.5 border-b text-xs font-semibold"
-                  style={{ borderColor: 'var(--border)', color: 'var(--text-muted)', gridTemplateColumns: isWorkspaceAdmin && selectedUserId === 'all' ? '1fr 110px 110px 55px 1fr 36px' : '110px 110px 55px 1fr 36px' }}
+                  style={{ borderColor: 'var(--border)', color: 'var(--text-muted)', minWidth: '480px', gridTemplateColumns: isWorkspaceAdmin && selectedUserId === 'all' ? '1fr 110px 110px 55px 1fr 36px' : '110px 110px 55px 1fr 36px' }}
                 >
                   {isWorkspaceAdmin && selectedUserId === 'all' && <span>Uživatel</span>}
                   <span>Od</span><span>Do</span><span>Dní</span><span>Poznámka</span><span></span>
@@ -567,7 +568,7 @@ function VacationContent() {
                   <div
                     key={entry.id}
                     className="grid gap-4 px-4 py-3 border-b last:border-b-0 items-center group transition-colors"
-                    style={{ borderColor: 'var(--border)', gridTemplateColumns: isWorkspaceAdmin && selectedUserId === 'all' ? '1fr 110px 110px 55px 1fr 36px' : '110px 110px 55px 1fr 36px' }}
+                    style={{ borderColor: 'var(--border)', minWidth: '480px', gridTemplateColumns: isWorkspaceAdmin && selectedUserId === 'all' ? '1fr 110px 110px 55px 1fr 36px' : '110px 110px 55px 1fr 36px' }}
                     onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
                     onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                   >
@@ -598,6 +599,7 @@ function VacationContent() {
                     </button>
                   </div>
                 ))}
+                </div>{/* /overflow-x-auto */}
               </div>
             )}
 

@@ -163,6 +163,7 @@ function CalendarContent() {
 
   // Mini kalendář + nastavení
   const [miniCalDate, setMiniCalDate] = useState<Date>(() => new Date());
+  const [showLeftPanel, setShowLeftPanel] = useState(false);
   const [calDayStart, setCalDayStart] = useState(8);
   const [calDayEnd, setCalDayEnd] = useState(18);
   const [showCalSettings, setShowCalSettings] = useState(false);
@@ -656,7 +657,7 @@ function CalendarContent() {
     <div className="h-full flex flex-col" style={{ minHeight: 0 }}>
 
       {/* ── Záhlaví ──────────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-3 px-6 pt-6 pb-4 flex-shrink-0">
+      <div className="flex flex-wrap items-center gap-3 px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 flex-shrink-0">
         <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Kalendář</h1>
 
         {/* Navigace */}
@@ -715,11 +716,24 @@ function CalendarContent() {
       </div>
 
       {/* ── Hlavní obsah ─────────────────────────────────────────────────── */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
+
+        {/* Mobile toggle button for left panel */}
+        <div className="md:hidden px-4 pb-2 flex-shrink-0">
+          <button
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm border w-full"
+            style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
+            onClick={() => setShowLeftPanel(p => !p)}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            Mini kalendář & filtry
+            <svg className="ml-auto" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ transform: showLeftPanel ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+        </div>
 
         {/* ── Levý panel ───────────────────────────────────────────────── */}
         <div
-          className="w-56 flex-shrink-0 border-r overflow-y-auto flex flex-col"
+          className={`md:w-56 flex-shrink-0 border-r overflow-y-auto flex flex-col${showLeftPanel ? '' : ' hidden md:flex'}`}
           style={{ borderColor: 'var(--border)' }}
         >
           {/* Mini kalendář */}

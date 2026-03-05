@@ -72,6 +72,7 @@ function DocumentsContent() {
 
   // Aktuálně vybraná složka (null = vše)
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
+  const [showFolderPanel, setShowFolderPanel] = useState(false);
 
   // Modál pro složku
   const [folderModal, setFolderModal] = useState<{ open: boolean; id: string | null; name: string; color: string }>({
@@ -300,9 +301,22 @@ function DocumentsContent() {
           )}
         </div>
 
+        {/* Mobile toggle for folder panel */}
+        <div className="md:hidden mb-3">
+          <button
+            className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium border w-full"
+            style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
+            onClick={() => setShowFolderPanel(p => !p)}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            Složky
+            <svg className="ml-auto" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ transform: showFolderPanel ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }}><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+        </div>
+
         <div className="flex gap-5">
           {/* ── Levý panel: složky ─────────────────────────────────────────── */}
-          <div className="w-48 flex-shrink-0">
+          <div className={`md:w-48 flex-shrink-0${showFolderPanel ? '' : ' hidden md:block'}`}>
             <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>Složky</div>
             <div className="space-y-0.5">
               {/* Vše */}

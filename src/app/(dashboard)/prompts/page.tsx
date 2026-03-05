@@ -204,6 +204,7 @@ function PromptsContent() {
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [showFavorites, setShowFavorites] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [showFolderPanel, setShowFolderPanel] = useState(false);
 
   const [sortBy, setSortBy] = useState<'date' | 'likes' | 'title'>('date');
   const [searchQ, setSearchQ] = useState('');
@@ -430,11 +431,21 @@ function PromptsContent() {
 
   return (
     <DashboardLayout>
-      <div className="flex gap-5 h-[calc(100vh-80px)] min-h-0">
+      <div className="flex flex-col md:flex-row gap-5 md:h-[calc(100vh-80px)] min-h-0">
 
         {/* ── Left Panel ── */}
-        <div className="w-56 flex-shrink-0 flex flex-col gap-3">
-          <div className="p-3 rounded-xl border overflow-y-auto flex-1" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+        <div className="md:w-56 flex-shrink-0 flex flex-col gap-3">
+          {/* Mobile toggle */}
+          <button
+            className="md:hidden flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium border"
+            style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
+            onClick={() => setShowFolderPanel(p => !p)}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            Složky
+            <svg className="ml-auto" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ transform: showFolderPanel ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }}><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div className={`p-3 rounded-xl border md:flex md:flex-col overflow-y-auto flex-1${showFolderPanel ? ' flex flex-col' : ' hidden'}`} style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
             {/* Všechny prompty */}
             <button onClick={() => { setSelectedFolder(null); setShowFavorites(false); }}
               className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors mb-1"

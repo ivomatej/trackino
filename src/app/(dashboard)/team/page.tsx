@@ -438,12 +438,12 @@ function TeamContent() {
         </div>
 
         {/* Taby */}
-        <div className="flex gap-1 mb-6 rounded-lg p-1" style={{ background: 'var(--bg-hover)' }}>
+        <div className="flex gap-1 mb-6 rounded-lg p-1 overflow-x-auto" style={{ background: 'var(--bg-hover)' }}>
           {tabs.map(tab => (
             <button
               key={tab.key}
               onClick={() => { setActiveTab(tab.key); resetForm(); }}
-              className="flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors"
+              className="flex-shrink-0 px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap"
               style={{
                 background: activeTab === tab.key ? 'var(--bg-card)' : 'transparent',
                 color: activeTab === tab.key ? 'var(--text-primary)' : 'var(--text-muted)',
