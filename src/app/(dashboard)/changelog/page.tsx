@@ -11,6 +11,26 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.16.1 – 5. 3. 2026</h3>
+<ul>
+  <li><strong>iOS auto-zoom prevence – celá aplikace</strong> – na iPhonu se stránka automaticky přibližovala při focusu na textové pole, pokud mělo font-size menší než 16px. Nyní mají všechny interaktivní vstupy (input, textarea, select) na mobilu velikost 16px (text-base) a na desktopu 14px (sm:text-sm). Opraveno 98 elementů v 25 souborech.</li>
+  <li><strong>Prompty a Záložky – mobilní ⋮ menu složek</strong> – na mobilních zařízeních se akční ikonky složek (přidat podsložku, sdílet, přejmenovat, smazat) zobrazí přes nové tlačítko ⋮ s rozbalovacím menu. Na desktopu zůstávají původní ikonky při hoveru.</li>
+  <li><strong>Sdílení složek – možnost „Nesdílet s nikým"</strong> – v dialogu pro sdílení složky (Prompty i Záložky) přibyla třetí možnost: Nesdílet s nikým, která složku okamžitě vrátí do soukromého stavu.</li>
+  <li><strong>FolderTree dropdown – oprava oříznutí</strong> – rozbalovací menu složek se dříve ořezávalo za hranou kontejneru se scrollem. Nyní je menu pozicováno přes <code>position: fixed</code> s přesnými souřadnicemi z <code>getBoundingClientRect()</code>, takže se zobrazí celé.</li>
+  <li><strong>Záložky – popis inline vedle názvu</strong> – popisek záložky se nyní zobrazuje na stejném řádku jako název (za pomlčkou, šedě, zkráceno), nikoli pod ním, čímž se ušetří místo.</li>
+  <li><strong>Mobilní responzivita – 5 stránek</strong> – Nastavení workspace: horizontální nav s gradientovým indikátorem posunu; Tým: taby s gradientem; Správa workspace (Admin): karty akcí se přizpůsobí na celou šířku; Tarify (App Settings): tabulka modulů je horizontálně scrollovatelná; Kalendář: popisky hodin jsou nyní pod linkou (nikoli přes ni) a sloupce týdenního pohledu jsou širší.</li>
+</ul>
+
+<h3>v2.16.0 – 5. 3. 2026</h3>
+<ul>
+  <li><strong>Sidebar – WorkspaceSwitcher přesunut pod Dokumentaci</strong> – přepínač workspace se nyní nachází v dolní části sidebaru, přímo nad uživatelským panelem. Je scrollovatelný a expanduje inline.</li>
+  <li><strong>Prompty – UX vylepšení</strong> – odstraněn expand chevron a zobrazení jména autora (zůstává jen datum). Kliknutí na název promptu otevře editační dialog. Kódové bloky mají tlačítko pro kopírování (SVG ikona) a při kliknutí se vymaže placeholder.</li>
+  <li><strong>Sdílení složek (Prompty + Záložky) – výběr konkrétních uživatelů</strong> – sekce „Konkrétní uživatelé" zobrazuje seznam členů s avatary; zvýrazněný (bg-active) výběr ukazuje, komu je složka sdílena.</li>
+  <li><strong>Sidebar – reorganizace navigace</strong> – Důležité dny přesunuto do sekce SLEDOVÁNÍ (pod Kalendář); Připomínky přesunuto do sekce SPOLEČNOST (pod Pravidla v kanceláři); NÁSTROJE nyní obsahuje Záložky, Prompty a Převodník textu.</li>
+  <li><strong>Přejmenování: Poznámky → Poznámky manažera</strong> – přejmenováno v celé aplikaci pro větší jasnost.</li>
+  <li><strong>Nápověda – aktualizace</strong> – sekce nápovědy a tarify přizpůsobeny nové struktuře sidebaru.</li>
+</ul>
+
 <h3>v2.15.0 – 5. 3. 2026</h3>
 <ul>
   <li><strong>Sidebar – collapse tlačítko na desktopu</strong> – nové tlačítko (šipka vlevo) v záhlaví sidebaru umožňuje skrýt/zobrazit levý navigační panel na desktopu a tabletu. Stav (skrytý/viditelný) se ukládá do localStorage a přetrvá i po obnovení stránky. Hamburger v hlavičce slouží jako tlačítko pro znovuotevření skrytého sidebaru.</li>
