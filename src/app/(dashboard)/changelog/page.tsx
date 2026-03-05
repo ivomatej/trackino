@@ -11,6 +11,18 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.15.0 – 5. 3. 2026</h3>
+<ul>
+  <li><strong>Sidebar – collapse tlačítko na desktopu</strong> – nové tlačítko (šipka vlevo) v záhlaví sidebaru umožňuje skrýt/zobrazit levý navigační panel na desktopu a tabletu. Stav (skrytý/viditelný) se ukládá do localStorage a přetrvá i po obnovení stránky. Hamburger v hlavičce slouží jako tlačítko pro znovuotevření skrytého sidebaru.</li>
+  <li><strong>Kalendář – přepínač pohledu v hlavičce</strong> – přepínač Seznam / Týden / Měsíc byl přesunut z levého panelu do horního záhlaví kalendáře (vedle tlačítka Přidat událost). Levý panel nyní zobrazuje Moje kalendáře, automatické zdroje a nastavení <em>nahoře</em>, mini kalendář <em>dole</em>.</li>
+  <li><strong>Měřič – 2-řádkový layout na mobilu</strong> – na mobilních zařízeních se timer rozloží do 2 řádků: textové pole „Na čem pracuješ?" (plná šířka) a v druhém řádku výběry projektu, kategorie, štítků + časomíra + tlačítko START/STOP. Záhlaví headeru se automaticky přizpůsobí výšce.</li>
+  <li><strong>Měřič – větší vstupní pole (iOS anti-zoom)</strong> – textové pole „Na čem pracuješ?" má nyní font-size 16px na mobilech (text-base), čímž se zabrání automatickému přiblížení obrazovky na iPhonu při kliknutí na pole.</li>
+  <li><strong>Měřič – větší akční ikonky</strong> – ikonky akcí (spustit znovu, poznámka, smazat) v seznamu záznamů mají větší tap target na mobilech (p-1.5) a větší ikony (16px) pro pohodlnější ovládání dotykem.</li>
+  <li><strong>Měřič – fix zaoblených rohů skupin</strong> – záhlaví skupiny dnů (šedé pozadí „Dnes", „Včera") nyní správně sleduje zaoblené rohy rámečku (rounded-t-xl) a nepřesahuje do rohů karty.</li>
+  <li><strong>Dovolená – přizpůsobení hlavičky pro mobil</strong> – hlavička stránky Dovolená je na mobilu dvouřádková: název vlevo, tlačítka (výběr uživatele + Přidat) vpravo/pod ním. Text tlačítka se zkrátí na „Přidat" na úzkých obrazovkách.</li>
+  <li><strong>Úpravy aplikace – odstraněn SQL banner</strong> – informační banner s SQL migrací byl odstraněn z celé stránky (migrace je dávno aplikována).</li>
+</ul>
+
 <h3>v2.14.0 – 5. 3. 2026</h3>
 <ul>
   <li><strong>Přepínač workspace přesunut do sidebaru</strong> – přepínač workspace (viditelný pouze pokud máte přístup do 2+ workspace) byl přesunut z horního záhlaví do levého postranního panelu, nad sekci s uživatelským účtem. Rozbalovací menu se otevírá <em>nahoru</em> pro lepší přehlednost.</li>

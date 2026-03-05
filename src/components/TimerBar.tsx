@@ -506,19 +506,22 @@ export default function TimerBar({ onEntryChanged, playData }: TimerBarProps) {
   const selectedProjectClientName = selectedProject ? (projectClientMap[selectedProject] ?? '') : '';
 
   return (
-    <div className="flex items-center gap-2 sm:gap-3 w-full">
-      {/* Popis – omezená šířka na desktopu */}
+    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full">
+      {/* Popis – full width na mobilu, flex-1 na desktopu */}
       <input
         type="text"
         value={description}
         onChange={(e) => setDescription(e.target.value)}
         placeholder="Na čem pracuješ?"
-        className="flex-1 min-w-0 px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
+        className="flex-1 min-w-0 px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
         style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
         onKeyDown={(e) => {
           if (e.key === 'Enter' && !isRunning) startTimer();
         }}
       />
+
+      {/* Pickers + timer + tlačítka – druhý řádek na mobilu, pokračování řádku na desktopu */}
+      <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
 
       {/* Projekt picker */}
       <div className="relative flex-shrink-0" ref={projectPickerRef}>
@@ -815,7 +818,7 @@ export default function TimerBar({ onEntryChanged, playData }: TimerBarProps) {
 
       {/* Čas – JetBrains Mono font */}
       <div
-        className="text-lg sm:text-xl font-bold tabular-nums min-w-[85px] sm:min-w-[100px] text-center"
+        className="text-lg sm:text-xl font-bold tabular-nums min-w-[85px] sm:min-w-[100px] text-center ml-auto sm:ml-0"
         style={{
           color: isRunning ? 'var(--primary)' : 'var(--text-muted)',
           letterSpacing: '0.02em',
@@ -861,6 +864,8 @@ export default function TimerBar({ onEntryChanged, playData }: TimerBarProps) {
           </button>
         </div>
       )}
+
+      </div>{/* /pickers row */}
     </div>
   );
 }

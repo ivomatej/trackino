@@ -358,16 +358,16 @@ function VacationContent() {
       <div className="max-w-3xl">
 
         {/* Hlavička */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <div>
             <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Dovolená</h1>
             <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
-              Přehled dovolené za rok {currentYear}
+              Přehled za rok {currentYear}
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
             {isWorkspaceAdmin && allProfiles.length > 0 && activeTab === 'records' && (
-              <div className="relative">
+              <div className="relative flex-shrink-0">
                 <select
                   value={selectedUserId}
                   onChange={(e) => setSelectedUserId(e.target.value)}
@@ -386,13 +386,14 @@ function VacationContent() {
             {(canUseVacation || isWorkspaceAdmin) && activeTab === 'records' && (
               <button
                 onClick={() => setShowForm(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-90"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-90 flex-shrink-0"
                 style={{ background: 'var(--primary)' }}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
                 </svg>
-                Přidat dovolenou
+                <span className="hidden sm:inline">Přidat dovolenou</span>
+                <span className="sm:hidden">Přidat</span>
               </button>
             )}
           </div>

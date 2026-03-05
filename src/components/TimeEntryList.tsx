@@ -244,7 +244,7 @@ export default function TimeEntryList({ refreshKey, onPlay }: TimeEntryListProps
       {days.map(day => (
         <div key={day.date} className="rounded-xl border" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
           {/* Header dne */}
-          <div className="px-4 sm:px-6 py-2.5 border-b flex items-center justify-between" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
+          <div className="px-4 sm:px-6 py-2.5 border-b flex items-center justify-between rounded-t-xl" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
             <h2 className="text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>
               {day.label === 'Dnes' || day.label === 'Včera'
                 ? day.label
@@ -337,7 +337,7 @@ export default function TimeEntryList({ refreshKey, onPlay }: TimeEntryListProps
                   </div>
 
                   {/* Čas + akce */}
-                  <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                  <div className="flex items-center gap-3 sm:gap-3 flex-shrink-0">
                     <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
                       {formatTimeRange(entry.start_time, entry.end_time)}
                     </span>
@@ -355,13 +355,13 @@ export default function TimeEntryList({ refreshKey, onPlay }: TimeEntryListProps
                           taskId: entry.task_id || '',
                           tagIds: entryTagMap[entry.id] ?? [],
                         })}
-                        className="p-1 rounded transition-colors"
+                        className="p-1.5 sm:p-1 rounded transition-colors"
                         style={{ color: 'var(--text-muted)' }}
                         onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--primary)'; }}
                         onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
                         title="Spustit znovu"
                       >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                           <polygon points="5 3 19 12 5 21 5 3" />
                         </svg>
                       </button>
@@ -379,12 +379,12 @@ export default function TimeEntryList({ refreshKey, onPlay }: TimeEntryListProps
                           }
                         }}
                         title={entry.manager_note ? 'Upravit poznámku' : 'Přidat poznámku'}
-                        className="p-1 rounded transition-colors"
+                        className="p-1.5 sm:p-1 rounded transition-colors"
                         style={{ color: entry.manager_note ? '#d97706' : 'var(--text-muted)' }}
                         onMouseEnter={(e) => { e.currentTarget.style.color = '#d97706'; }}
                         onMouseLeave={(e) => { e.currentTarget.style.color = entry.manager_note ? '#d97706' : 'var(--text-muted)'; }}
                       >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                           <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                         </svg>
@@ -394,13 +394,13 @@ export default function TimeEntryList({ refreshKey, onPlay }: TimeEntryListProps
                     {/* Smazat – vždy viditelné */}
                     <button
                       onClick={() => deleteEntry(entry.id)}
-                      className="p-1 rounded transition-colors"
+                      className="p-1.5 sm:p-1 rounded transition-colors"
                       style={{ color: 'var(--text-muted)' }}
                       onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--danger)'; }}
                       onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
                       title="Smazat"
                     >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="3 6 5 6 21 6" />
                         <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
                         <path d="M10 11v6" /><path d="M14 11v6" />

@@ -52,6 +52,13 @@ Před implementací nového modulu nebo funkce se podívej do existujícího kó
 - **Select dropdown šipky**: Každý `<select>` element musí mít vlastní vizuální šipku – obal ho do `<div className="relative">`, přidej `appearance-none pr-8` na select a vlož SVG chevron jako absolutně pozicovaný dekorativní prvek (`pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2`). Nikdy nespoléhej na nativní šipku prohlížeče, která v tmavém režimu nebo na různých platformách vypadá jinak.
 - **Color picker**: Po výběru barvy musí být zvolená barva vizuálně jasně oddělena od ostatních – zvýrazňovací kroužek (ring/outline) nesmí přesahovat do sousedních barev. Používej `ring-2 ring-offset-2 ring-[var(--primary)]` nebo ekvivalent s `outline-offset`. Vždy ověř, že se kroužek správně zobrazuje v tmavém i světlém režimu.
 
+### 11. iOS auto-zoom prevence na inputech
+Na iOS Safari se stránka automaticky přiblíží (zoom), pokud má `<input>` nebo `<textarea>` menší `font-size` než **16px** (tj. méně než `text-base` v Tailwindu). Pravidla:
+- Vždy používej `text-base sm:text-sm` (nebo jen `text-base`) na všech interaktivních inputech a textareách, aby nedocházelo k automatickému přiblížení na iPhonu.
+- **Nikdy** nepoužívej `text-xs` nebo `text-sm` samotné na inputech, které uživatel aktivně vyplňuje (vyhledávací pole, formulářová pole, timer vstup atd.).
+- Výjimka: inputy ve vyskakovacích panelech (dropdown menu, picker) mohou mít `text-sm` pokud jsou malé – ale hlavní vstupní pole na stránce a v headeru musí mít `text-base`.
+- Toto platí pro všechny stránky a komponenty v celé aplikaci Trackino.
+
 ### 9. Responzivita a světlý/tmavý režim
 Každý nový modul nebo funkce musí být plně funkční na:
 - **Mobil** – Android i iPhone (malé obrazovky, touch gesta, dostatečné tap targety min. 44px)

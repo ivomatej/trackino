@@ -155,6 +155,21 @@ function useSystemNotifications() {
 
 export default function DashboardLayout({ children, showTimer = false, onTimerEntryChanged, timerPlayData }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem('trackino_sidebar_collapsed') === '1';
+  });
+
+  const toggleDesktopSidebar = () => {
+    setSidebarCollapsed(prev => {
+      const next = !prev;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('trackino_sidebar_collapsed', next ? '1' : '0');
+      }
+      return next;
+    });
+  };
+
   const { isPendingApproval, isWorkspaceLocked } = useWorkspace();
   const { profile } = useAuth();
   // Master admin vidí zamčený workspace i tak (aby mohl odemknout)
@@ -165,10 +180,15 @@ export default function DashboardLayout({ children, showTimer = false, onTimerEn
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--bg-main)' }}>
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        collapsed={sidebarCollapsed}
+        onCollapseDesktop={toggleDesktopSidebar}
+      />
 
-      {/* Main content */}
-      <div className="lg:ml-[var(--sidebar-width)] min-h-screen flex flex-col">
+      {/* Main content – posouvá se doleva při collapse sidebaru na desktopu */}
+      <div className={`${!sidebarCollapsed ? 'lg:ml-[var(--sidebar-width)]' : ''} min-h-screen flex flex-col transition-[margin] duration-200 ease-in-out`}>
         {/* Topbar s timerem */}
         <header
           className="sticky top-0 z-30"
@@ -206,14 +226,21 @@ export default function DashboardLayout({ children, showTimer = false, onTimerEn
           ))}
 
           {/* Horní řádek: hamburger + timer */}
-          <div className="flex items-center gap-3 px-4 lg:px-6 h-[var(--topbar-height)] border-b" style={{ borderColor: 'var(--border)' }}>
-            {/* Hamburger (mobile) */}
+          <div className="flex items-center gap-3 px-4 lg:px-6 py-2.5 sm:py-0 sm:h-[var(--topbar-height)] border-b" style={{ borderColor: 'var(--border)' }}>
+            {/* Hamburger / Collapse toggle */}
             <button
-              onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 -ml-2 rounded-lg transition-colors flex-shrink-0"
+              onClick={() => {
+                if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+                  toggleDesktopSidebar();
+                } else {
+                  setSidebarOpen(true);
+                }
+              }}
+              className="p-2 -ml-2 rounded-lg transition-colors flex-shrink-0"
               style={{ color: 'var(--text-secondary)' }}
               onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
               onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              title={sidebarCollapsed ? 'Zobrazit panel' : 'Skrýt panel'}
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <line x1="3" y1="6" x2="21" y2="6" />

@@ -701,9 +701,26 @@ function CalendarContent() {
 
         <div className="flex-1" />
 
+        {/* Přepínač pohledu – v hlavičce */}
+        <div className="flex rounded-lg overflow-hidden border flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
+          {(['list', 'week', 'month'] as ViewType[]).map(v => (
+            <button
+              key={v}
+              onClick={() => setView(v)}
+              className="px-2.5 sm:px-3.5 py-1.5 text-xs sm:text-sm font-medium transition-colors"
+              style={{
+                background: view === v ? 'var(--primary)' : 'var(--bg-card)',
+                color: view === v ? 'white' : 'var(--text-secondary)',
+              }}
+            >
+              {v === 'list' ? 'Seznam' : v === 'week' ? 'Týden' : 'Měsíc'}
+            </button>
+          ))}
+        </div>
+
         <button
           onClick={() => openNewEvent()}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white"
+          className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm font-medium text-white flex-shrink-0"
           style={{ background: 'var(--primary)' }}
           onMouseEnter={e => (e.currentTarget.style.opacity = '0.9')}
           onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
@@ -711,7 +728,8 @@ function CalendarContent() {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
           </svg>
-          Přidat událost
+          <span className="hidden sm:inline">Přidat událost</span>
+          <span className="sm:hidden">Přidat</span>
         </button>
       </div>
 
@@ -736,99 +754,9 @@ function CalendarContent() {
           className={`md:w-56 flex-shrink-0 border-r overflow-y-auto flex flex-col${showLeftPanel ? '' : ' hidden md:flex'}`}
           style={{ borderColor: 'var(--border)' }}
         >
-          {/* Mini kalendář */}
-          <div className="px-3 pt-3 pb-2">
-            {/* Navigace mini kalu */}
-            <div className="flex items-center justify-between mb-1.5">
-              <button
-                onClick={() => setMiniCalDate(d => { const n = new Date(d); n.setMonth(n.getMonth() - 1); return n; })}
-                className="p-1 rounded transition-colors"
-                style={{ color: 'var(--text-muted)' }}
-                onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
-                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-              >
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="15 18 9 12 15 6" />
-                </svg>
-              </button>
-              <span className="text-[11px] font-semibold capitalize" style={{ color: 'var(--text-primary)' }}>
-                {MONTH_NAMES[miniCalDate.getMonth()]} {miniCalDate.getFullYear()}
-              </span>
-              <button
-                onClick={() => setMiniCalDate(d => { const n = new Date(d); n.setMonth(n.getMonth() + 1); return n; })}
-                className="p-1 rounded transition-colors"
-                style={{ color: 'var(--text-muted)' }}
-                onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
-                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-              >
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="9 18 15 12 9 6" />
-                </svg>
-              </button>
-            </div>
-
-            {/* Day name headers */}
-            <div className="grid grid-cols-7 mb-0.5">
-              {DAY_NAMES_SHORT.map(d => (
-                <div key={d} className="text-center text-[9px] font-semibold py-0.5" style={{ color: 'var(--text-muted)' }}>
-                  {d.charAt(0)}
-                </div>
-              ))}
-            </div>
-
-            {/* Day grid */}
-            {miniCalGrid.map((week, wi) => (
-              <div key={wi} className="grid grid-cols-7">
-                {week.map((day, di) => {
-                  const isToday = isSameDay(day, today);
-                  const isCurMonth = day.getMonth() === miniCalDate.getMonth();
-                  const isSelected = isSameDay(day, currentDate);
-                  return (
-                    <div key={di} className="flex items-center justify-center py-0.5">
-                      <button
-                        onClick={() => {
-                          setCurrentDate(day);
-                          setMiniCalDate(day);
-                        }}
-                        className="w-6 h-6 flex items-center justify-center rounded-full text-[10px] font-medium transition-colors"
-                        style={{
-                          background: isToday ? 'var(--primary)' : isSelected ? 'var(--bg-active)' : 'transparent',
-                          color: isToday ? 'white' : isSelected ? 'var(--primary)' : isCurMonth ? 'var(--text-primary)' : 'var(--text-muted)',
-                        }}
-                        onMouseEnter={e => { if (!isToday) e.currentTarget.style.background = 'var(--bg-hover)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = isToday ? 'var(--primary)' : isSelected ? 'var(--bg-active)' : 'transparent'; }}
-                      >
-                        {day.getDate()}
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
-
-          {/* Přepínač pohledu */}
-          <div className="px-3 pb-3">
-            <div className="flex rounded-lg overflow-hidden border" style={{ borderColor: 'var(--border)' }}>
-              {(['list', 'week', 'month'] as ViewType[]).map(v => (
-                <button
-                  key={v}
-                  onClick={() => setView(v)}
-                  className="flex-1 py-1.5 text-[11px] font-medium transition-colors"
-                  style={{
-                    background: view === v ? 'var(--primary)' : 'var(--bg-card)',
-                    color: view === v ? 'white' : 'var(--text-secondary)',
-                  }}
-                >
-                  {v === 'list' ? 'Sez.' : v === 'week' ? 'Týd.' : 'Měs.'}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Moje kalendáře */}
-          <div className="px-3 border-t flex-1" style={{ borderColor: 'var(--border)' }}>
-            <div className="mt-3 mb-4">
+          {/* ── Moje kalendáře (nahoře) ─────────────────────────────────── */}
+          <div className="px-3 pt-3 flex-1">
+            <div className="mb-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[10px] font-semibold tracking-wider" style={{ color: 'var(--text-muted)' }}>
                   MÉ KALENDÁŘE
@@ -899,7 +827,7 @@ function CalendarContent() {
             </div>
 
             {/* Nastavení kalendáře */}
-            <div className="border-t pt-3 pb-3" style={{ borderColor: 'var(--border)' }}>
+            <div className="border-t pt-3 pb-1" style={{ borderColor: 'var(--border)' }}>
               <button
                 onClick={() => { setCalSettingsForm({ dayStart: calDayStart, dayEnd: calDayEnd }); setShowCalSettings(true); }}
                 className="flex items-center gap-2 w-full py-1 px-1 text-xs transition-colors rounded"
@@ -914,6 +842,77 @@ function CalendarContent() {
                 Nastavení kalendáře
               </button>
             </div>
+          </div>
+
+          {/* ── Mini kalendář (dole) ─────────────────────────────────────── */}
+          <div className="px-3 pt-3 pb-3 border-t flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
+            {/* Navigace mini kalu */}
+            <div className="flex items-center justify-between mb-1.5">
+              <button
+                onClick={() => setMiniCalDate(d => { const n = new Date(d); n.setMonth(n.getMonth() - 1); return n; })}
+                className="p-1 rounded transition-colors"
+                style={{ color: 'var(--text-muted)' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+              >
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="15 18 9 12 15 6" />
+                </svg>
+              </button>
+              <span className="text-[11px] font-semibold capitalize" style={{ color: 'var(--text-primary)' }}>
+                {MONTH_NAMES[miniCalDate.getMonth()]} {miniCalDate.getFullYear()}
+              </span>
+              <button
+                onClick={() => setMiniCalDate(d => { const n = new Date(d); n.setMonth(n.getMonth() + 1); return n; })}
+                className="p-1 rounded transition-colors"
+                style={{ color: 'var(--text-muted)' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+              >
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Day name headers */}
+            <div className="grid grid-cols-7 mb-0.5">
+              {DAY_NAMES_SHORT.map(d => (
+                <div key={d} className="text-center text-[9px] font-semibold py-0.5" style={{ color: 'var(--text-muted)' }}>
+                  {d.charAt(0)}
+                </div>
+              ))}
+            </div>
+
+            {/* Day grid */}
+            {miniCalGrid.map((week, wi) => (
+              <div key={wi} className="grid grid-cols-7">
+                {week.map((day, di) => {
+                  const isToday = isSameDay(day, today);
+                  const isCurMonth = day.getMonth() === miniCalDate.getMonth();
+                  const isSelected = isSameDay(day, currentDate);
+                  return (
+                    <div key={di} className="flex items-center justify-center py-0.5">
+                      <button
+                        onClick={() => {
+                          setCurrentDate(day);
+                          setMiniCalDate(day);
+                        }}
+                        className="w-6 h-6 flex items-center justify-center rounded-full text-[10px] font-medium transition-colors"
+                        style={{
+                          background: isToday ? 'var(--primary)' : isSelected ? 'var(--bg-active)' : 'transparent',
+                          color: isToday ? 'white' : isSelected ? 'var(--primary)' : isCurMonth ? 'var(--text-primary)' : 'var(--text-muted)',
+                        }}
+                        onMouseEnter={e => { if (!isToday) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = isToday ? 'var(--primary)' : isSelected ? 'var(--bg-active)' : 'transparent'; }}
+                      >
+                        {day.getDate()}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
           </div>
         </div>
 

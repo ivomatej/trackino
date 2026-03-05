@@ -12,6 +12,8 @@ import type { Workspace } from '@/types/database';
 interface SidebarProps {
   open: boolean;
   onClose: () => void;
+  collapsed?: boolean;
+  onCollapseDesktop?: () => void;
 }
 
 interface NavItem {
@@ -166,7 +168,7 @@ function WorkspaceSwitcher() {
   );
 }
 
-export default function Sidebar({ open, onClose }: SidebarProps) {
+export default function Sidebar({ open, onClose, collapsed = false, onCollapseDesktop }: SidebarProps) {
   const pathname = usePathname();
   const { user, profile, signOut } = useAuth();
   const { currentWorkspace, userRole, currentMembership, hasModule } = useWorkspace();
@@ -577,7 +579,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
         className={`
           fixed top-0 left-0 bottom-0 z-50 w-[var(--sidebar-width)] flex flex-col
           border-r transition-transform duration-200 ease-in-out
-          lg:translate-x-0
+          ${!collapsed ? 'lg:translate-x-0' : 'lg:-translate-x-full'}
           ${open ? 'translate-x-0' : '-translate-x-full'}
         `}
         style={{ background: 'var(--bg-sidebar)', borderColor: 'var(--border)' }}
@@ -597,11 +599,30 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
               </div>
             </div>
           </Link>
-          <button onClick={onClose} className="lg:hidden p-1 rounded" style={{ color: 'var(--text-muted)' }}>
+          {/* Zavřít – pouze mobil */}
+          <button onClick={onClose} className="lg:hidden p-1.5 rounded-lg transition-colors" style={{ color: 'var(--text-muted)' }}
+            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+          >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
+          {/* Collapse – pouze desktop */}
+          {onCollapseDesktop && (
+            <button
+              onClick={onCollapseDesktop}
+              className="hidden lg:flex p-1.5 rounded-lg transition-colors"
+              title="Skrýt panel"
+              style={{ color: 'var(--text-muted)' }}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+            </button>
+          )}
         </div>
 
         {/* Navigace se skupinami */}
