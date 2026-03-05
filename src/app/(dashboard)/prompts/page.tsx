@@ -675,11 +675,6 @@ function PromptsContent() {
               return (
                 <div key={p.id} className="p-4 rounded-xl border" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
                   <div className="flex items-start gap-3">
-                    {/* Avatar */}
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 text-white"
-                      style={{ background: author?.avatar_color ?? 'var(--primary)' }}>
-                      {getInitials(author?.display_name ?? '?')}
-                    </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5 sm:gap-2">
                         <div className="min-w-0">
@@ -689,6 +684,10 @@ function PromptsContent() {
                           </h3>
                           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                             <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{new Date(p.created_at).toLocaleDateString('cs-CZ')}</span>
+                            {author?.display_name && <>
+                              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>·</span>
+                              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{author.display_name}</span>
+                            </>}
                             {p.is_shared && <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: 'var(--primary)20', color: 'var(--primary)' }}>Sdílený</span>}
                             {promptComments.length > 0 && <span className="text-xs" style={{ color: 'var(--text-muted)' }}>💬 {promptComments.length}</span>}
                           </div>

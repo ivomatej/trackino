@@ -599,13 +599,14 @@ function BookmarksContent() {
                           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                             <a href={domain} target="_blank" rel="noopener noreferrer"
                               className="text-xs truncate hover:underline" style={{ color: 'var(--text-muted)' }}>
-                              {domain.replace(/^https?:\/\//, '')}
+                              {domain.replace(/^https?:\/\/(www\.)?/, '')}
                             </a>
                             <span className="text-xs" style={{ color: 'var(--text-muted)' }}>·</span>
-                            <span className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0" style={{ background: author?.avatar_color ?? 'var(--primary)', fontSize: '10px' }}>
-                              {getInitials(author?.display_name ?? '?')}
-                            </span>
                             <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{new Date(b.created_at).toLocaleDateString('cs-CZ')}</span>
+                            {author?.display_name && <>
+                              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>·</span>
+                              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{author.display_name}</span>
+                            </>}
                             {b.is_shared && <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: 'var(--primary)20', color: 'var(--primary)' }}>Sdílená</span>}
                           </div>
                         </div>
