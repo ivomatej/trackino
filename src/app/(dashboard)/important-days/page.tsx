@@ -235,7 +235,7 @@ CREATE POLICY "Auth full" ON trackino_important_days
       )}
 
       {/* Hlavička */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Důležité dny</h1>
           <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>

@@ -163,7 +163,7 @@ function FolderTree({
               <span className="flex-1 text-xs truncate" style={{ color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
                 {folder.name}
               </span>
-              <div className="opacity-0 group-hover/folder:opacity-100 flex items-center gap-0.5 flex-shrink-0 transition-opacity">
+              <div className="sm:opacity-0 sm:group-hover/folder:opacity-100 flex items-center gap-0.5 flex-shrink-0 transition-opacity">
                 {depth < MAX_DEPTH - 1 && (
                   <button type="button" title="Přidat podsložku" onClick={e => { e.stopPropagation(); onAddSub(folder.id, depth + 1); }}
                     className="w-5 h-5 flex items-center justify-center rounded hover:bg-[var(--bg-hover)]"
@@ -264,7 +264,7 @@ function PromptsContent() {
       supabase.from('trackino_prompt_comments').select('*').order('created_at'),
       supabase.from('trackino_prompt_likes').select('*'),
       supabase.from('trackino_prompt_favorites').select('*').eq('user_id', userId),
-      supabase.from('trackino_workspace_members').select('user_id, trackino_profiles(display_name, email, avatar_color)').eq('workspace_id', wsId),
+      supabase.from('trackino_workspace_members').select('user_id').eq('workspace_id', wsId),
     ]);
     setFolders(fRes.data ?? []);
     setFolderShares(fsRes.data ?? []);
@@ -292,14 +292,23 @@ function PromptsContent() {
     setLikes(likesMap);
     setFavorites(new Set((favRes.data ?? []).map((f: { prompt_id: string }) => f.prompt_id)));
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const ms: Member[] = (mRes.data ?? []).map((m: any) => {
-      const p = Array.isArray(m.trackino_profiles) ? m.trackino_profiles[0] : m.trackino_profiles;
+    // Fetch profilů pro workspace members (spolehlivý dvou-krokový přístup)
+    const memberUserIds: string[] = (mRes.data ?? []).map((m: { user_id: string }) => m.user_id);
+    let memberProfiles: { id: string; display_name: string | null; email: string | null; avatar_color: string | null }[] = [];
+    if (memberUserIds.length > 0) {
+      const { data: profData } = await supabase
+        .from('trackino_profiles')
+        .select('id, display_name, email, avatar_color')
+        .in('id', memberUserIds);
+      memberProfiles = profData ?? [];
+    }
+    const ms: Member[] = memberUserIds.map((uid: string) => {
+      const prof = memberProfiles.find(p => p.id === uid);
       return {
-        user_id: m.user_id,
-        display_name: p?.display_name ?? m.user_id,
-        email: p?.email ?? '',
-        avatar_color: (p as any)?.avatar_color ?? 'var(--primary)',
+        user_id: uid,
+        display_name: prof?.display_name ?? uid,
+        email: prof?.email ?? '',
+        avatar_color: prof?.avatar_color ?? 'var(--primary)',
       };
     });
     // Fetch profiles for prompt creators not in workspace members (e.g., master admin)
