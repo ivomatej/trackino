@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo, ReactNode } from 'react';
+import { useState, useEffect, useMemo, ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -93,37 +93,22 @@ function RemoveIcon() {
 function WorkspaceSwitcher() {
   const { workspaces, currentWorkspace, selectWorkspace } = useWorkspace();
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
 
   if (workspaces.length <= 1) return null;
 
   return (
-    <div className="relative border-b" style={{ borderColor: 'var(--border)' }} ref={ref}>
-      {/* Dropdown – otevírá se nahoru */}
+    <div className="border-t mt-2 pt-1" style={{ borderColor: 'var(--border)' }}>
+      {/* Rozbalený seznam – inline nad triggerem, stejný styl jako user panel */}
       {open && (
-        <div
-          className="absolute left-0 right-0 bottom-full rounded-xl border shadow-xl z-50 py-1"
-          style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}
-        >
-          {workspaces.map((ws: Workspace) => (
+        <div className="px-3 py-1 border-b" style={{ borderColor: 'var(--border)' }}>
+          {workspaces.filter(ws => ws.id !== currentWorkspace?.id).map((ws: Workspace) => (
             <button
               key={ws.id}
               onClick={() => { selectWorkspace(ws); setOpen(false); }}
-              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-colors"
-              style={{
-                color: ws.id === currentWorkspace?.id ? 'var(--primary)' : 'var(--text-primary)',
-                background: ws.id === currentWorkspace?.id ? 'var(--bg-active)' : 'transparent',
-              }}
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-left transition-colors"
+              style={{ color: 'var(--text-secondary)' }}
               onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--bg-hover)'}
-              onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = ws.id === currentWorkspace?.id ? 'var(--bg-active)' : 'transparent'}
+              onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
             >
               <div
                 className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
@@ -131,12 +116,7 @@ function WorkspaceSwitcher() {
               >
                 {ws.name.charAt(0).toUpperCase()}
               </div>
-              <span className="flex-1 truncate font-medium">{ws.name}</span>
-              {ws.id === currentWorkspace?.id && (
-                <svg className="flex-shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-              )}
+              <span className="flex-1 truncate">{ws.name}</span>
             </button>
           ))}
         </div>
@@ -305,6 +285,11 @@ export default function Sidebar({ open, onClose, collapsed = false, onCollapseDe
       trackingItems.push({ label: 'Kalendář', href: '/calendar', icon: ICONS.calendar });
     }
 
+    // Důležité dny – pod Kalendářem
+    if (hasModule('important_days')) {
+      trackingItems.push({ label: 'Důležité dny', href: '/important-days', icon: ICONS.importantDays });
+    }
+
     // Dovolená – viditelné pro uživatele s nárokem nebo adminy
     if (hasModule('vacation') && (canUseVacation || isAdmin)) {
       trackingItems.push({ label: 'Dovolená', href: '/vacation', icon: ICONS.vacation });
@@ -330,7 +315,7 @@ export default function Sidebar({ open, onClose, collapsed = false, onCollapseDe
       analyzeItems.push({ label: 'Podřízení', href: '/subordinates', icon: ICONS.subordinates });
     }
     if (hasModule('notes') && isManagerOrAdmin) {
-      analyzeItems.push({ label: 'Poznámky', href: '/notes', icon: ICONS.notes });
+      analyzeItems.push({ label: 'Poznámky manažera', href: '/notes', icon: ICONS.notes });
     }
     if (hasModule('attendance')) {
       analyzeItems.push({ label: 'Přehled hodin', href: '/attendance', icon: ICONS.attendance });
@@ -339,25 +324,16 @@ export default function Sidebar({ open, onClose, collapsed = false, onCollapseDe
       analyzeItems.push({ label: 'Analýza kategorií', href: '/category-report', icon: ICONS.categoryReport });
     }
 
-    // NÁSTROJE
+    // NÁSTROJE – pořadí: Záložky, Prompty, Převodník textu
     const nastrojeItems: NavItem[] = [];
-    if (hasModule('text_converter')) {
-      nastrojeItems.push({ label: 'Převodník textu', href: '/text-converter', icon: ICONS.textConverter });
-    }
-    if (hasModule('important_days')) {
-      nastrojeItems.push({ label: 'Důležité dny', href: '/important-days', icon: ICONS.importantDays });
-    }
-
-    if (hasModule('prompts')) {
-      nastrojeItems.push({ label: 'Prompty', href: '/prompts', icon: ICONS.prompts });
-    }
     if (hasModule('bookmarks')) {
       nastrojeItems.push({ label: 'Záložky', href: '/bookmarks', icon: ICONS.bookmarks });
     }
-
-    // Připomínky – viditelné všem členům (každý může posílat zpětnou vazbu)
-    if (hasModule('feedback')) {
-      nastrojeItems.push({ label: 'Připomínky', href: '/feedback', icon: ICONS.feedback });
+    if (hasModule('prompts')) {
+      nastrojeItems.push({ label: 'Prompty', href: '/prompts', icon: ICONS.prompts });
+    }
+    if (hasModule('text_converter')) {
+      nastrojeItems.push({ label: 'Převodník textu', href: '/text-converter', icon: ICONS.textConverter });
     }
 
     // SPRÁVA
@@ -430,6 +406,10 @@ export default function Sidebar({ open, onClose, collapsed = false, onCollapseDe
     }
     if (hasModule('office_rules')) {
       spolecnostItems.push({ label: 'Pravidla v kanceláři', href: '/office-rules', icon: ICONS.officeRules });
+    }
+    // Připomínky přesunuty do SPOLEČNOST
+    if (hasModule('feedback')) {
+      spolecnostItems.push({ label: 'Připomínky', href: '/feedback', icon: ICONS.feedback });
     }
     if (spolecnostItems.length > 0) {
       groups.push({
@@ -735,11 +715,13 @@ export default function Sidebar({ open, onClose, collapsed = false, onCollapseDe
               })}
             </div>
           </div>
+
+          {/* Workspace switcher – pod Dokumentací, scrollovatelný */}
+          <WorkspaceSwitcher />
         </nav>
 
-        {/* User panel + Workspace switcher */}
+        {/* User panel */}
         <div className="border-t" style={{ borderColor: 'var(--border)' }}>
-          <WorkspaceSwitcher />
           {showUserPanel && (
             <div className="px-3 py-2 border-b animate-fade-in" style={{ borderColor: 'var(--border)' }}>
               {/* Detailní nastavení */}

@@ -721,16 +721,33 @@ function BookmarksContent() {
               ))}
             </div>
             {shareType === 'users' && (
-              <div className="mb-4 max-h-40 overflow-y-auto space-y-1">
-                {members.filter(m => m.user_id !== userId).map(m => (
-                  <label key={m.user_id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-[var(--bg-hover)]">
-                    <input type="checkbox" checked={shareUserIds.includes(m.user_id)}
-                      onChange={e => setShareUserIds(prev => e.target.checked ? [...prev, m.user_id] : prev.filter(id => id !== m.user_id))}
-                      className="accent-[var(--primary)]" />
-                    <span className="text-sm" style={{ color: 'var(--text-primary)' }}>{m.display_name}</span>
-                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{m.email}</span>
-                  </label>
-                ))}
+              <div className="mb-4 max-h-48 overflow-y-auto space-y-1 rounded-xl border p-2" style={{ borderColor: 'var(--border)' }}>
+                {members.filter(m => m.user_id !== userId).length === 0 && (
+                  <p className="text-xs px-2 py-1" style={{ color: 'var(--text-muted)' }}>Žádní další členové workspace</p>
+                )}
+                {members.filter(m => m.user_id !== userId).map(m => {
+                  const isChecked = shareUserIds.includes(m.user_id);
+                  return (
+                    <label key={m.user_id}
+                      className="flex items-center gap-3 px-2 py-2 rounded-lg cursor-pointer transition-colors"
+                      style={{ background: isChecked ? 'var(--bg-active)' : 'transparent' }}
+                      onMouseEnter={e => { if (!isChecked) (e.currentTarget as HTMLElement).style.background = 'var(--bg-hover)'; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = isChecked ? 'var(--bg-active)' : 'transparent'; }}
+                    >
+                      <input type="checkbox" checked={isChecked}
+                        onChange={e => setShareUserIds(prev => e.target.checked ? [...prev, m.user_id] : prev.filter(id => id !== m.user_id))}
+                        className="accent-[var(--primary)] flex-shrink-0" />
+                      <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                        style={{ background: m.avatar_color ?? 'var(--primary)' }}>
+                        {getInitials(m.display_name)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm truncate" style={{ color: 'var(--text-primary)' }}>{m.display_name}</div>
+                        <div className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{m.email}</div>
+                      </div>
+                    </label>
+                  );
+                })}
               </div>
             )}
             <div className="flex gap-2">

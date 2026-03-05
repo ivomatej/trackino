@@ -63,7 +63,7 @@ function RichEditor({ value, onChange }: { value: string; onChange: (v: string) 
     const sel = window.getSelection();
     const selected = sel && sel.rangeCount > 0 ? sel.getRangeAt(0).toString() : '';
     document.execCommand('insertHTML', false,
-      `<pre style="background:var(--bg-hover);padding:12px;border-radius:8px;font-family:monospace;font-size:13px;overflow-x:auto;margin:8px 0;border:1px solid var(--border)"><code>${selected || 'kód zde'}</code></pre><p><br></p>`
+      `<pre class="code-block" style="position:relative;background:var(--bg-hover);padding:12px 40px 12px 12px;border-radius:8px;font-family:monospace;font-size:13px;overflow-x:auto;margin:8px 0;border:1px solid var(--border)"><code>${selected || 'kód zde'}</code></pre><p><br></p>`
     );
     if (ref.current) onChange(ref.current.innerHTML);
   };
@@ -95,12 +95,28 @@ function RichEditor({ value, onChange }: { value: string; onChange: (v: string) 
         onClick={(e) => {
           const target = e.target as Element;
           const codeEl = target.closest('code');
+          const preEl = target.closest('pre');
+
+          // Kliknutí na copy ikonu (pravý horní roh pre bloku)
+          if (preEl) {
+            const rect = preEl.getBoundingClientRect();
+            if (e.clientX > rect.right - 36 && e.clientY < rect.top + 32) {
+              const code = preEl.querySelector('code')?.textContent ?? '';
+              navigator.clipboard.writeText(code).catch(() => {});
+              return;
+            }
+          }
+
+          // Kliknutí na "kód zde" placeholder → smaž a nastav kurzor
           if (codeEl && codeEl.textContent === 'kód zde') {
+            codeEl.textContent = '';
             const range = document.createRange();
-            range.selectNodeContents(codeEl);
+            range.setStart(codeEl, 0);
+            range.collapse(true);
             const sel = window.getSelection();
             sel?.removeAllRanges();
             sel?.addRange(range);
+            if (ref.current) onChange(ref.current.innerHTML);
           }
         }}
         className="min-h-[200px] p-4 text-sm focus:outline-none prose-editor"
@@ -111,7 +127,9 @@ function RichEditor({ value, onChange }: { value: string; onChange: (v: string) 
         .prose-editor h3{font-size:1.05em;font-weight:600;margin:10px 0 4px}
         .prose-editor ul{list-style:disc;padding-left:20px;margin:4px 0}
         .prose-editor ol{list-style:decimal;padding-left:20px;margin:4px 0}
-        .prose-editor pre{background:var(--bg-hover);padding:12px;border-radius:8px;font-family:monospace;font-size:13px;overflow-x:auto;margin:8px 0;border:1px solid var(--border)}
+        .prose-editor pre{position:relative;background:var(--bg-hover);padding:12px 40px 12px 12px;border-radius:8px;font-family:monospace;font-size:13px;overflow-x:auto;margin:8px 0;border:1px solid var(--border)}
+        .prose-editor pre::after{content:"";position:absolute;top:8px;right:8px;width:20px;height:20px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='13' height='13' rx='2' ry='2'/%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:center;cursor:pointer;opacity:0.5;transition:opacity 0.15s}
+        .prose-editor pre:hover::after{opacity:1}
       `}</style>
     </div>
   );
@@ -240,7 +258,6 @@ function PromptsContent() {
   const [pmFolderId, setPmFolderId] = useState<string | null>(null);
   const [pmSaving, setPmSaving] = useState(false);
 
-  const [detailPrompt, setDetailPrompt] = useState<Prompt | null>(null);
   const [newComment, setNewComment] = useState('');
   const [addingComment, setAddingComment] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
@@ -406,7 +423,6 @@ function PromptsContent() {
   const deletePrompt = async (p: Prompt) => {
     if (!confirm(`Smazat prompt „${p.title}"?`)) return;
     await supabase.from('trackino_prompts').delete().eq('id', p.id);
-    if (detailPrompt?.id === p.id) setDetailPrompt(null);
     fetchAll();
   };
 
@@ -608,25 +624,11 @@ function PromptsContent() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <div className="flex items-center gap-1">
-                            <h3 className="font-semibold text-sm cursor-pointer hover:underline" style={{ color: 'var(--text-primary)' }}
-                              onClick={() => openPromptModal(p)}>
-                              {p.title}
-                            </h3>
-                            <button
-                              onClick={() => setDetailPrompt(detailPrompt?.id === p.id ? null : p)}
-                              className="w-5 h-5 flex items-center justify-center rounded transition-colors flex-shrink-0"
-                              style={{ color: 'var(--text-muted)' }}
-                              title={detailPrompt?.id === p.id ? 'Skrýt komentáře' : 'Zobrazit obsah a komentáře'}
-                            >
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
-                                style={{ transform: detailPrompt?.id === p.id ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>
-                                <polyline points="6 9 12 15 18 9"/>
-                              </svg>
-                            </button>
-                          </div>
+                          <h3 className="font-semibold text-sm cursor-pointer hover:underline" style={{ color: 'var(--text-primary)' }}
+                            onClick={() => openPromptModal(p)}>
+                            {p.title}
+                          </h3>
                           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{author?.display_name ?? '—'}</span>
                             <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{new Date(p.created_at).toLocaleDateString('cs-CZ')}</span>
                             {p.is_shared && <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: 'var(--primary)20', color: 'var(--primary)' }}>Sdílený</span>}
                             {promptComments.length > 0 && <span className="text-xs" style={{ color: 'var(--text-muted)' }}>💬 {promptComments.length}</span>}
@@ -678,92 +680,6 @@ function PromptsContent() {
                         </div>
                       </div>
 
-                      {/* Detail view */}
-                      {detailPrompt?.id === p.id && (
-                        <div className="mt-4 space-y-4">
-                          {/* Content */}
-                          <div className="prose-editor text-sm" dangerouslySetInnerHTML={{ __html: p.content }}
-                            style={{ color: 'var(--text-primary)' }} />
-                          {/* Comments */}
-                          <div className="border-t pt-3" style={{ borderColor: 'var(--border)' }}>
-                            <h4 className="text-xs font-semibold mb-2" style={{ color: 'var(--text-secondary)' }}>Komentáře ({promptComments.length})</h4>
-                            {promptComments.map(c => {
-                              const cm = getMember(c.user_id);
-                              const isMyComment = c.user_id === userId;
-                              return (
-                                <div key={c.id} className="flex gap-2 mb-2">
-                                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-                                    style={{ background: cm?.avatar_color ?? 'var(--primary)' }}>
-                                    {getInitials(cm?.display_name ?? '?')}
-                                  </div>
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{cm?.display_name}</span>
-                                      <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{new Date(c.created_at).toLocaleDateString('cs-CZ')}</span>
-                                      {isMyComment && editingComment?.id !== c.id && (
-                                        <>
-                                          <button
-                                            onClick={() => setEditingComment({ id: c.id, content: c.content })}
-                                            className="text-xs px-1.5 py-0.5 rounded hover:bg-[var(--bg-hover)] transition-colors"
-                                            style={{ color: 'var(--text-muted)' }}
-                                            title="Upravit komentář"
-                                          >
-                                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                                          </button>
-                                          <button
-                                            onClick={() => deleteComment(c.id)}
-                                            className="text-xs px-1.5 py-0.5 rounded hover:bg-[var(--bg-hover)] transition-colors"
-                                            style={{ color: 'var(--danger)' }}
-                                            title="Smazat komentář"
-                                          >
-                                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                                              <path d="M9 6V4h6v2"/>
-                                            </svg>
-                                          </button>
-                                        </>
-                                      )}
-                                    </div>
-                                    {editingComment?.id === c.id ? (
-                                      <div className="mt-1 space-y-1.5">
-                                        <textarea
-                                          value={editingComment.content}
-                                          onChange={e => setEditingComment({ ...editingComment, content: e.target.value })}
-                                          rows={2}
-                                          className="w-full px-2 py-1.5 rounded-lg border text-xs focus:outline-none focus:ring-1 focus:ring-[var(--primary)] resize-none"
-                                          style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
-                                        />
-                                        <div className="flex gap-1.5">
-                                          <button onClick={updateComment}
-                                            className="px-2.5 py-1 rounded-lg text-xs font-medium text-white"
-                                            style={{ background: 'var(--primary)' }}>Uložit</button>
-                                          <button onClick={() => setEditingComment(null)}
-                                            className="px-2.5 py-1 rounded-lg text-xs font-medium border"
-                                            style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}>Zrušit</button>
-                                        </div>
-                                      </div>
-                                    ) : (
-                                      <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>{c.content}</p>
-                                    )}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                            <div className="flex gap-2 mt-2">
-                              <input value={newComment} onChange={e => setNewComment(e.target.value)}
-                                placeholder="Přidat komentář…" onKeyDown={e => e.key === 'Enter' && addComment(p.id)}
-                                className="flex-1 px-3 py-1.5 rounded-lg border text-xs focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
-                                style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }} />
-                              <button onClick={() => addComment(p.id)} disabled={addingComment || !newComment.trim()}
-                                className="px-3 py-1.5 rounded-lg text-xs font-medium text-white disabled:opacity-50"
-                                style={{ background: 'var(--primary)' }}>Odeslat</button>
-                              <button onClick={() => { setNewComment(''); }}
-                                className="px-3 py-1.5 rounded-lg text-xs font-medium border"
-                                style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}>Zrušit</button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -809,16 +725,33 @@ function PromptsContent() {
               ))}
             </div>
             {shareType === 'users' && (
-              <div className="mb-4 max-h-40 overflow-y-auto space-y-1">
-                {members.filter(m => m.user_id !== userId).map(m => (
-                  <label key={m.user_id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-[var(--bg-hover)]">
-                    <input type="checkbox" checked={shareUserIds.includes(m.user_id)}
-                      onChange={e => setShareUserIds(prev => e.target.checked ? [...prev, m.user_id] : prev.filter(id => id !== m.user_id))}
-                      className="accent-[var(--primary)]" />
-                    <span className="text-sm" style={{ color: 'var(--text-primary)' }}>{m.display_name}</span>
-                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{m.email}</span>
-                  </label>
-                ))}
+              <div className="mb-4 max-h-48 overflow-y-auto space-y-1 rounded-xl border p-2" style={{ borderColor: 'var(--border)' }}>
+                {members.filter(m => m.user_id !== userId).length === 0 && (
+                  <p className="text-xs px-2 py-1" style={{ color: 'var(--text-muted)' }}>Žádní další členové workspace</p>
+                )}
+                {members.filter(m => m.user_id !== userId).map(m => {
+                  const isChecked = shareUserIds.includes(m.user_id);
+                  return (
+                    <label key={m.user_id}
+                      className="flex items-center gap-3 px-2 py-2 rounded-lg cursor-pointer transition-colors"
+                      style={{ background: isChecked ? 'var(--bg-active)' : 'transparent' }}
+                      onMouseEnter={e => { if (!isChecked) (e.currentTarget as HTMLElement).style.background = 'var(--bg-hover)'; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = isChecked ? 'var(--bg-active)' : 'transparent'; }}
+                    >
+                      <input type="checkbox" checked={isChecked}
+                        onChange={e => setShareUserIds(prev => e.target.checked ? [...prev, m.user_id] : prev.filter(id => id !== m.user_id))}
+                        className="accent-[var(--primary)] flex-shrink-0" />
+                      <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                        style={{ background: m.avatar_color ?? 'var(--primary)' }}>
+                        {getInitials(m.display_name)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm truncate" style={{ color: 'var(--text-primary)' }}>{m.display_name}</div>
+                        <div className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{m.email}</div>
+                      </div>
+                    </label>
+                  );
+                })}
               </div>
             )}
             <div className="flex gap-2">

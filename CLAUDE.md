@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 5. 3. 2026 (v2.15.0)
+> Aktualizováno: 5. 3. 2026 (v2.16.0)
 
 ---
 
@@ -476,6 +476,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.16.0 | 5. 3. 2026 | Sidebar: WorkspaceSwitcher přesunut pod Dokumentaci (scrollovatelný, inline expanze jako user panel); Prompty: odstraněn expand chevron + jméno autora (jen datum); kliknutí na název → editační dialog; kódové bloky: clear placeholder on click, kopírovat ikona (SVG ::after + souřadnicová detekce); Sdílení (Prompty + Záložky): sekce „Konkrétní uživatelé" doplněna o seznam s avatary a bg-active výběrem; Sidebar reorganizace: Důležité dny → SLEDOVÁNÍ (pod Kalendář), Připomínky → SPOLEČNOST (pod Pravidla v kanceláři), NÁSTROJE = Záložky, Prompty, Převodník textu; Poznámky → Poznámky manažera všude; Nápověda: aktualizovány sekce a tarify dle nové struktury sidebaru |
 | v2.15.0 | 5. 3. 2026 | Sidebar collapse: hamburger vždy viditelný, desktop collapse toggle s localStorage persist (trackino_sidebar_collapsed), transition-[margin]; Kalendář: view switcher (Seznam/Týden/Měsíc) přesunut do top headeru, levý panel reorder (Moje kalendáře nahoře, mini kalendář dole); Měřič mobile: 2-řádkový layout (flex-col sm:flex-row), text-base na inputu (iOS anti-zoom), bigger action icons (16px), rounded-t-xl fix na day header; Dovolená mobile: flex-col header, responsive button text; SQL banner odstraněn z Úpravy aplikace; CLAUDE-ASISTENT.md pravidlo 11 (iOS auto-zoom) |
 | v2.14.0 | 5. 3. 2026 | WorkspaceSwitcher přesunut z headeru do Sidebaru (nad user panel, dropdown nahoru); Prompty + Záložky: Sdílené prompty/záložky virtuální složka, komentáře edit/delete, kopírování obsahu/URL, avatary s avatar_color, FolderTree hover opacity fix, panel wider md:w-72, select arrows fix; CLAUDE-ASISTENT.md pravidlo 10 (select šipky + color picker) |
 | v2.13.1 | 5. 3. 2026 | Mobilní responzivita: Prompty/Záložky/Kalendář/Dokumenty – toggle pro levý panel na mobilu; Nastavení workspace – horizontální scrollovatelný nav na mobilu; Tým – přetékající taby → overflow-x-auto; Dovolená – stats grid-cols-2 na mobilu + overflow-x-auto tabulka |

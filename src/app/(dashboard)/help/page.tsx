@@ -119,7 +119,7 @@ const DEFAULT_HELP_CONTENT = `
 <p>V <strong>Tým → editace člena → sekce Fakturace</strong> lze každému členovi přiřadit konkrétní fakturační profil. Pokud není přiřazen žádný, použije se výchozí profil workspace. Přiřazený profil se uživateli zobrazí při podání žádosti o fakturaci v pravém panelu formuláře.</p>
 
 <h3>Převodník textu</h3>
-<p>Modul <strong>Převodník textu</strong> (dostupný v tarifu <strong>Max</strong>, sekce Analýza) podporuje dva směry konverze:</p>
+<p>Modul <strong>Převodník textu</strong> (dostupný v tarifu <strong>Pro a Max</strong>, sekce <strong>NÁSTROJE</strong>) podporuje dva směry konverze:</p>
 <p><strong>Mód 1: Formátovaný text → Text / Markdown</strong> – vložte naformátovaný text z Wordu nebo webu (Ctrl+V) do levého panelu. Výstupní záložky:</p>
 <ul>
   <li><strong>Prostý text</strong> – odstraní veškeré formátování, zachová pouze odřádkování.</li>
@@ -133,7 +133,7 @@ const DEFAULT_HELP_CONTENT = `
 <p>Přepínač módu se nachází v horní části stránky. Tlačítko <em>Kopírovat</em> v každé záložce zkopíruje výstup do schránky. Tlačítko <em>Vymazat vše</em> vyčistí oba panely.</p>
 
 <h3>Důležité dny</h3>
-<p>Modul <strong>Důležité dny</strong> (sekce <strong>NÁSTROJE</strong>, tarif Pro a Max) slouží k evidenci osobních důležitých dat a opakujících se událostí. Záznamy jsou soukromé – každý uživatel vidí pouze své vlastní.</p>
+<p>Modul <strong>Důležité dny</strong> (sekce <strong>SLEDOVÁNÍ</strong>, tarif Pro a Max) slouží k evidenci osobních důležitých dat a opakujících se událostí. Záznamy jsou soukromé – každý uživatel vidí pouze své vlastní.</p>
 <ul>
   <li><strong>Jednorázový záznam</strong> – konkrétní den nebo rozsah od–do (např. narozeniny, výroční akce, projektový termín)</li>
   <li><strong>Opakující se události</strong> – po přepnutí na opakování lze vybrat: <em>Každý týden</em> (stejný den v týdnu), <em>Každý měsíc</em> (stejný den v měsíci) nebo <em>Každý rok</em> (stejné datum). U opakujících se событий se zadává pouze datum začátku opakování.</li>
@@ -153,7 +153,7 @@ const DEFAULT_HELP_CONTENT = `
   <li><strong>Liky</strong> – každý uživatel může dát jeden like (srdíčko). Počet unikátních liků se zobrazuje u každého promptu. Výpis lze seřadit dle liků.</li>
   <li><strong>Oblíbené</strong> – hvězdičkou označíte prompt jako oblíbený; v levém panelu se zobrazí sekce „Oblíbené" s počtem</li>
   <li><strong>Sdílené prompty</strong> – pokud workspace obsahuje sdílené prompty, zobrazí se v levém panelu virtuální složka <em>Sdílené prompty</em>. Kliknutím zobrazíte všechny prompty označené jako sdílené bez ohledu na jejich složku.</li>
-  <li><strong>Komentáře</strong> – kliknutím na název promptu se rozbalí detail se seznamem komentářů a polem pro nový komentář (Enter nebo tlačítko Odeslat). Vlastní komentáře lze <strong>upravit</strong> (ikona tužky) nebo <strong>smazat</strong> (ikona koše). Komentáře jsou evidovány se jménem autora a datem.</li>
+  <li><strong>Komentáře</strong> – kliknutím na název promptu se otevře editační dialog, kde jsou v dolní části zobrazeny komentáře a pole pro nový komentář (Enter nebo tlačítko Odeslat). Vlastní komentáře lze <strong>upravit</strong> (ikona tužky) nebo <strong>smazat</strong> (ikona koše). Komentáře jsou evidovány se jménem autora a datem.</li>
   <li><strong>Smazání</strong> – prompt může smazat pouze jeho autor (ikona koše)</li>
 </ul>
 
@@ -220,7 +220,7 @@ const DEFAULT_HELP_CONTENT = `
 <p>Aplikace je rozdělena do <strong>modulů</strong>, které lze zapnout nebo vypnout. Výchozí sada modulů závisí na tarifu workspace:</p>
 <ul>
   <li><strong>Free</strong> – Měřič, Reporty, Projekty, Klienti, Štítky, Tým</li>
-  <li><strong>Pro</strong> – Free + Plánovač, Dovolená, Fakturace, Přehled hodin, Analýza kategorií, Podřízení, Poznámky, Nastavení, Převodník textu, Důležité dny, <strong>Prompty</strong>, <strong>Záložky</strong> + funkce <strong>Oblíbené</strong> v levém menu</li>
+  <li><strong>Pro</strong> – Free + Plánovač, Dovolená, Fakturace, Přehled hodin, Analýza kategorií, Podřízení, Poznámky manažera, Nastavení, Převodník textu, Důležité dny, Žádosti, <strong>Prompty</strong>, <strong>Záložky</strong>, sekce Společnost (Znalostní báze, Dokumenty, Firemní pravidla, Pravidla v kanceláři, Připomínky) + funkce <strong>Oblíbené</strong> v levém menu</li>
   <li><strong>Max</strong> – Pro + Audit log + Kalendář</li>
 </ul>
 <p>Admin může v <strong>Nastavení → Moduly</strong> nastavit výjimky pro jednotlivé uživatele – přidat modul, který není v tarifu, nebo zakázat modul, který v tarifu je. Výjimky mají vždy přednost před výchozím tarifem. Moduly, které uživatel nemá povoleny, se nezobrazují v levém menu.</p>
@@ -268,7 +268,7 @@ const DEFAULT_HELP_CONTENT = `
 <p><strong>Formát telefonního čísla</strong> – čísla se v aplikaci zobrazují s mezerami pro přehlednost (např. <code>+420 608 510 232</code>). Tlačítko kopírování zkopíruje číslo <em>bez</em> mezer (např. <code>+420608510232</code>) pro přímé použití v dialeru nebo jiné aplikaci. Číslo lze zadat v libovolném formátu – při uložení se mezery automaticky odstraní.</p>
 
 <h3>Navigace – rozbalovací sekce</h3>
-<p>Levý sidebar je členěn do pěti sekcí: <strong>SLEDOVÁNÍ</strong>, <strong>ANALÝZA</strong>, <strong>NÁSTROJE</strong>, <strong>SPRÁVA</strong> a <strong>SYSTÉM</strong> (viditelná pouze pro Master Adminy). Každou sekci lze kliknutím na její název sbalit nebo rozbalit – šipka indikuje aktuální stav. Stav sbalení se ukládá v prohlížeči a přetrvá i po obnovení stránky.</p>
+<p>Levý sidebar je členěn do šesti sekcí: <strong>SLEDOVÁNÍ</strong>, <strong>ANALÝZA</strong>, <strong>NÁSTROJE</strong>, <strong>SPRÁVA</strong>, <strong>SPOLEČNOST</strong> (dostupná od tarifu Pro) a <strong>SYSTÉM</strong> (viditelná pouze pro Master Adminy). Každou sekci lze kliknutím na její název sbalit nebo rozbalit – šipka indikuje aktuální stav. Stav sbalení se ukládá v prohlížeči a přetrvá i po obnovení stránky.</p>
 
 <h3>Detailní nastavení (osobní profil)</h3>
 <p>V levém dolním rohu sidebaru je panel přihlášeného uživatele. Kliknutím na něj se rozbalí možnosti: odkaz <strong>Detailní nastavení</strong> (profil, jméno, e-mail, telefon, barva avataru, barevný režim) a tlačítko <strong>Odhlásit se</strong>. Pole <strong>Pozice</strong> v profilu je editovatelné pouze pro adminy – ostatní vidí hodnotu nastavenou adminem.</p>
@@ -352,7 +352,7 @@ const DEFAULT_HELP_CONTENT = `
 </ul>
 
 <h3>Připomínky (anonymní formulář)</h3>
-<p>Modul <strong>Připomínky</strong> (sekce Nástroje, tarif Pro a Max) umožňuje všem členům workspace anonymně sdílet podněty, návrhy nebo zpětnou vazbu.</p>
+<p>Modul <strong>Připomínky</strong> (sekce <strong>SPOLEČNOST</strong>, tarif Pro a Max) umožňuje všem členům workspace anonymně sdílet podněty, návrhy nebo zpětnou vazbu.</p>
 <ul>
   <li><strong>Anonymita</strong> – připomínky jsou zcela anonymní; nikdo (ani admin) nemůže zjistit, kdo zprávu odeslal</li>
   <li><strong>Odeslání připomínky</strong> – vyplňte zprávu a klikněte Odeslat; formulář jasně upozorňuje na anonymitu</li>
@@ -361,12 +361,13 @@ const DEFAULT_HELP_CONTENT = `
 </ul>
 
 <h3>Sekce SPOLEČNOST</h3>
-<p>Od tarifu <strong>Pro</strong> je v levém menu dostupná sekce <strong>SPOLEČNOST</strong> se čtyřmi moduly pro správu firemních znalostí a dokumentace:</p>
+<p>Od tarifu <strong>Pro</strong> je v levém menu dostupná sekce <strong>SPOLEČNOST</strong> s pěti moduly pro správu firemních znalostí, dokumentace a zpětné vazby:</p>
 <ul>
   <li><strong>Znalostní báze</strong> – připravovaný modul pro interní wiki a sdílení firemních znalostí a postupů</li>
   <li><strong>Dokumenty</strong> – správa firemních souborů a odkazů; dokumenty lze organizovat do barevných složek; všichni členové workspace vidí dokumenty, správci (admin nebo uživatel s příznakem „Spravuje dokumenty") mohou nahrávat, mazat a spravovat složky</li>
   <li><strong>Firemní pravidla</strong> – editovatelná textová stránka s firemními směrnicemi a pravidly; obsah upravuje admin/owner workspace; členové vidí aktuální obsah</li>
   <li><strong>Pravidla v kanceláři</strong> – editovatelná textová stránka s provozním řádem a pravidly kanceláře; stejný editor jako Firemní pravidla</li>
+  <li><strong>Připomínky</strong> – anonymní formulář pro zpětnou vazbu; viz sekce Připomínky níže</li>
 </ul>
 
 <h3>Dokumenty – správa souborů a složek</h3>
