@@ -567,7 +567,7 @@ function BugsContent() {
     <DashboardLayout>
       <div className="max-w-3xl space-y-6">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Nahlásit chybu</h1>
+          <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Nahlásit chybu</h1>
           <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
             Popište chybu nebo problém, který jste v aplikaci objevili
           </p>

@@ -119,7 +119,7 @@ function OfficeRulesContent() {
         {/* Záhlaví */}
         <div className="flex items-start justify-between gap-4 mb-6">
           <div className="min-w-0">
-            <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Pravidla v kanceláři</h1>
+            <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Pravidla v kanceláři</h1>
             <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
               Provozní řád a pravidla každodenního chodu kanceláře
             </p>

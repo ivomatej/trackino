@@ -670,7 +670,7 @@ function InvoicesContent() {
       <div className="max-w-3xl">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <div>
-            <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Fakturace</h1>
+            <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Fakturace</h1>
             <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
               Správa faktur a žádostí o proplacení
             </p>

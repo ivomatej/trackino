@@ -119,7 +119,7 @@ function CompanyRulesContent() {
         {/* Záhlaví */}
         <div className="flex items-start justify-between gap-4 mb-6">
           <div className="min-w-0">
-            <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Firemní pravidla</h1>
+            <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Firemní pravidla</h1>
             <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
               Interní směrnice a pravidla pro celý tým
             </p>

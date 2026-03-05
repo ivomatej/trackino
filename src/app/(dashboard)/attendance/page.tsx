@@ -245,7 +245,7 @@ function AttendanceContent() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setWeekStart(w => addDays(w, -7))}
-              className="px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors"
+              className="px-3 py-2 rounded-lg border text-sm font-medium transition-colors"
               style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)', background: 'var(--bg-card)' }}
               onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
               onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-card)'; }}
@@ -254,7 +254,7 @@ function AttendanceContent() {
             </button>
             <button
               onClick={() => setWeekStart(getMonday(new Date(workspaceTodayStr + 'T12:00:00')))}
-              className="px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors"
+              className="px-3 py-2 rounded-lg border text-sm font-medium transition-colors"
               style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)', background: 'var(--bg-card)' }}
               onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
               onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-card)'; }}
@@ -263,7 +263,7 @@ function AttendanceContent() {
             </button>
             <button
               onClick={() => setWeekStart(w => addDays(w, 7))}
-              className="px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors"
+              className="px-3 py-2 rounded-lg border text-sm font-medium transition-colors"
               style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)', background: 'var(--bg-card)' }}
               onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
               onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-card)'; }}

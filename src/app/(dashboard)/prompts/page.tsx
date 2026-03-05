@@ -557,7 +557,7 @@ function PromptsContent() {
 
   return (
     <DashboardLayout>
-      <h1 className="text-2xl font-bold mb-3 flex-shrink-0" style={{ color: 'var(--text-primary)' }}>Prompty</h1>
+      <h1 className="text-xl font-bold mb-3 flex-shrink-0" style={{ color: 'var(--text-primary)' }}>Prompty</h1>
       <div className="flex flex-col md:flex-row gap-5 flex-1 min-h-0">
 
         {/* ── Left Panel ── */}
@@ -627,13 +627,13 @@ function PromptsContent() {
           {/* Toolbar */}
           <div className="flex items-center gap-3 flex-wrap">
             <input value={searchQ} onChange={e => setSearchQ(e.target.value)} placeholder="Hledat prompty…"
-              className="px-3 py-1.5 rounded-lg border text-base sm:text-sm flex-1 min-w-[160px] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+              className="px-3 py-2 rounded-lg border text-base sm:text-sm flex-1 min-w-[160px] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
               style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }} />
             <div className="relative flex-shrink-0">
               <select
                 value={sortBy}
                 onChange={e => setSortBy(e.target.value as 'date' | 'likes' | 'title')}
-                className="text-base sm:text-sm border rounded-lg pl-3 pr-8 py-1.5 appearance-none cursor-pointer"
+                className="text-base sm:text-sm border rounded-lg pl-3 pr-8 py-2 appearance-none cursor-pointer"
                 style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-secondary)', outline: 'none' }}
               >
                 <option value="date">Nejnovější</option>
@@ -647,7 +647,7 @@ function PromptsContent() {
               </div>
             </div>
             <button onClick={() => openPromptModal()}
-              className="px-4 py-1.5 rounded-lg text-sm font-medium text-white flex items-center gap-1.5"
+              className="px-4 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-1.5"
               style={{ background: 'var(--primary)' }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Nový prompt

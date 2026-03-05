@@ -131,7 +131,7 @@ function ClientsContent() {
           {isWorkspaceAdmin && !showForm && (
             <button
               onClick={() => setShowForm(true)}
-              className="px-3 py-1.5 rounded-lg text-sm font-medium text-white transition-colors"
+              className="px-3 py-2 rounded-lg text-sm font-medium text-white transition-colors"
               style={{ background: 'var(--primary)' }}
               onMouseEnter={(e) => e.currentTarget.style.background = 'var(--primary-hover)'}
               onMouseLeave={(e) => e.currentTarget.style.background = 'var(--primary)'}

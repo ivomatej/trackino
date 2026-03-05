@@ -217,7 +217,7 @@ function CategoryReportContent() {
     { key: 'custom', label: 'Vlastní' },
   ];
 
-  const inputCls = 'px-3 py-1.5 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]';
+  const inputCls = 'px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]';
   const inputStyle = { borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' };
 
   return (
@@ -234,7 +234,7 @@ function CategoryReportContent() {
             <button
               key={p.key}
               onClick={() => applyPreset(p.key)}
-              className="px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors"
+              className="px-3 py-2 rounded-lg border text-sm font-medium transition-colors"
               style={{
                 borderColor: preset === p.key ? 'var(--primary)' : 'var(--border)',
                 background: preset === p.key ? 'var(--primary-light)' : 'var(--bg-card)',

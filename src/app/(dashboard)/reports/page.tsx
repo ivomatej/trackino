@@ -384,7 +384,7 @@ function ReportsContent() {
         {/* Záhlaví */}
         <div className="flex items-start justify-between flex-wrap gap-3">
           <div>
-            <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Reporty</h1>
+            <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Reporty</h1>
             <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
               Přehled odpracovaného času s filtry a ručním zadáváním
             </p>

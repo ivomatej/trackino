@@ -78,7 +78,7 @@ function ProfileContent() {
     <DashboardLayout>
       <div className="max-w-2xl">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Detailní nastavení</h1>
+          <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Detailní nastavení</h1>
           <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
             Správa vašich osobních údajů a nastavení aplikace
           </p>

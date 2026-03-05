@@ -240,7 +240,7 @@ function SubordinatesContent() {
       <div className="max-w-4xl">
         <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
           <div>
-            <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Podřízení</h1>
+            <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Podřízení</h1>
             <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
               Záznamy podřízených {periodLabel}
             </p>
@@ -253,7 +253,7 @@ function SubordinatesContent() {
                 <button
                   key={p}
                   onClick={() => setTimePeriod(p)}
-                  className="px-3 py-1.5 transition-colors"
+                  className="px-3 py-2 transition-colors"
                   style={{
                     background: timePeriod === p ? 'var(--primary)' : 'var(--bg-input)',
                     color: timePeriod === p ? '#fff' : 'var(--text-secondary)',
@@ -272,7 +272,7 @@ function SubordinatesContent() {
                   type="date"
                   value={customFrom}
                   onChange={(e) => setCustomFrom(e.target.value)}
-                  className="px-2 py-1.5 rounded-lg border text-base sm:text-sm"
+                  className="px-2 py-2 rounded-lg border text-base sm:text-sm"
                   style={inputStyle}
                 />
                 <span className="text-sm" style={{ color: 'var(--text-muted)' }}>–</span>
@@ -280,7 +280,7 @@ function SubordinatesContent() {
                   type="date"
                   value={customTo}
                   onChange={(e) => setCustomTo(e.target.value)}
-                  className="px-2 py-1.5 rounded-lg border text-base sm:text-sm"
+                  className="px-2 py-2 rounded-lg border text-base sm:text-sm"
                   style={inputStyle}
                 />
               </>
@@ -292,7 +292,7 @@ function SubordinatesContent() {
                 <select
                   value={selectedUser}
                   onChange={(e) => setSelectedUser(e.target.value)}
-                  className="pl-3 pr-8 py-1.5 rounded-lg border text-base sm:text-sm appearance-none cursor-pointer"
+                  className="pl-3 pr-8 py-2 rounded-lg border text-base sm:text-sm appearance-none cursor-pointer"
                   style={inputStyle}
                 >
                   <option value="all">Všichni ({entries.length})</option>
