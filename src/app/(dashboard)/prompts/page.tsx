@@ -18,7 +18,7 @@ interface Prompt {
   created_by: string; created_at: string; updated_at: string;
 }
 interface PromptComment { id: string; prompt_id: string; user_id: string; content: string; created_at: string; }
-interface Member { user_id: string; display_name: string; email: string; }
+interface Member { user_id: string; display_name: string; email: string; avatar_color: string; }
 
 const MAX_DEPTH = 5;
 
@@ -145,7 +145,7 @@ function FolderTree({
               <span className="flex-1 text-xs truncate" style={{ color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
                 {folder.name}
               </span>
-              <div className="hidden group-hover/folder:flex items-center gap-0.5 flex-shrink-0">
+              <div className="opacity-0 group-hover/folder:opacity-100 flex items-center gap-0.5 flex-shrink-0 transition-opacity">
                 {depth < MAX_DEPTH - 1 && (
                   <button type="button" title="Přidat podsložku" onClick={e => { e.stopPropagation(); onAddSub(folder.id, depth + 1); }}
                     className="w-5 h-5 flex items-center justify-center rounded hover:bg-[var(--bg-hover)]"
@@ -168,7 +168,10 @@ function FolderTree({
                     <button type="button" title="Smazat" onClick={e => { e.stopPropagation(); onDelete(folder); }}
                       className="w-5 h-5 flex items-center justify-center rounded hover:bg-[var(--bg-hover)]"
                       style={{ color: 'var(--danger)' }}>
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                        <path d="M9 6V4h6v2"/>
+                      </svg>
                     </button>
                   </>
                 )}
@@ -203,11 +206,14 @@ function PromptsContent() {
 
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [showFavorites, setShowFavorites] = useState(false);
+  const [showShared, setShowShared] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [showFolderPanel, setShowFolderPanel] = useState(false);
 
   const [sortBy, setSortBy] = useState<'date' | 'likes' | 'title'>('date');
   const [searchQ, setSearchQ] = useState('');
+
+  const [editingComment, setEditingComment] = useState<{ id: string; content: string } | null>(null);
 
   // Modals
   const [folderModal, setFolderModal] = useState<{ open: boolean; parentId: string | null; editing: PromptFolder | null }>({ open: false, parentId: null, editing: null });
@@ -241,7 +247,7 @@ function PromptsContent() {
       supabase.from('trackino_prompt_comments').select('*').order('created_at'),
       supabase.from('trackino_prompt_likes').select('*'),
       supabase.from('trackino_prompt_favorites').select('*').eq('user_id', userId),
-      supabase.from('trackino_workspace_members').select('user_id, trackino_profiles(display_name, email)').eq('workspace_id', wsId),
+      supabase.from('trackino_workspace_members').select('user_id, trackino_profiles(display_name, email, avatar_color)').eq('workspace_id', wsId),
     ]);
     setFolders(fRes.data ?? []);
     setFolderShares(fsRes.data ?? []);
@@ -272,7 +278,12 @@ function PromptsContent() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const ms: Member[] = (mRes.data ?? []).map((m: any) => {
       const p = Array.isArray(m.trackino_profiles) ? m.trackino_profiles[0] : m.trackino_profiles;
-      return { user_id: m.user_id, display_name: p?.display_name ?? m.user_id, email: p?.email ?? '' };
+      return {
+        user_id: m.user_id,
+        display_name: p?.display_name ?? m.user_id,
+        email: p?.email ?? '',
+        avatar_color: (p as any)?.avatar_color ?? 'var(--primary)',
+      };
     });
     setMembers(ms);
   }, [wsId, userId]);
@@ -400,6 +411,18 @@ function PromptsContent() {
     fetchAll();
   };
 
+  const deleteComment = async (commentId: string) => {
+    await supabase.from('trackino_prompt_comments').delete().eq('id', commentId);
+    setComments(prev => prev.filter(c => c.id !== commentId));
+  };
+
+  const updateComment = async () => {
+    if (!editingComment) return;
+    await supabase.from('trackino_prompt_comments').update({ content: editingComment.content }).eq('id', editingComment.id);
+    setComments(prev => prev.map(c => c.id === editingComment.id ? { ...c, content: editingComment.content } : c));
+    setEditingComment(null);
+  };
+
   const copyText = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
     setCopied(key); setTimeout(() => setCopied(null), 1500);
@@ -409,6 +432,7 @@ function PromptsContent() {
   const filtered = prompts
     .filter(p => {
       if (showFavorites) return favorites.has(p.id);
+      if (showShared) return p.is_shared;
       if (selectedFolder) return p.folder_id === selectedFolder;
       return true;
     })
@@ -434,7 +458,7 @@ function PromptsContent() {
       <div className="flex flex-col md:flex-row gap-5 md:h-[calc(100vh-80px)] min-h-0">
 
         {/* ── Left Panel ── */}
-        <div className="md:w-56 flex-shrink-0 flex flex-col gap-3">
+        <div className="md:w-72 flex-shrink-0 flex flex-col gap-3">
           {/* Mobile toggle */}
           <button
             className="md:hidden flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium border"
@@ -447,19 +471,35 @@ function PromptsContent() {
           </button>
           <div className={`p-3 rounded-xl border md:flex md:flex-col overflow-y-auto flex-1${showFolderPanel ? ' flex flex-col' : ' hidden'}`} style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
             {/* Všechny prompty */}
-            <button onClick={() => { setSelectedFolder(null); setShowFavorites(false); }}
+            <button onClick={() => { setSelectedFolder(null); setShowFavorites(false); setShowShared(false); }}
               className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors mb-1"
-              style={{ background: !selectedFolder && !showFavorites ? 'var(--bg-active)' : 'transparent', color: 'var(--text-primary)' }}>
+              style={{ background: !selectedFolder && !showFavorites && !showShared ? 'var(--bg-active)' : 'transparent', color: 'var(--text-primary)' }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
               Všechny prompty
             </button>
             {/* Oblíbené */}
             {favorites.size > 0 && (
-              <button onClick={() => { setShowFavorites(true); setSelectedFolder(null); }}
-                className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors mb-2"
+              <button onClick={() => { setShowFavorites(true); setSelectedFolder(null); setShowShared(false); }}
+                className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors mb-1"
                 style={{ background: showFavorites ? 'var(--bg-active)' : 'transparent', color: 'var(--warning, #f59e0b)' }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                 Oblíbené ({favorites.size})
+              </button>
+            )}
+            {/* Sdílené prompty */}
+            {prompts.some(p => p.is_shared) && (
+              <button
+                onClick={() => { setSelectedFolder(null); setShowShared(true); setShowFavorites(false); }}
+                className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors mb-1"
+                style={{ background: showShared ? 'var(--bg-active)' : 'transparent', color: showShared ? 'var(--primary)' : 'var(--text-secondary)' }}
+                onMouseEnter={e => { if (!showShared) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                onMouseLeave={e => { if (!showShared) e.currentTarget.style.background = 'transparent'; }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                </svg>
+                Sdílené prompty
               </button>
             )}
             <div className="border-b mb-2" style={{ borderColor: 'var(--border)' }} />
@@ -472,7 +512,7 @@ function PromptsContent() {
               </button>
             </div>
             <FolderTree folders={folders} selectedId={selectedFolder} expanded={expanded}
-              onSelect={id => { setSelectedFolder(id); setShowFavorites(false); }}
+              onSelect={id => { setSelectedFolder(id); setShowFavorites(false); setShowShared(false); }}
               onToggle={toggle} onAddSub={(pid, d) => openFolderModal(pid)}
               onEdit={f => openFolderModal(null, f)} onDelete={deleteFolder}
               onShare={openShare} userId={userId} />
@@ -486,13 +526,23 @@ function PromptsContent() {
             <input value={searchQ} onChange={e => setSearchQ(e.target.value)} placeholder="Hledat prompty…"
               className="px-3 py-1.5 rounded-lg border text-sm flex-1 min-w-[160px] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
               style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }} />
-            <select value={sortBy} onChange={e => setSortBy(e.target.value as 'date' | 'likes' | 'title')}
-              className="px-3 py-1.5 rounded-lg border text-sm focus:outline-none"
-              style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}>
-              <option value="date">Nejnovější</option>
-              <option value="likes">Nejvíce liků</option>
-              <option value="title">Název A–Z</option>
-            </select>
+            <div className="relative flex-shrink-0">
+              <select
+                value={sortBy}
+                onChange={e => setSortBy(e.target.value as 'date' | 'likes' | 'title')}
+                className="text-xs border rounded-lg pl-3 pr-8 py-1.5 appearance-none cursor-pointer"
+                style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-secondary)', outline: 'none' }}
+              >
+                <option value="date">Nejnovější</option>
+                <option value="likes">Nejvíce liků</option>
+                <option value="title">Název A–Z</option>
+              </select>
+              <div className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </div>
+            </div>
             <button onClick={() => openPromptModal()}
               className="px-4 py-1.5 rounded-lg text-sm font-medium text-white flex items-center gap-1.5"
               style={{ background: 'var(--primary)' }}>
@@ -524,7 +574,7 @@ function PromptsContent() {
                   <div className="flex items-start gap-3">
                     {/* Avatar */}
                     <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 text-white"
-                      style={{ background: 'var(--primary)' }}>
+                      style={{ background: author?.avatar_color ?? 'var(--primary)' }}>
                       {getInitials(author?.display_name ?? '?')}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -543,6 +593,16 @@ function PromptsContent() {
                         </div>
                         {/* Actions */}
                         <div className="flex items-center gap-1 flex-shrink-0">
+                          {/* Copy content */}
+                          <button title="Kopírovat obsah" onClick={() => copyText(stripHtml(p.content), `content-${p.id}`)}
+                            className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors"
+                            style={{ color: copied === `content-${p.id}` ? 'var(--success)' : 'var(--text-muted)', background: 'var(--bg-hover)' }}>
+                            {copied === `content-${p.id}` ? '✓' : (
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                              </svg>
+                            )}
+                          </button>
                           {/* Copy first code block */}
                           {codes.length > 0 && (
                             <button title="Kopírovat kód promptu" onClick={() => copyText(codes[0], `code-${p.id}`)}
@@ -552,12 +612,6 @@ function PromptsContent() {
                               Kód
                             </button>
                           )}
-                          {/* Copy text */}
-                          <button title="Kopírovat obsah" onClick={() => copyText(stripHtml(p.content), `txt-${p.id}`)}
-                            className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors"
-                            style={{ color: copied === `txt-${p.id}` ? 'var(--success)' : 'var(--text-muted)', background: 'var(--bg-hover)' }}>
-                            {copied === `txt-${p.id}` ? '✓' : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>}
-                          </button>
                           {/* Like */}
                           <button onClick={() => toggleLike(p.id)}
                             className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition-colors"
@@ -584,7 +638,10 @@ function PromptsContent() {
                             <button onClick={() => deletePrompt(p)} title="Smazat"
                               className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors"
                               style={{ color: 'var(--danger)', background: 'var(--bg-hover)' }}>
-                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                                <path d="M9 6V4h6v2"/>
+                              </svg>
                             </button>
                           )}
                         </div>
@@ -601,17 +658,62 @@ function PromptsContent() {
                             <h4 className="text-xs font-semibold mb-2" style={{ color: 'var(--text-secondary)' }}>Komentáře ({promptComments.length})</h4>
                             {promptComments.map(c => {
                               const cm = getMember(c.user_id);
+                              const isMyComment = c.user_id === userId;
                               return (
                                 <div key={c.id} className="flex gap-2 mb-2">
-                                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0" style={{ background: 'var(--primary)' }}>
+                                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                                    style={{ background: cm?.avatar_color ?? 'var(--primary)' }}>
                                     {getInitials(cm?.display_name ?? '?')}
                                   </div>
                                   <div className="flex-1">
                                     <div className="flex items-center gap-2">
                                       <span className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{cm?.display_name}</span>
                                       <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{new Date(c.created_at).toLocaleDateString('cs-CZ')}</span>
+                                      {isMyComment && editingComment?.id !== c.id && (
+                                        <>
+                                          <button
+                                            onClick={() => setEditingComment({ id: c.id, content: c.content })}
+                                            className="text-xs px-1.5 py-0.5 rounded hover:bg-[var(--bg-hover)] transition-colors"
+                                            style={{ color: 'var(--text-muted)' }}
+                                            title="Upravit komentář"
+                                          >
+                                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                          </button>
+                                          <button
+                                            onClick={() => deleteComment(c.id)}
+                                            className="text-xs px-1.5 py-0.5 rounded hover:bg-[var(--bg-hover)] transition-colors"
+                                            style={{ color: 'var(--danger)' }}
+                                            title="Smazat komentář"
+                                          >
+                                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                                              <path d="M9 6V4h6v2"/>
+                                            </svg>
+                                          </button>
+                                        </>
+                                      )}
                                     </div>
-                                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>{c.content}</p>
+                                    {editingComment?.id === c.id ? (
+                                      <div className="mt-1 space-y-1.5">
+                                        <textarea
+                                          value={editingComment.content}
+                                          onChange={e => setEditingComment({ ...editingComment, content: e.target.value })}
+                                          rows={2}
+                                          className="w-full px-2 py-1.5 rounded-lg border text-xs focus:outline-none focus:ring-1 focus:ring-[var(--primary)] resize-none"
+                                          style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                                        />
+                                        <div className="flex gap-1.5">
+                                          <button onClick={updateComment}
+                                            className="px-2.5 py-1 rounded-lg text-xs font-medium text-white"
+                                            style={{ background: 'var(--primary)' }}>Uložit</button>
+                                          <button onClick={() => setEditingComment(null)}
+                                            className="px-2.5 py-1 rounded-lg text-xs font-medium border"
+                                            style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}>Zrušit</button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>{c.content}</p>
+                                    )}
                                   </div>
                                 </div>
                               );
@@ -624,6 +726,9 @@ function PromptsContent() {
                               <button onClick={() => addComment(p.id)} disabled={addingComment || !newComment.trim()}
                                 className="px-3 py-1.5 rounded-lg text-xs font-medium text-white disabled:opacity-50"
                                 style={{ background: 'var(--primary)' }}>Odeslat</button>
+                              <button onClick={() => { setNewComment(''); }}
+                                className="px-3 py-1.5 rounded-lg text-xs font-medium border"
+                                style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}>Zrušit</button>
                             </div>
                           </div>
                         </div>
@@ -705,12 +810,19 @@ function PromptsContent() {
                   style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }} />
                 <div>
                   <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Složka</label>
-                  <select value={pmFolderId ?? ''} onChange={e => setPmFolderId(e.target.value || null)}
-                    className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none"
-                    style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}>
-                    <option value="">— Bez složky —</option>
-                    {folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
-                  </select>
+                  <div className="relative">
+                    <select value={pmFolderId ?? ''} onChange={e => setPmFolderId(e.target.value || null)}
+                      className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none appearance-none pr-8"
+                      style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}>
+                      <option value="">— Bez složky —</option>
+                      {folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                    </select>
+                    <div className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="6 9 12 15 18 9"/>
+                      </svg>
+                    </div>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Obsah</label>

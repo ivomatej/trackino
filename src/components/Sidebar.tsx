@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect, useMemo, ReactNode } from 'react';
+import { useState, useEffect, useRef, useMemo, ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { supabase } from '@/lib/supabase';
 import { isWorkspaceAdmin as checkWsAdmin, isManager as checkIsManager, canAccessAuditLog as checkAuditAccess, isMasterAdmin as checkMasterAdmin } from '@/lib/permissions';
+import type { Workspace } from '@/types/database';
 
 interface SidebarProps {
   open: boolean;
@@ -83,6 +84,86 @@ function RemoveIcon() {
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
       <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
     </svg>
+  );
+}
+
+// ─── Workspace Switcher ───────────────────────────────────────────────────────
+function WorkspaceSwitcher() {
+  const { workspaces, currentWorkspace, selectWorkspace } = useWorkspace();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  if (workspaces.length <= 1) return null;
+
+  return (
+    <div className="relative px-3 pb-1" ref={ref}>
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors border"
+        style={{
+          color: 'var(--text-secondary)',
+          background: open ? 'var(--bg-active)' : 'var(--bg-hover)',
+          borderColor: 'var(--border)',
+        }}
+        title="Přepnout workspace"
+      >
+        <div
+          className="w-5 h-5 rounded flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0"
+          style={{ background: currentWorkspace?.color ?? 'var(--primary)' }}
+        >
+          {currentWorkspace?.name.charAt(0).toUpperCase()}
+        </div>
+        <span className="flex-1 text-left truncate">{currentWorkspace?.name}</span>
+        <svg
+          width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+          style={{ transition: 'transform 0.15s', transform: open ? 'rotate(180deg)' : 'rotate(0deg)', flexShrink: 0 }}
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+
+      {open && (
+        <div
+          className="absolute left-3 right-3 bottom-full mb-1 rounded-lg border shadow-lg z-50 py-1"
+          style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}
+        >
+          {workspaces.map((ws: Workspace) => (
+            <button
+              key={ws.id}
+              onClick={() => { selectWorkspace(ws); setOpen(false); }}
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-left transition-colors"
+              style={{
+                color: ws.id === currentWorkspace?.id ? 'var(--primary)' : 'var(--text-primary)',
+                background: ws.id === currentWorkspace?.id ? 'var(--bg-active)' : 'transparent',
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = ws.id === currentWorkspace?.id ? 'var(--bg-active)' : 'transparent'}
+            >
+              <div
+                className="w-5 h-5 rounded flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0"
+                style={{ background: ws.color ?? 'var(--primary)' }}
+              >
+                {ws.name.charAt(0).toUpperCase()}
+              </div>
+              <span className="flex-1 truncate">{ws.name}</span>
+              {ws.id === currentWorkspace?.id && (
+                <svg className="flex-shrink-0" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -635,6 +716,9 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
             </div>
           </div>
         </nav>
+
+        {/* Workspace switcher – jen pokud má uživatel více workspaců */}
+        <WorkspaceSwitcher />
 
         {/* User panel */}
         <div className="border-t" style={{ borderColor: 'var(--border)' }}>

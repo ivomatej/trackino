@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useRef, useEffect, ReactNode } from 'react';
+import { useState, useEffect, ReactNode } from 'react';
 import Sidebar from './Sidebar';
 import TimerBar from './TimerBar';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import type { Workspace, SystemNotification } from '@/types/database';
+import type { SystemNotification } from '@/types/database';
 
 interface TimerPlayData {
   description: string;
@@ -104,83 +104,6 @@ function LockedWorkspaceScreen() {
           Odhlásit se
         </button>
       </div>
-    </div>
-  );
-}
-
-function WorkspaceSwitcher() {
-  const { workspaces, currentWorkspace, selectWorkspace } = useWorkspace();
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
-
-  if (workspaces.length <= 1) return null;
-
-  return (
-    <div className="relative flex-shrink-0" ref={ref}>
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors"
-        style={{ color: 'var(--text-secondary)', background: open ? 'var(--bg-hover)' : 'transparent' }}
-        onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-        onMouseLeave={(e) => { if (!open) e.currentTarget.style.background = 'transparent'; }}
-        title="Přepnout workspace"
-      >
-        <div
-          className="w-5 h-5 rounded flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0"
-          style={{ background: currentWorkspace?.color ?? 'var(--primary)' }}
-        >
-          {currentWorkspace?.name.charAt(0).toUpperCase()}
-        </div>
-        <span className="max-w-[100px] truncate hidden sm:inline">{currentWorkspace?.name}</span>
-        <svg
-          width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-          style={{ transition: 'transform 0.15s', transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}
-        >
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
-      </button>
-
-      {open && (
-        <div
-          className="absolute right-0 top-full mt-1 rounded-lg border shadow-lg z-50 py-1"
-          style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', minWidth: '180px' }}
-        >
-          {workspaces.map((ws: Workspace) => (
-            <button
-              key={ws.id}
-              onClick={() => { selectWorkspace(ws); setOpen(false); }}
-              className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-left transition-colors"
-              style={{
-                color: ws.id === currentWorkspace?.id ? 'var(--primary)' : 'var(--text-primary)',
-                background: ws.id === currentWorkspace?.id ? 'var(--bg-active)' : 'transparent',
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-              onMouseLeave={(e) => e.currentTarget.style.background = ws.id === currentWorkspace?.id ? 'var(--bg-active)' : 'transparent'}
-            >
-              <div
-                className="w-6 h-6 rounded flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0"
-                style={{ background: ws.color ?? 'var(--primary)' }}
-              >
-                {ws.name.charAt(0).toUpperCase()}
-              </div>
-              <span className="truncate">{ws.name}</span>
-              {ws.id === currentWorkspace?.id && (
-                <svg className="ml-auto flex-shrink-0" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-              )}
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
@@ -309,8 +232,6 @@ export default function DashboardLayout({ children, showTimer = false, onTimerEn
               <div className="flex-1" />
             )}
 
-            {/* Přepínač workspace – jen pokud má uživatel více než jeden workspace */}
-            <WorkspaceSwitcher />
           </div>
         </header>
 

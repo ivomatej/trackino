@@ -55,7 +55,7 @@ const DEFAULT_HELP_CONTENT = `
 <p>Kliknutím na ikonu projektu otevřete picker projektů – při najetí myší se zobrazí tooltip „Klient · Projekt". Kliknutím na ikonu seznamu otevřete picker kategorie/úkolu – tooltip zobrazuje „Kategorie · Úkol".</p>
 
 <h3>Přepínání workspace</h3>
-<p>Pokud máte přístup do více workspace, zobrazuje se v pravém rohu horní lišty přepínač. Kliknutím na něj vyberete jiný workspace bez nutnosti odhlásit se.</p>
+<p>Pokud máte přístup do více workspace, zobrazuje se přepínač workspace v <strong>levém postranním panelu (sidebar)</strong>, nad sekcí s uživatelským účtem. Kliknutím na něj vyberete jiný workspace bez nutnosti odhlásit se. Přepínač se zobrazí pouze v případě, že máte přístup do 2 a více workspace.</p>
 
 <h3>Role v systému</h3>
 <ul>
@@ -149,10 +149,11 @@ const DEFAULT_HELP_CONTENT = `
   <li><strong>Sdílení složek</strong> – ikonka sdílení (na hover nad složkou) umožňuje sdílet celou složku buď s celým workspacem nebo jen s konkrétními uživateli. Sdílené složky jsou označeny modrou ikonkou.</li>
   <li><strong>Soukromé vs. sdílené prompty</strong> – při vytváření promptu lze zaškrtnout „Sdílet s celým workspacem" (i bez sdílené složky)</li>
   <li><strong>Editor</strong> – toolbar s formátováním: H2, H3, Tučné, Kurzíva, Podtržení, odrážkový a číselný seznam, blok kódu. Kódové bloky mají tmavé pozadí a monospace font.</li>
-  <li><strong>Kopírování</strong> – tlačítko „Kód" kopíruje obsah prvního kódového bloku v promptu; tlačítko se dvěma stránkami kopíruje celý textový obsah (bez HTML)</li>
+  <li><strong>Kopírování</strong> – tlačítko „Kód" kopíruje obsah prvního kódového bloku v promptu; ikona kopírování (dvě stránky) kopíruje celý textový obsah promptu (bez HTML formátování)</li>
   <li><strong>Liky</strong> – každý uživatel může dát jeden like (srdíčko). Počet unikátních liků se zobrazuje u každého promptu. Výpis lze seřadit dle liků.</li>
   <li><strong>Oblíbené</strong> – hvězdičkou označíte prompt jako oblíbený; v levém panelu se zobrazí sekce „Oblíbené" s počtem</li>
-  <li><strong>Komentáře</strong> – kliknutím na název promptu se rozbalí detail se seznamem komentářů a polem pro nový komentář (Enter nebo tlačítko Odeslat). Komentáře jsou evidovány se jménem autora a datem.</li>
+  <li><strong>Sdílené prompty</strong> – pokud workspace obsahuje sdílené prompty, zobrazí se v levém panelu virtuální složka <em>Sdílené prompty</em>. Kliknutím zobrazíte všechny prompty označené jako sdílené bez ohledu na jejich složku.</li>
+  <li><strong>Komentáře</strong> – kliknutím na název promptu se rozbalí detail se seznamem komentářů a polem pro nový komentář (Enter nebo tlačítko Odeslat). Vlastní komentáře lze <strong>upravit</strong> (ikona tužky) nebo <strong>smazat</strong> (ikona koše). Komentáře jsou evidovány se jménem autora a datem.</li>
   <li><strong>Smazání</strong> – prompt může smazat pouze jeho autor (ikona koše)</li>
 </ul>
 
@@ -160,10 +161,13 @@ const DEFAULT_HELP_CONTENT = `
 <p>Modul <strong>Záložky</strong> (sekce <strong>NÁSTROJE</strong>, tarif Pro a Max) funguje jako sdílená záložkovací knihovna – uložte si URL článků, videí, webů nebo dokumentů a sdílejte je s týmem.</p>
 <ul>
   <li><strong>Složky a sdílení</strong> – stejný systém jako u Promptů: až 5 úrovní podsložek, sdílení s workspacem nebo konkrétními uživateli</li>
-  <li><strong>Ve výpisu</strong> – favicon webu, název (klikací odkaz do nového okna), doména (odkaz na homepage webu), iniciály autora, datum, badge Sdílená</li>
+  <li><strong>Ve výpisu</strong> – favicon webu, název (klikací odkaz do nového okna), doména (odkaz na homepage webu), iniciály autora s barevným avatarem, datum, badge Sdílená</li>
   <li><strong>Všechny URL</strong> se otevírají v novém okně prohlížeče (target=_blank)</li>
   <li><strong>Popis</strong> – volitelný krátký text k záložce, zobrazí se pod doménou</li>
-  <li><strong>Liky, oblíbené a komentáře</strong> – stejný systém jako u Promptů; komentáře se zobrazují po kliknutí na ikonku bubliny</li>
+  <li><strong>Kopírování URL</strong> – ikona kopírování vedle záložky zkopíruje URL do schránky jedním kliknutím</li>
+  <li><strong>Sdílené záložky</strong> – pokud workspace obsahuje sdílené záložky, zobrazí se v levém panelu virtuální složka <em>Sdílené záložky</em>. Kliknutím zobrazíte všechny záložky označené jako sdílené bez ohledu na složku.</li>
+  <li><strong>Liky a oblíbené</strong> – stejný systém jako u Promptů</li>
+  <li><strong>Komentáře</strong> – kliknutím na ikonku bubliny se rozbalí detail s komentáři. Vlastní komentáře lze <strong>upravit</strong> (ikona tužky) nebo <strong>smazat</strong> (ikona koše).</li>
   <li><strong>Smazání</strong> – záložku může smazat pouze její autor</li>
   <li><strong>URL prefix</strong> – při zadání URL bez protokolu se automaticky doplní https://</li>
 </ul>

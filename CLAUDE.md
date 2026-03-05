@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 5. 3. 2026 (v2.13.1)
+> Aktualizováno: 5. 3. 2026 (v2.14.0)
 
 ---
 
@@ -448,6 +448,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.14.0 | 5. 3. 2026 | WorkspaceSwitcher přesunut z headeru do Sidebaru (nad user panel, dropdown nahoru); Prompty + Záložky: Sdílené prompty/záložky virtuální složka, komentáře edit/delete, kopírování obsahu/URL, avatary s avatar_color, FolderTree hover opacity fix, panel wider md:w-72, select arrows fix; CLAUDE-ASISTENT.md pravidlo 10 (select šipky + color picker) |
 | v2.13.1 | 5. 3. 2026 | Mobilní responzivita: Prompty/Záložky/Kalendář/Dokumenty – toggle pro levý panel na mobilu; Nastavení workspace – horizontální scrollovatelný nav na mobilu; Tým – přetékající taby → overflow-x-auto; Dovolená – stats grid-cols-2 na mobilu + overflow-x-auto tabulka |
 | v2.13.0 | 5. 3. 2026 | Nový modul Prompty (NÁSTROJE, Pro+): stromová struktura složek (5 úrovní), rich text editor, kódové bloky, liky, oblíbené, komentáře, sdílení složek; Nový modul Záložky (NÁSTROJE, Pro+): záložkovací knihovna URL s faviconem, stejný systém složek/sdílení/liků; 12 nových DB tabulek |
 | v2.12.1 | 4. 3. 2026 | Fix: Nastavení workspace – horizontální tab scrollbar (8 záložek) → vertikální levé menu (w-44) + rozšíření layout na max-w-5xl |
@@ -978,11 +979,20 @@ Prompt je viditelný pokud: `created_by === userId` OR `is_shared === true` OR `
 - `expanded: Set<string>` – lokální state pro rozbalení
 - Hover akce na složce: + podsložka, sdílet, přejmenovat, smazat (jen owner)
 - Ikona složky: modrá pokud is_shared, šedá pokud soukromá
+- **Hover fix (v2.14.0)**: akční tlačítka používají `opacity-0 group-hover/folder:opacity-100 flex transition-opacity` místo `hidden group-hover/folder:flex` – zabraňuje skoku šířky při hoveru
 
 ### RichEditor komponenta
 - `contenteditable` div s `document.execCommand` pro formátování
 - Kódové bloky: `<pre><code>` s inline stylem pro tmavé pozadí
 - `extractCodeBlocks(html)` – regex extrakce obsahu `<pre><code>` pro kopírování
+
+### Nové stavy a funkce (v2.14.0)
+- `showShared: boolean` – filtruje `p.is_shared === true` bez ohledu na složku; tlačítko "Sdílené prompty" v levém panelu (jen pokud existují sdílené prompty)
+- `editingComment: { id: string; content: string } | null` – inline editace vlastního komentáře
+- `deleteComment(id)` – smaže komentář z DB (`trackino_prompt_comments`)
+- `updateComment()` – uloží editovaný komentář do DB
+- Levý panel šířka: `md:w-56` → `md:w-72`
+- `Member.avatar_color: string` – barva avataru z `trackino_profiles`
 
 ---
 
@@ -1003,6 +1013,21 @@ Prompt je viditelný pokud: `created_by === userId` OR `is_shared === true` OR `
 - `getDomain(url)` – vrací origin URL pro odkaz na homepage
 - URL prefix: pokud url nezačíná `https?://`, automaticky doplní `https://`
 - Všechny URL otevírány s `target="_blank" rel="noopener noreferrer"`
+
+### Nové stavy a funkce (v2.14.0)
+- `showShared: boolean` – virtuální složka "Sdílené záložky" (filtr `b.is_shared === true`)
+- `editingComment: { id: string; content: string } | null` – inline editace vlastního komentáře
+- `deleteComment(id)`, `updateComment()` – mazání a editace komentářů (`trackino_bookmark_comments`)
+- Kopírování URL: `navigator.clipboard.writeText(b.url)` při kliknutí na ikonu
+- `Member.avatar_color: string` – barva avataru autora a v komentářích
+- Levý panel šířka: `md:w-56` → `md:w-72`
+
+### WorkspaceSwitcher – architektura (v2.14.0, Sidebar.tsx)
+- Přesunuto z `DashboardLayout.tsx` do `Sidebar.tsx` jako inline funkce `WorkspaceSwitcher()`
+- Umístění: nad user panel (mezi `<nav>` a `<div className="border-t">`)
+- Dropdown otevírán nahoru: `absolute left-3 right-3 bottom-full mb-1`
+- Zobrazí se jen pokud `workspaces.length > 1`
+- `DashboardLayout.tsx` nemá již žádnou logiku workspace switcheru
 
 ---
 

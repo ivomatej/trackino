@@ -18,7 +18,8 @@ interface Bookmark {
   created_by: string; created_at: string; updated_at: string;
 }
 interface BookmarkComment { id: string; bookmark_id: string; user_id: string; content: string; created_at: string; }
-interface Member { user_id: string; display_name: string; email: string; }
+// Fix #1: add avatar_color to Member interface
+interface Member { user_id: string; display_name: string; email: string; avatar_color: string; }
 
 const MAX_DEPTH = 5;
 
@@ -72,7 +73,8 @@ function FolderTree({
               <span className="flex-1 text-xs truncate" style={{ color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
                 {folder.name}
               </span>
-              <div className="hidden group-hover/folder:flex items-center gap-0.5 flex-shrink-0">
+              {/* Fix #7: use opacity transition instead of hidden/flex to avoid width shift */}
+              <div className="opacity-0 group-hover/folder:opacity-100 flex items-center gap-0.5 flex-shrink-0 transition-opacity">
                 {depth < MAX_DEPTH - 1 && (
                   <button type="button" title="Přidat podsložku" onClick={e => { e.stopPropagation(); onAddSub(folder.id, depth + 1); }}
                     className="w-5 h-5 flex items-center justify-center rounded hover:bg-[var(--bg-hover)]" style={{ color: 'var(--text-muted)' }}>
@@ -90,9 +92,13 @@ function FolderTree({
                       className="w-5 h-5 flex items-center justify-center rounded hover:bg-[var(--bg-hover)]" style={{ color: 'var(--text-muted)' }}>
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                     </button>
+                    {/* Fix #8: delete icon same size as bookmark item delete icon */}
                     <button type="button" title="Smazat" onClick={e => { e.stopPropagation(); onDelete(folder); }}
                       className="w-5 h-5 flex items-center justify-center rounded hover:bg-[var(--bg-hover)]" style={{ color: 'var(--danger)' }}>
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                        <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                      </svg>
                     </button>
                   </>
                 )}
@@ -127,6 +133,8 @@ function BookmarksContent() {
 
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [showFavorites, setShowFavorites] = useState(false);
+  // Fix #3: new showShared state for virtual "Sdílené záložky" folder
+  const [showShared, setShowShared] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [showFolderPanel, setShowFolderPanel] = useState(false);
 
@@ -150,6 +158,8 @@ function BookmarksContent() {
   const [openComments, setOpenComments] = useState<string | null>(null);
   const [newComment, setNewComment] = useState('');
   const [addingComment, setAddingComment] = useState(false);
+  // Fix #3: editingComment state for inline comment editing
+  const [editingComment, setEditingComment] = useState<{ id: string; content: string } | null>(null);
 
   const wsId = currentWorkspace?.id;
   const userId = user?.id ?? '';
@@ -164,7 +174,8 @@ function BookmarksContent() {
       supabase.from('trackino_bookmark_comments').select('*').order('created_at'),
       supabase.from('trackino_bookmark_likes').select('*'),
       supabase.from('trackino_bookmark_favorites').select('*').eq('user_id', userId),
-      supabase.from('trackino_workspace_members').select('user_id, trackino_profiles(display_name, email)').eq('workspace_id', wsId),
+      // Fix #2: fetch avatar_color from trackino_profiles
+      supabase.from('trackino_workspace_members').select('user_id, trackino_profiles(display_name, email, avatar_color)').eq('workspace_id', wsId),
     ]);
     setFolders(fRes.data ?? []);
     setFolderShares(fsRes.data ?? []);
@@ -187,10 +198,16 @@ function BookmarksContent() {
     setLikes(likesMap);
     setFavorites(new Set((favRes.data ?? []).map((f: { bookmark_id: string }) => f.bookmark_id)));
 
+    // Fix #2: map avatar_color from profile
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     setMembers((mRes.data ?? []).map((m: any) => {
       const p = Array.isArray(m.trackino_profiles) ? m.trackino_profiles[0] : m.trackino_profiles;
-      return { user_id: m.user_id, display_name: p?.display_name ?? m.user_id, email: p?.email ?? '' };
+      return {
+        user_id: m.user_id,
+        display_name: p?.display_name ?? m.user_id,
+        email: p?.email ?? '',
+        avatar_color: p?.avatar_color ?? 'var(--primary)',
+      };
     }));
   }, [wsId, userId]);
 
@@ -308,6 +325,7 @@ function BookmarksContent() {
     fetchAll();
   };
 
+  // ── Comments ──────────────────────────────────────────────────────────────
   const addComment = async (bId: string) => {
     if (!newComment.trim()) return;
     setAddingComment(true);
@@ -317,10 +335,25 @@ function BookmarksContent() {
     fetchAll();
   };
 
+  // Fix #12: deleteComment and updateComment functions
+  const deleteComment = async (commentId: string) => {
+    await supabase.from('trackino_bookmark_comments').delete().eq('id', commentId);
+    fetchAll();
+  };
+
+  const updateComment = async () => {
+    if (!editingComment || !editingComment.content.trim()) return;
+    await supabase.from('trackino_bookmark_comments').update({ content: editingComment.content.trim() }).eq('id', editingComment.id);
+    setEditingComment(null);
+    fetchAll();
+  };
+
   // ── Filtered ──────────────────────────────────────────────────────────────
+  // Fix #4: add showShared case before selectedFolder
   const filtered = bookmarks
     .filter(b => {
       if (showFavorites) return favorites.has(b.id);
+      if (showShared) return b.is_shared;
       if (selectedFolder) return b.folder_id === selectedFolder;
       return true;
     })
@@ -341,7 +374,8 @@ function BookmarksContent() {
       <div className="flex flex-col md:flex-row gap-5 md:h-[calc(100vh-80px)] min-h-0">
 
         {/* ── Left Panel ── */}
-        <div className="md:w-56 flex-shrink-0 flex flex-col gap-3">
+        {/* Fix #5: w-56 → w-72 */}
+        <div className="md:w-72 flex-shrink-0 flex flex-col gap-3">
           {/* Mobile toggle */}
           <button
             className="md:hidden flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium border"
@@ -353,14 +387,26 @@ function BookmarksContent() {
             <svg className="ml-auto" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ transform: showFolderPanel ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }}><polyline points="6 9 12 15 18 9"/></svg>
           </button>
           <div className={`p-3 rounded-xl border md:flex md:flex-col overflow-y-auto flex-1${showFolderPanel ? ' flex flex-col' : ' hidden'}`} style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
-            <button onClick={() => { setSelectedFolder(null); setShowFavorites(false); }}
+            {/* Fix #6: "Všechny záložky" resets showShared too */}
+            <button onClick={() => { setSelectedFolder(null); setShowFavorites(false); setShowShared(false); }}
               className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors mb-1"
-              style={{ background: !selectedFolder && !showFavorites ? 'var(--bg-active)' : 'transparent', color: 'var(--text-primary)' }}>
+              style={{ background: !selectedFolder && !showFavorites && !showShared ? 'var(--bg-active)' : 'transparent', color: 'var(--text-primary)' }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
               Všechny záložky
             </button>
+
+            {/* Fix #6: "Sdílené záložky" virtual folder button */}
+            {bookmarks.some(b => b.is_shared) && (
+              <button onClick={() => { setShowShared(true); setSelectedFolder(null); setShowFavorites(false); }}
+                className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors mb-1"
+                style={{ background: showShared ? 'var(--bg-active)' : 'transparent', color: 'var(--primary)' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                Sdílené záložky
+              </button>
+            )}
+
             {favorites.size > 0 && (
-              <button onClick={() => { setShowFavorites(true); setSelectedFolder(null); }}
+              <button onClick={() => { setShowFavorites(true); setSelectedFolder(null); setShowShared(false); }}
                 className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors mb-2"
                 style={{ background: showFavorites ? 'var(--bg-active)' : 'transparent', color: '#f59e0b' }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
@@ -376,8 +422,9 @@ function BookmarksContent() {
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               </button>
             </div>
+            {/* Fix #6: onSelect also resets showShared and showFavorites */}
             <FolderTree folders={folders} selectedId={selectedFolder} expanded={expanded}
-              onSelect={id => { setSelectedFolder(id); setShowFavorites(false); }}
+              onSelect={id => { setSelectedFolder(id); setShowFavorites(false); setShowShared(false); }}
               onToggle={toggle} onAddSub={(pid) => openFolderModal(pid)}
               onEdit={f => openFolderModal(null, f)} onDelete={deleteFolder}
               onShare={openShare} userId={userId} />
@@ -390,13 +437,19 @@ function BookmarksContent() {
             <input value={searchQ} onChange={e => setSearchQ(e.target.value)} placeholder="Hledat záložky…"
               className="px-3 py-1.5 rounded-lg border text-sm flex-1 min-w-[160px] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
               style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }} />
-            <select value={sortBy} onChange={e => setSortBy(e.target.value as 'date' | 'likes' | 'title')}
-              className="px-3 py-1.5 rounded-lg border text-sm focus:outline-none"
-              style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}>
-              <option value="date">Nejnovější</option>
-              <option value="likes">Nejvíce liků</option>
-              <option value="title">Název A–Z</option>
-            </select>
+            {/* Fix #9: sort select with custom arrow */}
+            <div className="relative flex-shrink-0">
+              <select value={sortBy} onChange={e => setSortBy(e.target.value as 'date' | 'likes' | 'title')}
+                className="appearance-none pr-8 px-3 py-1.5 rounded-lg border text-sm focus:outline-none"
+                style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}>
+                <option value="date">Nejnovější</option>
+                <option value="likes">Nejvíce liků</option>
+                <option value="title">Název A–Z</option>
+              </select>
+              <div className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+            </div>
             <button onClick={() => openBmModal()}
               className="px-4 py-1.5 rounded-lg text-sm font-medium text-white flex items-center gap-1.5"
               style={{ background: 'var(--primary)' }}>
@@ -450,7 +503,8 @@ function BookmarksContent() {
                               {domain.replace(/^https?:\/\//, '')}
                             </a>
                             <span className="text-xs" style={{ color: 'var(--text-muted)' }}>·</span>
-                            <span className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0" style={{ background: 'var(--primary)', fontSize: '10px' }}>
+                            {/* Fix #10: use author's avatar_color */}
+                            <span className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0" style={{ background: author?.avatar_color ?? 'var(--primary)', fontSize: '10px' }}>
                               {getInitials(author?.display_name ?? '?')}
                             </span>
                             <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{new Date(b.created_at).toLocaleDateString('cs-CZ')}</span>
@@ -461,8 +515,17 @@ function BookmarksContent() {
 
                         {/* Actions */}
                         <div className="flex items-center gap-1 flex-shrink-0">
+                          {/* Fix #11: Copy URL button before comments */}
+                          <button onClick={() => { navigator.clipboard.writeText(b.url); }}
+                            title="Kopírovat URL"
+                            className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors"
+                            style={{ color: 'var(--text-muted)', background: 'var(--bg-hover)' }}
+                            onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+                            onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                          </button>
                           {/* Comments */}
-                          <button onClick={() => { setOpenComments(isCommentsOpen ? null : b.id); setNewComment(''); }}
+                          <button onClick={() => { setOpenComments(isCommentsOpen ? null : b.id); setNewComment(''); setEditingComment(null); }}
                             className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition-colors"
                             style={{ color: isCommentsOpen ? 'var(--primary)' : 'var(--text-muted)', background: isCommentsOpen ? 'var(--bg-active)' : 'var(--bg-hover)' }}>
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
@@ -489,37 +552,92 @@ function BookmarksContent() {
                               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                             </button>
                           )}
-                          {/* Delete */}
+                          {/* Delete – Fix #14: full trash icon with top path */}
                           {isOwner && (
                             <button onClick={() => deleteBm(b)} title="Smazat"
                               className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors"
                               style={{ color: 'var(--danger)', background: 'var(--bg-hover)' }}>
-                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                                <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                              </svg>
                             </button>
                           )}
                         </div>
                       </div>
 
-                      {/* Comments panel */}
+                      {/* Fix #12: Comments panel – complete rework */}
                       {isCommentsOpen && (
                         <div className="mt-3 border-t pt-3" style={{ borderColor: 'var(--border)' }}>
                           {bComments.map(c => {
                             const cm = getMember(c.user_id);
+                            const isMyComment = c.user_id === userId;
+                            const isEditing = editingComment?.id === c.id;
                             return (
-                              <div key={c.id} className="flex gap-2 mb-2">
-                                <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0" style={{ background: 'var(--primary)', fontSize: '10px' }}>
+                              <div key={c.id} className="flex gap-2 mb-3">
+                                {/* Avatar with member's avatar_color */}
+                                <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                                  style={{ background: cm?.avatar_color ?? 'var(--primary)', fontSize: '10px' }}>
                                   {getInitials(cm?.display_name ?? '?')}
                                 </div>
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{cm?.display_name}</span>
+                                <div className="flex-1 min-w-0">
+                                  {/* Author name + date on one line */}
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{cm?.display_name ?? 'Uživatel'}</span>
                                     <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{new Date(c.created_at).toLocaleDateString('cs-CZ')}</span>
+                                    {/* Edit/delete only for own comments */}
+                                    {isMyComment && !isEditing && (
+                                      <div className="flex items-center gap-1 ml-auto">
+                                        <button onClick={() => setEditingComment({ id: c.id, content: c.content })}
+                                          title="Upravit komentář"
+                                          className="w-5 h-5 flex items-center justify-center rounded hover:bg-[var(--bg-hover)] transition-colors"
+                                          style={{ color: 'var(--text-muted)' }}>
+                                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                        </button>
+                                        <button onClick={() => deleteComment(c.id)}
+                                          title="Smazat komentář"
+                                          className="w-5 h-5 flex items-center justify-center rounded hover:bg-[var(--bg-hover)] transition-colors"
+                                          style={{ color: 'var(--danger)' }}>
+                                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                                            <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                                          </svg>
+                                        </button>
+                                      </div>
+                                    )}
                                   </div>
-                                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>{c.content}</p>
+                                  {/* Inline edit mode */}
+                                  {isEditing ? (
+                                    <div className="mt-1">
+                                      <textarea
+                                        value={editingComment.content}
+                                        onChange={e => setEditingComment({ ...editingComment, content: e.target.value })}
+                                        rows={2}
+                                        className="w-full px-2 py-1.5 rounded-lg border text-xs focus:outline-none focus:ring-1 focus:ring-[var(--primary)] resize-none"
+                                        style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                                      />
+                                      <div className="flex gap-1.5 mt-1">
+                                        <button onClick={updateComment}
+                                          className="px-3 py-1 rounded-lg text-xs font-medium text-white"
+                                          style={{ background: 'var(--primary)' }}>
+                                          Uložit
+                                        </button>
+                                        <button onClick={() => setEditingComment(null)}
+                                          className="px-3 py-1 rounded-lg text-xs font-medium border"
+                                          style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}>
+                                          Zrušit
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    /* Comment text below author line */
+                                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>{c.content}</p>
+                                  )}
                                 </div>
                               </div>
                             );
                           })}
+                          {/* Comment form with Cancel button */}
                           <div className="flex gap-2 mt-2">
                             <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="Přidat komentář…"
                               onKeyDown={e => e.key === 'Enter' && addComment(b.id)}
@@ -527,6 +645,9 @@ function BookmarksContent() {
                               style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }} />
                             <button onClick={() => addComment(b.id)} disabled={addingComment || !newComment.trim()}
                               className="px-3 py-1.5 rounded-lg text-xs font-medium text-white disabled:opacity-50" style={{ background: 'var(--primary)' }}>Odeslat</button>
+                            <button onClick={() => { setOpenComments(null); setNewComment(''); }}
+                              className="px-3 py-1.5 rounded-lg text-xs font-medium border"
+                              style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}>Zrušit</button>
                           </div>
                         </div>
                       )}
@@ -607,15 +728,22 @@ function BookmarksContent() {
               <input value={bmUrl} onChange={e => setBmUrl(e.target.value)} placeholder="URL (např. https://example.com)"
                 className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
                 style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }} />
-              <textarea value={bmDesc} onChange={e => setBmDesc(e.target.value)} placeholder="Popis (volitelné)" rows={2}
+              {/* Fix #13: textarea rows from 2 to 4 */}
+              <textarea value={bmDesc} onChange={e => setBmDesc(e.target.value)} placeholder="Popis (volitelné)" rows={4}
                 className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] resize-none"
                 style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }} />
-              <select value={bmFolderId ?? ''} onChange={e => setBmFolderId(e.target.value || null)}
-                className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none"
-                style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}>
-                <option value="">— Bez složky —</option>
-                {folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
-              </select>
+              {/* Fix #13: folder select with custom arrow */}
+              <div className="relative">
+                <select value={bmFolderId ?? ''} onChange={e => setBmFolderId(e.target.value || null)}
+                  className="appearance-none pr-8 w-full px-3 py-2 rounded-lg border text-sm focus:outline-none"
+                  style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}>
+                  <option value="">— Bez složky —</option>
+                  {folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                </select>
+                <div className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+              </div>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={bmIsShared} onChange={e => setBmIsShared(e.target.checked)} className="accent-[var(--primary)]" />
                 <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Sdílet s celým workspacem</span>

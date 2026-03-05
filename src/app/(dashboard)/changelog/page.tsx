@@ -11,6 +11,22 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.14.0 – 5. 3. 2026</h3>
+<ul>
+  <li><strong>Přepínač workspace přesunut do sidebaru</strong> – přepínač workspace (viditelný pouze pokud máte přístup do 2+ workspace) byl přesunut z horního záhlaví do levého postranního panelu, nad sekci s uživatelským účtem. Rozbalovací menu se otevírá <em>nahoru</em> pro lepší přehlednost.</li>
+  <li><strong>Prompty – sdílené prompty</strong> – nová virtuální složka <em>Sdílené prompty</em> v levém panelu zobrazí všechny prompty označené jako sdílené bez ohledu na jejich složku (zobrazí se pouze pokud existují sdílené prompty).</li>
+  <li><strong>Prompty – editace a mazání komentářů</strong> – vlastní komentáře lze nyní upravit (ikona tužky → inline textové pole + Uložit/Zrušit) nebo smazat (ikona koše). Cizí komentáře nejsou upravitelné.</li>
+  <li><strong>Prompty – tlačítko kopírování obsahu</strong> – nová ikona kopírování vedle každého promptu zkopíruje celý textový obsah promptu (bez HTML) do schránky jedním kliknutím.</li>
+  <li><strong>Prompty – avatary s barvou uživatele</strong> – avatar autora promptu a avatary v komentářích nyní využívají osobní barvu uživatele (avatar_color z profilu) místo jednotné primární barvy.</li>
+  <li><strong>Záložky – sdílené záložky</strong> – nová virtuální složka <em>Sdílené záložky</em> v levém panelu zobrazí všechny záložky sdílené v rámci workspace.</li>
+  <li><strong>Záložky – editace a mazání komentářů</strong> – vlastní komentáře záložek lze upravit nebo smazat stejně jako u Promptů.</li>
+  <li><strong>Záložky – kopírování URL</strong> – nová ikona kopírování u každé záložky zkopíruje URL do schránky.</li>
+  <li><strong>Záložky – avatary s barvou uživatele</strong> – avatar autora a avatary v komentářích využívají avatar_color z profilu.</li>
+  <li><strong>Opravy UX – šipky u select elementů</strong> – všechny rozbalovací nabídky (select) v modulech Záložky a Prompty mají nyní konzistentní vlastní SVG šipku místo nativní šipky prohlížeče (funguje správně i v tmavém režimu).</li>
+  <li><strong>FolderTree hover</strong> – akční ikonky složek se nyní zobrazují přechodem opacity místo přepínání display, takže při hoveru na složku nedochází ke skoku šířky řádku.</li>
+  <li><strong>Panel složek wider</strong> – levý panel se složkami v Záložkách i Promptech byl rozšířen z 224 px na 288 px pro lepší zobrazení delších názvů složek.</li>
+</ul>
+
 <h3>v2.13.1 – 5. 3. 2026</h3>
 <ul>
   <li><strong>Mobilní responzivita – panely se složkami</strong> – Prompty, Záložky, Kalendář a Dokumenty mají na mobilech tlačítko „Složky / Mini kalendář & filtry" pro zobrazení/skrytí levého panelu se složkami. Na tabletu a desktopu zůstává panel vždy viditelný.</li>
