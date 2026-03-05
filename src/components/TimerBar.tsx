@@ -49,15 +49,25 @@ export default function TimerBar({ onEntryChanged, playData }: TimerBarProps) {
   const [taskSearch, setTaskSearch] = useState('');
   const projectPickerRef = useRef<HTMLDivElement>(null);
   const taskPickerRef = useRef<HTMLDivElement>(null);
+  const [projectPickerPos, setProjectPickerPos] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [taskPickerPos, setTaskPickerPos] = useState<{ top: number; left: number; width: number } | null>(null);
+  const projectDropdownRef = useRef<HTMLDivElement>(null);
+  const taskDropdownRef = useRef<HTMLDivElement>(null);
 
   // Zavírání pickerů klikem mimo
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
-      if (projectPickerRef.current && !projectPickerRef.current.contains(e.target as Node)) {
+      if (
+        projectPickerRef.current && !projectPickerRef.current.contains(e.target as Node) &&
+        !(projectDropdownRef.current && projectDropdownRef.current.contains(e.target as Node))
+      ) {
         setShowProjectPicker(false);
         setProjectSearch('');
       }
-      if (taskPickerRef.current && !taskPickerRef.current.contains(e.target as Node)) {
+      if (
+        taskPickerRef.current && !taskPickerRef.current.contains(e.target as Node) &&
+        !(taskDropdownRef.current && taskDropdownRef.current.contains(e.target as Node))
+      ) {
         setShowTaskPicker(false);
         setTaskSearch('');
       }
@@ -526,7 +536,14 @@ export default function TimerBar({ onEntryChanged, playData }: TimerBarProps) {
       {/* Projekt picker */}
       <div className="relative flex-shrink-0" ref={projectPickerRef}>
         <button
-          onClick={() => { setShowProjectPicker(!showProjectPicker); setShowTaskPicker(false); setProjectSearch(''); }}
+          onClick={(e) => {
+            if (showProjectPicker) { setShowProjectPicker(false); setProjectSearch(''); return; }
+            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+            const w = Math.min(320, window.innerWidth - 16);
+            setProjectPickerPos({ top: rect.bottom + 4, left: Math.max(8, Math.min(rect.left, window.innerWidth - w - 8)), width: w });
+            setShowTaskPicker(false); setTaskSearch(''); setProjectSearch('');
+            setShowProjectPicker(true);
+          }}
           className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition-colors"
           style={{
             color: selectedProject ? 'var(--text-primary)' : 'var(--text-muted)',
@@ -554,10 +571,11 @@ export default function TimerBar({ onEntryChanged, playData }: TimerBarProps) {
           )}
         </button>
 
-        {showProjectPicker && (
+        {showProjectPicker && projectPickerPos && (
           <div
-            className="absolute top-full right-0 mt-1 rounded-lg border shadow-lg z-50 max-h-80 overflow-hidden flex flex-col"
-            style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', width: '320px' }}
+            ref={projectDropdownRef}
+            className="fixed rounded-lg border shadow-lg z-[9999] max-h-80 overflow-hidden flex flex-col"
+            style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', top: projectPickerPos?.top ?? 0, left: projectPickerPos?.left ?? 0, width: projectPickerPos?.width ?? 320 }}
           >
             {/* Vyhledávání */}
             <div className="p-2 border-b" style={{ borderColor: 'var(--border)' }}>
@@ -626,7 +644,14 @@ export default function TimerBar({ onEntryChanged, playData }: TimerBarProps) {
       {/* Kategorie / Úkol picker */}
       <div className="relative flex-shrink-0" ref={taskPickerRef}>
         <button
-          onClick={() => { setShowTaskPicker(!showTaskPicker); setShowProjectPicker(false); setTaskSearch(''); }}
+          onClick={(e) => {
+            if (showTaskPicker) { setShowTaskPicker(false); setTaskSearch(''); return; }
+            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+            const w = Math.min(280, window.innerWidth - 16);
+            setTaskPickerPos({ top: rect.bottom + 4, left: Math.max(8, Math.min(rect.left, window.innerWidth - w - 8)), width: w });
+            setShowProjectPicker(false); setProjectSearch(''); setTaskSearch('');
+            setShowTaskPicker(true);
+          }}
           className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition-colors"
           style={{
             color: selectedTask || selectedCategory ? 'var(--primary)' : 'var(--text-muted)',
@@ -661,10 +686,11 @@ export default function TimerBar({ onEntryChanged, playData }: TimerBarProps) {
           )}
         </button>
 
-        {showTaskPicker && (
+        {showTaskPicker && taskPickerPos && (
           <div
-            className="absolute top-full right-0 mt-1 rounded-lg border shadow-lg z-50 max-h-80 overflow-hidden flex flex-col"
-            style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', width: '280px' }}
+            ref={taskDropdownRef}
+            className="fixed rounded-lg border shadow-lg z-[9999] max-h-80 overflow-hidden flex flex-col"
+            style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', top: taskPickerPos?.top ?? 0, left: taskPickerPos?.left ?? 0, width: taskPickerPos?.width ?? 280 }}
           >
             {/* Vyhledávání */}
             <div className="p-2 border-b" style={{ borderColor: 'var(--border)' }}>
