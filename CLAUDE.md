@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 5. 3. 2026 (v2.13.0)
+> Aktualizováno: 5. 3. 2026 (v2.13.1)
 
 ---
 
@@ -448,6 +448,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.13.1 | 5. 3. 2026 | Mobilní responzivita: Prompty/Záložky/Kalendář/Dokumenty – toggle pro levý panel na mobilu; Nastavení workspace – horizontální scrollovatelný nav na mobilu; Tým – přetékající taby → overflow-x-auto; Dovolená – stats grid-cols-2 na mobilu + overflow-x-auto tabulka |
 | v2.13.0 | 5. 3. 2026 | Nový modul Prompty (NÁSTROJE, Pro+): stromová struktura složek (5 úrovní), rich text editor, kódové bloky, liky, oblíbené, komentáře, sdílení složek; Nový modul Záložky (NÁSTROJE, Pro+): záložkovací knihovna URL s faviconem, stejný systém složek/sdílení/liků; 12 nových DB tabulek |
 | v2.12.1 | 4. 3. 2026 | Fix: Nastavení workspace – horizontální tab scrollbar (8 záložek) → vertikální levé menu (w-44) + rozšíření layout na max-w-5xl |
 | v2.12.0 | 4. 3. 2026 | Oslovení (display_nickname v profilu, greeting na Přehledu); Timer always visible (per-user toggle, profile.timer_always_visible); Předplatné v Nastavení (lazy monthly snapshots do trackino_workspace_subscriptions); Kalendář redesign (mini cal + week time grid + settings modal, calendar_day_start/end); App Settings skupina Společnost; Nastavení workspace záložka Společnost (society_modules_enabled JSONB); SQL migrace: ALTER trackino_profiles ADD display_nickname/timer_always_visible/calendar_day_start/calendar_day_end; CREATE TABLE trackino_workspace_subscriptions; ALTER trackino_workspaces ADD society_modules_enabled |

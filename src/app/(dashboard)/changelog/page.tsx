@@ -11,6 +11,14 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.13.1 – 5. 3. 2026</h3>
+<ul>
+  <li><strong>Mobilní responzivita – panely se složkami</strong> – Prompty, Záložky, Kalendář a Dokumenty mají na mobilech tlačítko „Složky / Mini kalendář & filtry" pro zobrazení/skrytí levého panelu se složkami. Na tabletu a desktopu zůstává panel vždy viditelný.</li>
+  <li><strong>Nastavení workspace – mobilní navigace</strong> – levé vertikální menu sekcí se na mobilních zařízeních změní na horizontálně scrollovatelný pruh tlačítek (flex-row + overflow-x-auto).</li>
+  <li><strong>Tým – záložky na mobilu</strong> – záložky v sekci Tým (Členové, Oddělení, Kategorie, Úkoly, Manažeři) jsou nyní horizontálně scrollovatelné a nepřetékají na úzkých obrazovkách.</li>
+  <li><strong>Dovolená – mobilní tabulka a statistiky</strong> – statistické karty zobrazují 2 sloupce na mobilu (místo 3); tabulka záznamů je zabalena do horizontálního scrolleru pro zachování přehlednosti na úzkých obrazovkách.</li>
+</ul>
+
 <h3>v2.13.0 – 5. 3. 2026</h3>
 <ul>
   <li><strong>Nový modul Prompty</strong> (NÁSTROJE, tarif Pro+) – evidence AI promptů ve stromové struktuře složek (až 5 úrovní). Formátovaný editor (H2/H3, tučné, kurzíva, podtržení, seznamy, bloky kódu). Kopírování kódu jedním klikem, like systém, oblíbené hvězdičkou, komentáře, sdílení složek (workspace nebo konkrétní uživatelé), řazení a fulltextové vyhledávání.</li>

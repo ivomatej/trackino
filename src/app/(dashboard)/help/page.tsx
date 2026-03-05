@@ -29,6 +29,17 @@ const DEFAULT_HELP_CONTENT = `
   <li><strong>Detailní nastavení</strong> – osobní profil: jméno, e-mail, telefon, pozice (nastavuje admin) a barevný režim; dostupné přes rozbalovací panel uživatele v levém dolním rohu sidebaru</li>
 </ul>
 
+<h3>Mobilní a tabletové zobrazení</h3>
+<p>Trackino je plně funkční na mobilních zařízeních (Android i iPhone) i tabletech. Klíčové adaptace pro malé obrazovky:</p>
+<ul>
+  <li><strong>Navigace (sidebar)</strong> – na mobilech se sidebar skryje a otevře se tlačítkem ☰ v záhlaví. Kliknutím na libovolnou položku nebo na tmavé pozadí se zavře.</li>
+  <li><strong>Prompty a Záložky</strong> – levý panel se složkami je na mobilech skrytý; zobrazíte jej tlačítkem <em>Složky</em> v horní části stránky.</li>
+  <li><strong>Kalendář</strong> – mini kalendář a filtry jsou na mobilech skryté; zobrazíte je tlačítkem <em>Mini kalendář & filtry</em> v horní části.</li>
+  <li><strong>Dokumenty</strong> – panel složek se zobrazí/skryje tlačítkem <em>Složky</em> na mobilech.</li>
+  <li><strong>Nastavení workspace</strong> – na mobilech se sekce zobrazují jako horizontálně scrollovatelný pruh tlačítek.</li>
+  <li><strong>Tým</strong> – záložky sekce jsou horizontálně scrollovatelné na úzkých obrazovkách.</li>
+</ul>
+
 <h3>Přehled</h3>
 <p>Po přihlášení se zobrazí Přehled s klíčovými informacemi pro aktuální měsíc:</p>
 <ul>
