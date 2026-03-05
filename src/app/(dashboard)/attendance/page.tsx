@@ -29,7 +29,7 @@ function addDays(d: Date, n: number): Date {
 }
 
 function toDateStr(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 function formatHM(seconds: number): string {
@@ -168,7 +168,8 @@ function AttendanceContent() {
 
     const map: Record<string, Record<string, number>> = {};
     (data ?? []).forEach((e: Pick<TimeEntry, 'user_id' | 'start_time' | 'duration'>) => {
-      const dateStr = e.start_time.slice(0, 10);
+      const _d = new Date(e.start_time);
+      const dateStr = `${_d.getFullYear()}-${String(_d.getMonth() + 1).padStart(2, '0')}-${String(_d.getDate()).padStart(2, '0')}`;
       if (!map[e.user_id]) map[e.user_id] = {};
       map[e.user_id][dateStr] = (map[e.user_id][dateStr] ?? 0) + (e.duration ?? 0);
     });
