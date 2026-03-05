@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 5. 3. 2026 (v2.14.0)
+> Aktualizováno: 5. 3. 2026 (v2.15.0)
 
 ---
 
@@ -243,6 +243,25 @@ const { canAdmin, isManager, isMasterAdmin, canManualEntry, canSeeTags, isManage
 
 ## 7. Sidebar (src/components/Sidebar.tsx)
 
+### Collapse (v2.15.0)
+- Desktop/tablet: sidebar lze skrýt/zobrazit – stav `collapsed` předáván z `DashboardLayout` jako prop
+- `collapsed = true` → sidebar vyjede doleva (`lg:-translate-x-full`)
+- `collapsed = false` → sidebar je viditelný (`lg:translate-x-0`)
+- State uložen v `localStorage['trackino_sidebar_collapsed']` (`'1'` = collapsed)
+- V headerů sidebaru: malé `hidden lg:flex` tlačítko s chevron-left ikonou (volá `onCollapseDesktop()`)
+- V `DashboardLayout.tsx`: hamburger tlačítko vždy viditelné; na mobilu otevírá overlay, na desktopu (`window.innerWidth >= 1024`) volá `toggleDesktopSidebar()`
+- Main content area: `${!sidebarCollapsed ? 'lg:ml-[var(--sidebar-width)]' : ''} transition-[margin] duration-200 ease-in-out`
+
+### Interface
+```typescript
+interface SidebarProps {
+  open: boolean;           // overlay na mobilu
+  onClose: () => void;
+  collapsed?: boolean;     // desktop collapse stav
+  onCollapseDesktop?: () => void;
+}
+```
+
 ### Struktura
 ```
 [Logo / WorkspaceSelector]
@@ -344,6 +363,13 @@ NÁSTROJE
 - Dostupné jen pro role !== 'member' (`canManualEntry()`)
 - Povinná pole dle `workspace.required_fields` (project, category, task, description, tag)
 
+### Mobilní 2-řádkový layout (v2.15.0)
+- Root div: `flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full`
+- **Řádek 1 (mobil)**: text input „Na čem pracuji" – `text-base sm:text-sm` (iOS anti-zoom, viz pravidlo 11 v CLAUDE-ASISTENT.md)
+- **Řádek 2 (mobil)**: inner div `flex items-center gap-2 sm:gap-3 flex-shrink-0` s pickery (projekt, kategorie, tag) + `ml-auto sm:ml-0` na timer display (tlačí čas doprava na mobilu)
+- Na desktopu (`sm:`) vše v jednom řádku jako dříve
+- `DashboardLayout` header výška: `py-2.5 sm:py-0 sm:h-[var(--topbar-height)]` (auto-výška na mobilu, pevná na desktopu)
+
 ---
 
 ## 10. Klíčové utility
@@ -441,6 +467,8 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 | `/app-settings` přesměruje na `/` při refreshi | AuthContext volá `setLoading(false)` PŘED dokončením `fetchProfile()` (setTimeout 0) → `authLoading=false`, `user=set`, `profile=null` → redirect se spustí | Čekat na všechny tři: `if (authLoading) return; if (!user) redirect; if (profile===null) return; if (!isMasterAdmin) redirect;` |
 | Dovolená / jiná stránka se neustále načítá (infinite loop) | Pole/objekt počítaný inline v těle komponenty je v deps `useCallback` → nová reference každý render → `useEffect` se spouští donekonečna | Obalit do `useMemo` se správnými deps |
 | Chybějící borderBottom na některých buňkách v Plánovači | Gap buňky před prvním proužkem v strip lane neměly `borderBottom` | Přidat `borderBottom` i na leading gap `<th>` buňky |
+| iOS Safari automaticky zoomuje při focusu na input | Font-size inputu je menší než 16px | Použít `text-base sm:text-sm` na všech inputech a textareách |
+| Day group header má ostré rohy (šedé pozadí přesahuje zaoblenění karty) | Div s `background` uvnitř `rounded-xl` containeru chybí `rounded-t-xl` | Přidat `rounded-t-xl` na header div uvnitř rounded karty |
 
 ---
 
@@ -448,6 +476,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.15.0 | 5. 3. 2026 | Sidebar collapse: hamburger vždy viditelný, desktop collapse toggle s localStorage persist (trackino_sidebar_collapsed), transition-[margin]; Kalendář: view switcher (Seznam/Týden/Měsíc) přesunut do top headeru, levý panel reorder (Moje kalendáře nahoře, mini kalendář dole); Měřič mobile: 2-řádkový layout (flex-col sm:flex-row), text-base na inputu (iOS anti-zoom), bigger action icons (16px), rounded-t-xl fix na day header; Dovolená mobile: flex-col header, responsive button text; SQL banner odstraněn z Úpravy aplikace; CLAUDE-ASISTENT.md pravidlo 11 (iOS auto-zoom) |
 | v2.14.0 | 5. 3. 2026 | WorkspaceSwitcher přesunut z headeru do Sidebaru (nad user panel, dropdown nahoru); Prompty + Záložky: Sdílené prompty/záložky virtuální složka, komentáře edit/delete, kopírování obsahu/URL, avatary s avatar_color, FolderTree hover opacity fix, panel wider md:w-72, select arrows fix; CLAUDE-ASISTENT.md pravidlo 10 (select šipky + color picker) |
 | v2.13.1 | 5. 3. 2026 | Mobilní responzivita: Prompty/Záložky/Kalendář/Dokumenty – toggle pro levý panel na mobilu; Nastavení workspace – horizontální scrollovatelný nav na mobilu; Tým – přetékající taby → overflow-x-auto; Dovolená – stats grid-cols-2 na mobilu + overflow-x-auto tabulka |
 | v2.13.0 | 5. 3. 2026 | Nový modul Prompty (NÁSTROJE, Pro+): stromová struktura složek (5 úrovní), rich text editor, kódové bloky, liky, oblíbené, komentáře, sdílení složek; Nový modul Záložky (NÁSTROJE, Pro+): záložkovací knihovna URL s faviconem, stejný systém složek/sdílení/liků; 12 nových DB tabulek |
@@ -551,6 +580,17 @@ AppChangeStatus = 'open' | 'in_progress' | 'solved' | 'archived'
 - `'list'` – chronologický výpis po měsících, 6 měsíců dopředu od začátku aktuálního měsíce
 - `'week'` – 7 sloupců (Po–Ne), `getMonday(currentDate)` jako začátek
 - `'month'` – mřížka; týdny začínají pondělím; dny mimo měsíc jsou šedě podbarveny
+
+### View switcher (v2.15.0)
+- Přesunut z levého panelu do **top headeru** (vedle „Přidat událost")
+- Tlačítka: „Seznam" / „Týden" / „Měsíc" (plné texty, ne zkratky)
+- Responzivní: `px-2.5 sm:px-3.5 py-1.5 text-xs sm:text-sm font-medium`
+- „Přidat událost" button: `<span className="hidden sm:inline">Přidat událost</span><span className="sm:hidden">Přidat</span>`
+
+### Levý panel – pořadí sekcí (v2.15.0)
+1. **Moje kalendáře** – nahoře (`px-3 pt-3 flex-1`), s togglem auto-sync + tlačítkem Nastavení
+2. **Mini kalendář** – dole (`border-t pt-3 pb-3 flex-shrink-0`)
+- Starý view switcher v levém panelu byl kompletně odstraněn
 
 ### DisplayEvent (lokální typ)
 ```typescript
@@ -1028,6 +1068,60 @@ Prompt je viditelný pokud: `created_by === userId` OR `is_shared === true` OR `
 - Dropdown otevírán nahoru: `absolute left-3 right-3 bottom-full mb-1`
 - Zobrazí se jen pokud `workspaces.length > 1`
 - `DashboardLayout.tsx` nemá již žádnou logiku workspace switcheru
+
+---
+
+## 26. Sidebar Collapse – architektura (v2.15.0)
+
+### State management (DashboardLayout.tsx)
+```typescript
+const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+  if (typeof window === 'undefined') return false;
+  return localStorage.getItem('trackino_sidebar_collapsed') === '1';
+});
+
+const toggleDesktopSidebar = () => {
+  setSidebarCollapsed(prev => {
+    const next = !prev;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('trackino_sidebar_collapsed', next ? '1' : '0');
+    }
+    return next;
+  });
+};
+```
+
+### Hamburger tlačítko (vždy viditelné v DashboardLayout)
+```tsx
+<button
+  onClick={() => {
+    if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+      toggleDesktopSidebar();  // desktop: collapse/expand
+    } else {
+      setSidebarOpen(true);    // mobil: otevři overlay
+    }
+  }}
+>
+  {/* hamburger SVG */}
+</button>
+```
+
+### Main content div
+```tsx
+<div className={`${!sidebarCollapsed ? 'lg:ml-[var(--sidebar-width)]' : ''} min-h-screen flex flex-col transition-[margin] duration-200 ease-in-out`}>
+```
+
+### Sidebar aside className
+```tsx
+className={`
+  fixed top-0 left-0 bottom-0 z-50 w-[var(--sidebar-width)] flex flex-col
+  border-r transition-transform duration-200 ease-in-out
+  ${!collapsed ? 'lg:translate-x-0' : 'lg:-translate-x-full'}
+  ${open ? 'translate-x-0' : '-translate-x-full'}
+`}
+```
+- `open` = mobilní overlay otevřen (přes hamburgera)
+- `collapsed` = desktop stav (z localStorage)
 
 ---
 
