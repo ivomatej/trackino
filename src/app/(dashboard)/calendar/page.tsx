@@ -983,7 +983,7 @@ function CalendarContent() {
 
               {/* ══ TÝDENNÍ POHLED ════════════════════════════════════════════ */}
               {view === 'week' && (
-                <div className="flex flex-col h-full" style={{ minWidth: 520 }}>
+                <div className="flex flex-col h-full" style={{ minWidth: 640 }}>
                   {/* Záhlaví dnů */}
                   <div className="flex border-b flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
                     <div className="flex-shrink-0 border-r" style={{ width: 56, borderColor: 'var(--border)' }} />
@@ -1061,7 +1061,7 @@ function CalendarContent() {
                           className="relative border-b"
                           style={{ height: ROW_H, borderColor: 'var(--border)' }}
                         >
-                          <span className="absolute text-[10px] right-1.5 -top-2" style={{ color: 'var(--text-muted)' }}>
+                          <span className="absolute text-[10px] right-1.5 top-1" style={{ color: 'var(--text-muted)' }}>
                             {String(calDayStart + i).padStart(2, '0')}:00
                           </span>
                         </div>

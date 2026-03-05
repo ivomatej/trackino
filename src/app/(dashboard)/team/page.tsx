@@ -438,22 +438,27 @@ function TeamContent() {
         </div>
 
         {/* Taby */}
-        <div className="flex gap-1 mb-6 rounded-lg p-1 overflow-x-auto" style={{ background: 'var(--bg-hover)' }}>
-          {tabs.map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => { setActiveTab(tab.key); resetForm(); }}
-              className="flex-shrink-0 px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap"
-              style={{
-                background: activeTab === tab.key ? 'var(--bg-card)' : 'transparent',
-                color: activeTab === tab.key ? 'var(--text-primary)' : 'var(--text-muted)',
-                boxShadow: activeTab === tab.key ? 'var(--shadow-sm)' : 'none',
-              }}
-            >
-              {tab.label}
-              <span className="ml-1.5 text-xs" style={{ color: 'var(--text-muted)' }}>{tab.count}</span>
-            </button>
-          ))}
+        <div className="relative mb-6">
+          <div className="flex gap-1 rounded-lg p-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" style={{ background: 'var(--bg-hover)' }}>
+            {tabs.map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => { setActiveTab(tab.key); resetForm(); }}
+                className="flex-shrink-0 px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap"
+                style={{
+                  background: activeTab === tab.key ? 'var(--bg-card)' : 'transparent',
+                  color: activeTab === tab.key ? 'var(--text-primary)' : 'var(--text-muted)',
+                  boxShadow: activeTab === tab.key ? 'var(--shadow-sm)' : 'none',
+                }}
+              >
+                {tab.label}
+                <span className="ml-1.5 text-xs" style={{ color: 'var(--text-muted)' }}>{tab.count}</span>
+              </button>
+            ))}
+          </div>
+          {/* Gradient indikátor, že je možné scrollovat doprava */}
+          <div className="absolute right-1 top-1 bottom-1 w-8 pointer-events-none rounded-r-lg"
+            style={{ background: 'linear-gradient(to right, transparent, var(--bg-hover))' }} />
         </div>
 
         {/* ========== TAB: ČLENOVÉ ========== */}

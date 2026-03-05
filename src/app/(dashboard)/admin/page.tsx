@@ -553,7 +553,7 @@ function AdminContent() {
               className="rounded-xl border p-4"
               style={{ borderColor: 'var(--border)', background: 'var(--bg-card)' }}
             >
-              <div className="flex items-start gap-3">
+              <div className="flex flex-wrap items-start gap-3">
                 {/* Barevný avatar */}
                 <div
                   className="w-9 h-9 rounded-lg flex items-center justify-center text-white text-sm font-bold flex-shrink-0 mt-0.5"
@@ -636,11 +636,11 @@ function AdminContent() {
                   )}
                 </div>
 
-                {/* Akční tlačítka */}
-                <div className="flex flex-col gap-1.5 items-end flex-shrink-0">
+                {/* Akční tlačítka – na mobilu celá šířka, na desktopu vpravo */}
+                <div className="w-full sm:w-auto flex flex-col gap-1.5 items-start sm:items-end sm:flex-shrink-0">
                   {!ws.deleted_at && (
                     <>
-                      <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                      <div className="flex items-center gap-1.5 flex-wrap justify-start sm:justify-end">
                         <button
                           onClick={() => toggleLock(ws)}
                           className="px-2.5 py-1 rounded-lg border text-xs font-medium transition-colors"

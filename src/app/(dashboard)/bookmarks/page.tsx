@@ -192,7 +192,7 @@ function BookmarksContent() {
   const [folderModal, setFolderModal] = useState<{ open: boolean; parentId: string | null; editing: BookmarkFolder | null }>({ open: false, parentId: null, editing: null });
   const [folderName, setFolderName] = useState('');
   const [shareModal, setShareModal] = useState<{ open: boolean; folder: BookmarkFolder | null }>({ open: false, folder: null });
-  const [shareType, setShareType] = useState<'workspace' | 'users'>('workspace');
+  const [shareType, setShareType] = useState<'none' | 'workspace' | 'users'>('none');
   const [shareUserIds, setShareUserIds] = useState<string[]>([]);
 
   const [bmModal, setBmModal] = useState<{ open: boolean; editing: Bookmark | null }>({ open: false, editing: null });
@@ -327,7 +327,8 @@ function BookmarksContent() {
   const openShare = (folder: BookmarkFolder) => {
     const existing = folderShares.filter(s => s.folder_id === folder.id);
     const hasWorkspace = existing.some(s => s.user_id === null);
-    setShareType(hasWorkspace ? 'workspace' : 'users');
+    const hasUsers = existing.some(s => s.user_id !== null);
+    setShareType(hasWorkspace ? 'workspace' : hasUsers ? 'users' : 'none');
     setShareUserIds(existing.filter(s => s.user_id !== null).map(s => s.user_id as string));
     setShareModal({ open: true, folder });
   };
@@ -765,13 +766,17 @@ function BookmarksContent() {
             <h2 className="font-semibold mb-1 text-sm" style={{ color: 'var(--text-primary)' }}>Sdílet složku „{shareModal.folder?.name}"</h2>
             <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>Určete, kdo může složku a její záložky vidět</p>
             <div className="space-y-2 mb-4">
-              {(['workspace', 'users'] as const).map(t => (
-                <label key={t} className="flex items-center gap-3 p-3 rounded-xl border cursor-pointer"
-                  style={{ borderColor: shareType === t ? 'var(--primary)' : 'var(--border)', background: shareType === t ? 'var(--bg-active)' : 'transparent' }}>
-                  <input type="radio" checked={shareType === t} onChange={() => setShareType(t)} className="accent-[var(--primary)]" />
+              {([
+                { id: 'none', label: 'Nesdílet s nikým', desc: 'Složka zůstane soukromá' },
+                { id: 'workspace', label: 'Celý workspace', desc: 'Vidí všichni členové' },
+                { id: 'users', label: 'Konkrétní uživatelé', desc: 'Vybraní členové' },
+              ] as const).map(t => (
+                <label key={t.id} className="flex items-center gap-3 p-3 rounded-xl border cursor-pointer"
+                  style={{ borderColor: shareType === t.id ? 'var(--primary)' : 'var(--border)', background: shareType === t.id ? 'var(--bg-active)' : 'transparent' }}>
+                  <input type="radio" checked={shareType === t.id} onChange={() => setShareType(t.id)} className="accent-[var(--primary)]" />
                   <div>
-                    <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{t === 'workspace' ? 'Celý workspace' : 'Konkrétní uživatelé'}</div>
-                    <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{t === 'workspace' ? 'Vidí všichni členové' : 'Vybraní členové'}</div>
+                    <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{t.label}</div>
+                    <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{t.desc}</div>
                   </div>
                 </label>
               ))}

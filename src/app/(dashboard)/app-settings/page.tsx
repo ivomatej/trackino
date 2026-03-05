@@ -382,7 +382,8 @@ function AppSettingsContent() {
                   ))}
                 </div>
 
-                <div className="rounded-2xl border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
+                <div className="overflow-x-auto rounded-2xl border" style={{ borderColor: 'var(--border)' }}>
+                  <div style={{ minWidth: 480 }}>
                   <div className="grid gap-0 border-b"
                     style={{ gridTemplateColumns: '1fr 100px 100px 100px', borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
                     <div className="px-5 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Modul</div>
@@ -432,6 +433,7 @@ function AppSettingsContent() {
                       </div>
                     );
                   })}
+                  </div>{/* konec min-width wrapper */}
                 </div>
 
                 <p className="text-xs mt-4" style={{ color: 'var(--text-muted)' }}>

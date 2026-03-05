@@ -537,8 +537,8 @@ function SettingsContent() {
 
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start">
           {/* Navigační menu – horizontální scroll na mobilu, vertikální na desktopu */}
-          <div className="w-full sm:w-44 flex-shrink-0">
-            <nav className="flex flex-row sm:flex-col gap-0.5 p-1 rounded-xl overflow-x-auto" style={{ background: 'var(--bg-hover)' }}>
+          <div className="relative w-full sm:w-44 flex-shrink-0">
+            <nav className="flex flex-row sm:flex-col gap-0.5 p-1 rounded-xl overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" style={{ background: 'var(--bg-hover)' }}>
               {tabs.map(tab => (
                 <button
                   key={tab.id}
@@ -554,6 +554,9 @@ function SettingsContent() {
                 </button>
               ))}
             </nav>
+            {/* Gradient indikátor scrollu – zobrazí se jen na mobilu */}
+            <div className="sm:hidden absolute right-1 top-1 bottom-1 w-8 pointer-events-none rounded-r-xl"
+              style={{ background: 'linear-gradient(to right, transparent, var(--bg-hover))' }} />
           </div>
 
           {/* Pravý obsah */}
