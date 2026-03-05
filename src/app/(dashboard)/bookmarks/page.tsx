@@ -46,6 +46,7 @@ function FolderTree({
   onShare: (f: BookmarkFolder) => void; userId: string; depth?: number; parentId?: string | null;
 }) {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
   const children = folders.filter(f => f.parent_id === parentId);
   if (children.length === 0) return null;
   return (
@@ -74,17 +75,25 @@ function FolderTree({
               <span className="flex-1 text-xs truncate" style={{ color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
                 {folder.name}
               </span>
-              {/* Mobil: ⋮ dropdown */}
-              <div className="relative sm:hidden flex-shrink-0" onClick={e => e.stopPropagation()}>
+              {/* Mobil: ⋮ dropdown (fixed position = neklipuje se kontejnerem) */}
+              <div className="sm:hidden flex-shrink-0" onClick={e => e.stopPropagation()}>
                 <button type="button"
-                  onClick={e => { e.stopPropagation(); setOpenMenu(openMenu === folder.id ? null : folder.id); }}
+                  onClick={e => {
+                    e.stopPropagation();
+                    if (openMenu === folder.id) { setOpenMenu(null); setMenuPos(null); }
+                    else {
+                      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                      setMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+                      setOpenMenu(folder.id);
+                    }
+                  }}
                   className="w-7 h-7 flex items-center justify-center rounded-md transition-colors"
                   style={{ color: 'var(--text-muted)', background: openMenu === folder.id ? 'var(--bg-hover)' : 'transparent' }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
                 </button>
-                {openMenu === folder.id && (
-                  <div className="absolute right-0 bottom-full mb-1 z-50 rounded-lg border shadow-lg py-1 min-w-[160px]"
-                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+                {openMenu === folder.id && menuPos && (
+                  <div className="fixed z-[9999] rounded-lg border shadow-lg py-1 min-w-[160px]"
+                    style={{ top: menuPos.top, right: menuPos.right, background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
                     {depth < MAX_DEPTH - 1 && (
                       <button type="button"
                         className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left hover:bg-[var(--bg-hover)]"
@@ -575,24 +584,30 @@ function BookmarksContent() {
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5 sm:gap-2">
                         <div className="flex-1 min-w-0">
-                          <a href={b.url} target="_blank" rel="noopener noreferrer"
-                            className="font-semibold text-sm hover:underline break-words block" style={{ color: 'var(--primary)' }}>
-                            {b.title}
-                          </a>
+                          {/* Název + popis na jednom řádku – název má prioritu, popis se ořízne */}
+                          <div className="flex items-baseline gap-1.5 min-w-0">
+                            <a href={b.url} target="_blank" rel="noopener noreferrer"
+                              className="font-semibold text-sm hover:underline flex-shrink-0 max-w-full" style={{ color: 'var(--primary)' }}>
+                              {b.title}
+                            </a>
+                            {b.description && (
+                              <span className="text-xs truncate flex-1 min-w-0" style={{ color: 'var(--text-muted)' }}>
+                                {b.description}
+                              </span>
+                            )}
+                          </div>
                           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                             <a href={domain} target="_blank" rel="noopener noreferrer"
                               className="text-xs truncate hover:underline" style={{ color: 'var(--text-muted)' }}>
                               {domain.replace(/^https?:\/\//, '')}
                             </a>
                             <span className="text-xs" style={{ color: 'var(--text-muted)' }}>·</span>
-                            {/* Fix #10: use author's avatar_color */}
                             <span className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0" style={{ background: author?.avatar_color ?? 'var(--primary)', fontSize: '10px' }}>
                               {getInitials(author?.display_name ?? '?')}
                             </span>
                             <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{new Date(b.created_at).toLocaleDateString('cs-CZ')}</span>
                             {b.is_shared && <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: 'var(--primary)20', color: 'var(--primary)' }}>Sdílená</span>}
                           </div>
-                          {b.description && <p className="text-xs mt-1 line-clamp-2" style={{ color: 'var(--text-secondary)' }}>{b.description}</p>}
                         </div>
 
                         {/* Actions */}

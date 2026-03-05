@@ -135,6 +135,7 @@ function FolderTree({
   onShare: (f: PromptFolder) => void; userId: string; depth?: number; parentId?: string | null;
 }) {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
   const children = folders.filter(f => f.parent_id === parentId);
   if (children.length === 0) return null;
   return (
@@ -164,17 +165,25 @@ function FolderTree({
               <span className="flex-1 text-xs truncate" style={{ color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
                 {folder.name}
               </span>
-              {/* Mobil: ⋮ dropdown */}
-              <div className="relative sm:hidden flex-shrink-0" onClick={e => e.stopPropagation()}>
+              {/* Mobil: ⋮ dropdown (fixed position = neklipuje se kontejnerem) */}
+              <div className="sm:hidden flex-shrink-0" onClick={e => e.stopPropagation()}>
                 <button type="button"
-                  onClick={e => { e.stopPropagation(); setOpenMenu(openMenu === folder.id ? null : folder.id); }}
+                  onClick={e => {
+                    e.stopPropagation();
+                    if (openMenu === folder.id) { setOpenMenu(null); setMenuPos(null); }
+                    else {
+                      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                      setMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+                      setOpenMenu(folder.id);
+                    }
+                  }}
                   className="w-7 h-7 flex items-center justify-center rounded-md transition-colors"
                   style={{ color: 'var(--text-muted)', background: openMenu === folder.id ? 'var(--bg-hover)' : 'transparent' }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
                 </button>
-                {openMenu === folder.id && (
-                  <div className="absolute right-0 bottom-full mb-1 z-50 rounded-lg border shadow-lg py-1 min-w-[160px]"
-                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+                {openMenu === folder.id && menuPos && (
+                  <div className="fixed z-[9999] rounded-lg border shadow-lg py-1 min-w-[160px]"
+                    style={{ top: menuPos.top, right: menuPos.right, background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
                     {depth < MAX_DEPTH - 1 && (
                       <button type="button"
                         className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left hover:bg-[var(--bg-hover)]"
