@@ -614,7 +614,7 @@ function CalendarContent() {
 
   // ── Event pill ────────────────────────────────────────────────────────────
 
-  function EventPill({ ev, compact = false }: { ev: DisplayEvent; compact?: boolean }) {
+  function EventPill({ ev, compact = false, wrap = false }: { ev: DisplayEvent; compact?: boolean; wrap?: boolean }) {
     const isClickable = ev.source === 'manual';
     return (
       <div
@@ -625,7 +625,7 @@ function CalendarContent() {
             if (original) openEditEvent(original);
           }
         }}
-        className={`${compact ? 'px-1 text-[10px] leading-[14px]' : 'px-1.5 py-0.5 text-xs'} rounded font-medium truncate`}
+        className={`${compact ? 'px-1 py-0.5 text-[10px] leading-[14px]' : 'px-1.5 py-0.5 text-xs'} rounded font-medium ${wrap ? 'break-words' : 'truncate'}`}
         style={{
           background: ev.color + '22',
           color: ev.color,
@@ -1042,7 +1042,7 @@ function CalendarContent() {
                               }}
                             >
                               {allDayRows[i].map(ev => (
-                                <EventPill key={ev.id} ev={ev} compact />
+                                <EventPill key={ev.id} ev={ev} compact wrap />
                               ))}
                             </div>
                           );

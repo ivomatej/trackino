@@ -337,13 +337,16 @@ export default function TimeEntryList({ refreshKey, onPlay }: TimeEntryListProps
                   </div>
 
                   {/* Čas + akce */}
-                  <div className="flex items-center gap-3 sm:gap-3 flex-shrink-0">
+                  <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
                     <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
                       {formatTimeRange(entry.start_time, entry.end_time)}
                     </span>
                     <span className="text-sm tabular-nums font-medium min-w-[70px] text-right" style={{ color: 'var(--text-primary)' }}>
                       {formatDuration(entry.duration || 0)}
                     </span>
+
+                    {/* Akční tlačítka – větší tap targety na mobilu */}
+                    <div className="flex items-center gap-0.5 sm:gap-0.5">
 
                     {/* Play – znovu spustit záznam */}
                     {onPlay && (
@@ -355,7 +358,7 @@ export default function TimeEntryList({ refreshKey, onPlay }: TimeEntryListProps
                           taskId: entry.task_id || '',
                           tagIds: entryTagMap[entry.id] ?? [],
                         })}
-                        className="p-1.5 sm:p-1 rounded transition-colors"
+                        className="w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg transition-colors flex-shrink-0"
                         style={{ color: 'var(--text-muted)' }}
                         onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--primary)'; }}
                         onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
@@ -379,7 +382,7 @@ export default function TimeEntryList({ refreshKey, onPlay }: TimeEntryListProps
                           }
                         }}
                         title={entry.manager_note ? 'Upravit poznámku' : 'Přidat poznámku'}
-                        className="p-1.5 sm:p-1 rounded transition-colors"
+                        className="w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg transition-colors flex-shrink-0"
                         style={{ color: entry.manager_note ? '#d97706' : 'var(--text-muted)' }}
                         onMouseEnter={(e) => { e.currentTarget.style.color = '#d97706'; }}
                         onMouseLeave={(e) => { e.currentTarget.style.color = entry.manager_note ? '#d97706' : 'var(--text-muted)'; }}
@@ -394,7 +397,7 @@ export default function TimeEntryList({ refreshKey, onPlay }: TimeEntryListProps
                     {/* Smazat – vždy viditelné */}
                     <button
                       onClick={() => deleteEntry(entry.id)}
-                      className="p-1.5 sm:p-1 rounded transition-colors"
+                      className="w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg transition-colors flex-shrink-0"
                       style={{ color: 'var(--text-muted)' }}
                       onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--danger)'; }}
                       onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
@@ -407,6 +410,8 @@ export default function TimeEntryList({ refreshKey, onPlay }: TimeEntryListProps
                         <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
                       </svg>
                     </button>
+
+                    </div>{/* konec akčních tlačítek */}
                   </div>
                 </div>
 
