@@ -260,7 +260,7 @@ function NotesContent() {
                     type="date"
                     value={customFrom}
                     onChange={(e) => setCustomFrom(e.target.value)}
-                    className="px-3 py-2 rounded-lg border text-sm focus:outline-none"
+                    className="px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none"
                     style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
                   />
                 </div>
@@ -270,7 +270,7 @@ function NotesContent() {
                     type="date"
                     value={customTo}
                     onChange={(e) => setCustomTo(e.target.value)}
-                    className="px-3 py-2 rounded-lg border text-sm focus:outline-none"
+                    className="px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none"
                     style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
                   />
                 </div>
@@ -285,7 +285,7 @@ function NotesContent() {
                   <select
                     value={userFilter}
                     onChange={(e) => setUserFilter(e.target.value)}
-                    className="px-3 py-2 pr-8 rounded-lg border text-sm focus:outline-none appearance-none cursor-pointer"
+                    className="px-3 py-2 pr-8 rounded-lg border text-base sm:text-sm focus:outline-none appearance-none cursor-pointer"
                     style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
                   >
                     <option value="all">Všichni</option>
@@ -434,7 +434,7 @@ function NotesContent() {
                               autoFocus
                               placeholder="Napište poznámku… (Enter = uložit, Shift+Enter = nový řádek)"
                               rows={2}
-                              className="flex-1 px-2.5 py-1.5 rounded-lg border text-sm focus:outline-none focus:ring-1 focus:ring-[var(--primary)] resize-none"
+                              className="flex-1 px-2.5 py-1.5 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-1 focus:ring-[var(--primary)] resize-none"
                               style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
                             />
                             <div className="flex flex-col gap-1 flex-shrink-0">

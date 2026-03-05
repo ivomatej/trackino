@@ -246,7 +246,7 @@ function NoteInput({ initialNote, onSave }: { initialNote: string; onSave: (note
         value={note}
         onChange={e => setNote(e.target.value)}
         placeholder="Volitelná poznámka..."
-        className="w-full px-2 py-1.5 rounded-lg text-xs border outline-none resize-none"
+        className="w-full px-2 py-1.5 rounded-lg text-base sm:text-sm border outline-none resize-none"
         style={{ background: 'var(--bg-input)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
       />
       <button
@@ -820,7 +820,7 @@ function PlannerContent() {
                 value={newStatusName}
                 onChange={e => setNewStatusName(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') saveStatus(); }}
-                className="flex-1 min-w-[180px] px-3 py-1.5 rounded-lg text-sm border outline-none"
+                className="flex-1 min-w-[180px] px-3 py-1.5 rounded-lg text-base sm:text-sm border outline-none"
                 style={{ background: 'var(--bg-input)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
               />
               <input

@@ -526,12 +526,12 @@ function BookmarksContent() {
         <div className="flex-1 min-w-0 flex flex-col gap-3">
           <div className="flex items-center gap-3 flex-wrap">
             <input value={searchQ} onChange={e => setSearchQ(e.target.value)} placeholder="Hledat záložky…"
-              className="px-3 py-1.5 rounded-lg border text-sm flex-1 min-w-[160px] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+              className="px-3 py-1.5 rounded-lg border text-base sm:text-sm flex-1 min-w-[160px] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
               style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }} />
             {/* Fix #9: sort select with custom arrow */}
             <div className="relative flex-shrink-0">
               <select value={sortBy} onChange={e => setSortBy(e.target.value as 'date' | 'likes' | 'title')}
-                className="appearance-none pr-8 px-3 py-1.5 rounded-lg border text-sm focus:outline-none"
+                className="appearance-none pr-8 px-3 py-1.5 rounded-lg border text-base sm:text-sm focus:outline-none"
                 style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}>
                 <option value="date">Nejnovější</option>
                 <option value="likes">Nejvíce liků</option>
@@ -710,7 +710,7 @@ function BookmarksContent() {
                                         value={editingComment.content}
                                         onChange={e => setEditingComment({ ...editingComment, content: e.target.value })}
                                         rows={2}
-                                        className="w-full px-2 py-1.5 rounded-lg border text-xs focus:outline-none focus:ring-1 focus:ring-[var(--primary)] resize-none"
+                                        className="w-full px-2 py-1.5 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-1 focus:ring-[var(--primary)] resize-none"
                                         style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
                                       />
                                       <div className="flex gap-1.5 mt-1">
@@ -738,7 +738,7 @@ function BookmarksContent() {
                           <div className="flex gap-2 mt-2">
                             <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="Přidat komentář…"
                               onKeyDown={e => e.key === 'Enter' && addComment(b.id)}
-                              className="flex-1 px-3 py-1.5 rounded-lg border text-xs focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
+                              className="flex-1 px-3 py-1.5 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
                               style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }} />
                             <button onClick={() => addComment(b.id)} disabled={addingComment || !newComment.trim()}
                               className="px-3 py-1.5 rounded-lg text-xs font-medium text-white disabled:opacity-50" style={{ background: 'var(--primary)' }}>Odeslat</button>
@@ -764,7 +764,7 @@ function BookmarksContent() {
             <h2 className="font-semibold mb-4 text-sm" style={{ color: 'var(--text-primary)' }}>{folderModal.editing ? 'Přejmenovat složku' : 'Nová složka'}</h2>
             <input value={folderName} onChange={e => setFolderName(e.target.value)} placeholder="Název složky" autoFocus
               onKeyDown={e => e.key === 'Enter' && saveFolder()}
-              className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+              className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
               style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }} />
             <div className="flex gap-2 mt-4">
               <button onClick={saveFolder} className="flex-1 py-2 rounded-lg text-sm font-medium text-white" style={{ background: 'var(--primary)' }}>Uložit</button>
@@ -841,19 +841,19 @@ function BookmarksContent() {
             <h2 className="font-semibold mb-4 text-sm" style={{ color: 'var(--text-primary)' }}>{bmModal.editing ? 'Upravit záložku' : 'Nová záložka'}</h2>
             <div className="space-y-3">
               <input value={bmTitle} onChange={e => setBmTitle(e.target.value)} placeholder="Název záložky" autoFocus
-                className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
                 style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }} />
               <input value={bmUrl} onChange={e => setBmUrl(e.target.value)} placeholder="URL (např. https://example.com)"
-                className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
                 style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }} />
               {/* Fix #13: textarea rows from 2 to 4 */}
               <textarea value={bmDesc} onChange={e => setBmDesc(e.target.value)} placeholder="Popis (volitelné)" rows={4}
-                className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] resize-none"
+                className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] resize-none"
                 style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }} />
               {/* Fix #13: folder select with custom arrow */}
               <div className="relative">
                 <select value={bmFolderId ?? ''} onChange={e => setBmFolderId(e.target.value || null)}
-                  className="appearance-none pr-8 w-full px-3 py-2 rounded-lg border text-sm focus:outline-none"
+                  className="appearance-none pr-8 w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none"
                   style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}>
                   <option value="">— Bez složky —</option>
                   {folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}

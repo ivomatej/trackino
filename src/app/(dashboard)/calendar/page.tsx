@@ -1237,7 +1237,7 @@ function CalendarContent() {
                 <select
                   value={calSettingsForm.dayStart}
                   onChange={e => setCalSettingsForm(f => ({ ...f, dayStart: parseInt(e.target.value) }))}
-                  className="w-full px-3 py-2 rounded-lg border text-sm"
+                  className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm"
                   style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
                 >
                   {Array.from({ length: 24 }, (_, i) => (
@@ -1250,7 +1250,7 @@ function CalendarContent() {
                 <select
                   value={calSettingsForm.dayEnd}
                   onChange={e => setCalSettingsForm(f => ({ ...f, dayEnd: parseInt(e.target.value) }))}
-                  className="w-full px-3 py-2 rounded-lg border text-sm"
+                  className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm"
                   style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
                 >
                   {Array.from({ length: 24 }, (_, i) => i + 1).filter(h => h > calSettingsForm.dayStart).map(h => (
@@ -1303,7 +1303,7 @@ function CalendarContent() {
                   value={eventForm.title}
                   onChange={e => setEventForm(f => ({ ...f, title: e.target.value }))}
                   placeholder="Název události"
-                  className="w-full px-3 py-2 rounded-lg border text-sm"
+                  className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm"
                   style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
                   autoFocus
                 />
@@ -1315,7 +1315,7 @@ function CalendarContent() {
                   <select
                     value={eventForm.calendar_id}
                     onChange={e => setEventForm(f => ({ ...f, calendar_id: e.target.value }))}
-                    className="w-full px-3 py-2 rounded-lg border text-sm"
+                    className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm"
                     style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
                   >
                     {calendars.map(c => (
@@ -1332,7 +1332,7 @@ function CalendarContent() {
                     type="date"
                     value={eventForm.start_date}
                     onChange={e => setEventForm(f => ({ ...f, start_date: e.target.value, end_date: f.end_date < e.target.value ? e.target.value : f.end_date }))}
-                    className="w-full px-3 py-2 rounded-lg border text-sm"
+                    className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm"
                     style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
                   />
                 </div>
@@ -1343,7 +1343,7 @@ function CalendarContent() {
                     value={eventForm.end_date}
                     min={eventForm.start_date}
                     onChange={e => setEventForm(f => ({ ...f, end_date: e.target.value }))}
-                    className="w-full px-3 py-2 rounded-lg border text-sm"
+                    className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm"
                     style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
                   />
                 </div>
@@ -1371,7 +1371,7 @@ function CalendarContent() {
                       type="time"
                       value={eventForm.start_time}
                       onChange={e => setEventForm(f => ({ ...f, start_time: e.target.value }))}
-                      className="w-full px-3 py-2 rounded-lg border text-sm"
+                      className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm"
                       style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
                     />
                   </div>
@@ -1381,7 +1381,7 @@ function CalendarContent() {
                       type="time"
                       value={eventForm.end_time}
                       onChange={e => setEventForm(f => ({ ...f, end_time: e.target.value }))}
-                      className="w-full px-3 py-2 rounded-lg border text-sm"
+                      className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm"
                       style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
                     />
                   </div>
@@ -1395,7 +1395,7 @@ function CalendarContent() {
                   onChange={e => setEventForm(f => ({ ...f, description: e.target.value }))}
                   placeholder="Volitelný popis..."
                   rows={2}
-                  className="w-full px-3 py-2 rounded-lg border text-sm resize-none"
+                  className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm resize-none"
                   style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
                 />
               </div>
@@ -1481,7 +1481,7 @@ function CalendarContent() {
                   value={calendarForm.name}
                   onChange={e => setCalendarForm(f => ({ ...f, name: e.target.value }))}
                   placeholder="Název kalendáře"
-                  className="w-full px-3 py-2 rounded-lg border text-sm"
+                  className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm"
                   style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
                   autoFocus
                 />

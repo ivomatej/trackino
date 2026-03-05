@@ -429,7 +429,7 @@ function TextConverterContent() {
                   readOnly
                   value={forwardOutput}
                   placeholder={hasForwardInput ? 'Konverze…' : 'Výstup se zobrazí zde po vložení textu vlevo'}
-                  className="flex-1 p-4 resize-none focus:outline-none text-sm font-mono"
+                  className="flex-1 p-4 resize-none focus:outline-none text-base sm:text-sm font-mono"
                   style={{
                     background: 'var(--bg-card)',
                     color: 'var(--text-primary)',
@@ -477,7 +477,7 @@ function TextConverterContent() {
                     convertReverse(e.target.value);
                   }}
                   placeholder={'# Nadpis\n\n**Tučné**, *kurzíva*, ~~přeškrtnuté~~\n\n- Položka 1\n- Položka 2\n\n[Odkaz](https://example.com)'}
-                  className="flex-1 p-4 resize-none focus:outline-none text-sm font-mono"
+                  className="flex-1 p-4 resize-none focus:outline-none text-base sm:text-sm font-mono"
                   style={{
                     background: 'var(--bg-card)',
                     color: 'var(--text-primary)',
@@ -542,7 +542,7 @@ function TextConverterContent() {
                     readOnly
                     value={reversePlain}
                     placeholder="Prostý text se zobrazí zde po zadání Markdownu vlevo"
-                    className="flex-1 p-4 resize-none focus:outline-none text-sm font-mono"
+                    className="flex-1 p-4 resize-none focus:outline-none text-base sm:text-sm font-mono"
                     style={{
                       background: 'var(--bg-card)',
                       color: 'var(--text-primary)',

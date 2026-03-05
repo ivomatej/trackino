@@ -81,7 +81,7 @@ export default function RegisterPage() {
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               required
-              className="w-full px-3 py-2.5 rounded-lg border border-[#e2e8f0] bg-white text-[#0f172a] text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:border-transparent placeholder:text-[#94a3b8] transition-shadow"
+              className="w-full px-3 py-2.5 rounded-lg border border-[#e2e8f0] bg-white text-[#0f172a] text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:border-transparent placeholder:text-[#94a3b8] transition-shadow"
               placeholder="Jan Novák"
             />
           </div>
@@ -96,7 +96,7 @@ export default function RegisterPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-3 py-2.5 rounded-lg border border-[#e2e8f0] bg-white text-[#0f172a] text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:border-transparent placeholder:text-[#94a3b8] transition-shadow"
+              className="w-full px-3 py-2.5 rounded-lg border border-[#e2e8f0] bg-white text-[#0f172a] text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:border-transparent placeholder:text-[#94a3b8] transition-shadow"
               placeholder="vas@email.cz"
             />
           </div>
@@ -112,7 +112,7 @@ export default function RegisterPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={6}
-              className="w-full px-3 py-2.5 rounded-lg border border-[#e2e8f0] bg-white text-[#0f172a] text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:border-transparent placeholder:text-[#94a3b8] transition-shadow"
+              className="w-full px-3 py-2.5 rounded-lg border border-[#e2e8f0] bg-white text-[#0f172a] text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:border-transparent placeholder:text-[#94a3b8] transition-shadow"
               placeholder="Minimálně 6 znaků"
             />
           </div>
@@ -127,7 +127,7 @@ export default function RegisterPage() {
               type="text"
               value={workspaceCode}
               onChange={(e) => setWorkspaceCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))}
-              className="w-full px-3 py-2.5 rounded-lg border border-[#e2e8f0] bg-white text-[#0f172a] text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:border-transparent placeholder:text-[#94a3b8] transition-shadow font-mono tracking-widest"
+              className="w-full px-3 py-2.5 rounded-lg border border-[#e2e8f0] bg-white text-[#0f172a] text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:border-transparent placeholder:text-[#94a3b8] transition-shadow font-mono tracking-widest"
               placeholder="ABC123"
               maxLength={6}
             />

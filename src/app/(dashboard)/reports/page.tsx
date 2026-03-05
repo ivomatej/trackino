@@ -422,7 +422,7 @@ function ReportsContent() {
                   type="date"
                   value={manualDate}
                   onChange={(e) => setManualDate(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
+                  className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
                   style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
                 />
               </div>
@@ -432,7 +432,7 @@ function ReportsContent() {
                   type="time"
                   value={manualStart}
                   onChange={(e) => setManualStart(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-1 focus:ring-[var(--primary)] tabular-nums"
+                  className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-1 focus:ring-[var(--primary)] tabular-nums"
                   style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
                 />
               </div>
@@ -442,7 +442,7 @@ function ReportsContent() {
                   type="time"
                   value={manualEnd}
                   onChange={(e) => setManualEnd(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-1 focus:ring-[var(--primary)] tabular-nums"
+                  className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-1 focus:ring-[var(--primary)] tabular-nums"
                   style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
                 />
               </div>
@@ -455,7 +455,7 @@ function ReportsContent() {
                   <select
                     value={manualProject}
                     onChange={(e) => setManualProject(e.target.value)}
-                    className="w-full px-3 py-2 pr-8 rounded-lg border text-sm focus:outline-none appearance-none cursor-pointer"
+                    className="w-full px-3 py-2 pr-8 rounded-lg border text-base sm:text-sm focus:outline-none appearance-none cursor-pointer"
                     style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
                   >
                     <option value="">— Bez projektu —</option>
@@ -469,7 +469,7 @@ function ReportsContent() {
                   <select
                     value={manualCategory}
                     onChange={(e) => setManualCategory(e.target.value)}
-                    className="w-full px-3 py-2 pr-8 rounded-lg border text-sm focus:outline-none appearance-none cursor-pointer"
+                    className="w-full px-3 py-2 pr-8 rounded-lg border text-base sm:text-sm focus:outline-none appearance-none cursor-pointer"
                     style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
                   >
                     <option value="">— Bez kategorie —</option>
@@ -486,7 +486,7 @@ function ReportsContent() {
                   <select
                     value={manualTask}
                     onChange={(e) => setManualTask(e.target.value)}
-                    className="w-full px-3 py-2 pr-8 rounded-lg border text-sm focus:outline-none appearance-none cursor-pointer"
+                    className="w-full px-3 py-2 pr-8 rounded-lg border text-base sm:text-sm focus:outline-none appearance-none cursor-pointer"
                     style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
                   >
                     <option value="">— Bez úkolu —</option>
@@ -501,7 +501,7 @@ function ReportsContent() {
                     <select
                       value={manualForUser}
                       onChange={(e) => setManualForUser(e.target.value)}
-                      className="w-full px-3 py-2 pr-8 rounded-lg border text-sm focus:outline-none appearance-none cursor-pointer"
+                      className="w-full px-3 py-2 pr-8 rounded-lg border text-base sm:text-sm focus:outline-none appearance-none cursor-pointer"
                       style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
                     >
                       <option value="me">Já (vlastní záznam)</option>
@@ -522,7 +522,7 @@ function ReportsContent() {
                 onChange={(e) => setManualDesc(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') saveManual(); }}
                 placeholder="Co jste dělali?"
-                className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
+                className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
                 style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
               />
             </div>
@@ -583,7 +583,7 @@ function ReportsContent() {
                     type="date"
                     value={customFrom}
                     onChange={(e) => setCustomFrom(e.target.value)}
-                    className="px-3 py-2 rounded-lg border text-sm focus:outline-none"
+                    className="px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none"
                     style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
                   />
                 </div>
@@ -593,7 +593,7 @@ function ReportsContent() {
                     type="date"
                     value={customTo}
                     onChange={(e) => setCustomTo(e.target.value)}
-                    className="px-3 py-2 rounded-lg border text-sm focus:outline-none"
+                    className="px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none"
                     style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
                   />
                 </div>
@@ -608,7 +608,7 @@ function ReportsContent() {
                   <select
                     value={userFilter}
                     onChange={(e) => setUserFilter(e.target.value)}
-                    className="px-3 py-2 pr-8 rounded-lg border text-sm focus:outline-none appearance-none cursor-pointer"
+                    className="px-3 py-2 pr-8 rounded-lg border text-base sm:text-sm focus:outline-none appearance-none cursor-pointer"
                     style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
                   >
                     <option value="me">Já</option>
@@ -628,7 +628,7 @@ function ReportsContent() {
                 <select
                   value={projectFilter}
                   onChange={(e) => setProjectFilter(e.target.value)}
-                  className="px-3 py-2 pr-8 rounded-lg border text-sm focus:outline-none appearance-none cursor-pointer"
+                  className="px-3 py-2 pr-8 rounded-lg border text-base sm:text-sm focus:outline-none appearance-none cursor-pointer"
                   style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
                 >
                   <option value="all">Všechny projekty</option>
@@ -851,7 +851,7 @@ function ReportsContent() {
                                 autoFocus
                                 placeholder="Interní poznámka manažera… (Enter = uložit, Shift+Enter = nový řádek)"
                                 rows={2}
-                                className="flex-1 px-2.5 py-1.5 rounded-md border text-xs resize-none focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
+                                className="flex-1 px-2.5 py-1.5 rounded-md border text-base sm:text-sm resize-none focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
                                 style={{ borderColor: '#f59e0b50', background: '#f59e0b08', color: 'var(--text-primary)' }}
                               />
                               <div className="flex flex-col gap-1">

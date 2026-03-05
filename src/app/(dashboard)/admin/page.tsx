@@ -425,14 +425,14 @@ function AdminContent() {
               value={newWsName}
               onChange={(e) => setNewWsName(e.target.value)}
               placeholder="Název workspace"
-              className="flex-1 min-w-0 px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+              className="flex-1 min-w-0 px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
               style={inputStyle}
             />
             <div className="relative flex-shrink-0">
               <select
                 value={newWsTariff}
                 onChange={(e) => setNewWsTariff(e.target.value as Tariff)}
-                className="pl-3 pr-8 py-2 rounded-lg border text-sm appearance-none cursor-pointer"
+                className="pl-3 pr-8 py-2 rounded-lg border text-base sm:text-sm appearance-none cursor-pointer"
                 style={inputStyle}
               >
                 <option value="free">Free</option>
@@ -489,7 +489,7 @@ function AdminContent() {
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
           placeholder="Hledat workspace…"
-          className="w-full pl-9 pr-8 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+          className="w-full pl-9 pr-8 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
           style={inputStyle}
         />
         {searchQuery && (
@@ -755,7 +755,7 @@ function AdminContent() {
                   type="text"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                  className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
                   style={inputStyle}
                 />
               </div>
@@ -827,7 +827,7 @@ function AdminContent() {
                           <select
                             value={m.role}
                             onChange={(e) => changeMemberRole(m.id, e.target.value as UserRole)}
-                            className="pl-2 pr-5 py-1 rounded-md border text-xs appearance-none cursor-pointer"
+                            className="pl-2 pr-5 py-1 rounded-md border text-base sm:text-sm appearance-none cursor-pointer"
                             style={inputStyle}
                           >
                             <option value="owner">Vlastník</option>
@@ -863,14 +863,14 @@ function AdminContent() {
                     value={inviteEmail}
                     onChange={(e) => { setInviteEmail(e.target.value); setInviteCode(null); }}
                     placeholder="email@priklad.cz"
-                    className="flex-1 px-3 py-2 rounded-lg border text-xs focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                    className="flex-1 px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
                     style={inputStyle}
                   />
                   <div className="relative flex-shrink-0">
                     <select
                       value={inviteRole}
                       onChange={(e) => setInviteRole(e.target.value as UserRole)}
-                      className="pl-2 pr-6 py-2 rounded-lg border text-xs appearance-none cursor-pointer"
+                      className="pl-2 pr-6 py-2 rounded-lg border text-base sm:text-sm appearance-none cursor-pointer"
                       style={inputStyle}
                     >
                       <option value="admin">Admin</option>

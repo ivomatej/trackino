@@ -71,7 +71,7 @@ function ProfileContent() {
     ? displayName.split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2)
     : (profile?.email?.charAt(0).toUpperCase() ?? '?');
 
-  const inputCls = 'w-full px-3 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]';
+  const inputCls = 'w-full px-3 py-2.5 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]';
   const inputStyle = { borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' };
 
   return (

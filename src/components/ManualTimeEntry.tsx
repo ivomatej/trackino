@@ -128,7 +128,7 @@ export default function ManualTimeEntry({ onSaved, onCancel }: ManualTimeEntryPr
         value={description}
         onChange={(e) => setDescription(e.target.value)}
         placeholder="Na čem jste pracovali?"
-        className="w-full px-3 py-2.5 rounded-lg border text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+        className="w-full px-3 py-2.5 rounded-lg border text-base sm:text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
         style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
       />
 
@@ -140,7 +140,7 @@ export default function ManualTimeEntry({ onSaved, onCancel }: ManualTimeEntryPr
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+            className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
             style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
           />
         </div>
@@ -150,7 +150,7 @@ export default function ManualTimeEntry({ onSaved, onCancel }: ManualTimeEntryPr
             type="time"
             value={startTime}
             onChange={(e) => setStartTime(e.target.value)}
-            className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+            className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
             style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
           />
         </div>
@@ -160,7 +160,7 @@ export default function ManualTimeEntry({ onSaved, onCancel }: ManualTimeEntryPr
             type="time"
             value={endTime}
             onChange={(e) => setEndTime(e.target.value)}
-            className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+            className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
             style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
           />
         </div>
@@ -171,7 +171,7 @@ export default function ManualTimeEntry({ onSaved, onCancel }: ManualTimeEntryPr
         <select
           value={selectedProject}
           onChange={(e) => setSelectedProject(e.target.value)}
-          className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+          className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
           style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
         >
           <option value="">Projekt</option>
@@ -180,7 +180,7 @@ export default function ManualTimeEntry({ onSaved, onCancel }: ManualTimeEntryPr
         <select
           value={selectedCategory}
           onChange={(e) => setSelectedCategory(e.target.value)}
-          className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+          className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
           style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
         >
           <option value="">Kategorie</option>
@@ -189,7 +189,7 @@ export default function ManualTimeEntry({ onSaved, onCancel }: ManualTimeEntryPr
         <select
           value={selectedTask}
           onChange={(e) => setSelectedTask(e.target.value)}
-          className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+          className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
           style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
         >
           <option value="">Úkol</option>

@@ -419,7 +419,7 @@ function TeamContent() {
   if (!currentWorkspace) return null;
 
   const currencySymbol = currentWorkspace.currency === 'EUR' ? '€' : currentWorkspace.currency === 'USD' ? '$' : 'Kč';
-  const inputCls = "w-full px-3 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]";
+  const inputCls = "w-full px-3 py-2.5 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]";
   const inputStyle = { borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' };
   const editInitials = editName.trim()
     ? editName.trim().split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
@@ -543,7 +543,7 @@ function TeamContent() {
                     placeholder="Hledat člena..."
                     value={memberSearch}
                     onChange={e => setMemberSearch(e.target.value)}
-                    className="w-full pl-9 pr-8 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                    className="w-full pl-9 pr-8 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
                     style={{ background: 'var(--bg-input)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
                   />
                   {memberSearch && (
@@ -743,7 +743,7 @@ function TeamContent() {
                             <select
                               value={member.role}
                               onChange={(e) => updateMemberRole(member.id, e.target.value as UserRole)}
-                              className="px-2 py-1 pr-6 rounded-md border text-xs appearance-none cursor-pointer"
+                              className="px-2 py-1 pr-6 rounded-md border text-base sm:text-sm appearance-none cursor-pointer"
                               style={inputStyle}
                             >
                               <option value="admin">Admin</option>

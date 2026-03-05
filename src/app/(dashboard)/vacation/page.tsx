@@ -346,7 +346,7 @@ function VacationContent() {
     return `${parseInt(day)}.${parseInt(m)}.${y}`;
   };
 
-  const inputCls = 'w-full px-3 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]';
+  const inputCls = 'w-full px-3 py-2.5 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]';
   const inputStyle = { borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' };
 
   // Přidávání: admin přidává za sebe nebo jiného
@@ -371,7 +371,7 @@ function VacationContent() {
                 <select
                   value={selectedUserId}
                   onChange={(e) => setSelectedUserId(e.target.value)}
-                  className="pl-3 pr-8 py-2 rounded-lg border text-sm appearance-none cursor-pointer"
+                  className="pl-3 pr-8 py-2 rounded-lg border text-base sm:text-sm appearance-none cursor-pointer"
                   style={inputStyle}
                 >
                   <option value="me">Moje dovolená</option>
@@ -773,7 +773,7 @@ function VacationContent() {
                 onChange={e => setRejectModal(m => m ? { ...m, note: e.target.value } : null)}
                 rows={3}
                 placeholder="např. V daném termínu je plánovaný důležitý projekt."
-                className="w-full px-3 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] resize-none"
+                className="w-full px-3 py-2.5 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] resize-none"
                 style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
                 autoFocus
               />

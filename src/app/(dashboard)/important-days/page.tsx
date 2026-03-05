@@ -388,7 +388,7 @@ CREATE POLICY "Auth full" ON trackino_important_days
                   value={fTitle}
                   onChange={e => setFTitle(e.target.value)}
                   placeholder="Např. Narozeniny, Výroční schůzka…"
-                  className="w-full px-3 py-2 rounded-lg border text-sm"
+                  className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm"
                   style={{ borderColor: 'var(--border)', background: 'var(--bg-input, var(--bg-hover))', color: 'var(--text-primary)' }}
                   autoFocus
                 />
@@ -401,7 +401,7 @@ CREATE POLICY "Auth full" ON trackino_important_days
                   <select
                     value={fRecurring}
                     onChange={e => setFRecurring(e.target.value as ImportantDayRecurring)}
-                    className="w-full px-3 py-2 pr-8 rounded-lg border text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
+                    className="w-full px-3 py-2 pr-8 rounded-lg border text-base sm:text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
                     style={{ borderColor: 'var(--border)', background: 'var(--bg-input, var(--bg-hover))', color: 'var(--text-primary)' }}
                   >
                     <option value="none">Jednorázově</option>
@@ -426,7 +426,7 @@ CREATE POLICY "Auth full" ON trackino_important_days
                       type="date"
                       value={fStartDate}
                       onChange={e => { setFStartDate(e.target.value); if (!fEndDate || e.target.value > fEndDate) setFEndDate(e.target.value); }}
-                      className="w-full px-3 py-2 rounded-lg border text-sm"
+                      className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm"
                       style={{ borderColor: 'var(--border)', background: 'var(--bg-input, var(--bg-hover))', color: 'var(--text-primary)' }}
                     />
                   </div>
@@ -437,7 +437,7 @@ CREATE POLICY "Auth full" ON trackino_important_days
                       value={fEndDate}
                       min={fStartDate}
                       onChange={e => setFEndDate(e.target.value)}
-                      className="w-full px-3 py-2 rounded-lg border text-sm"
+                      className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm"
                       style={{ borderColor: 'var(--border)', background: 'var(--bg-input, var(--bg-hover))', color: 'var(--text-primary)' }}
                     />
                   </div>
@@ -451,7 +451,7 @@ CREATE POLICY "Auth full" ON trackino_important_days
                     type="date"
                     value={fStartDate}
                     onChange={e => setFStartDate(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border text-sm"
+                    className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm"
                     style={{ borderColor: 'var(--border)', background: 'var(--bg-input, var(--bg-hover))', color: 'var(--text-primary)' }}
                   />
                   <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
@@ -490,7 +490,7 @@ CREATE POLICY "Auth full" ON trackino_important_days
                   onChange={e => setFNote(e.target.value)}
                   rows={2}
                   placeholder="Volitelná poznámka…"
-                  className="w-full px-3 py-2 rounded-lg border text-sm resize-none"
+                  className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm resize-none"
                   style={{ borderColor: 'var(--border)', background: 'var(--bg-input, var(--bg-hover))', color: 'var(--text-primary)' }}
                 />
               </div>

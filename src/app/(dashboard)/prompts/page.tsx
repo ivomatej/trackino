@@ -108,7 +108,7 @@ function RichEditor({ value, onChange }: { value: string; onChange: (v: string) 
           }
 
         }}
-        className="min-h-[200px] p-4 text-sm focus:outline-none prose-editor"
+        className="min-h-[200px] p-4 text-base sm:text-sm focus:outline-none prose-editor"
         style={{ color: 'var(--text-primary)', background: 'var(--bg-card)' }}
       />
       <style>{`
@@ -627,13 +627,13 @@ function PromptsContent() {
           {/* Toolbar */}
           <div className="flex items-center gap-3 flex-wrap">
             <input value={searchQ} onChange={e => setSearchQ(e.target.value)} placeholder="Hledat prompty…"
-              className="px-3 py-1.5 rounded-lg border text-sm flex-1 min-w-[160px] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+              className="px-3 py-1.5 rounded-lg border text-base sm:text-sm flex-1 min-w-[160px] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
               style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }} />
             <div className="relative flex-shrink-0">
               <select
                 value={sortBy}
                 onChange={e => setSortBy(e.target.value as 'date' | 'likes' | 'title')}
-                className="text-xs border rounded-lg pl-3 pr-8 py-1.5 appearance-none cursor-pointer"
+                className="text-base sm:text-sm border rounded-lg pl-3 pr-8 py-1.5 appearance-none cursor-pointer"
                 style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-secondary)', outline: 'none' }}
               >
                 <option value="date">Nejnovější</option>
@@ -755,7 +755,7 @@ function PromptsContent() {
             <h2 className="font-semibold mb-4 text-sm" style={{ color: 'var(--text-primary)' }}>{folderModal.editing ? 'Přejmenovat složku' : 'Nová složka'}</h2>
             <input value={folderName} onChange={e => setFolderName(e.target.value)} placeholder="Název složky" autoFocus
               onKeyDown={e => e.key === 'Enter' && saveFolder()}
-              className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+              className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
               style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }} />
             <div className="flex gap-2 mt-4">
               <button onClick={saveFolder} className="flex-1 py-2 rounded-lg text-sm font-medium text-white" style={{ background: 'var(--primary)' }}>Uložit</button>
@@ -833,13 +833,13 @@ function PromptsContent() {
               <h2 className="font-semibold mb-4 text-sm" style={{ color: 'var(--text-primary)' }}>{promptModal.editing ? 'Upravit prompt' : 'Nový prompt'}</h2>
               <div className="space-y-4">
                 <input value={pmTitle} onChange={e => setPmTitle(e.target.value)} placeholder="Název promptu" autoFocus
-                  className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                  className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
                   style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }} />
                 <div>
                   <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Složka</label>
                   <div className="relative">
                     <select value={pmFolderId ?? ''} onChange={e => setPmFolderId(e.target.value || null)}
-                      className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none appearance-none pr-8"
+                      className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none appearance-none pr-8"
                       style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}>
                       <option value="">— Bez složky —</option>
                       {folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}

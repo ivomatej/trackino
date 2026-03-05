@@ -272,7 +272,7 @@ function SubordinatesContent() {
                   type="date"
                   value={customFrom}
                   onChange={(e) => setCustomFrom(e.target.value)}
-                  className="px-2 py-1.5 rounded-lg border text-sm"
+                  className="px-2 py-1.5 rounded-lg border text-base sm:text-sm"
                   style={inputStyle}
                 />
                 <span className="text-sm" style={{ color: 'var(--text-muted)' }}>–</span>
@@ -280,7 +280,7 @@ function SubordinatesContent() {
                   type="date"
                   value={customTo}
                   onChange={(e) => setCustomTo(e.target.value)}
-                  className="px-2 py-1.5 rounded-lg border text-sm"
+                  className="px-2 py-1.5 rounded-lg border text-base sm:text-sm"
                   style={inputStyle}
                 />
               </>
@@ -292,7 +292,7 @@ function SubordinatesContent() {
                 <select
                   value={selectedUser}
                   onChange={(e) => setSelectedUser(e.target.value)}
-                  className="pl-3 pr-8 py-1.5 rounded-lg border text-sm appearance-none cursor-pointer"
+                  className="pl-3 pr-8 py-1.5 rounded-lg border text-base sm:text-sm appearance-none cursor-pointer"
                   style={inputStyle}
                 >
                   <option value="all">Všichni ({entries.length})</option>
@@ -362,7 +362,7 @@ function SubordinatesContent() {
                           onChange={(e) => setEditDesc(e.target.value)}
                           onKeyDown={(e) => { if (e.key === 'Enter') saveDescription(entry.id); if (e.key === 'Escape') setEditingEntry(null); }}
                           autoFocus
-                          className="flex-1 px-2 py-1 rounded border text-sm focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
+                          className="flex-1 px-2 py-1 rounded border text-base sm:text-sm focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
                           style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
                         />
                         <button onClick={() => saveDescription(entry.id)} className="px-2 py-1 rounded text-xs font-medium text-white" style={{ background: 'var(--primary)' }}>
@@ -408,7 +408,7 @@ function SubordinatesContent() {
                           onKeyDown={(e) => { if (e.key === 'Enter') saveNote(entry.id); if (e.key === 'Escape') setEditingNote(null); }}
                           autoFocus
                           placeholder="Napište poznámku..."
-                          className="flex-1 px-2 py-1 rounded border text-xs focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
+                          className="flex-1 px-2 py-1 rounded border text-base sm:text-sm focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
                           style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
                         />
                         <button onClick={() => saveNote(entry.id)} className="px-2 py-1 rounded text-xs font-medium text-white" style={{ background: 'var(--primary)' }}>
