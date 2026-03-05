@@ -528,9 +528,12 @@ export default function TimerBar({ onEntryChanged, playData }: TimerBarProps) {
         <button
           onClick={() => { setShowProjectPicker(!showProjectPicker); setShowTaskPicker(false); setProjectSearch(''); }}
           className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition-colors"
-          style={{ color: selectedProject ? 'var(--text-primary)' : 'var(--text-muted)' }}
-          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+          style={{
+            color: selectedProject ? 'var(--text-primary)' : 'var(--text-muted)',
+            background: selectedProject ? ((selectedProjectObj?.color ?? 'var(--primary)') + '18') : 'transparent',
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.background = selectedProject ? ((selectedProjectObj?.color ?? 'var(--primary)') + '28') : 'var(--bg-hover)'}
+          onMouseLeave={(e) => e.currentTarget.style.background = selectedProject ? ((selectedProjectObj?.color ?? 'var(--primary)') + '18') : 'transparent'}
           title={
             selectedProjectClientName
               ? `${selectedProjectClientName} · ${selectedProjectObj?.name}`
@@ -539,8 +542,8 @@ export default function TimerBar({ onEntryChanged, playData }: TimerBarProps) {
         >
           {selectedProject ? (
             <>
-              <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: selectedProjectObj?.color ?? 'var(--primary)' }} />
-              <span className="text-xs truncate max-w-[70px] sm:max-w-[140px]">
+              <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: selectedProjectObj?.color ?? 'var(--primary)' }} />
+              <span className="hidden sm:block text-xs truncate max-w-[140px]">
                 {selectedProjectClientName ? `${selectedProjectClientName} · ` : ''}{selectedProjectObj?.name}
               </span>
             </>
@@ -625,9 +628,12 @@ export default function TimerBar({ onEntryChanged, playData }: TimerBarProps) {
         <button
           onClick={() => { setShowTaskPicker(!showTaskPicker); setShowProjectPicker(false); setTaskSearch(''); }}
           className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition-colors"
-          style={{ color: selectedTask || selectedCategory ? 'var(--primary)' : 'var(--text-muted)' }}
-          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+          style={{
+            color: selectedTask || selectedCategory ? 'var(--primary)' : 'var(--text-muted)',
+            background: (selectedTask || selectedCategory) ? 'var(--primary)18' : 'transparent',
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.background = (selectedTask || selectedCategory) ? 'var(--primary)28' : 'var(--bg-hover)'}
+          onMouseLeave={(e) => e.currentTarget.style.background = (selectedTask || selectedCategory) ? 'var(--primary)18' : 'transparent'}
           title={
             selectedCategoryObj && selectedTaskObj
               ? `${selectedCategoryObj.name} · ${selectedTaskObj.name}`
@@ -636,8 +642,8 @@ export default function TimerBar({ onEntryChanged, playData }: TimerBarProps) {
         >
           {selectedCategory || selectedTask ? (
             <>
-              <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: 'var(--primary)' }} />
-              <span className="text-xs truncate max-w-[70px] sm:max-w-[140px]">
+              <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: 'var(--primary)' }} />
+              <span className="hidden sm:block text-xs truncate max-w-[140px]">
                 {selectedCategoryObj?.name ?? ''}
                 {selectedCategoryObj && selectedTaskObj ? ' · ' : ''}
                 {selectedTaskObj?.name ?? ''}
