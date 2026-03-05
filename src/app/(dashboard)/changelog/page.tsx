@@ -11,6 +11,14 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.16.2 – 5. 3. 2026</h3>
+<ul>
+  <li><strong>Sjednocení nadpisů stránek</strong> – všechny hlavní nadpisy stránek (Fakturace, Dovolená, Reporty, Projekty, Tým, Prompty, Záložky, Podřízení, Poznámky, Profil, Důležité dny, Firemní pravidla, Pravidla v kanceláři, Nahlásit chybu) mají nyní jednotnou velikost <code>text-xl</code> jako ostatní stránky aplikace.</li>
+  <li><strong>Sjednocení výšek toolbarových prvků</strong> – tlačítka, selecty a inputy v hlavním filtrovacím panelu každé stránky mají nyní jednotnou výšku (<code>py-2</code>). Opraveno: Podřízení (period tabs, datumové inputy, user select), Analýza kategorií (inputy + preset tlačítka), Přehled hodin (navigační tlačítka), Klienti a Štítky (tlačítko Nový), Záložky a Prompty (search + sort + akční tlačítko).</li>
+  <li><strong>Záložky a Prompty – jméno autora místo avataru</strong> – barevný kroužek s iniciálami autora byl odstraněn; za datem vytvoření se nyní zobrazuje celé jméno autora oddelené tečkou (formát: <em>5. 3. 2026 · Jan Novák</em>).</li>
+  <li><strong>Záložky – doména bez www.</strong> – URL doména záložky se zobrazuje bez prefixu <em>www.</em> (např. <em>forbes.cz</em> místo <em>www.forbes.cz</em>).</li>
+</ul>
+
 <h3>v2.16.1 – 5. 3. 2026</h3>
 <ul>
   <li><strong>iOS auto-zoom prevence – celá aplikace</strong> – na iPhonu se stránka automaticky přibližovala při focusu na textové pole, pokud mělo font-size menší než 16px. Nyní mají všechny interaktivní vstupy (input, textarea, select) na mobilu velikost 16px (text-base) a na desktopu 14px (sm:text-sm). Opraveno 98 elementů v 25 souborech.</li>

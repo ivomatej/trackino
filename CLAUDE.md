@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 5. 3. 2026 (v2.16.1)
+> Aktualizováno: 5. 3. 2026 (v2.16.2)
 
 ---
 
@@ -476,6 +476,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.16.2 | 5. 3. 2026 | Sjednocení nadpisů stránek (text-xl, 14 stránek); sjednocení výšek toolbarových prvků na py-2 (7 stránek); Záložky+Prompty jméno autora místo avataru; záložky doména bez www. |
 | v2.16.1 | 5. 3. 2026 | iOS auto-zoom prevence: text-base sm:text-sm na všech input/textarea/select v celé aplikaci (98 elementů, 25 souborů); FolderTree ⋮ mobilní dropdown (Prompty+Záložky); Sdílení složek „Nesdílet s nikým"; FolderTree dropdown fixed position (position:fixed+getBoundingClientRect); Záložky popis inline; Mobilní responzivita: Settings nav, Tým tabs, Admin karty, App-Settings tabulka, Kalendář časy |
 | v2.16.0 | 5. 3. 2026 | Sidebar: WorkspaceSwitcher přesunut pod Dokumentaci (scrollovatelný, inline expanze jako user panel); Prompty: odstraněn expand chevron + jméno autora (jen datum); kliknutí na název → editační dialog; kódové bloky: clear placeholder on click, kopírovat ikona (SVG ::after + souřadnicová detekce); Sdílení (Prompty + Záložky): sekce „Konkrétní uživatelé" doplněna o seznam s avatary a bg-active výběrem; Sidebar reorganizace: Důležité dny → SLEDOVÁNÍ (pod Kalendář), Připomínky → SPOLEČNOST (pod Pravidla v kanceláři), NÁSTROJE = Záložky, Prompty, Převodník textu; Poznámky → Poznámky manažera všude; Nápověda: aktualizovány sekce a tarify dle nové struktury sidebaru |
 | v2.15.0 | 5. 3. 2026 | Sidebar collapse: hamburger vždy viditelný, desktop collapse toggle s localStorage persist (trackino_sidebar_collapsed), transition-[margin]; Kalendář: view switcher (Seznam/Týden/Měsíc) přesunut do top headeru, levý panel reorder (Moje kalendáře nahoře, mini kalendář dole); Měřič mobile: 2-řádkový layout (flex-col sm:flex-row), text-base na inputu (iOS anti-zoom), bigger action icons (16px), rounded-t-xl fix na day header; Dovolená mobile: flex-col header, responsive button text; SQL banner odstraněn z Úpravy aplikace; CLAUDE-ASISTENT.md pravidlo 11 (iOS auto-zoom) |
