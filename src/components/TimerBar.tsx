@@ -540,7 +540,7 @@ export default function TimerBar({ onEntryChanged, playData }: TimerBarProps) {
           {selectedProject ? (
             <>
               <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: selectedProjectObj?.color ?? 'var(--primary)' }} />
-              <span className="hidden sm:block text-xs truncate max-w-[140px]">
+              <span className="text-xs truncate max-w-[70px] sm:max-w-[140px]">
                 {selectedProjectClientName ? `${selectedProjectClientName} · ` : ''}{selectedProjectObj?.name}
               </span>
             </>
@@ -637,7 +637,7 @@ export default function TimerBar({ onEntryChanged, playData }: TimerBarProps) {
           {selectedCategory || selectedTask ? (
             <>
               <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: 'var(--primary)' }} />
-              <span className="hidden sm:block text-xs truncate max-w-[140px]">
+              <span className="text-xs truncate max-w-[70px] sm:max-w-[140px]">
                 {selectedCategoryObj?.name ?? ''}
                 {selectedCategoryObj && selectedTaskObj ? ' · ' : ''}
                 {selectedTaskObj?.name ?? ''}
