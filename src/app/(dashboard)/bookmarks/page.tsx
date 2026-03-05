@@ -200,7 +200,7 @@ function BookmarksContent() {
 
     // Fix #2: map avatar_color from profile
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    setMembers((mRes.data ?? []).map((m: any) => {
+    const ms: Member[] = (mRes.data ?? []).map((m: any) => {
       const p = Array.isArray(m.trackino_profiles) ? m.trackino_profiles[0] : m.trackino_profiles;
       return {
         user_id: m.user_id,
@@ -208,7 +208,32 @@ function BookmarksContent() {
         email: p?.email ?? '',
         avatar_color: p?.avatar_color ?? 'var(--primary)',
       };
-    }));
+    });
+
+    // Fetch profiles for bookmark creators not in workspace members (e.g., master admin)
+    const memberIds = new Set(ms.map((m: Member) => m.user_id));
+    const allBookmarks: { created_by: string }[] = bRes.data ?? [];
+    const creatorIds = [...new Set(allBookmarks.map(b => b.created_by))].filter(id => !memberIds.has(id));
+    if (creatorIds.length > 0) {
+      const { data: extraProfiles } = await supabase
+        .from('trackino_profiles')
+        .select('id, display_name, email, avatar_color')
+        .in('id', creatorIds);
+      for (const ep of (extraProfiles ?? [])) {
+        ms.push({
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          user_id: (ep as any).id,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          display_name: (ep as any).display_name ?? (ep as any).id,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          email: (ep as any).email ?? '',
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          avatar_color: (ep as any).avatar_color ?? 'var(--primary)',
+        });
+      }
+    }
+
+    setMembers(ms);
   }, [wsId, userId]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);

@@ -92,6 +92,17 @@ function RichEditor({ value, onChange }: { value: string; onChange: (v: string) 
       </div>
       <div ref={ref} contentEditable suppressContentEditableWarning
         onInput={() => { if (ref.current) onChange(ref.current.innerHTML); }}
+        onClick={(e) => {
+          const target = e.target as Element;
+          const codeEl = target.closest('code');
+          if (codeEl && codeEl.textContent === 'kód zde') {
+            const range = document.createRange();
+            range.selectNodeContents(codeEl);
+            const sel = window.getSelection();
+            sel?.removeAllRanges();
+            sel?.addRange(range);
+          }
+        }}
         className="min-h-[200px] p-4 text-sm focus:outline-none prose-editor"
         style={{ color: 'var(--text-primary)', background: 'var(--bg-card)' }}
       />
@@ -285,6 +296,23 @@ function PromptsContent() {
         avatar_color: (p as any)?.avatar_color ?? 'var(--primary)',
       };
     });
+    // Fetch profiles for prompt creators not in workspace members (e.g., master admin)
+    const memberIds = new Set(ms.map(m => m.user_id));
+    const creatorIds = [...new Set((pRes.data ?? []).map((p: { created_by: string }) => p.created_by))].filter(id => !memberIds.has(id));
+    if (creatorIds.length > 0) {
+      const { data: extraProfiles } = await supabase
+        .from('trackino_profiles')
+        .select('id, display_name, email, avatar_color')
+        .in('id', creatorIds);
+      for (const ep of (extraProfiles ?? [])) {
+        ms.push({
+          user_id: ep.id,
+          display_name: (ep as { id: string; display_name: string; email: string; avatar_color: string }).display_name ?? ep.id,
+          email: (ep as { id: string; display_name: string; email: string; avatar_color: string }).email ?? '',
+          avatar_color: (ep as { id: string; display_name: string; email: string; avatar_color: string }).avatar_color ?? 'var(--primary)',
+        });
+      }
+    }
     setMembers(ms);
   }, [wsId, userId]);
 
@@ -580,10 +608,23 @@ function PromptsContent() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <h3 className="font-semibold text-sm cursor-pointer hover:underline" style={{ color: 'var(--text-primary)' }}
-                            onClick={() => setDetailPrompt(detailPrompt?.id === p.id ? null : p)}>
-                            {p.title}
-                          </h3>
+                          <div className="flex items-center gap-1">
+                            <h3 className="font-semibold text-sm cursor-pointer hover:underline" style={{ color: 'var(--text-primary)' }}
+                              onClick={() => openPromptModal(p)}>
+                              {p.title}
+                            </h3>
+                            <button
+                              onClick={() => setDetailPrompt(detailPrompt?.id === p.id ? null : p)}
+                              className="w-5 h-5 flex items-center justify-center rounded transition-colors flex-shrink-0"
+                              style={{ color: 'var(--text-muted)' }}
+                              title={detailPrompt?.id === p.id ? 'Skrýt komentáře' : 'Zobrazit obsah a komentáře'}
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                                style={{ transform: detailPrompt?.id === p.id ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>
+                                <polyline points="6 9 12 15 18 9"/>
+                              </svg>
+                            </button>
+                          </div>
                           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                             <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{author?.display_name ?? '—'}</span>
                             <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{new Date(p.created_at).toLocaleDateString('cs-CZ')}</span>
@@ -593,16 +634,6 @@ function PromptsContent() {
                         </div>
                         {/* Actions */}
                         <div className="flex items-center gap-1 flex-shrink-0">
-                          {/* Copy content */}
-                          <button title="Kopírovat obsah" onClick={() => copyText(stripHtml(p.content), `content-${p.id}`)}
-                            className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors"
-                            style={{ color: copied === `content-${p.id}` ? 'var(--success)' : 'var(--text-muted)', background: 'var(--bg-hover)' }}>
-                            {copied === `content-${p.id}` ? '✓' : (
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-                              </svg>
-                            )}
-                          </button>
                           {/* Copy first code block */}
                           {codes.length > 0 && (
                             <button title="Kopírovat kód promptu" onClick={() => copyText(codes[0], `code-${p.id}`)}

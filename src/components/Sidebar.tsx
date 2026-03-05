@@ -104,58 +104,34 @@ function WorkspaceSwitcher() {
   if (workspaces.length <= 1) return null;
 
   return (
-    <div className="relative px-3 pb-1" ref={ref}>
-      <button
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors border"
-        style={{
-          color: 'var(--text-secondary)',
-          background: open ? 'var(--bg-active)' : 'var(--bg-hover)',
-          borderColor: 'var(--border)',
-        }}
-        title="Přepnout workspace"
-      >
-        <div
-          className="w-5 h-5 rounded flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0"
-          style={{ background: currentWorkspace?.color ?? 'var(--primary)' }}
-        >
-          {currentWorkspace?.name.charAt(0).toUpperCase()}
-        </div>
-        <span className="flex-1 text-left truncate">{currentWorkspace?.name}</span>
-        <svg
-          width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
-          style={{ transition: 'transform 0.15s', transform: open ? 'rotate(180deg)' : 'rotate(0deg)', flexShrink: 0 }}
-        >
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
-      </button>
-
+    <div className="relative border-b" style={{ borderColor: 'var(--border)' }} ref={ref}>
+      {/* Dropdown – otevírá se nahoru */}
       {open && (
         <div
-          className="absolute left-3 right-3 bottom-full mb-1 rounded-lg border shadow-lg z-50 py-1"
+          className="absolute left-0 right-0 bottom-full rounded-xl border shadow-xl z-50 py-1"
           style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}
         >
           {workspaces.map((ws: Workspace) => (
             <button
               key={ws.id}
               onClick={() => { selectWorkspace(ws); setOpen(false); }}
-              className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-left transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-colors"
               style={{
                 color: ws.id === currentWorkspace?.id ? 'var(--primary)' : 'var(--text-primary)',
                 background: ws.id === currentWorkspace?.id ? 'var(--bg-active)' : 'transparent',
               }}
-              onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-              onMouseLeave={(e) => e.currentTarget.style.background = ws.id === currentWorkspace?.id ? 'var(--bg-active)' : 'transparent'}
+              onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--bg-hover)'}
+              onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = ws.id === currentWorkspace?.id ? 'var(--bg-active)' : 'transparent'}
             >
               <div
-                className="w-5 h-5 rounded flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0"
+                className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
                 style={{ background: ws.color ?? 'var(--primary)' }}
               >
                 {ws.name.charAt(0).toUpperCase()}
               </div>
-              <span className="flex-1 truncate">{ws.name}</span>
+              <span className="flex-1 truncate font-medium">{ws.name}</span>
               {ws.id === currentWorkspace?.id && (
-                <svg className="flex-shrink-0" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <svg className="flex-shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
               )}
@@ -163,6 +139,29 @@ function WorkspaceSwitcher() {
           ))}
         </div>
       )}
+      {/* Trigger button – stejný styl jako user panel */}
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center gap-3 px-4 py-3 transition-colors"
+        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--bg-hover)'}
+        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+      >
+        <div
+          className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+          style={{ background: currentWorkspace?.color ?? 'var(--primary)' }}
+        >
+          {currentWorkspace?.name.charAt(0).toUpperCase()}
+        </div>
+        <div className="flex-1 min-w-0 text-left">
+          <div className="text-[10px] uppercase tracking-wider font-medium" style={{ color: 'var(--text-muted)' }}>Workspace</div>
+          <div className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{currentWorkspace?.name}</div>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+          style={{ color: 'var(--text-muted)', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }}
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
     </div>
   );
 }
@@ -717,11 +716,9 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
           </div>
         </nav>
 
-        {/* Workspace switcher – jen pokud má uživatel více workspaců */}
-        <WorkspaceSwitcher />
-
-        {/* User panel */}
+        {/* User panel + Workspace switcher */}
         <div className="border-t" style={{ borderColor: 'var(--border)' }}>
+          <WorkspaceSwitcher />
           {showUserPanel && (
             <div className="px-3 py-2 border-b animate-fade-in" style={{ borderColor: 'var(--border)' }}>
               {/* Detailní nastavení */}
