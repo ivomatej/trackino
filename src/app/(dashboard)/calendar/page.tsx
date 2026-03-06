@@ -193,6 +193,11 @@ function getImportantDayOccurrences(
   return result;
 }
 
+/** Odstraní ICS escaping (\\, → ,  \\; → ;  \\n → mezera  \\\\ → \\) */
+function unescapeIcs(s: string): string {
+  return s.replace(/\\,/g, ',').replace(/\\;/g, ';').replace(/\\n/gi, ' ').replace(/\\\\/g, '\\');
+}
+
 // Parsování ICS/iCal textu na DisplayEvent záznamy
 function parseICS(icsText: string, subId: string, color: string): DisplayEvent[] {
   // Rozloží zalomené řádky (RFC 5545 line folding)
@@ -206,13 +211,13 @@ function parseICS(icsText: string, subId: string, color: string): DisplayEvent[]
     const get = (key: string) =>
       blk.match(new RegExp(`(?:^|\\n)${key}(?:;[^:]*)?:([^\\r\\n]+)`, 'i'))?.[1]?.trim() ?? '';
 
-    const summary = get('SUMMARY') || '(Bez názvu)';
+    const summary = unescapeIcs(get('SUMMARY')) || '(Bez názvu)';
     const dtstart = get('DTSTART');
     const dtend = get('DTEND') || dtstart;
     if (!dtstart) continue;
 
     const uid = get('UID') || `${subId}-${Math.random()}`;
-    const description = get('DESCRIPTION').replace(/\\n/g, ' ').replace(/\\,/g, ',');
+    const description = unescapeIcs(get('DESCRIPTION'));
     const isDateTime = dtstart.includes('T');
 
     let startDate: string;
@@ -295,7 +300,7 @@ function CalendarContent() {
   const [calDayEnd, setCalDayEnd] = useState(18);
   const [showCalSettings, setShowCalSettings] = useState(false);
   const [savingCalSettings, setSavingCalSettings] = useState(false);
-  const [calSettingsForm, setCalSettingsForm] = useState({ dayStart: 8, dayEnd: 18 });
+  const [calSettingsForm, setCalSettingsForm] = useState({ dayStart: 8, dayEnd: 18, viewStart: 9, viewEnd: 17 });
 
   // Formulář události
   const [showEventForm, setShowEventForm] = useState(false);
@@ -339,6 +344,29 @@ function CalendarContent() {
   const [icsRefreshing, setIcsRefreshing] = useState(false);
   const [showIcsGuide, setShowIcsGuide] = useState(false);
 
+  // Viditelná část kalendáře při načtení (localStorage, nezávislé na profilu)
+  const [calViewStart, setCalViewStart] = useState(() => {
+    if (typeof window === 'undefined') return 9;
+    return parseInt(localStorage.getItem('trackino_cal_view_start') ?? '9', 10);
+  });
+  const [calViewEnd, setCalViewEnd] = useState(() => {
+    if (typeof window === 'undefined') return 17;
+    return parseInt(localStorage.getItem('trackino_cal_view_end') ?? '17', 10);
+  });
+
+  // Ref pro automatické scrollování časové mřížky na calViewStart
+  const weekGridRef = useRef<HTMLDivElement>(null);
+
+  // Sort order pro Moje kalendáře a Externí kalendáře (localStorage)
+  const [calendarOrder, setCalendarOrder] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try { return JSON.parse(localStorage.getItem('trackino_cal_order') ?? '[]'); } catch { return []; }
+  });
+  const [subsOrder, setSubsOrder] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try { return JSON.parse(localStorage.getItem('trackino_subs_order') ?? '[]'); } catch { return []; }
+  });
+
   const initializedRef = useRef(false);
 
   // ── Sync nastavení kalendáře z profilu ────────────────────────────────────
@@ -349,9 +377,17 @@ function CalendarContent() {
       const end = profile.calendar_day_end ?? 18;
       setCalDayStart(start);
       setCalDayEnd(end);
-      setCalSettingsForm({ dayStart: start, dayEnd: end });
+      setCalSettingsForm(f => ({ ...f, dayStart: start, dayEnd: end }));
     }
   }, [profile]);
+
+  // ── Auto-scroll časové mřížky na calViewStart ─────────────────────────────
+  useEffect(() => {
+    if ((view === 'week' || view === 'today') && weekGridRef.current) {
+      weekGridRef.current.scrollTop = Math.max(0, calViewStart - calDayStart) * ROW_H;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, calViewStart, calDayStart]);
 
   // Aktualizace aktuálního času každou minutu
   useEffect(() => {
@@ -683,6 +719,48 @@ function CalendarContent() {
     setSubscriptions(prev => prev.map(s => s.id === id ? { ...s, is_enabled: enabled } : s));
   }
 
+  // ── Seřazené kalendáře a odběry ───────────────────────────────────────────
+
+  const sortedCalendars = useMemo(() => {
+    if (calendarOrder.length === 0) return calendars;
+    const idx = new Map(calendarOrder.map((id, i) => [id, i]));
+    return [...calendars].sort((a, b) => (idx.get(a.id) ?? 999) - (idx.get(b.id) ?? 999));
+  }, [calendars, calendarOrder]);
+
+  const sortedSubscriptions = useMemo(() => {
+    if (subsOrder.length === 0) return [...subscriptions].sort((a, b) => a.name.localeCompare(b.name, 'cs'));
+    const idx = new Map(subsOrder.map((id, i) => [id, i]));
+    return [...subscriptions].sort((a, b) => (idx.get(a.id) ?? 999) - (idx.get(b.id) ?? 999));
+  }, [subscriptions, subsOrder]);
+
+  function moveCalendar(id: string, dir: -1 | 1) {
+    setCalendarOrder(prev => {
+      const list = prev.length > 0 ? [...prev] : sortedCalendars.map(c => c.id);
+      const i = list.indexOf(id);
+      if (i < 0) return list;
+      const j = i + dir;
+      if (j < 0 || j >= list.length) return list;
+      const next = [...list];
+      [next[i], next[j]] = [next[j], next[i]];
+      localStorage.setItem('trackino_cal_order', JSON.stringify(next));
+      return next;
+    });
+  }
+
+  function moveSubscription(id: string, dir: -1 | 1) {
+    setSubsOrder(prev => {
+      const list = prev.length > 0 ? [...prev] : sortedSubscriptions.map(s => s.id);
+      const i = list.indexOf(id);
+      if (i < 0) return list;
+      const j = i + dir;
+      if (j < 0 || j >= list.length) return list;
+      const next = [...list];
+      [next[i], next[j]] = [next[j], next[i]];
+      localStorage.setItem('trackino_subs_order', JSON.stringify(next));
+      return next;
+    });
+  }
+
   // ── Nastavení kalendáře ───────────────────────────────────────────────────
 
   async function saveCalSettings() {
@@ -693,6 +771,13 @@ function CalendarContent() {
     });
     setCalDayStart(calSettingsForm.dayStart);
     setCalDayEnd(calSettingsForm.dayEnd);
+    // Viditelná část – uložit do localStorage
+    const vs = Math.max(calSettingsForm.dayStart, Math.min(calSettingsForm.dayEnd - 1, calSettingsForm.viewStart));
+    const ve = Math.max(vs + 1, Math.min(calSettingsForm.dayEnd, calSettingsForm.viewEnd));
+    setCalViewStart(vs);
+    setCalViewEnd(ve);
+    localStorage.setItem('trackino_cal_view_start', String(vs));
+    localStorage.setItem('trackino_cal_view_end', String(ve));
     setSavingCalSettings(false);
     setShowCalSettings(false);
   }
@@ -1104,8 +1189,8 @@ function CalendarContent() {
                   </svg>
                 </button>
               </div>
-              {calendars.map(cal => (
-                <div key={cal.id} className="flex items-center gap-2 py-1 group/cal">
+              {sortedCalendars.map((cal, calIdx) => (
+                <div key={cal.id} className="flex items-center gap-1.5 py-0.5 group/cal">
                   <input
                     type="checkbox"
                     checked={selectedCalendarIds.has(cal.id)}
@@ -1117,20 +1202,29 @@ function CalendarContent() {
                         return next;
                       });
                     }}
-                    className="w-3.5 h-3.5 rounded cursor-pointer"
+                    className="w-3.5 h-3.5 rounded cursor-pointer flex-shrink-0"
                     style={{ accentColor: cal.color }}
                   />
                   <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ background: cal.color }} />
-                  <span className="text-sm flex-1 truncate" style={{ color: 'var(--text-primary)' }}>
+                  <span className="text-sm flex-1 truncate min-w-0" style={{ color: 'var(--text-primary)' }}>
                     {cal.name}
                   </span>
+                  {/* Šipky nahoru/dolů – zobrazí se na hover */}
+                  <div className="opacity-0 group-hover/cal:opacity-100 flex flex-col transition-opacity flex-shrink-0">
+                    <button onClick={() => moveCalendar(cal.id, -1)} disabled={calIdx === 0} className="p-0 leading-none disabled:opacity-20" style={{ color: 'var(--text-muted)' }} title="Nahoru">
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+                    </button>
+                    <button onClick={() => moveCalendar(cal.id, 1)} disabled={calIdx === sortedCalendars.length - 1} className="p-0 leading-none disabled:opacity-20" style={{ color: 'var(--text-muted)' }} title="Dolů">
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                    </button>
+                  </div>
                   <button
                     onClick={() => openEditCalendar(cal)}
-                    className="opacity-0 group-hover/cal:opacity-60 hover:!opacity-100 transition-opacity p-0.5 rounded"
+                    className="opacity-0 group-hover/cal:opacity-60 hover:!opacity-100 transition-opacity p-0.5 rounded flex-shrink-0"
                     style={{ color: 'var(--text-muted)' }}
                     title="Upravit"
                   >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                       <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                     </svg>
@@ -1210,8 +1304,8 @@ function CalendarContent() {
                   + Přidat ICS odkaz
                 </button>
               ) : (
-                subscriptions.map(sub => (
-                  <div key={sub.id} className="flex items-center gap-1.5 py-1 group/sub">
+                sortedSubscriptions.map((sub, subIdx) => (
+                  <div key={sub.id} className="flex items-center gap-1.5 py-0.5 group/sub">
                     <input
                       type="checkbox"
                       checked={sub.is_enabled}
@@ -1220,7 +1314,16 @@ function CalendarContent() {
                       style={{ accentColor: sub.color }}
                     />
                     <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ background: sub.color }} />
-                    <span className="text-xs flex-1 truncate" style={{ color: 'var(--text-primary)' }} title={sub.name}>{sub.name}</span>
+                    <span className="text-xs flex-1 truncate min-w-0" style={{ color: 'var(--text-primary)' }} title={sub.name}>{sub.name}</span>
+                    {/* Šipky nahoru/dolů */}
+                    <div className="opacity-0 group-hover/sub:opacity-100 flex flex-col transition-opacity flex-shrink-0">
+                      <button onClick={() => moveSubscription(sub.id, -1)} disabled={subIdx === 0} className="p-0 leading-none disabled:opacity-20" style={{ color: 'var(--text-muted)' }} title="Nahoru">
+                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+                      </button>
+                      <button onClick={() => moveSubscription(sub.id, 1)} disabled={subIdx === sortedSubscriptions.length - 1} className="p-0 leading-none disabled:opacity-20" style={{ color: 'var(--text-muted)' }} title="Dolů">
+                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                      </button>
+                    </div>
                     {/* Tlačítko Upravit */}
                     <button
                       onClick={() => openEditSub(sub)}
@@ -1241,7 +1344,7 @@ function CalendarContent() {
             {/* Nastavení kalendáře */}
             <div className="border-t pt-3 pb-4" style={{ borderColor: 'var(--border)' }}>
               <button
-                onClick={() => { setCalSettingsForm({ dayStart: calDayStart, dayEnd: calDayEnd }); setShowCalSettings(true); }}
+                onClick={() => { setCalSettingsForm({ dayStart: calDayStart, dayEnd: calDayEnd, viewStart: calViewStart, viewEnd: calViewEnd }); setShowCalSettings(true); }}
                 className="flex items-center gap-2 w-full py-1 px-1 text-xs transition-colors rounded"
                 style={{ color: 'var(--text-muted)' }}
                 onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
@@ -1464,7 +1567,7 @@ function CalendarContent() {
                   })()}
 
                   {/* Časová mřížka */}
-                  <div className="flex overflow-auto flex-1">
+                  <div ref={weekGridRef} className="flex overflow-auto flex-1">
                     {/* Sloupec hodin */}
                     <div className="flex-shrink-0 border-r" style={{ width: 56, borderColor: 'var(--border)' }}>
                       {Array.from({ length: calDayEnd - calDayStart }, (_, i) => (
@@ -1549,9 +1652,16 @@ function CalendarContent() {
                                 }}
                                 title={ev.title}
                               >
-                                <div className="font-semibold truncate">{ev.start_time?.slice(0, 5)} {ev.title}</div>
+                                <div className="font-semibold truncate pr-3">{ev.start_time?.slice(0, 5)} {ev.title}</div>
                                 {heightPx > 30 && ev.end_time && (
                                   <div className="opacity-70 truncate">{ev.end_time.slice(0, 5)}</div>
+                                )}
+                                {ev.source === 'manual' && (
+                                  <div className="absolute top-0.5 right-0.5" style={{ opacity: 0.55 }}>
+                                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                    </svg>
+                                  </div>
                                 )}
                               </div>
                             );
@@ -1584,7 +1694,7 @@ function CalendarContent() {
                     )}
 
                     {/* Časová mřížka */}
-                    <div className="flex overflow-auto flex-1">
+                    <div ref={weekGridRef} className="flex overflow-auto flex-1">
                       {/* Sloupec hodin */}
                       <div className="flex-shrink-0 border-r" style={{ width: 56, borderColor: 'var(--border)' }}>
                         {Array.from({ length: calDayEnd - calDayStart }, (_, i) => (
@@ -1653,9 +1763,16 @@ function CalendarContent() {
                               }}
                               title={ev.title}
                             >
-                              <div className="font-semibold truncate">{ev.start_time?.slice(0, 5)} {ev.title}</div>
+                              <div className="font-semibold truncate pr-4">{ev.start_time?.slice(0, 5)} {ev.title}</div>
                               {heightPx > 35 && ev.end_time && (
                                 <div className="opacity-70">{ev.end_time.slice(0, 5)}</div>
+                              )}
+                              {ev.source === 'manual' && (
+                                <div className="absolute top-1 right-1" style={{ opacity: 0.55 }}>
+                                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                  </svg>
+                                </div>
                               )}
                             </div>
                           );
@@ -1900,7 +2017,7 @@ function CalendarContent() {
       {/* ══ MODAL – Nastavení kalendáře ════════════════════════════════════════ */}
       {showCalSettings && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="w-full max-w-sm rounded-xl shadow-xl border p-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+          <div className="w-full max-w-md rounded-xl shadow-xl border p-6 overflow-y-auto" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', maxHeight: '90vh' }}>
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Nastavení kalendáře</h2>
               <button onClick={() => setShowCalSettings(false)} className="p-1 rounded" style={{ color: 'var(--text-muted)' }}>
@@ -1910,11 +2027,14 @@ function CalendarContent() {
               </button>
             </div>
             <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>
-              Nastavení rozsahu hodin pro týdenní zobrazení kalendáře.
+              Rozsah hodin v časové mřížce a výchozí viditelná část při načtení.
             </p>
-            <div className="grid grid-cols-2 gap-3">
+
+            {/* Rozsah dne */}
+            <p className="text-xs font-semibold mb-2" style={{ color: 'var(--text-secondary)' }}>Rozsah dne (scrollovatelná oblast)</p>
+            <div className="grid grid-cols-2 gap-3 mb-4">
               <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Začátek dne</label>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-muted)' }}>Začátek</label>
                 <div className="relative">
                   <select
                     value={calSettingsForm.dayStart}
@@ -1932,7 +2052,7 @@ function CalendarContent() {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Konec dne</label>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-muted)' }}>Konec</label>
                 <div className="relative">
                   <select
                     value={calSettingsForm.dayEnd}
@@ -1941,7 +2061,7 @@ function CalendarContent() {
                     style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
                   >
                     {Array.from({ length: 24 }, (_, i) => i + 1).filter(h => h > calSettingsForm.dayStart).map(h => (
-                      <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>
+                      <option key={h} value={h}>{h === 24 ? '0:00 (půlnoc)' : `${String(h).padStart(2, '0')}:00`}</option>
                     ))}
                   </select>
                   <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: 'var(--text-muted)' }}>
@@ -1950,7 +2070,52 @@ function CalendarContent() {
                 </div>
               </div>
             </div>
-            <div className="flex gap-2 justify-end mt-6">
+
+            {/* Viditelná část */}
+            <p className="text-xs font-semibold mb-2" style={{ color: 'var(--text-secondary)' }}>Výchozí viditelná část (při načtení stránky)</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-muted)' }}>Od</label>
+                <div className="relative">
+                  <select
+                    value={calSettingsForm.viewStart}
+                    onChange={e => setCalSettingsForm(f => ({ ...f, viewStart: parseInt(e.target.value) }))}
+                    className="w-full appearance-none px-3 py-2 pr-8 rounded-lg border text-base sm:text-sm"
+                    style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
+                  >
+                    {Array.from({ length: calSettingsForm.dayEnd - calSettingsForm.dayStart }, (_, i) => calSettingsForm.dayStart + i).map(h => (
+                      <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>
+                    ))}
+                  </select>
+                  <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: 'var(--text-muted)' }}>
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-muted)' }}>Do</label>
+                <div className="relative">
+                  <select
+                    value={calSettingsForm.viewEnd}
+                    onChange={e => setCalSettingsForm(f => ({ ...f, viewEnd: parseInt(e.target.value) }))}
+                    className="w-full appearance-none px-3 py-2 pr-8 rounded-lg border text-base sm:text-sm"
+                    style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
+                  >
+                    {Array.from({ length: calSettingsForm.dayEnd - calSettingsForm.dayStart }, (_, i) => calSettingsForm.dayStart + i + 1).filter(h => h > calSettingsForm.viewStart).map(h => (
+                      <option key={h} value={h}>{h === 24 ? '0:00 (půlnoc)' : `${String(h).padStart(2, '0')}:00`}</option>
+                    ))}
+                  </select>
+                  <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: 'var(--text-muted)' }}>
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+            <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>
+              Mimo viditelnou část lze posunout scrollováním.
+            </p>
+
+            <div className="flex gap-2 justify-end mt-5">
               <button
                 onClick={() => setShowCalSettings(false)}
                 className="px-4 py-2 rounded-lg text-sm border"
@@ -2157,7 +2322,7 @@ function CalendarContent() {
       {/* ══ MODAL – Přidat / Upravit ICS odběr ═══════════════════════════════ */}
       {showSubForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="w-full max-w-md rounded-xl shadow-xl border p-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+          <div className="w-full max-w-md rounded-xl shadow-xl border p-6 overflow-y-auto" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', maxHeight: '88vh' }}>
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
                 {editingSub ? 'Upravit ICS kalendář' : 'Přidat ICS kalendář'}
@@ -2193,7 +2358,7 @@ function CalendarContent() {
               </button>
 
               {showIcsGuide && (
-                <div className="divide-y text-xs" style={{ borderColor: 'var(--border)' }}>
+                <div className="divide-y text-xs overflow-y-auto" style={{ borderColor: 'var(--border)', maxHeight: 320 }}>
 
                   {/* Google Kalendář */}
                   <div className="px-3 py-3" style={{ background: 'var(--bg-card)' }}>
