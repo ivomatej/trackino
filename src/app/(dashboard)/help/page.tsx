@@ -84,7 +84,7 @@ const DEFAULT_HELP_CONTENT = `
 <ul>
   <li><strong>Měsíční pohled</strong> – klasická mřížka celého měsíce (Po–Ne); kliknutím na libovolný den vytvoříte novou událost</li>
   <li><strong>Týdenní pohled</strong> – časová osa vlevo (hodiny), záhlaví dnů nahoře, pás celodennních událostí a klikatelná mřížka hodin. Události s konkrétním časem se zobrazují jako bloky přímo v odpovídající hodině; dnešní sloupec je jemně zvýrazněn</li>
-  <li><strong>Pohled Seznam</strong> – chronologický výpis událostí seskupených po měsících; zobrazuje 6 měsíců dopředu. Tlačítkem <em>Zobrazit dřívější události</em> (nahoře v seznamu) načtete vždy 10 dalších starších událostí. Panel poznámek se otevírá v pravém sloupci vedle seznamu – kliknutím na ikonku 📄 u události ji vyberete a poznámku zobrazíte nebo začnete psát.</li>
+  <li><strong>Pohled Seznam</strong> – chronologický výpis událostí seskupených po měsících; zobrazuje 6 měsíců dopředu (max. polovina šířky stránky). Tlačítkem <em>Zobrazit dřívější události</em> načtete vždy 10 dalších starších událostí. Kliknutím na ikonku 📄 u události rozbalíte inline panel poznámek přímo pod kartičkou (ostatní události se posunou níže). Opětovným kliknutím panel zavřete. Pokud má událost uloženou poznámku, panel zůstane vždy viditelný.</li>
   <li><strong>Navigace</strong> – tlačítka ← Dnes → pro přepínání týdnů nebo měsíců; rozsah dat je vždy zobrazen v záhlaví stránky</li>
 </ul>
 <p><strong>Levý panel</strong> obsahuje čtyři sekce (každou lze sbalit/rozbalit šipkou vedle nadpisu):</p>
@@ -96,13 +96,15 @@ const DEFAULT_HELP_CONTENT = `
 </ul>
 <p><strong>Nastavení kalendáře:</strong> Tlačítko ⚙ v levém panelu otevře nastavení rozsahu hodin pro týdenní pohled. Nastavte „Začátek dne" a „Konec dne" (např. 8:00–18:00). Nastavení se ukládá do vašeho profilu a přetrvává i po odhlášení.</p>
 <p><strong>Přidání události:</strong> Klikněte na tlačítko <em>+ Přidat událost</em> nebo klikněte přímo na den v měsíčním pohledu či na časový slot v týdenním pohledu. Ve formuláři vyplňte název, datum od–do, zda jde o celý den (nebo zadejte čas), volitelný popis a barvu. Událost lze kdykoli editovat kliknutím na ni, nebo smazat z formuláře.</p>
-<p><strong>Poznámky k událostem</strong> (Pohled Seznam): u každé události se po najetí myší zobrazí ikonka 📄. Kliknutím vyberete událost a v pravém panelu se zobrazí editor poznámek. Pravý panel obsahuje záhlaví s názvem události a tlačítko × pro zavření. Poznámky jsou soukromé (pouze váš pohled). Panel nabízí tyto akce:</p>
+<p><strong>Poznámky k událostem</strong> (Pohled Seznam): u každé události se po najetí myší zobrazí ikonka 📄. Kliknutím rozbalíte inline editor poznámek přímo pod kartičkou (max. 220 px výšky). Poznámky jsou soukromé (pouze váš pohled). Editor nabízí:</p>
 <ul>
-  <li>🚩 <strong>Praporek</strong> – označí poznámku jako důležitou (červený rámeček)</li>
-  <li>✓ <strong>Check</strong> – uzavře poznámku jako hotovou (přeškrtnutý text, snížená průhlednost)</li>
-  <li>⭐ <strong>Hvězdička</strong> – přidá poznámku do oblíbených (žlutý rámeček)</li>
-  <li>📋 <strong>Kopírovat</strong> – zkopíruje obsah poznámky a checklist jako prostý text</li>
+  <li><strong>Formátování textu</strong> – B / I / U, odrážkový a číselný seznam</li>
+  <li><strong>Důležitá</strong> – červený pill tag; označí poznámku jako důležitou (červený rámeček panelu)</li>
+  <li><strong>Oblíbená</strong> – žlutý pill tag; přidá do oblíbených (žlutý rámeček panelu)</li>
+  <li><strong>Hotovo</strong> – šedý pill tag; uzavře poznámku (přeškrtnutý text, snížená průhlednost)</li>
+  <li>📋 <strong>Kopírovat</strong> – zkopíruje obsah a checklist jako prostý text</li>
   <li>🗑 <strong>Koš</strong> – smaže celou poznámku (s potvrzením)</li>
+  <li><strong>Uložit / Zrušit</strong> – tlačítka se zobrazí, pouze pokud jsou neuložené změny. Flagy (Důležitá/Oblíbená/Hotovo) se ukládají okamžitě.</li>
   <li>URL adresy v textu se automaticky stanou klikatelným odkazem (otevírá nový tab)</li>
 </ul>
 

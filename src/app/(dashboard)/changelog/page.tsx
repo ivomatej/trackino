@@ -11,10 +11,18 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.18.1 – 6. 3. 2026</h3>
+<ul>
+  <li><strong>Kalendář – Seznam: inline poznámky</strong> – poznámka k události se nyní otevírá přímo pod kartičkou události jako rozbalovací panel (max. 220 px výšky), nikoliv v pravém sloupci. Ostatní události se posunou níže. Pokud událost již má poznámku, zůstane vždy zobrazena. Kliknutím na ikonku 📄 panel otevřete nebo zavřete.</li>
+  <li><strong>Kalendář – Seznam: šířka výpisu</strong> – seznam událostí nyní zaujímá přibližně polovinu plochy (max. 672 px) místo původních dvou třetin. Prázdný prostor napravo usnadňuje čitelnost.</li>
+  <li><strong>Kalendář – Poznámky: tlačítka Uložit / Zrušit</strong> – automatické ukládání při pauze v psaní bylo nahrazeno explicitními tlačítky Uložit a Zrušit, která se zobrazí pouze v případě neuložených změn. Tlačítko Zrušit obnoví předchozí obsah. Flagy Důležitá / Oblíbená / Hotovo se ukládají okamžitě jako dříve.</li>
+  <li><strong>Kalendář – Poznámky: redesign pill tagů</strong> – tlačítka Důležitá, Oblíbená a Hotovo jsou nyní zobrazena jako barevné pill tagy s rámečkem místo malých ikon v toolbaru. Aktivní stav: Důležitá = červená, Oblíbená = žlutá, Hotovo = šedá ztlumená.</li>
+</ul>
+
 <h3>v2.18.0 – 6. 3. 2026</h3>
 <ul>
-  <li><strong>Kalendář – Seznam: dvousloupcové rozvržení</strong> – pohled Seznam je nyní rozdělen na dvě části: levý sloupec obsahuje čistý výpis událostí, pravý sloupec zobrazuje panel poznámek pro vybranou událost. Kliknutím na ikonku 📄 u události ji vyberete a pravý panel se otevře; vybraná událost je zvýrazněna primární barvou. Panel obsahuje záhlaví s názvem události a tlačítko × pro zavření. Na mobilech se panel zobrazuje pod seznamem, na větších obrazovkách vedle sebe.</li>
-  <li><strong>Kalendář – Seznam: „Zobrazit dřívější události"</strong> – tlačítko nyní načítá vždy přesně 10 starších událostí (místo 6 měsíců). Historický rozsah je natvrdo nastaven na 24 měsíců zpět, takže jsou data vždy dostupná.</li>
+  <li><strong>Kalendář – Seznam: dvousloupcové rozvržení</strong> – pohled Seznam je nyní rozdělen na dvě části: levý sloupec obsahuje čistý výpis událostí, pravý sloupec zobrazuje panel poznámek pro vybranou událost.</li>
+  <li><strong>Kalendář – Seznam: „Zobrazit dřívější události"</strong> – tlačítko nyní načítá vždy přesně 10 starších událostí (místo 6 měsíců). Historický rozsah je natvrdo nastaven na 24 měsíců zpět.</li>
   <li><strong>Kalendář – Mé kalendáře: velikost písma</strong> – názvy vlastních kalendářů v levém panelu jsou nyní stejně velké jako položky Externích kalendářů (text-xs).</li>
 </ul>
 
