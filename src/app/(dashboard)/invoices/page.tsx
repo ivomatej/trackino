@@ -1048,7 +1048,7 @@ function InvoicesContent() {
           {(activeTab === 'approve' || activeTab === 'billing') && (canApprove || canManageBilling) && (
             <div className="flex flex-col sm:flex-row gap-2">
               {/* Filtr měsíce */}
-              <div className="relative flex-shrink-0">
+              <div className="relative flex-shrink-0 self-start">
                 <select
                   value={filterMonth}
                   onChange={e => setFilterMonth(e.target.value)}
@@ -1066,7 +1066,7 @@ function InvoicesContent() {
               </div>
               {/* Filtr roku */}
               {availableYears.length > 1 && (
-                <div className="relative flex-shrink-0">
+                <div className="relative flex-shrink-0 self-start">
                   <select
                     value={filterYear}
                     onChange={e => setFilterYear(e.target.value)}

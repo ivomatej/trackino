@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 6. 3. 2026 (v2.18.1)
+> Aktualizováno: 6. 3. 2026 (v2.19.0)
 
 ---
 
@@ -486,6 +486,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.19.0 | 6. 3. 2026 | Kalendář/Poznámky: checkboxy šedé (#9ca3af), animace kopírování (1.5s zelená fajfka); zapamatování pohledu v localStorage (trackino_calendar_view, výchozí 'week'); mobilní layout Seznamu (flex-col md:flex-row, w-full md:w-[520px]); Bez události: název sub z subscriptions.find (event_ref.slice(4,40)), celý checklist úkolů, bez line-clamp; Fakturace: self-start na filter select wrapperech |
 | v2.18.1 | 6. 3. 2026 | Kalendář/Seznam: inline accordion poznámky (max 220px pod kartičkou, posunuje ostatní níže); šířka výpisu max-w-2xl (~50%); auto-save nahrazen tlačítky Uložit/Zrušit (isDirty pattern); meta tagy redesignovány jako colored pill tlačítka (Důležitá červená, Oblíbená žlutá, Hotovo šedá) |
 | v2.18.0 | 6. 3. 2026 | Kalendář/Seznam: dvousloupcové rozvržení (vlevo výpis, vpravo panel poznámek pro vybranou událost); „Zobrazit dřívější události" – event-count-based (10 událostí, ne 6 měsíců), fixní rozsah 24 měsíců zpět; Mé kalendáře – font-size sjednocen na text-xs |
 | v2.17.3 | 6. 3. 2026 | Žádosti/Archiv: sjednocení stylingu s Dovolenou (badge top-right, reviewer info inline, červený blok pro důvod zamítnutí); Kalendář/ICS: fix bug – opakující se události sdílí poznámky (přidán startDate do ID: `sub-{subId}-{uid}-{startDate}`); Kalendář/Poznámky: URL auto-linking (onBlur linkifyHtml), nové ikonky Praporek/Check/Hvězdička/Kopírovat/Koš, flagy is_important/is_done/is_favorite (DB migrace); Kalendář/Seznam: tlačítko „Zobrazit dřívější události" (listHistoryMonths +6 měs.); Kalendář/Levý panel: přesun Ext. kalendářů pod Mé kalendáře, odebrání barevných teček u checkboxů, collapse šipky u všech sekcí |

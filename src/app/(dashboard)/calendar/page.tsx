@@ -347,6 +347,7 @@ function NotePanel({
   const savedTasksRef = useRef<TaskItem[]>(note.tasks);
   const taskInputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
   const [focusLastTask, setFocusLastTask] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // Meta flagy (local state + ref pro closure)
   const [isImportant, setIsImportant] = useState(note.is_important ?? false);
@@ -463,7 +464,10 @@ function NotePanel({
     const text = stripHtmlToText(html).trim();
     const taskLines = localTasks.map(t => `${t.checked ? '✓' : '•'} ${t.text}`).join('\n');
     const combined = [text, taskLines].filter(Boolean).join('\n\n');
-    navigator.clipboard.writeText(combined.trim()).catch(() => {});
+    navigator.clipboard.writeText(combined.trim()).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    }).catch(() => {});
   }
 
   function toggleTask(id: string) {
@@ -537,10 +541,16 @@ function NotePanel({
             </svg>
           </button>
           <div style={{ width: 1, height: 12, background: 'var(--border)', margin: '0 2px', flexShrink: 0 }} />
-          <button onMouseDown={e => { e.preventDefault(); copyContent(); }} style={btnStyle} title="Kopírovat obsah" onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-            </svg>
+          <button onMouseDown={e => { e.preventDefault(); copyContent(); }} style={{ ...btnStyle, color: copied ? '#22c55e' : 'var(--text-secondary)' }} title={copied ? 'Zkopírováno!' : 'Kopírovat obsah'} onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+            {copied ? (
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            ) : (
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+              </svg>
+            )}
           </button>
           <button
             onMouseDown={e => { e.preventDefault(); if (confirm('Smazat celou poznámku?')) onDelete(eventRef); }}
@@ -633,7 +643,7 @@ function NotePanel({
               checked={task.checked}
               onChange={() => toggleTask(task.id)}
               className="w-3 h-3 flex-shrink-0 cursor-pointer"
-              style={{ accentColor: 'var(--primary)' }}
+              style={{ accentColor: '#9ca3af' }}
             />
             <input
               ref={el => { if (el) taskInputRefs.current.set(task.id, el); else taskInputRefs.current.delete(task.id); }}
@@ -710,7 +720,11 @@ function CalendarContent() {
   const { currentWorkspace } = useWorkspace();
   const today = useMemo(() => new Date(), []);
 
-  const [view, setView] = useState<ViewType>('week');
+  const [view, setView] = useState<ViewType>(() => {
+    if (typeof window === 'undefined') return 'week';
+    const saved = localStorage.getItem('trackino_calendar_view') as ViewType | null;
+    return (saved && (['today', 'week', 'month', 'year', 'list'] as string[]).includes(saved)) ? saved as ViewType : 'week';
+  });
   const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
   const [calendars, setCalendars] = useState<Calendar[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -862,6 +876,13 @@ function CalendarContent() {
     const id = setInterval(tick, 60_000);
     return () => clearInterval(id);
   }, []);
+
+  // Uložení pohledu do localStorage při každé změně
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('trackino_calendar_view', view);
+    }
+  }, [view]);
 
   // Reset stránkování, vyhledávání a historie při přepnutí pohledu nebo navigaci
   useEffect(() => {
@@ -2726,6 +2747,7 @@ function CalendarContent() {
                                     })()
                                   : null;
                                 const isIcs = on.event_ref.startsWith('sub-');
+                                const subName = isIcs ? (subscriptions.find(s => s.id === on.event_ref.slice(4, 40))?.name ?? 'Ext. kalendář') : null;
                                 return (
                                   <div key={on.id} className="flex items-start gap-3 px-4 py-3 group/orphan" style={{ background: 'var(--bg-card)' }}
                                     onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
@@ -2757,12 +2779,7 @@ function CalendarContent() {
                                         )}
                                         {isIcs && (
                                           <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>
-                                            Ext. kalendář
-                                          </span>
-                                        )}
-                                        {on.tasks.length > 0 && (
-                                          <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
-                                            ✓ {tasksDone}/{on.tasks.length} úkolů
+                                            {subName}
                                           </span>
                                         )}
                                         <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
@@ -2770,11 +2787,24 @@ function CalendarContent() {
                                         </span>
                                       </div>
 
-                                      {/* Náhled obsahu */}
+                                      {/* Obsah poznámky */}
                                       {hasContent && (
-                                        <div className="mt-1 text-xs line-clamp-2" style={{ color: 'var(--text-secondary)' }}
+                                        <div className="mt-1 text-xs" style={{ color: 'var(--text-secondary)' }}
                                           dangerouslySetInnerHTML={{ __html: on.content }}
                                         />
+                                      )}
+                                      {/* Checklist úkolů */}
+                                      {on.tasks.length > 0 && (
+                                        <div className="mt-2 space-y-1">
+                                          {on.tasks.map(task => (
+                                            <div key={task.id} className="flex items-center gap-1.5">
+                                              <input type="checkbox" checked={task.checked} readOnly className="w-3 h-3 flex-shrink-0 cursor-default" style={{ accentColor: '#9ca3af' }} />
+                                              <span className="text-xs" style={{ color: task.checked ? 'var(--text-muted)' : 'var(--text-secondary)', textDecoration: task.checked ? 'line-through' : 'none' }}>
+                                                {task.text}
+                                              </span>
+                                            </div>
+                                          ))}
+                                        </div>
                                       )}
                                     </div>
 
@@ -2861,7 +2891,7 @@ function CalendarContent() {
                                   const isSelected = openNoteEventIds.has(ev.id);
                                   const noteVisible = isSelected || noteHasContent;
                                   return (
-                                    <div key={ev.id} className="flex flex-row gap-3 items-start">
+                                    <div key={ev.id} className="flex flex-col md:flex-row gap-3 items-start">
                                       <div
                                         onClick={() => { if (isClickable) { const orig = events.find(x => x.id === ev.source_id); if (orig) openEditEvent(orig); } }}
                                         className="group/ev flex-1 min-w-0 flex items-start gap-3 p-3 rounded-lg border transition-colors"
@@ -2917,7 +2947,7 @@ function CalendarContent() {
                                           </svg>
                                         </button>
                                       </div>
-                                      <div className="w-[520px] flex-shrink-0">
+                                      <div className="w-full md:w-[520px] flex-shrink-0">
                                         {noteVisible && (
                                           <div>
                                             <NotePanel

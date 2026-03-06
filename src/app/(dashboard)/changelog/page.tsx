@@ -11,6 +11,17 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.19.0 – 6. 3. 2026</h3>
+<ul>
+  <li><strong>Kalendář – Poznámky: checkboxy šedé</strong> – checkboxy u úkolů v poznámce jsou nyní šedé místo modré, aby nerušily při čtení obsahu.</li>
+  <li><strong>Kalendář – Poznámky: animace kopírování</strong> – po kliknutí na tlačítko Kopírovat se ikonka na 1,5 sekundy změní na zelený fajfku, která potvrzuje úspěšné zkopírování obsahu do schránky.</li>
+  <li><strong>Kalendář – zapamatování pohledu</strong> – zvolený pohled (Dnes / Týden / Měsíc / Rok / Seznam) se nyní ukládá do localStorage a obnoví se při příštím otevření kalendáře. Výchozí pohled při prvním spuštění je Týden.</li>
+  <li><strong>Kalendář – mobilní layout (Seznam)</strong> – panel poznámky v pohledu Seznam se nyní na mobilech zobrazuje pod kartičkou události místo vedle ní, čímž eliminuje horizontální přetékání na úzkých obrazovkách.</li>
+  <li><strong>Kalendář – Bez události: název kalendáře</strong> – sirotčí poznámky z externích (ICS) kalendářů nyní zobrazují skutečný název odběru kalendáře místo obecného textu „Ext. kalendář".</li>
+  <li><strong>Kalendář – Bez události: celý checklist</strong> – panel sirotčích poznámek nyní zobrazuje kompletní seznam úkolů (zaškrtnuté i nezaškrtnuté) místo souhrnného počtu „✓ N/M úkolů". Obsah poznámky se zobrazuje bez ořezání.</li>
+  <li><strong>Fakturace – šipka v roletce měsíce</strong> – opraveno zarovnání vlastní šipky v roletce pro výběr měsíce (a roku) ve filtru faktur. Šipka je nyní správně vycentrována svisle.</li>
+</ul>
+
 <h3>v2.18.1 – 6. 3. 2026</h3>
 <ul>
   <li><strong>Kalendář – Seznam: inline poznámky</strong> – poznámka k události se nyní otevírá přímo pod kartičkou události jako rozbalovací panel (max. 220 px výšky), nikoliv v pravém sloupci. Ostatní události se posunou níže. Pokud událost již má poznámku, zůstane vždy zobrazena. Kliknutím na ikonku 📄 panel otevřete nebo zavřete.</li>
