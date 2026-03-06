@@ -89,7 +89,7 @@ const DEFAULT_HELP_CONTENT = `
 </ul>
 <p><strong>Levý panel</strong> obsahuje čtyři sekce (každou lze sbalit/rozbalit šipkou vedle nadpisu):</p>
 <ul>
-  <li><strong>MÉ KALENDÁŘE</strong> – ruční události. Při prvním přístupu se vytvoří výchozí „Můj kalendář"; další přidáte tlačítkem +. Barva je viditelná přes zaškrtávátko, které zároveň slouží jako přepínač viditelnosti.</li>
+  <li><strong>MÉ KALENDÁŘE</strong> – ruční události. Při prvním přístupu se vytvoří výchozí „Můj kalendář"; další přidáte tlačítkem +. Barva je viditelná přes zaškrtávátko, které zároveň slouží jako přepínač viditelnosti. Najetím myší na kalendář se zobrazí ikona tužky (upravit) a červená ikona koše (smazat). Výchozí kalendář nelze smazat (ikona koše se u něj nezobrazuje). Smazáním kalendáře se odstraní i všechny jeho události.</li>
   <li><strong>EXTERNÍ KALENDÁŘE</strong> – ICS/iCal odběry; přidáte je tlačítkem + a zobrazíte/skryjete zaškrtnutím. Tlačítko ↻ obnoví data.</li>
   <li><strong>AUTOMATICKY</strong> – Dovolená a Důležité dny; zobrazují se vždy automaticky bez nutnosti nastavovat.</li>
   <li><strong>DALŠÍ KALENDÁŘE</strong> – Státní svátky ČR; zapněte/vypněte zaškrtnutím.</li>
@@ -364,6 +364,7 @@ const DEFAULT_HELP_CONTENT = `
   <li><strong>Stav žádosti</strong> – Čeká na vyřízení (žlutý štítek), Schváleno (zelený štítek), Zamítnuto (červený štítek s poznámkou)</li>
   <li><strong>Záložka Moje žádosti</strong> – přehled všech vašich žádostí s aktuálním stavem; zamítnuté žádosti zobrazují poznámku od nadřízeného</li>
   <li><strong>Záložka Ke zpracování</strong> – viditelná pro manažery a adminy; přehled čekajících žádostí od podřízených s tlačítky Schválit a Zamítnout</li>
+  <li><strong>Záložka Archiv</strong> – přehled všech vyřízených žádostí (schválených i zamítnutých). U zamítnutých žádostí se štítek „Zamítnuto" zobrazuje pod hlavním obsahem kartičky, těsně nad blokem s důvodem zamítnutí.</li>
   <li><strong>Kdo zpracovává žádosti</strong> – primárně přímý manažer; admini vidí žádosti všech; konfiguruje se v Tým → Členové (příznak „Zpracovává žádosti")</li>
 </ul>
 

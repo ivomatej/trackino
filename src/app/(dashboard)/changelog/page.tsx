@@ -11,6 +11,12 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.20.8 – 7. 3. 2026</h3>
+<ul>
+  <li><strong>Žádosti – Archiv: pozice štítku „Zamítnuto"</strong> – štítek „Zamítnuto" byl přesunut z pravého horního rohu kartičky dolů, těsně nad blok „Důvod zamítnutí". Štítek „Schváleno" zůstává vpravo nahoře. Konzistentní s layoutem Dovolená → Archiv.</li>
+  <li><strong>Kalendář – Smazání kalendáře</strong> – v sekci „Mé kalendáře" v levém panelu přibyla ikona koše (červená, viditelná na hover) přímo vedle ikony tužky. Umožňuje smazat ne-výchozí kalendář bez nutnosti otevírat editační modal. Výchozí kalendář nelze smazat (ikona koše se u něj nezobrazuje). Tlačítko Smazat zůstává i v editačním modalu.</li>
+</ul>
+
 <h3>v2.20.2 – 6. 3. 2026</h3>
 <ul>
   <li><strong>Kalendář – Viditelná oblast mřížky</strong> – nastavení „Od/Do" nyní určuje nejen počáteční scroll pozici, ale i výšku viditelného okna. Pokud nastavíte například 9:00–17:00, bude v okně kalendáře vidět přesně 8 hodinových řádků – výš ani níž bez scrollování neuvidíte. Mimo tuto oblast lze pohybovat scrollem (celá 24h mřížka zůstává dostupná). Příklad: 9:00–17:00 = 8 řádků, 8:00–16:00 = 8 řádků atd.</li>
