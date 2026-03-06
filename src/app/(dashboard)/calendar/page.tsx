@@ -856,7 +856,7 @@ function CalendarContent() {
     applyHeight();
     window.addEventListener('resize', applyHeight);
     return () => window.removeEventListener('resize', applyHeight);
-  }, [view]);
+  }, [view, loading]); // loading zajistí přepočet výšky po načtení dat (stabilní DOM)
 
   // ── Scroll na calViewStart – useLayoutEffect zajistí scroll PŘED prvním malováním ──
   // useLayoutEffect běží synchronně po DOM mutacích; výška (effect výše) se nastaví
@@ -1882,7 +1882,7 @@ function CalendarContent() {
                       </svg>
                     )}
                   </button>
-                  <span className="text-xs flex-1 truncate min-w-0" style={{ color: 'var(--text-primary)' }}>
+                  <span className="text-xs flex-1 truncate min-w-0 cursor-pointer" onClick={() => openEditCalendar(cal)} style={{ color: 'var(--text-primary)' }}>
                     {cal.name}
                   </span>
                   {/* Šipky nahoru/dolů – zobrazí se na hover */}
@@ -3606,13 +3606,13 @@ function CalendarContent() {
             <div className="flex items-center justify-between mt-6">
               {editingCalendar && !editingCalendar.is_default ? (
                 <button
-                  onClick={async () => { if (confirm('Smazat tento kalendář? Budou smazány i všechny jeho události.')) { await deleteCalendar(editingCalendar.id); setShowCalendarForm(false); } }}
+                  onClick={async () => { if (confirm('Odstranit tento kalendář? Budou smazány i všechny jeho události.')) { await deleteCalendar(editingCalendar.id); setShowCalendarForm(false); } }}
                   className="px-3 py-2 rounded-lg text-sm transition-colors"
                   style={{ color: '#ef4444' }}
                   onMouseEnter={e => (e.currentTarget.style.background = '#fee2e244')}
                   onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                 >
-                  Smazat
+                  Odstranit
                 </button>
               ) : <div />}
               <div className="flex gap-2">
