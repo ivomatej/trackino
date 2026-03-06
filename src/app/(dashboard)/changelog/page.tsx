@@ -11,6 +11,12 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.20.10 – 7. 3. 2026</h3>
+<ul>
+  <li><strong>Kalendář – Smazání kalendáře (mobil)</strong> – kliknutím/tapnutím na název vlastního kalendáře v sekci „Mé kalendáře" se nyní otevře editační modal. V modálu je tlačítko <strong>Odstranit</strong> (vlevo dole), které celý kalendář i jeho události smaže. Na dotek dostupné na iOS i Androidu – není potřeba hledání hover-ikony.</li>
+  <li><strong>Kalendář – Týdenní pohled: scroll na počáteční hodinu (oprava 2)</strong> – výška scrollovacího kontejneru se nyní přepočítává po úplném načtení dat. Předchozí oprava (v2.20.9) zajistila synchronní scroll, ale výška mohla být spočtena z nestabilního DOM. Nyní se výška i scroll nastavují ve správném pořadí po dokončení načítání – oprava funkční na mobilu i desktopu.</li>
+</ul>
+
 <h3>v2.20.9 – 7. 3. 2026</h3>
 <ul>
   <li><strong>Kalendář – Týdenní pohled: scroll na počáteční hodinu</strong> – opravena chyba, kdy se při prvním načtení stránky mřížka zobrazila od 0:00 místo od nakonfigurované hodiny (např. 9:00). Problém postihoval mobil i desktop. Scroll se nyní nastavuje synchronně před prvním malováním prohlížeče (<code>useLayoutEffect</code>), takže nedochází k záblesku 0:00. Přepínání mezi pohledy fungovalo správně i dříve.</li>
