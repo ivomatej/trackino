@@ -367,7 +367,7 @@ function TextConverterContent() {
                 style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', minHeight: 400 }}
               >
                 <div
-                  className="px-3 py-2 border-b flex items-center gap-2"
+                  className="px-3 py-2 border-b flex items-center gap-2 min-h-[42px]"
                   style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)' }}
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
@@ -401,7 +401,7 @@ function TextConverterContent() {
                 style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', minHeight: 400 }}
               >
                 <div
-                  className="px-3 py-2 border-b flex items-center justify-between gap-2"
+                  className="px-3 py-2 border-b flex items-center justify-between gap-2 min-h-[42px]"
                   style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)' }}
                 >
                   <div className="flex gap-1">
@@ -460,7 +460,7 @@ function TextConverterContent() {
                 style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', minHeight: 400 }}
               >
                 <div
-                  className="px-3 py-2 border-b flex items-center gap-2"
+                  className="px-3 py-2 border-b flex items-center gap-2 min-h-[42px]"
                   style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)' }}
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
@@ -498,7 +498,7 @@ function TextConverterContent() {
                 style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', minHeight: 400 }}
               >
                 <div
-                  className="px-3 py-2 border-b flex items-center justify-between gap-2"
+                  className="px-3 py-2 border-b flex items-center justify-between gap-2 min-h-[42px]"
                   style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)' }}
                 >
                   <div className="flex gap-1">

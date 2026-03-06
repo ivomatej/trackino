@@ -25,7 +25,7 @@ interface DisplayEvent {
   end_time?: string | null;
 }
 
-type ViewType = 'list' | 'week' | 'month';
+type ViewType = 'list' | 'week' | 'month' | 'today';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -440,6 +440,7 @@ function CalendarContent() {
   function goPrev() {
     const d = new Date(currentDate);
     if (view === 'week') d.setDate(d.getDate() - 7);
+    else if (view === 'today') d.setDate(d.getDate() - 1);
     else d.setMonth(d.getMonth() - 1);
     setCurrentDate(d);
     setMiniCalDate(d);
@@ -448,6 +449,7 @@ function CalendarContent() {
   function goNext() {
     const d = new Date(currentDate);
     if (view === 'week') d.setDate(d.getDate() + 7);
+    else if (view === 'today') d.setDate(d.getDate() + 1);
     else d.setMonth(d.getMonth() + 1);
     setCurrentDate(d);
     setMiniCalDate(d);
@@ -463,6 +465,8 @@ function CalendarContent() {
       const start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
       const end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
       return { start: addDays(getMonday(start), -7), end: addDays(end, 14) };
+    } else if (view === 'today') {
+      return { start: currentDate, end: currentDate };
     } else {
       const start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
       const end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 6, 0);
@@ -619,6 +623,9 @@ function CalendarContent() {
       const sunday = addDays(monday, 6);
       return formatWeekRange(monday, sunday);
     }
+    if (view === 'today') {
+      return currentDate.toLocaleDateString('cs-CZ', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    }
     return formatMonthYear(currentDate);
   }, [view, currentDate]);
 
@@ -726,17 +733,17 @@ function CalendarContent() {
 
         {/* Přepínač pohledu – v hlavičce */}
         <div className="flex rounded-lg overflow-hidden border flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
-          {(['list', 'week', 'month'] as ViewType[]).map(v => (
+          {(['today', 'week', 'month', 'list'] as ViewType[]).map(v => (
             <button
               key={v}
-              onClick={() => setView(v)}
+              onClick={() => { if (v === 'today') { const t = new Date(); setCurrentDate(t); setMiniCalDate(t); } setView(v); }}
               className="px-2.5 sm:px-3.5 py-1.5 text-xs sm:text-sm font-medium transition-colors"
               style={{
                 background: view === v ? 'var(--primary)' : 'var(--bg-card)',
                 color: view === v ? 'white' : 'var(--text-secondary)',
               }}
             >
-              {v === 'list' ? 'Seznam' : v === 'week' ? 'Týden' : 'Měsíc'}
+              {v === 'today' ? 'Dnes' : v === 'week' ? 'Týden' : v === 'month' ? 'Měsíc' : 'Seznam'}
             </button>
           ))}
         </div>
@@ -976,17 +983,6 @@ function CalendarContent() {
                               onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
                               onMouseLeave={e => (e.currentTarget.style.background = !isCurrentMonth ? 'color-mix(in srgb, var(--bg-sidebar) 60%, transparent)' : 'var(--bg-card)')}
                             >
-                              {/* Indikátor aktuálního času v měsíčním pohledu */}
-                              {isToday && (
-                                <div
-                                  className="absolute bottom-0 left-0 h-0.5 pointer-events-none"
-                                  style={{
-                                    width: `${nowDayPct * 100}%`,
-                                    background: '#ef4444',
-                                    opacity: 0.7,
-                                  }}
-                                />
-                              )}
                               <div
                                 className="w-6 h-6 flex items-center justify-center rounded-full text-xs font-medium mb-1"
                                 style={{
@@ -1189,6 +1185,114 @@ function CalendarContent() {
                   </div>
                 </div>
               )}
+
+              {/* ══ DNES POHLED ══════════════════════════════════════════════ */}
+              {view === 'today' && (() => {
+                const day = currentDate;
+                const isToday = isSameDay(day, today);
+                const timedEvs = eventsOnDay(day).filter(ev => !ev.is_all_day && ev.start_time);
+                const allDayEvs = eventsOnDay(day).filter(ev => ev.is_all_day || !ev.start_time);
+                return (
+                  <div className="flex flex-col h-full" style={{ minWidth: 320 }}>
+                    {/* All-day strip */}
+                    {allDayEvs.length > 0 && (
+                      <div className="flex border-b flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
+                        <div className="flex-shrink-0 border-r text-[10px] px-1 py-1 flex items-center" style={{ width: 56, borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
+                          celý den
+                        </div>
+                        <div className="flex-1 p-1 flex flex-col gap-0.5">
+                          {allDayEvs.map(ev => <EventPill key={ev.id} ev={ev} compact />)}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Časová mřížka */}
+                    <div className="flex overflow-auto flex-1">
+                      {/* Sloupec hodin */}
+                      <div className="flex-shrink-0 border-r" style={{ width: 56, borderColor: 'var(--border)' }}>
+                        {Array.from({ length: calDayEnd - calDayStart }, (_, i) => (
+                          <div key={i} className="relative border-b" style={{ height: ROW_H, borderColor: 'var(--border)' }}>
+                            <span className="absolute text-[10px] right-1.5 top-1" style={{ color: 'var(--text-muted)' }}>
+                              {String(calDayStart + i).padStart(2, '0')}:00
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Sloupec dne */}
+                      <div
+                        className="flex-1 relative"
+                        style={{
+                          background: isToday ? 'color-mix(in srgb, var(--primary) 3%, transparent)' : 'transparent',
+                        }}
+                      >
+                        {/* Hodinové linky */}
+                        {Array.from({ length: calDayEnd - calDayStart }, (_, i) => (
+                          <div
+                            key={i}
+                            className="border-b cursor-pointer transition-colors"
+                            style={{ height: ROW_H, borderColor: 'var(--border)' }}
+                            onClick={() => openNewEvent(toDateStr(day))}
+                            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                          />
+                        ))}
+
+                        {/* Indikátor aktuálního času */}
+                        {isToday && nowTopPx !== null && (
+                          <div className="absolute left-0 right-0 pointer-events-none" style={{ top: nowTopPx, zIndex: 10 }}>
+                            <div className="relative flex items-center">
+                              <div className="absolute w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: '#ef4444', left: -5, top: -5 }} />
+                              <div className="w-full h-px" style={{ background: '#ef4444', opacity: 0.8 }} />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Timed events */}
+                        {timedEvs.map(ev => {
+                          const parts = (ev.start_time ?? '00:00').split(':');
+                          const sh = parseInt(parts[0] ?? '0', 10);
+                          const sm = parseInt(parts[1] ?? '0', 10);
+                          const startMin = sh * 60 + sm;
+                          const dayStartMin = calDayStart * 60;
+                          const topPx = Math.max(0, (startMin - dayStartMin) * (ROW_H / 60));
+                          let endMin = startMin + 60;
+                          if (ev.end_time) {
+                            const eParts = ev.end_time.split(':');
+                            endMin = parseInt(eParts[0] ?? '0', 10) * 60 + parseInt(eParts[1] ?? '0', 10);
+                          }
+                          const heightPx = Math.max(20, (endMin - startMin) * (ROW_H / 60));
+                          return (
+                            <div
+                              key={ev.id}
+                              className="absolute left-0.5 right-0.5 rounded px-2 py-1 text-xs font-medium overflow-hidden cursor-pointer"
+                              style={{
+                                top: topPx,
+                                height: heightPx,
+                                background: ev.color + '33',
+                                color: ev.color,
+                                border: `1px solid ${ev.color}66`,
+                                lineHeight: '15px',
+                              }}
+                              onClick={e => {
+                                e.stopPropagation();
+                                const orig = events.find(x => x.id === ev.source_id);
+                                if (orig) openEditEvent(orig);
+                              }}
+                              title={ev.title}
+                            >
+                              <div className="font-semibold">{ev.start_time?.slice(0, 5)} {ev.title}</div>
+                              {heightPx > 35 && ev.end_time && (
+                                <div className="opacity-70">{ev.end_time.slice(0, 5)}</div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* ══ LISTOVÝ POHLED ════════════════════════════════════════════ */}
               {view === 'list' && (

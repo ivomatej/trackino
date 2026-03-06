@@ -268,7 +268,7 @@ function RequestsContent() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-3xl">
         {/* Záhlaví */}
         <div className="flex items-start justify-between mb-6 gap-4">
           <div>
