@@ -11,6 +11,15 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.20.0 – 6. 3. 2026</h3>
+<ul>
+  <li><strong>Kalendář – Seznam, mobil: poznámky pod událostí</strong> – na mobilech se panel s poznámkou nyní vždy otevírá pod kartičkou události (ne vedle). Šířka kartičky je konzistentní přes celou šířku obrazovky. Tlačítko pro přidání poznámky je na mobilech vždy viditelné (30% průhlednost místo 0%).</li>
+  <li><strong>Kalendář – Seznam: název externího kalendáře</strong> – u událostí z externích (ICS) odběrů se nyní zobrazuje skutečný název odběru (např. „Pracovní kalendář") místo obecného štítku „Ext. kalendář".</li>
+  <li><strong>Kalendář – Týden: nastavení rozsahu dne</strong> – po uložení nastavení „Rozsah dne" a „Výchozí viditelná část" se nyní provede okamžitý scroll časové mřížky na správnou pozici (opravena race condition).</li>
+  <li><strong>Kalendář – Checkboxy s bílou fajfkou</strong> – vlastní kalendáře a externí odběry v levém panelu nyní používají vlastní checkbox místo nativního. Fajfka je vždy bílá (nezávisle na barvě kalendáře), takže je dobře čitelná i u žlutých nebo oranžových barev.</li>
+  <li><strong>iOS: oprava automatického zoomu u select prvků</strong> – selecty na stránkách Nastavení, Admin a Úpravy aplikace nyní mají <code>font-size: 16px</code> na mobilu (text-base sm:text-sm), čímž se zabrání automatickému přiblížení na iOS Safari.</li>
+</ul>
+
 <h3>v2.19.0 – 6. 3. 2026</h3>
 <ul>
   <li><strong>Kalendář – Poznámky: checkboxy šedé</strong> – checkboxy u úkolů v poznámce jsou nyní šedé místo modré, aby nerušily při čtení obsahu.</li>

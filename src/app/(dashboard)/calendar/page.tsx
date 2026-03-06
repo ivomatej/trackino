@@ -1388,17 +1388,27 @@ function CalendarContent() {
       calendar_day_start: calSettingsForm.dayStart,
       calendar_day_end: calSettingsForm.dayEnd,
     });
-    setCalDayStart(calSettingsForm.dayStart);
-    setCalDayEnd(calSettingsForm.dayEnd);
-    // Viditelná část – uložit do localStorage
-    const vs = Math.max(calSettingsForm.dayStart, Math.min(calSettingsForm.dayEnd - 1, calSettingsForm.viewStart));
-    const ve = Math.max(vs + 1, Math.min(calSettingsForm.dayEnd, calSettingsForm.viewEnd));
+    const newDayStart = calSettingsForm.dayStart;
+    const newDayEnd = calSettingsForm.dayEnd;
+    setCalDayStart(newDayStart);
+    setCalDayEnd(newDayEnd);
+    // Viditelná část – uložit do localStorage, zaklampovat na rozsah dne
+    const vs = Math.max(newDayStart, Math.min(newDayEnd - 1, calSettingsForm.viewStart));
+    const ve = Math.max(vs + 1, Math.min(newDayEnd, calSettingsForm.viewEnd));
     setCalViewStart(vs);
     setCalViewEnd(ve);
     localStorage.setItem('trackino_cal_view_start', String(vs));
     localStorage.setItem('trackino_cal_view_end', String(ve));
     setSavingCalSettings(false);
     setShowCalSettings(false);
+    // Explicitní scroll po zavření modalu (jistota i při beze změny hodnot)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (weekGridRef.current) {
+          weekGridRef.current.scrollTop = Math.max(0, vs - newDayStart) * ROW_H;
+        }
+      });
+    });
   }
 
   // ── Navigace ──────────────────────────────────────────────────────────────
@@ -1862,20 +1872,29 @@ function CalendarContent() {
               </div>
               {myCalExpanded && sortedCalendars.map((cal, calIdx) => (
                 <div key={cal.id} className="flex items-center gap-1.5 py-0.5 group/cal">
-                  <input
-                    type="checkbox"
-                    checked={selectedCalendarIds.has(cal.id)}
-                    onChange={e => {
+                  <button
+                    role="checkbox"
+                    aria-checked={selectedCalendarIds.has(cal.id)}
+                    onClick={() => {
                       setSelectedCalendarIds(prev => {
                         const next = new Set(prev);
-                        if (e.target.checked) next.add(cal.id);
-                        else next.delete(cal.id);
+                        if (next.has(cal.id)) next.delete(cal.id);
+                        else next.add(cal.id);
                         return next;
                       });
                     }}
-                    className="w-3.5 h-3.5 rounded cursor-pointer flex-shrink-0"
-                    style={{ accentColor: cal.color }}
-                  />
+                    className="w-3.5 h-3.5 rounded flex-shrink-0 flex items-center justify-center border-[1.5px] transition-colors cursor-pointer"
+                    style={{
+                      background: selectedCalendarIds.has(cal.id) ? cal.color : 'transparent',
+                      borderColor: cal.color,
+                    }}
+                  >
+                    {selectedCalendarIds.has(cal.id) && (
+                      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                    )}
+                  </button>
                   <span className="text-xs flex-1 truncate min-w-0" style={{ color: 'var(--text-primary)' }}>
                     {cal.name}
                   </span>
@@ -1963,13 +1982,22 @@ function CalendarContent() {
                 ) : (
                   sortedSubscriptions.map((sub, subIdx) => (
                     <div key={sub.id} className="flex items-center gap-1.5 py-0.5 group/sub">
-                      <input
-                        type="checkbox"
-                        checked={sub.is_enabled}
-                        onChange={() => toggleSubscription(sub.id, !sub.is_enabled)}
-                        className="w-3.5 h-3.5 rounded cursor-pointer flex-shrink-0"
-                        style={{ accentColor: sub.color }}
-                      />
+                      <button
+                        role="checkbox"
+                        aria-checked={sub.is_enabled}
+                        onClick={() => toggleSubscription(sub.id, !sub.is_enabled)}
+                        className="w-3.5 h-3.5 rounded flex-shrink-0 flex items-center justify-center border-[1.5px] transition-colors cursor-pointer"
+                        style={{
+                          background: sub.is_enabled ? sub.color : 'transparent',
+                          borderColor: sub.color,
+                        }}
+                      >
+                        {sub.is_enabled && (
+                          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="20 6 9 17 4 12"/>
+                          </svg>
+                        )}
+                      </button>
                       <span className="text-xs flex-1 truncate min-w-0" style={{ color: 'var(--text-primary)' }} title={sub.name}>{sub.name}</span>
                       {/* Šipky nahoru/dolů */}
                       <div className="opacity-0 group-hover/sub:opacity-100 flex flex-col transition-opacity flex-shrink-0">
@@ -2929,10 +2957,10 @@ function CalendarContent() {
                                           <div className="flex-shrink-0 w-2 h-2 rounded-full" style={{ background: '#ef4444' }} />
                                         </div>
                                       )}
-                                    <div className="flex flex-col md:flex-row gap-3 items-start">
+                                    <div className="flex flex-col md:flex-row gap-3 md:items-start">
                                       <div
                                         onClick={() => { if (isClickable) { const orig = events.find(x => x.id === ev.source_id); if (orig) openEditEvent(orig); } }}
-                                        className="group/ev flex-1 min-w-0 flex items-start gap-3 p-3 rounded-lg border transition-colors"
+                                        className="group/ev w-full md:flex-1 min-w-0 flex items-start gap-3 p-3 rounded-lg border transition-colors"
                                         style={{
                                           borderColor: 'var(--border)',
                                           background: 'var(--bg-card)',
@@ -2947,7 +2975,9 @@ function CalendarContent() {
                                             <span className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>{ev.title}</span>
                                             {ev.source !== 'manual' && (
                                               <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: ev.color + '22', color: ev.color }}>
-                                                {sourceBadgeLabel(ev.source)}
+                                                {ev.source === 'subscription'
+                                                  ? (subscriptions.find(s => s.id === ev.source_id)?.name ?? 'Ext. kalendář')
+                                                  : sourceBadgeLabel(ev.source)}
                                               </span>
                                             )}
                                           </div>
@@ -2968,7 +2998,7 @@ function CalendarContent() {
                                             e.stopPropagation();
                                             setOpenNoteEventIds(prev => { const n = new Set(prev); if (n.has(ev.id)) n.delete(ev.id); else n.add(ev.id); return n; });
                                           }}
-                                          className={`flex-shrink-0 p-1 rounded transition-all ${isSelected || noteHasContent ? 'opacity-70' : 'opacity-0'} group-hover/ev:opacity-100`}
+                                          className={`flex-shrink-0 p-1 rounded transition-all ${isSelected || noteHasContent ? 'opacity-70' : 'opacity-30 md:opacity-0'} md:group-hover/ev:opacity-100`}
                                           style={{
                                             color: isSelected || noteHasContent ? 'var(--primary)' : 'var(--text-muted)',
                                             background: 'none',

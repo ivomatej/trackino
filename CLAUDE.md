@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 6. 3. 2026 (v2.19.0)
+> Aktualizováno: 6. 3. 2026 (v2.20.0)
 
 ---
 
@@ -486,6 +486,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.20.0 | 6. 3. 2026 | Kalendář/Seznam mobil: md:items-start, w-full md:flex-1 na event card, tlačítko pozn. opacity-30 md:opacity-0; badge zobrazuje sub.name místo 'Ext. kalendář'; saveCalSettings: double-rAF scroll po uložení; vlastní checkbox (button+bílá fajfka) pro Mé kalendáře i Ext. odběry; iOS text-base na selectCls v settings/admin/app-changes |
 | v2.19.0 | 6. 3. 2026 | Kalendář/Poznámky: checkboxy šedé (#9ca3af), animace kopírování (1.5s zelená fajfka); zapamatování pohledu v localStorage (trackino_calendar_view, výchozí 'week'); mobilní layout Seznamu (flex-col md:flex-row, w-full md:w-[520px]); Bez události: název sub z subscriptions.find (event_ref.slice(4,40)), celý checklist úkolů, bez line-clamp; Fakturace: self-start na filter select wrapperech |
 | v2.18.1 | 6. 3. 2026 | Kalendář/Seznam: inline accordion poznámky (max 220px pod kartičkou, posunuje ostatní níže); šířka výpisu max-w-2xl (~50%); auto-save nahrazen tlačítky Uložit/Zrušit (isDirty pattern); meta tagy redesignovány jako colored pill tlačítka (Důležitá červená, Oblíbená žlutá, Hotovo šedá) |
 | v2.18.0 | 6. 3. 2026 | Kalendář/Seznam: dvousloupcové rozvržení (vlevo výpis, vpravo panel poznámek pro vybranou událost); „Zobrazit dřívější události" – event-count-based (10 událostí, ne 6 měsíců), fixní rozsah 24 měsíců zpět; Mé kalendáře – font-size sjednocen na text-xs |

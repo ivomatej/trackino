@@ -376,7 +376,7 @@ function AdminContent() {
   };
 
   const inputStyle = { borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' };
-  const selectCls = 'w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] appearance-none';
+  const selectCls = 'w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] appearance-none';
 
   const tabCounts = {
     active:   workspaces.filter(w => !w.archived_at && !w.deleted_at).length,
