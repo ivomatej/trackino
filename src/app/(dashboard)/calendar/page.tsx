@@ -77,9 +77,73 @@ const MONTH_NAMES = [
 ];
 
 const DEFAULT_COLORS = [
-  '#3b82f6', '#10b981', '#f59e0b', '#ef4444',
-  '#8b5cf6', '#ec4899', '#14b8a6', '#f97316',
+  '#ef4444', '#f97316', '#f59e0b', '#eab308',
+  '#84cc16', '#22c55e', '#10b981', '#14b8a6',
+  '#06b6d4', '#3b82f6', '#6366f1', '#8b5cf6',
+  '#a855f7', '#ec4899', '#f43f5e', '#78716c',
+  '#6b7280', '#92400e', '#a16207', '#1e3a5f',
 ];
+
+// ─── Timed-event overlap layout ──────────────────────────────────────────────
+
+interface LayoutEvt extends DisplayEvent {
+  _col: number;
+  _totalCols: number;
+  _startMin: number;
+  _endMin: number;
+}
+
+/** Greedy column layout pro překrývající se časové události.
+ *  Vrátí pole s `_col` (0-based sloupec), `_totalCols` a přepočítanými minutami. */
+function layoutTimedEvents(evs: DisplayEvent[]): LayoutEvt[] {
+  if (evs.length === 0) return [];
+  const mapped: LayoutEvt[] = evs.map(ev => {
+    const parts = (ev.start_time ?? '00:00').split(':');
+    const sh = parseInt(parts[0] ?? '0', 10);
+    const sm = parseInt(parts[1] ?? '0', 10);
+    const startMin = sh * 60 + sm;
+    let endMin = startMin + 60;
+    if (ev.end_time) {
+      const ep = ev.end_time.split(':');
+      endMin = parseInt(ep[0] ?? '0', 10) * 60 + parseInt(ep[1] ?? '0', 10);
+    }
+    return { ...ev, _col: 0, _totalCols: 1, _startMin: startMin, _endMin: Math.max(startMin + 15, endMin) };
+  });
+
+  // Seřadit podle začátku, delší nejdříve při stejném začátku
+  mapped.sort((a, b) => a._startMin - b._startMin || b._endMin - a._endMin);
+
+  // Greedy přiřazení sloupců
+  const colEnds: number[] = [];
+  for (const ev of mapped) {
+    let placed = false;
+    for (let c = 0; c < colEnds.length; c++) {
+      if (colEnds[c] <= ev._startMin) {
+        ev._col = c;
+        colEnds[c] = ev._endMin;
+        placed = true;
+        break;
+      }
+    }
+    if (!placed) {
+      ev._col = colEnds.length;
+      colEnds.push(ev._endMin);
+    }
+  }
+
+  // Spočítej totalCols = max(col)+1 mezi všemi přímo překrývajícími se událostmi
+  for (const ev of mapped) {
+    let maxCol = ev._col;
+    for (const other of mapped) {
+      if (other._startMin < ev._endMin && other._endMin > ev._startMin) {
+        maxCol = Math.max(maxCol, other._col);
+      }
+    }
+    ev._totalCols = maxCol + 1;
+  }
+
+  return mapped;
+}
 
 function getImportantDayOccurrences(
   day: ImportantDay,
@@ -1457,31 +1521,26 @@ function CalendarContent() {
                             </div>
                           )}
 
-                          {/* Timed events – absolutně pozicovány */}
-                          {timedEvs.map(ev => {
-                            const parts = (ev.start_time ?? '00:00').split(':');
-                            const sh = parseInt(parts[0] ?? '0', 10);
-                            const sm = parseInt(parts[1] ?? '0', 10);
-                            const startMin = sh * 60 + sm;
-                            const dayStartMin = calDayStart * 60;
-                            const topPx = Math.max(0, (startMin - dayStartMin) * (ROW_H / 60));
-                            let endMin = startMin + 60;
-                            if (ev.end_time) {
-                              const eParts = ev.end_time.split(':');
-                              endMin = parseInt(eParts[0] ?? '0', 10) * 60 + parseInt(eParts[1] ?? '0', 10);
-                            }
-                            const heightPx = Math.max(20, (endMin - startMin) * (ROW_H / 60));
+                          {/* Timed events – absolutně pozicovány, s detekcí překrytí */}
+                          {layoutTimedEvents(timedEvs).map(ev => {
+                            const topPx = Math.max(0, (ev._startMin - calDayStart * 60) * (ROW_H / 60));
+                            const heightPx = Math.max(20, (ev._endMin - ev._startMin) * (ROW_H / 60));
+                            const colW = 100 / ev._totalCols;
+                            const leftPct = ev._col * colW;
                             return (
                               <div
                                 key={ev.id}
-                                className="absolute left-0.5 right-0.5 rounded px-1 py-0.5 text-[10px] font-medium overflow-hidden cursor-pointer"
+                                className="absolute rounded px-1 py-0.5 text-[10px] font-medium overflow-hidden cursor-pointer"
                                 style={{
                                   top: topPx,
                                   height: heightPx,
+                                  left: `calc(${leftPct}% + 2px)`,
+                                  width: `calc(${colW}% - 4px)`,
                                   background: ev.color + '33',
                                   color: ev.color,
                                   border: `1px solid ${ev.color}66`,
                                   lineHeight: '13px',
+                                  zIndex: ev._col + 1,
                                 }}
                                 onClick={e => {
                                   e.stopPropagation();
@@ -1566,31 +1625,26 @@ function CalendarContent() {
                           </div>
                         )}
 
-                        {/* Timed events */}
-                        {timedEvs.map(ev => {
-                          const parts = (ev.start_time ?? '00:00').split(':');
-                          const sh = parseInt(parts[0] ?? '0', 10);
-                          const sm = parseInt(parts[1] ?? '0', 10);
-                          const startMin = sh * 60 + sm;
-                          const dayStartMin = calDayStart * 60;
-                          const topPx = Math.max(0, (startMin - dayStartMin) * (ROW_H / 60));
-                          let endMin = startMin + 60;
-                          if (ev.end_time) {
-                            const eParts = ev.end_time.split(':');
-                            endMin = parseInt(eParts[0] ?? '0', 10) * 60 + parseInt(eParts[1] ?? '0', 10);
-                          }
-                          const heightPx = Math.max(20, (endMin - startMin) * (ROW_H / 60));
+                        {/* Timed events – s detekcí překrytí */}
+                        {layoutTimedEvents(timedEvs).map(ev => {
+                          const topPx = Math.max(0, (ev._startMin - calDayStart * 60) * (ROW_H / 60));
+                          const heightPx = Math.max(20, (ev._endMin - ev._startMin) * (ROW_H / 60));
+                          const colW = 100 / ev._totalCols;
+                          const leftPct = ev._col * colW;
                           return (
                             <div
                               key={ev.id}
-                              className="absolute left-0.5 right-0.5 rounded px-2 py-1 text-xs font-medium overflow-hidden cursor-pointer"
+                              className="absolute rounded px-2 py-1 text-xs font-medium overflow-hidden cursor-pointer"
                               style={{
                                 top: topPx,
                                 height: heightPx,
+                                left: `calc(${leftPct}% + 2px)`,
+                                width: `calc(${colW}% - 4px)`,
                                 background: ev.color + '33',
                                 color: ev.color,
                                 border: `1px solid ${ev.color}66`,
                                 lineHeight: '15px',
+                                zIndex: ev._col + 1,
                               }}
                               onClick={e => {
                                 e.stopPropagation();
@@ -1599,7 +1653,7 @@ function CalendarContent() {
                               }}
                               title={ev.title}
                             >
-                              <div className="font-semibold">{ev.start_time?.slice(0, 5)} {ev.title}</div>
+                              <div className="font-semibold truncate">{ev.start_time?.slice(0, 5)} {ev.title}</div>
                               {heightPx > 35 && ev.end_time && (
                                 <div className="opacity-70">{ev.end_time.slice(0, 5)}</div>
                               )}
@@ -2195,6 +2249,29 @@ function CalendarContent() {
                       <li>Zaškrtni <span className="font-medium">„Veřejný kalendář"</span></li>
                       <li>Zkopíruj zobrazený ICS odkaz</li>
                     </ol>
+                  </div>
+
+                  {/* Wedos / Roundcube */}
+                  <div className="px-3 py-3" style={{ background: 'var(--bg-card)' }}>
+                    <div className="flex items-center gap-1.5 font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="8 2 8 6"/><polyline points="16 2 16 6"/><line x1="2" y1="10" x2="22" y2="10"/><line x1="7" y1="14" x2="9" y2="14"/><line x1="12" y1="14" x2="14" y2="14"/>
+                      </svg>
+                      Wedos / Roundcube webmail
+                    </div>
+                    <p className="mb-2" style={{ color: 'var(--text-muted)' }}>
+                      Wedos používá webmail Roundcube s pluginem Kalendář, který ICS export podporuje.
+                    </p>
+                    <ol className="space-y-1 list-decimal list-inside" style={{ color: 'var(--text-secondary)' }}>
+                      <li>Přihlas se do webmailu: <span className="font-medium">webmail.wedos.com</span></li>
+                      <li>Klikni na <span className="font-medium">Kalendář</span> v horním menu</li>
+                      <li>V levém panelu klikni pravým tlačítkem na název kalendáře</li>
+                      <li>Zvolte <span className="font-medium">„Sdílet / Exportovat"</span> nebo <span className="font-medium">„Vlastnosti"</span></li>
+                      <li>Zkopíruj ICS odkaz (URL zakončené <span className="font-mono">.ics</span>)</li>
+                    </ol>
+                    <div className="mt-2 p-2 rounded text-[10px]" style={{ background: '#fef3c7', color: '#92400e' }}>
+                      💡 Pokud tvůj webmail ICS URL přímo nenabízí, zkus v nastavení kalendáře hledat „CalDAV", „Sdílet" nebo „Publikovat".
+                    </div>
                   </div>
 
                 </div>
