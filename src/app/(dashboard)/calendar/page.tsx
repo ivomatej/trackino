@@ -488,100 +488,102 @@ function NotePanel({
       style={{ borderColor, background: bgColor, opacity: isDone ? 0.7 : 1, transition: 'border-color 0.15s, background 0.15s' }}
       onClick={e => e.stopPropagation()}
     >
-      {/* Toolbar – formátování + kopírovat + koš */}
-      <div className="flex items-center gap-0.5 flex-wrap">
-        {(['bold', 'italic', 'underline'] as const).map((cmd, idx) => (
-          <button
-            key={cmd}
-            onMouseDown={e => { e.preventDefault(); execFmt(cmd); }}
-            style={{ ...btnStyle, fontWeight: idx === 0 ? 700 : undefined, fontStyle: idx === 1 ? 'italic' : undefined, textDecoration: idx === 2 ? 'underline' : undefined, fontSize: 11 }}
-            title={['Tučné', 'Kurzíva', 'Podtržené'][idx]}
-            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-          >
-            {['B', 'I', 'U'][idx]}
+      {/* Řádek: Toolbar vlevo + Meta tagy vpravo */}
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        {/* Toolbar – formátování + kopírovat + koš */}
+        <div className="flex items-center gap-0.5">
+          {(['bold', 'italic', 'underline'] as const).map((cmd, idx) => (
+            <button
+              key={cmd}
+              onMouseDown={e => { e.preventDefault(); execFmt(cmd); }}
+              style={{ ...btnStyle, fontWeight: idx === 0 ? 700 : undefined, fontStyle: idx === 1 ? 'italic' : undefined, textDecoration: idx === 2 ? 'underline' : undefined, fontSize: 11 }}
+              title={['Tučné', 'Kurzíva', 'Podtržené'][idx]}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            >
+              {['B', 'I', 'U'][idx]}
+            </button>
+          ))}
+          <div style={{ width: 1, height: 12, background: 'var(--border)', margin: '0 2px', flexShrink: 0 }} />
+          <button onMouseDown={e => { e.preventDefault(); execFmt('insertUnorderedList'); }} style={btnStyle} title="Odrážkový seznam" onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/>
+              <circle cx="4" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1.5" fill="currentColor" stroke="none"/>
+            </svg>
           </button>
-        ))}
-        <div style={{ width: 1, height: 12, background: 'var(--border)', margin: '0 2px', flexShrink: 0 }} />
-        <button onMouseDown={e => { e.preventDefault(); execFmt('insertUnorderedList'); }} style={btnStyle} title="Odrážkový seznam" onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/>
-            <circle cx="4" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1.5" fill="currentColor" stroke="none"/>
-          </svg>
-        </button>
-        <button onMouseDown={e => { e.preventDefault(); execFmt('insertOrderedList'); }} style={btnStyle} title="Číselný seznam" onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/>
-            <path d="M4 6h1v4" strokeLinecap="round"/><path d="M4 10h2" strokeLinecap="round"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1" strokeLinecap="round"/>
-          </svg>
-        </button>
-        <div style={{ width: 1, height: 12, background: 'var(--border)', margin: '0 2px', flexShrink: 0 }} />
-        <button onMouseDown={e => { e.preventDefault(); copyContent(); }} style={btnStyle} title="Kopírovat obsah" onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-          </svg>
-        </button>
-        <button
-          onMouseDown={e => { e.preventDefault(); if (confirm('Smazat celou poznámku?')) onDelete(eventRef); }}
-          style={{ ...btnStyle, color: 'var(--text-muted)' }}
-          title="Smazat poznámku"
-          onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = '#ef4444'; }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; }}
-        >
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
-          </svg>
-        </button>
-      </div>
-
-      {/* Meta tagy – Důležitá / Oblíbená / Hotovo jako barevné pill tlačítka */}
-      <div className="flex items-center gap-1.5 flex-wrap">
-        <button
-          onMouseDown={e => { e.preventDefault(); toggleImportant(); }}
-          className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium transition-all border"
-          style={{
-            background: isImportant ? '#fee2e2' : 'transparent',
-            color: isImportant ? '#dc2626' : 'var(--text-muted)',
-            borderColor: isImportant ? '#fca5a5' : 'var(--border)',
-          }}
-          title={isImportant ? 'Zrušit důležitou' : 'Označit jako důležitou'}
-        >
-          <svg width="9" height="9" viewBox="0 0 24 24" fill={isImportant ? '#dc2626' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>
-          </svg>
-          Důležitá
-        </button>
-        <button
-          onMouseDown={e => { e.preventDefault(); toggleFavorite(); }}
-          className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium transition-all border"
-          style={{
-            background: isFavorite ? '#fef3c7' : 'transparent',
-            color: isFavorite ? '#d97706' : 'var(--text-muted)',
-            borderColor: isFavorite ? '#fcd34d' : 'var(--border)',
-          }}
-          title={isFavorite ? 'Zrušit oblíbenou' : 'Přidat do oblíbených'}
-        >
-          <svg width="9" height="9" viewBox="0 0 24 24" fill={isFavorite ? '#d97706' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-          </svg>
-          Oblíbená
-        </button>
-        <button
-          onMouseDown={e => { e.preventDefault(); toggleDone(); }}
-          className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium transition-all border"
-          style={{
-            background: isDone ? 'var(--bg-hover)' : 'transparent',
-            color: isDone ? 'var(--text-muted)' : 'var(--text-muted)',
-            borderColor: 'var(--border)',
-            opacity: isDone ? 0.7 : 1,
-          }}
-          title={isDone ? 'Znovu otevřít' : 'Označit jako hotovou'}
-        >
-          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={isDone ? 3 : 2} strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="20 6 9 17 4 12"/>
-          </svg>
-          Hotovo
-        </button>
+          <button onMouseDown={e => { e.preventDefault(); execFmt('insertOrderedList'); }} style={btnStyle} title="Číselný seznam" onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/>
+              <path d="M4 6h1v4" strokeLinecap="round"/><path d="M4 10h2" strokeLinecap="round"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1" strokeLinecap="round"/>
+            </svg>
+          </button>
+          <div style={{ width: 1, height: 12, background: 'var(--border)', margin: '0 2px', flexShrink: 0 }} />
+          <button onMouseDown={e => { e.preventDefault(); copyContent(); }} style={btnStyle} title="Kopírovat obsah" onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+          </button>
+          <button
+            onMouseDown={e => { e.preventDefault(); if (confirm('Smazat celou poznámku?')) onDelete(eventRef); }}
+            style={{ ...btnStyle, color: 'var(--text-muted)' }}
+            title="Smazat poznámku"
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = '#ef4444'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+          >
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+            </svg>
+          </button>
+        </div>
+        {/* Meta tagy – Důležitá / Oblíbená / Hotovo */}
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <button
+            onMouseDown={e => { e.preventDefault(); toggleImportant(); }}
+            className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium transition-all border"
+            style={{
+              background: isImportant ? '#fee2e2' : 'transparent',
+              color: isImportant ? '#dc2626' : 'var(--text-muted)',
+              borderColor: isImportant ? '#fca5a5' : 'var(--border)',
+            }}
+            title={isImportant ? 'Zrušit důležitou' : 'Označit jako důležitou'}
+          >
+            <svg width="9" height="9" viewBox="0 0 24 24" fill={isImportant ? '#dc2626' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>
+            </svg>
+            Důležitá
+          </button>
+          <button
+            onMouseDown={e => { e.preventDefault(); toggleFavorite(); }}
+            className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium transition-all border"
+            style={{
+              background: isFavorite ? '#fef3c7' : 'transparent',
+              color: isFavorite ? '#d97706' : 'var(--text-muted)',
+              borderColor: isFavorite ? '#fcd34d' : 'var(--border)',
+            }}
+            title={isFavorite ? 'Zrušit oblíbenou' : 'Přidat do oblíbených'}
+          >
+            <svg width="9" height="9" viewBox="0 0 24 24" fill={isFavorite ? '#d97706' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+            </svg>
+            Oblíbená
+          </button>
+          <button
+            onMouseDown={e => { e.preventDefault(); toggleDone(); }}
+            className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium transition-all border"
+            style={{
+              background: isDone ? 'var(--bg-hover)' : 'transparent',
+              color: 'var(--text-muted)',
+              borderColor: 'var(--border)',
+              opacity: isDone ? 0.7 : 1,
+            }}
+            title={isDone ? 'Znovu otevřít' : 'Označit jako hotovou'}
+          >
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={isDone ? 3 : 2} strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            Hotovo
+          </button>
+        </div>
       </div>
 
       {/* Contenteditable editor */}
@@ -604,7 +606,7 @@ function NotePanel({
       </div>
 
       {/* Checklist */}
-      <div className="border-t pt-1.5 space-y-1" style={{ borderColor: 'var(--border)' }}>
+      <div className="border-t pt-1.5 space-y-1 pl-2" style={{ borderColor: 'var(--border)' }}>
         {localTasks.map(task => (
           <div key={task.id} className="flex items-center gap-1.5 group/task">
             <input
@@ -2510,7 +2512,7 @@ function CalendarContent() {
 
                 return (
                   <div className="flex-1 overflow-auto">
-                    <div className="max-w-2xl p-4">
+                    <div className="max-w-5xl p-4">
                       {/* Vyhledávací pole */}
                       <div className="mb-4 flex items-center gap-2">
                         <div className="flex-1 relative">
@@ -2607,10 +2609,10 @@ function CalendarContent() {
                                   const isSelected = selectedListEventId === ev.id;
                                   const noteVisible = isSelected || noteHasContent;
                                   return (
-                                    <div key={ev.id} className="flex flex-col">
+                                    <div key={ev.id} className={`flex gap-3 items-start ${noteVisible ? 'flex-row' : 'flex-col'}`}>
                                       <div
                                         onClick={() => { if (isClickable) { const orig = events.find(x => x.id === ev.source_id); if (orig) openEditEvent(orig); } }}
-                                        className="group/ev flex items-start gap-3 p-3 rounded-lg border transition-colors"
+                                        className="group/ev flex-1 min-w-0 flex items-start gap-3 p-3 rounded-lg border transition-colors"
                                         style={{
                                           borderColor: 'var(--border)',
                                           background: 'var(--bg-card)',
@@ -2664,7 +2666,7 @@ function CalendarContent() {
                                         </button>
                                       </div>
                                       {noteVisible && (
-                                        <div className="mt-1 overflow-y-auto max-h-[220px]">
+                                        <div className="w-[340px] flex-shrink-0 overflow-y-auto max-h-[220px]">
                                           <NotePanel
                                             key={`inline-${ev.id}-${evNote?.id ?? 'new'}`}
                                             eventRef={ev.id}
