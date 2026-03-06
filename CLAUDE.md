@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 6. 3. 2026 (v2.17.2)
+> Aktualizováno: 6. 3. 2026 (v2.17.3)
 
 ---
 
@@ -128,6 +128,7 @@ Výchozí policy: `CREATE POLICY "Auth full" ... FOR ALL TO authenticated USING 
 | `trackino_workspace_pages` | id, workspace_id, slug ('company-rules'\|'office-rules'), content (HTML), updated_at, updated_by | Per-workspace editovatelné textové stránky (UNIQUE workspace_id+slug) |
 | `trackino_document_folders` | id, workspace_id, name, color, sort_order, created_by, created_at, updated_at | Složky pro organizaci dokumentů |
 | `trackino_documents` | id, workspace_id, folder_id (uuid\|null), name, type ('file'\|'link'), file_path (text\|null), file_size (int\|null), file_mime (text\|null), url (text\|null), description, created_by, created_at, updated_at | Firemní dokumenty a odkazy; soubory uloženy v Supabase Storage bucket `trackino-documents` |
+| `trackino_calendar_event_notes` | id, workspace_id, user_id, event_ref (text – ID události), content (HTML), tasks (jsonb – TaskItem[]), is_important (bool), is_done (bool), is_favorite (bool), created_at, updated_at | Poznámky k událostem v kalendáři – per-user, UNIQUE (workspace_id, user_id, event_ref) |
 
 ### Poznámky k DB
 - `trackino_member_rates.valid_to IS NULL` = aktuálně platná sazba (aktivní rate)
@@ -485,6 +486,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.17.3 | 6. 3. 2026 | Žádosti/Archiv: sjednocení stylingu s Dovolenou (badge top-right, reviewer info inline, červený blok pro důvod zamítnutí); Kalendář/ICS: fix bug – opakující se události sdílí poznámky (přidán startDate do ID: `sub-{subId}-{uid}-{startDate}`); Kalendář/Poznámky: URL auto-linking (onBlur linkifyHtml), nové ikonky Praporek/Check/Hvězdička/Kopírovat/Koš, flagy is_important/is_done/is_favorite (DB migrace); Kalendář/Seznam: tlačítko „Zobrazit dřívější události" (listHistoryMonths +6 měs.); Kalendář/Levý panel: přesun Ext. kalendářů pod Mé kalendáře, odebrání barevných teček u checkboxů, collapse šipky u všech sekcí |
 | v2.17.2 | 6. 3. 2026 | Sidebar: optimalizace badge (Promise.all místo 5 useEffects); Badge kruhy na stránkách Žádosti, Připomínky, Tým, Fakturace (nahrazení „(N)" za červený badge) |
 | v2.17.1 | 6. 3. 2026 | Přehled: sjednocení formátu hodin v grafu (fmtHours); Sidebar: badge u Žádostí (pending), Připomínek (unresolved), Fakturace (pending approval) |
 | v2.17.0 | 6. 3. 2026 | Přehled: notifikační panel „K vyřízení" (čekající dovolené, žádosti, připomínky, faktury); Přehled: týdenní sloupcový graf odpracovaných hodin (Recharts, 7 dní, průměr, trend) |
@@ -602,10 +604,15 @@ AppChangeStatus = 'open' | 'in_progress' | 'solved' | 'archived'
 - Responzivní: `px-2.5 sm:px-3.5 py-1.5 text-xs sm:text-sm font-medium`
 - „Přidat událost" button: `<span className="hidden sm:inline">Přidat událost</span><span className="sm:hidden">Přidat</span>`
 
-### Levý panel – pořadí sekcí (v2.15.0)
-1. **Moje kalendáře** – nahoře (`px-3 pt-3 flex-1`), s togglem auto-sync + tlačítkem Nastavení
-2. **Mini kalendář** – dole (`border-t pt-3 pb-3 flex-shrink-0`)
-- Starý view switcher v levém panelu byl kompletně odstraněn
+### Levý panel – pořadí sekcí (v2.17.3)
+1. **MÉ KALENDÁŘE** – checkbox (accentColor dle barvy kal.), bez barevné tečky
+2. **EXTERNÍ KALENDÁŘE** – přesunuto pod Mé kalendáře; checkbox (accentColor), bez tečky; + refresh + přidat
+3. **AUTOMATICKY** – Dovolená, Důležité dny (barevný čtvereček, bez checkboxu)
+4. **DALŠÍ KALENDÁŘE** – Státní svátky; checkbox (accentColor: '#ef4444'), bez tečky
+- Každá sekce má **collapse šipku** vedle nadpisu – rozbalí/sbalí podřazené položky
+- Stav collaspe: lokální React state (`myCalExpanded`, `extCalExpanded`, `autoExpanded`, `otherExpanded`)
+- Barevné tečky odstraněny ze všech položek s checkboxem (barva je pouze přes `accentColor` na checkboxu)
+- Mini kalendář – dole (`border-t pt-3 pb-3 flex-shrink-0`), nezměněno
 
 ### DisplayEvent (lokální typ)
 ```typescript
@@ -635,9 +642,44 @@ interface DisplayEvent {
 - `openNewEvent(date?)` – otevře formulář s předvyplněným datem
 - `saveEvent()` – INSERT nebo UPDATE do trackino_calendar_events
 - `saveCalendar()` – INSERT nebo UPDATE do trackino_calendars
+- `fetchNotesBatch(refs)` – dávkové načtení poznámek (včetně is_important/is_done/is_favorite)
+- `handleNoteSave(eventRef, content, tasks, meta)` – uloží/aktualizuje poznámku s meta flagy
+- `handleNoteDelete(eventRef)` – smaže poznámku z DB a skryje panel
+
+### ICS odběry – formát ID událostí (v2.17.3)
+```
+id = `sub-${subId}-${uid.slice(0,40)}-${startDate}`
+```
+- `startDate` je klíčový pro **opakující se události** – sdílejí stejné `UID` v ICS, ale mají různý startDate → každý výskyt dostane unikátní ID → poznámky se nepropagují
+
+### Poznámky k událostem – architektura (v2.17.3)
+```typescript
+interface TaskItem { id: string; text: string; checked: boolean; }
+interface EventNote {
+  id?: string; content: string; tasks: TaskItem[];
+  is_important?: boolean;  // červený rámeček + pozadí
+  is_done?: boolean;       // přeškrtnutí + průhlednost
+  is_favorite?: boolean;   // žlutý rámeček + pozadí
+}
+```
+- **NotePanel** – contenteditable editor + checklist + toolbar ikonky
+- **Toolbar ikonky**: B/I/U | odrážky/číselný seznam | Praporek | Check | Hvězdička | separator | Kopírovat | Koš
+- **URL linking**: `linkifyHtml()` obalí plain URL do `<a>` tagu při `onBlur`; click na `<a>` otevře `window.open(_blank)` (interceptováno přes `handleEditorClick`)
+- **Meta flagy**: uloženy do DB; vizuálně mění barvu rámečku a pozadí panelu
+- **Koš**: volá `onDelete(eventRef)` → smaže řádek z DB + skryje panel
+
+### Seznam – Zobrazit dřívější události (v2.17.3)
+- State `listHistoryMonths: number` (default 0) – resetuje se při změně pohledu/navigaci
+- Tlačítko nad seznamem → `setListHistoryMonths(m => m + 6)`
+- `visibleRange` pro list pohled: `start = new Date(year, month - listHistoryMonths, 1)`
 
 ### SQL migrace (nutno spustit v Supabase)
-Viz Nápověda → Kalendář nebo Help page.tsx pro plný SQL.
+```sql
+ALTER TABLE trackino_calendar_event_notes
+  ADD COLUMN IF NOT EXISTS is_important boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS is_done     boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS is_favorite boolean NOT NULL DEFAULT false;
+```
 
 ---
 

@@ -84,17 +84,27 @@ const DEFAULT_HELP_CONTENT = `
 <ul>
   <li><strong>Měsíční pohled</strong> – klasická mřížka celého měsíce (Po–Ne); kliknutím na libovolný den vytvoříte novou událost</li>
   <li><strong>Týdenní pohled</strong> – časová osa vlevo (hodiny), záhlaví dnů nahoře, pás celodennních událostí a klikatelná mřížka hodin. Události s konkrétním časem se zobrazují jako bloky přímo v odpovídající hodině; dnešní sloupec je jemně zvýrazněn</li>
-  <li><strong>Pohled Seznam</strong> – chronologický výpis událostí seskupených po měsících; zobrazuje 6 měsíců dopředu</li>
+  <li><strong>Pohled Seznam</strong> – chronologický výpis událostí seskupených po měsících; zobrazuje 6 měsíců dopředu. Tlačítkem <em>Zobrazit dřívější události</em> (nahoře v seznamu) načtete vždy dalších 6 měsíců do minulosti – ideální pro přístup ke starším událostem a jejich poznámkám.</li>
   <li><strong>Navigace</strong> – tlačítka ← Dnes → pro přepínání týdnů nebo měsíců; rozsah dat je vždy zobrazen v záhlaví stránky</li>
 </ul>
-<p><strong>Levý panel:</strong> Obsahuje mini měsíční kalendář s vlastní navigací (◀ Měsíc RRRR ▶) pro rychlé přeskakování na libovolný den. Pod mini kalendářem je přepínač pohledu (Seznam / Týden / Měsíc), seznam Mých kalendářů a tlačítko Nastavení kalendáře.</p>
-<p><strong>Moje kalendáře:</strong> Při prvním přístupu se automaticky vytvoří výchozí kalendář „Můj kalendář". Další kalendáře přidáte tlačítkem + vedle nadpisu. Každý kalendář má vlastní barvu; zaškrtnutím/odškrtnutím jej zobrazíte nebo skryjete v pohledu.</p>
+<p><strong>Levý panel</strong> obsahuje čtyři sekce (každou lze sbalit/rozbalit šipkou vedle nadpisu):</p>
 <ul>
-  <li>Ruční události jsou vázány na konkrétní kalendář</li>
-  <li>Dovolená a Důležité dny se zobrazují automaticky (sekce Automaticky v levém panelu)</li>
+  <li><strong>MÉ KALENDÁŘE</strong> – ruční události. Při prvním přístupu se vytvoří výchozí „Můj kalendář"; další přidáte tlačítkem +. Barva je viditelná přes zaškrtávátko, které zároveň slouží jako přepínač viditelnosti.</li>
+  <li><strong>EXTERNÍ KALENDÁŘE</strong> – ICS/iCal odběry; přidáte je tlačítkem + a zobrazíte/skryjete zaškrtnutím. Tlačítko ↻ obnoví data.</li>
+  <li><strong>AUTOMATICKY</strong> – Dovolená a Důležité dny; zobrazují se vždy automaticky bez nutnosti nastavovat.</li>
+  <li><strong>DALŠÍ KALENDÁŘE</strong> – Státní svátky ČR; zapněte/vypněte zaškrtnutím.</li>
 </ul>
 <p><strong>Nastavení kalendáře:</strong> Tlačítko ⚙ v levém panelu otevře nastavení rozsahu hodin pro týdenní pohled. Nastavte „Začátek dne" a „Konec dne" (např. 8:00–18:00). Nastavení se ukládá do vašeho profilu a přetrvává i po odhlášení.</p>
 <p><strong>Přidání události:</strong> Klikněte na tlačítko <em>+ Přidat událost</em> nebo klikněte přímo na den v měsíčním pohledu či na časový slot v týdenním pohledu. Ve formuláři vyplňte název, datum od–do, zda jde o celý den (nebo zadejte čas), volitelný popis a barvu. Událost lze kdykoli editovat kliknutím na ni, nebo smazat z formuláře.</p>
+<p><strong>Poznámky k událostem</strong> (Pohled Seznam): u každé události se po najetí myší zobrazí ikonka 📄. Kliknutím otevřete panel poznámek s bohatým editorem a checklistem úkolů. Poznámky jsou soukromé (pouze váš pohled). Panel nabízí tyto akce:</p>
+<ul>
+  <li>🚩 <strong>Praporek</strong> – označí poznámku jako důležitou (červený rámeček)</li>
+  <li>✓ <strong>Check</strong> – uzavře poznámku jako hotovou (přeškrtnutý text, snížená průhlednost)</li>
+  <li>⭐ <strong>Hvězdička</strong> – přidá poznámku do oblíbených (žlutý rámeček)</li>
+  <li>📋 <strong>Kopírovat</strong> – zkopíruje obsah poznámky a checklist jako prostý text</li>
+  <li>🗑 <strong>Koš</strong> – smaže celou poznámku (s potvrzením)</li>
+  <li>URL adresy v textu se automaticky stanou klikatelným odkazem (otevírá nový tab)</li>
+</ul>
 
 <h3>Přiřazení manažerů (Tým → Manažeři)</h3>
 <p>Admin workspace může v záložce <strong>Manažeři</strong> (v sekci Tým) definovat, kdo je čí Team Manažer. Kliknutím na tlačítko manažera se toto přiřazení okamžitě aktivuje nebo odebere. Každý člen může mít více manažerů. Přiřazení se promítá do stránky <strong>Podřízení</strong>, kde manažer vidí záznamy svých podřízených.</p>
