@@ -348,7 +348,7 @@ function SubordinatesContent() {
                       <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
                         {formatDate(entry.start_time)} · {formatTime(entry.start_time)} – {entry.end_time ? formatTime(entry.end_time) : '...'}
                       </span>
-                      <span className="text-xs font-mono font-medium" style={{ color: 'var(--text-primary)' }}>
+                      <span className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>
                         {formatDuration(entry.duration ?? 0)}
                       </span>
                     </div>

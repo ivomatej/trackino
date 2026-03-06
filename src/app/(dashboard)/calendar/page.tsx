@@ -193,6 +193,9 @@ function CalendarContent() {
   const [calendarForm, setCalendarForm] = useState({ name: '', color: '#3b82f6' });
   const [savingCalendar, setSavingCalendar] = useState(false);
 
+  // Aktuální čas (aktualizuje se každou minutu pro indikátor)
+  const [nowTime, setNowTime] = useState<Date>(() => new Date());
+
   const initializedRef = useRef(false);
 
   // ── Sync nastavení kalendáře z profilu ────────────────────────────────────
@@ -206,6 +209,13 @@ function CalendarContent() {
       setCalSettingsForm({ dayStart: start, dayEnd: end });
     }
   }, [profile]);
+
+  // Aktualizace aktuálního času každou minutu
+  useEffect(() => {
+    const tick = () => setNowTime(new Date());
+    const id = setInterval(tick, 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   // ── Načtení dat ──────────────────────────────────────────────────────────
 
@@ -652,6 +662,19 @@ function CalendarContent() {
 
   const ROW_H = 60; // px per hour in week view
 
+  // Pozice indikátoru aktuálního času v týdenním pohledu
+  const nowH = nowTime.getHours();
+  const nowM = nowTime.getMinutes();
+  const nowTotalMin = nowH * 60 + nowM;
+  const dayStartMin = calDayStart * 60;
+  const dayEndMin = calDayEnd * 60;
+  const nowTopPx = nowTotalMin >= dayStartMin && nowTotalMin <= dayEndMin
+    ? (nowTotalMin - dayStartMin) * (ROW_H / 60)
+    : null;
+
+  // Procento dne (pro měsíční pohled)
+  const nowDayPct = Math.min(1, Math.max(0, nowTotalMin / (24 * 60)));
+
   return (
     <DashboardLayout>
     <div className="h-full flex flex-col" style={{ minHeight: 0 }}>
@@ -945,7 +968,7 @@ function CalendarContent() {
                             <div
                               key={di}
                               onClick={() => openNewEvent(toDateStr(day))}
-                              className="min-h-[90px] p-1.5 cursor-pointer border-r last:border-r-0 transition-colors"
+                              className="min-h-[90px] p-1.5 cursor-pointer border-r last:border-r-0 transition-colors relative"
                               style={{
                                 borderColor: 'var(--border)',
                                 background: !isCurrentMonth ? 'color-mix(in srgb, var(--bg-sidebar) 60%, transparent)' : 'var(--bg-card)',
@@ -953,6 +976,17 @@ function CalendarContent() {
                               onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
                               onMouseLeave={e => (e.currentTarget.style.background = !isCurrentMonth ? 'color-mix(in srgb, var(--bg-sidebar) 60%, transparent)' : 'var(--bg-card)')}
                             >
+                              {/* Indikátor aktuálního času v měsíčním pohledu */}
+                              {isToday && (
+                                <div
+                                  className="absolute bottom-0 left-0 h-0.5 pointer-events-none"
+                                  style={{
+                                    width: `${nowDayPct * 100}%`,
+                                    background: '#ef4444',
+                                    opacity: 0.7,
+                                  }}
+                                />
+                              )}
                               <div
                                 className="w-6 h-6 flex items-center justify-center rounded-full text-xs font-medium mb-1"
                                 style={{
@@ -1092,6 +1126,22 @@ function CalendarContent() {
                               onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                             />
                           ))}
+
+                          {/* Indikátor aktuálního času */}
+                          {isToday && nowTopPx !== null && (
+                            <div
+                              className="absolute left-0 right-0 pointer-events-none"
+                              style={{ top: nowTopPx, zIndex: 10 }}
+                            >
+                              <div className="relative flex items-center">
+                                <div
+                                  className="absolute w-2.5 h-2.5 rounded-full flex-shrink-0"
+                                  style={{ background: '#ef4444', left: -5, top: -5 }}
+                                />
+                                <div className="w-full h-px" style={{ background: '#ef4444', opacity: 0.8 }} />
+                              </div>
+                            </div>
+                          )}
 
                           {/* Timed events – absolutně pozicovány */}
                           {timedEvs.map(ev => {

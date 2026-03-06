@@ -863,23 +863,29 @@ export default function TimerBar({ onEntryChanged, playData }: TimerBarProps) {
       {!isRunning ? (
         <button
           onClick={startTimer}
-          className="px-3 sm:px-6 py-1.5 sm:py-2 rounded-lg text-white font-semibold text-sm transition-colors whitespace-nowrap flex-shrink-0"
+          className="w-9 h-9 rounded-full flex items-center justify-center text-white flex-shrink-0 transition-colors"
           style={{ background: 'var(--primary)' }}
           onMouseEnter={(e) => e.currentTarget.style.background = 'var(--primary-hover)'}
           onMouseLeave={(e) => e.currentTarget.style.background = 'var(--primary)'}
+          title="Spustit"
         >
-          START
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+            <polygon points="6 3 20 12 6 21 6 3" />
+          </svg>
         </button>
       ) : (
-        <div className="flex gap-1 flex-shrink-0">
+        <div className="flex items-center gap-1 flex-shrink-0">
           <button
             onClick={stopTimer}
-            className="px-3 sm:px-6 py-1.5 sm:py-2 rounded-lg text-white font-semibold text-sm transition-colors whitespace-nowrap"
+            className="w-9 h-9 rounded-full flex items-center justify-center text-white flex-shrink-0 transition-opacity"
             style={{ background: 'var(--danger)' }}
-            onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
+            onMouseEnter={(e) => e.currentTarget.style.opacity = '0.85'}
             onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+            title="Zastavit"
           >
-            STOP
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+            </svg>
           </button>
           <button
             onClick={discardTimer}

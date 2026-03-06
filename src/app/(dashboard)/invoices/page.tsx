@@ -471,11 +471,19 @@ function InvoicesContent() {
 
   // Vyhledávání (jen admin záložky)
   const [invoiceSearch, setInvoiceSearch] = useState('');
+  // Filtr měsíce a roku
+  const [filterMonth, setFilterMonth] = useState<string>('');
+  const [filterYear, setFilterYear] = useState<string>('');
 
   // Filtrování faktur dle tabu
   const myInvoices = invoices.filter(i => i.user_id === user?.id);
 
+  // Unikátní roky z faktur (pro dropdown)
+  const availableYears = [...new Set(invoices.map(i => i.billing_period_year))].sort((a, b) => b - a);
+
   const matchesSearch = (inv: InvoiceWithUser) => {
+    if (filterYear && inv.billing_period_year !== parseInt(filterYear)) return false;
+    if (filterMonth && inv.billing_period_month !== parseInt(filterMonth)) return false;
     if (!invoiceSearch.trim()) return true;
     const q = invoiceSearch.toLowerCase();
     const name = (inv.profile?.display_name ?? inv.profile?.email ?? '').toLowerCase();
@@ -517,24 +525,19 @@ function InvoicesContent() {
       onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
       onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
     >
-      {showUser && invoice.profile && (
-        <div
-          className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-          style={{ background: invoice.profile.avatar_color ?? 'var(--primary)' }}
-        >
-          {invoice.profile.display_name?.charAt(0).toUpperCase() ?? '?'}
-        </div>
-      )}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-            {fmtMonth(invoice.billing_period_year, invoice.billing_period_month)}
-          </span>
+        <div className="flex items-center gap-1.5 flex-wrap">
           {showUser && (
-            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-              · {invoice.profile?.display_name ?? invoice.profile?.email ?? 'Neznámý'}
+            <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+              {invoice.profile?.display_name ?? invoice.profile?.email ?? 'Neznámý'}
             </span>
           )}
+          {showUser && (
+            <span className="text-sm" style={{ color: 'var(--text-muted)' }}>·</span>
+          )}
+          <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+            {fmtMonth(invoice.billing_period_year, invoice.billing_period_month)}
+          </span>
         </div>
         <div className="flex items-center gap-3 mt-0.5 flex-wrap">
           <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
@@ -1025,7 +1028,7 @@ function InvoicesContent() {
               {visibleTabs.map(tab => (
                 <button
                   key={tab.key}
-                  onClick={() => { setActiveTab(tab.key); setInvoiceSearch(''); }}
+                  onClick={() => { setActiveTab(tab.key); setInvoiceSearch(''); setFilterMonth(''); setFilterYear(''); }}
                   className="flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors"
                   style={{
                     background: activeTab === tab.key ? 'var(--bg-card)' : 'transparent',
@@ -1041,29 +1044,68 @@ function InvoicesContent() {
               ))}
             </div>
           )}
-          {/* Vyhledávání – pouze pro adminy/managery/správce fakturace, ne pro běžné uživatele */}
+          {/* Filtry + vyhledávání – pouze pro adminy/managery/správce fakturace */}
           {(activeTab === 'approve' || activeTab === 'billing') && (canApprove || canManageBilling) && (
-            <div className="relative">
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)' }}>
-                <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-              <input
-                type="text"
-                value={invoiceSearch}
-                onChange={(e) => setInvoiceSearch(e.target.value)}
-                placeholder="Hledat dle jména, VS nebo měsíce…"
-                className="w-full pl-9 pr-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-                style={inputStyle}
-              />
-              {invoiceSearch && (
-                <button
-                  onClick={() => setInvoiceSearch('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded"
-                  style={{ color: 'var(--text-muted)' }}
+            <div className="flex flex-col sm:flex-row gap-2">
+              {/* Filtr měsíce */}
+              <div className="relative flex-shrink-0">
+                <select
+                  value={filterMonth}
+                  onChange={e => setFilterMonth(e.target.value)}
+                  className="appearance-none pl-3 pr-8 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                  style={inputStyle}
                 >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-                </button>
+                  <option value="">Všechny měsíce</option>
+                  {['Leden','Únor','Březen','Duben','Květen','Červen','Červenec','Srpen','Září','Říjen','Listopad','Prosinec'].map((m, i) => (
+                    <option key={i + 1} value={String(i + 1)}>{m}</option>
+                  ))}
+                </select>
+                <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: 'var(--text-muted)' }}>
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </div>
+              {/* Filtr roku */}
+              {availableYears.length > 1 && (
+                <div className="relative flex-shrink-0">
+                  <select
+                    value={filterYear}
+                    onChange={e => setFilterYear(e.target.value)}
+                    className="appearance-none pl-3 pr-8 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                    style={inputStyle}
+                  >
+                    <option value="">Všechny roky</option>
+                    {availableYears.map(y => (
+                      <option key={y} value={String(y)}>{y}</option>
+                    ))}
+                  </select>
+                  <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: 'var(--text-muted)' }}>
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </div>
               )}
+              {/* Vyhledávání */}
+              <div className="relative flex-1">
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)' }}>
+                  <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+                <input
+                  type="text"
+                  value={invoiceSearch}
+                  onChange={(e) => setInvoiceSearch(e.target.value)}
+                  placeholder="Hledat dle jména nebo VS…"
+                  className="w-full pl-9 pr-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                  style={inputStyle}
+                />
+                {invoiceSearch && (
+                  <button
+                    onClick={() => setInvoiceSearch('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded"
+                    style={{ color: 'var(--text-muted)' }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </div>
