@@ -832,23 +832,23 @@ function CalendarContent() {
 
   // ── (calendar_day_start/end z profilu se již nepoužívají – grid je vždy 0–24) ──
 
-  // ── Výška weekGridRef dle viditelné oblasti ───────────────────────────────
-  // Výška = (calViewEnd - calViewStart) × ROW_H, max. dostupná výška viewportu.
-  // Tím je viditelná přesně zvolená oblast hodin; mimo ni lze scrollovat.
+  // ── Výška weekGridRef = celá dostupná výška viewportu ────────────────────
+  // Grid vyplní vše od horní hrany containeru dolů. Sticky záhlaví (dny + celý den)
+  // uvnitř gridu zůstávají při vertikálním scrollu nahoře.
+  // Počáteční scroll pozice (calViewStart) je řízena samostatným useEffectem níže.
   useLayoutEffect(() => {
     const el = weekGridRef.current;
     if (!el || (view !== 'week' && view !== 'today')) return;
 
     const setHeight = () => {
       const rect = el.getBoundingClientRect();
-      const desired = Math.max(3 * ROW_H, (calViewEnd - calViewStart) * ROW_H);
-      el.style.height = `${Math.min(desired, window.innerHeight - rect.top)}px`;
+      el.style.height = `${window.innerHeight - rect.top}px`;
     };
 
     setHeight();
     window.addEventListener('resize', setHeight);
     return () => window.removeEventListener('resize', setHeight);
-  }, [view, calViewStart, calViewEnd]);
+  }, [view]);
 
   // ── Auto-scroll časové mřížky na calViewStart ─────────────────────────────
   // Dependency na `loading` zajistí, že scroll proběhne až po vykreslení mřížky
@@ -3050,11 +3050,11 @@ function CalendarContent() {
               </button>
             </div>
             <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>
-              Nastavte, která část dne bude viditelná bez scrollování. Mřížka zobrazuje celý den (0–23 h) – výběrem Od/Do určíte výšku okna i počáteční pozici. Mimo viditelnou oblast se lze pohybovat scrollem.
+              Nastavte, od které hodiny se má kalendář otevřít. Záhlaví s dny zůstane při scrollu ukotveno. Celý den (0–23 h) je dostupný scrollem.
             </p>
 
             {/* Viditelná část */}
-            <p className="text-xs font-semibold mb-2" style={{ color: 'var(--text-secondary)' }}>Viditelná oblast kalendáře</p>
+            <p className="text-xs font-semibold mb-2" style={{ color: 'var(--text-secondary)' }}>Počáteční pozice při otevření</p>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-muted)' }}>Od</label>
@@ -3094,7 +3094,7 @@ function CalendarContent() {
               </div>
             </div>
             <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>
-              Příklad: Od 9:00 Do 17:00 zobrazí 8 hodinových řádků najednou.
+              Příklad: Od 9:00 → kalendář se otevře s řádkem 9:00 hned pod záhlavím.
             </p>
 
             <div className="flex gap-2 justify-end mt-5">
