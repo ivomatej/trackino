@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 6. 3. 2026 (v2.20.1)
+> Aktualizováno: 6. 3. 2026 (v2.20.2)
 
 ---
 

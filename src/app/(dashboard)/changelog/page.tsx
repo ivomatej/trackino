@@ -11,6 +11,11 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.20.2 – 6. 3. 2026</h3>
+<ul>
+  <li><strong>Kalendář – Viditelná oblast mřížky</strong> – nastavení „Od/Do" nyní určuje nejen počáteční scroll pozici, ale i výšku viditelného okna. Pokud nastavíte například 9:00–17:00, bude v okně kalendáře vidět přesně 8 hodinových řádků – výš ani níž bez scrollování neuvidíte. Mimo tuto oblast lze pohybovat scrollem (celá 24h mřížka zůstává dostupná). Příklad: 9:00–17:00 = 8 řádků, 8:00–16:00 = 8 řádků atd.</li>
+</ul>
+
 <h3>v2.20.1 – 6. 3. 2026</h3>
 <ul>
   <li><strong>Kalendář – Nastavení: zjednodušení</strong> – z nastavení kalendáře byl odstraněn oddíl „Rozsah dne (scrollovatelná oblast)". Časová mřížka nyní vždy zobrazuje celý den (0:00–23:00). Nastavit lze pouze „Výchozí viditelná část (při načtení stránky)" – selekty Od a Do určují, na jakou hodinu se mřížka posune při otevření kalendáře. Mimo viditelnou část lze vždy posunout scrollováním.</li>
