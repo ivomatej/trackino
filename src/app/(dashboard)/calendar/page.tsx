@@ -220,10 +220,6 @@ function parseICS(icsText: string, subId: string, color: string): DisplayEvent[]
     const uid = get('UID') || `${subId}-${Math.random()}`;
     const description = unescapeIcs(get('DESCRIPTION'));
     const isDateTime = dtstart.includes('T');
-    // Opakující se události (RRULE) nebo výjimky (RECURRENCE-ID) musí mít datum v ID,
-    // aby se rozlišily jednotlivé výskyty. Nerekurentní události datum nepotřebují –
-    // UID je dostatečně stabilní i při přesunutí schůzky na jiný den/čas.
-    const isRecurring = get('RRULE') !== '' || get('RECURRENCE-ID') !== '';
 
     let startDate: string;
     let endDate: string;
@@ -247,10 +243,10 @@ function parseICS(icsText: string, subId: string, color: string): DisplayEvent[]
       if (endDate < startDate) endDate = startDate;
     }
 
+    // ID vždy obsahuje datum+čas – zajišťuje unikátnost i pro události se stejným
+    // UID prefixem a pro opakující se série (každý výskyt je samostatný).
     const uidClean = uid.replace(/[^a-zA-Z0-9@._-]/g, '').slice(0, 40);
-    const eventId = isRecurring
-      ? `sub-${subId}-${uidClean}-${startDate}${startTime ? '-' + startTime.replace(':', '') : ''}`
-      : `sub-${subId}-${uidClean}`;
+    const eventId = `sub-${subId}-${uidClean}-${startDate}${startTime ? '-' + startTime.replace(':', '') : ''}`;
 
     result.push({
       id: eventId,
@@ -2653,21 +2649,21 @@ function CalendarContent() {
                             setShowOrphanPanel(next);
                             if (next) fetchOrphanNotes();
                           }}
-                          className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-medium transition-colors"
+                          className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors whitespace-nowrap"
                           style={{
-                            borderColor: showOrphanPanel ? 'var(--primary)' : 'var(--border)',
-                            color: showOrphanPanel ? 'var(--primary)' : 'var(--text-muted)',
-                            background: showOrphanPanel ? 'color-mix(in srgb, var(--primary) 8%, transparent)' : 'var(--bg-card)',
+                            border: showOrphanPanel ? '1.5px solid var(--primary)' : '1.5px solid var(--border)',
+                            color: showOrphanPanel ? 'var(--primary)' : 'var(--text-secondary)',
+                            background: showOrphanPanel ? 'var(--bg-hover)' : 'var(--bg-card)',
                           }}
-                          onMouseEnter={e => { if (!showOrphanPanel) e.currentTarget.style.background = 'var(--bg-hover)'; }}
-                          onMouseLeave={e => { if (!showOrphanPanel) e.currentTarget.style.background = 'var(--bg-card)'; }}
+                          onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = showOrphanPanel ? 'var(--bg-hover)' : 'var(--bg-card)'; }}
                           title="Zobrazit poznámky, jejichž událost již neexistuje"
                         >
                           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
                             <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/>
                           </svg>
-                          <span className="hidden sm:inline">Bez události</span>
+                          Bez události
                           {orphanNotes.length > 0 && (
                             <span className="inline-flex items-center justify-center w-4 h-4 rounded-full text-[10px] font-bold text-white" style={{ background: '#ef4444' }}>
                               {orphanNotes.length}
