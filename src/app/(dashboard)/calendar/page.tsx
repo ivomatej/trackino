@@ -736,11 +736,9 @@ function CalendarContent() {
   // Mini kalendář + nastavení
   const [miniCalDate, setMiniCalDate] = useState<Date>(() => new Date());
   const [showLeftPanel, setShowLeftPanel] = useState(false);
-  const [calDayStart, setCalDayStart] = useState(8);
-  const [calDayEnd, setCalDayEnd] = useState(18);
   const [showCalSettings, setShowCalSettings] = useState(false);
   const [savingCalSettings, setSavingCalSettings] = useState(false);
-  const [calSettingsForm, setCalSettingsForm] = useState({ dayStart: 8, dayEnd: 18, viewStart: 9, viewEnd: 17 });
+  const [calSettingsForm, setCalSettingsForm] = useState({ viewStart: 9, viewEnd: 17 });
 
   // Formulář události
   const [showEventForm, setShowEventForm] = useState(false);
@@ -832,17 +830,7 @@ function CalendarContent() {
 
   const initializedRef = useRef(false);
 
-  // ── Sync nastavení kalendáře z profilu ────────────────────────────────────
-
-  useEffect(() => {
-    if (profile) {
-      const start = profile.calendar_day_start ?? 8;
-      const end = profile.calendar_day_end ?? 18;
-      setCalDayStart(start);
-      setCalDayEnd(end);
-      setCalSettingsForm(f => ({ ...f, dayStart: start, dayEnd: end }));
-    }
-  }, [profile]);
+  // ── (calendar_day_start/end z profilu se již nepoužívají – grid je vždy 0–24) ──
 
   // ── Sticky fix: nastavení explicitní výšky weekGridRef ───────────────────
   // Protože DashboardLayout používá min-h-screen (ne h-screen), flex-1 uvnitř
@@ -866,9 +854,9 @@ function CalendarContent() {
   // Dependency na `loading` zajistí, že scroll proběhne až po vykreslení mřížky
   useEffect(() => {
     if (!loading && (view === 'week' || view === 'today') && weekGridRef.current) {
-      weekGridRef.current.scrollTop = Math.max(0, calViewStart - calDayStart) * ROW_H;
+      weekGridRef.current.scrollTop = calViewStart * ROW_H;
     }
-  }, [loading, view, calViewStart, calDayStart]);
+  }, [loading, view, calViewStart]);
 
   // Aktualizace aktuálního času každou minutu
   useEffect(() => {
@@ -1382,30 +1370,20 @@ function CalendarContent() {
 
   // ── Nastavení kalendáře ───────────────────────────────────────────────────
 
-  async function saveCalSettings() {
-    setSavingCalSettings(true);
-    await updateProfile({
-      calendar_day_start: calSettingsForm.dayStart,
-      calendar_day_end: calSettingsForm.dayEnd,
-    });
-    const newDayStart = calSettingsForm.dayStart;
-    const newDayEnd = calSettingsForm.dayEnd;
-    setCalDayStart(newDayStart);
-    setCalDayEnd(newDayEnd);
-    // Viditelná část – uložit do localStorage, zaklampovat na rozsah dne
-    const vs = Math.max(newDayStart, Math.min(newDayEnd - 1, calSettingsForm.viewStart));
-    const ve = Math.max(vs + 1, Math.min(newDayEnd, calSettingsForm.viewEnd));
+  function saveCalSettings() {
+    // Viditelná část – zaklampovat na 0–24 a uložit do localStorage
+    const vs = Math.max(0, Math.min(23, calSettingsForm.viewStart));
+    const ve = Math.max(vs + 1, Math.min(24, calSettingsForm.viewEnd));
     setCalViewStart(vs);
     setCalViewEnd(ve);
     localStorage.setItem('trackino_cal_view_start', String(vs));
     localStorage.setItem('trackino_cal_view_end', String(ve));
-    setSavingCalSettings(false);
     setShowCalSettings(false);
-    // Explicitní scroll po zavření modalu (jistota i při beze změny hodnot)
+    // Explicitní scroll po zavření modalu
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         if (weekGridRef.current) {
-          weekGridRef.current.scrollTop = Math.max(0, vs - newDayStart) * ROW_H;
+          weekGridRef.current.scrollTop = vs * ROW_H;
         }
       });
     });
@@ -1732,11 +1710,8 @@ function CalendarContent() {
   const nowH = nowTime.getHours();
   const nowM = nowTime.getMinutes();
   const nowTotalMin = nowH * 60 + nowM;
-  const dayStartMin = calDayStart * 60;
-  const dayEndMin = calDayEnd * 60;
-  const nowTopPx = nowTotalMin >= dayStartMin && nowTotalMin <= dayEndMin
-    ? (nowTotalMin - dayStartMin) * (ROW_H / 60)
-    : null;
+  // Grid je vždy 0–24h; aktuální čas je vždy viditelný pokud existuje
+  const nowTopPx = nowTotalMin * (ROW_H / 60);
 
   // Procento dne (pro měsíční pohled)
   const nowDayPct = Math.min(1, Math.max(0, nowTotalMin / (24 * 60)));
@@ -2088,7 +2063,7 @@ function CalendarContent() {
             {/* Nastavení kalendáře */}
             <div className="border-t pt-3 pb-4" style={{ borderColor: 'var(--border)' }}>
               <button
-                onClick={() => { setCalSettingsForm({ dayStart: calDayStart, dayEnd: calDayEnd, viewStart: calViewStart, viewEnd: calViewEnd }); setShowCalSettings(true); }}
+                onClick={() => { setCalSettingsForm({ viewStart: calViewStart, viewEnd: calViewEnd }); setShowCalSettings(true); }}
                 className="flex items-center gap-2 w-full py-1 px-1 text-xs transition-colors rounded"
                 style={{ color: 'var(--text-muted)' }}
                 onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
@@ -2317,14 +2292,14 @@ function CalendarContent() {
                   <div className="flex">
                     {/* Sloupec hodin */}
                     <div className="flex-shrink-0 border-r" style={{ width: 56, borderColor: 'var(--border)' }}>
-                      {Array.from({ length: calDayEnd - calDayStart }, (_, i) => (
+                      {Array.from({ length: 24 }, (_, i) => (
                         <div
                           key={i}
                           className="relative border-b"
                           style={{ height: ROW_H, borderColor: 'var(--border)' }}
                         >
                           <span className="absolute text-[10px] right-1.5 top-1" style={{ color: 'var(--text-muted)' }}>
-                            {String(calDayStart + i).padStart(2, '0')}:00
+                            {String(i).padStart(2, '0')}:00
                           </span>
                         </div>
                       ))}
@@ -2344,7 +2319,7 @@ function CalendarContent() {
                           }}
                         >
                           {/* Hodinové linky */}
-                          {Array.from({ length: calDayEnd - calDayStart }, (_, i) => (
+                          {Array.from({ length: 24 }, (_, i) => (
                             <div
                               key={i}
                               className="border-b cursor-pointer transition-colors"
@@ -2356,7 +2331,7 @@ function CalendarContent() {
                           ))}
 
                           {/* Indikátor aktuálního času */}
-                          {isToday && nowTopPx !== null && (
+                          {isToday && (
                             <div
                               className="absolute left-0 right-0 pointer-events-none"
                               style={{ top: nowTopPx, zIndex: 5 }}
@@ -2374,7 +2349,7 @@ function CalendarContent() {
 
                           {/* Timed events – absolutně pozicovány, s detekcí překrytí */}
                           {layoutTimedEvents(timedEvs).map(ev => {
-                            const topPx = Math.max(0, (ev._startMin - calDayStart * 60) * (ROW_H / 60));
+                            const topPx = Math.max(0, ev._startMin * (ROW_H / 60));
                             const heightPx = Math.max(20, (ev._endMin - ev._startMin) * (ROW_H / 60));
                             const colW = 100 / ev._totalCols;
                             const leftPct = ev._col * colW;
@@ -2446,10 +2421,10 @@ function CalendarContent() {
                     <div className="flex">
                       {/* Sloupec hodin */}
                       <div className="flex-shrink-0 border-r" style={{ width: 56, borderColor: 'var(--border)' }}>
-                        {Array.from({ length: calDayEnd - calDayStart }, (_, i) => (
+                        {Array.from({ length: 24 }, (_, i) => (
                           <div key={i} className="relative border-b" style={{ height: ROW_H, borderColor: 'var(--border)' }}>
                             <span className="absolute text-[10px] right-1.5 top-1" style={{ color: 'var(--text-muted)' }}>
-                              {String(calDayStart + i).padStart(2, '0')}:00
+                              {String(i).padStart(2, '0')}:00
                             </span>
                           </div>
                         ))}
@@ -2463,7 +2438,7 @@ function CalendarContent() {
                         }}
                       >
                         {/* Hodinové linky */}
-                        {Array.from({ length: calDayEnd - calDayStart }, (_, i) => (
+                        {Array.from({ length: 24 }, (_, i) => (
                           <div
                             key={i}
                             className="border-b cursor-pointer transition-colors"
@@ -2475,7 +2450,7 @@ function CalendarContent() {
                         ))}
 
                         {/* Indikátor aktuálního času */}
-                        {isToday && nowTopPx !== null && (
+                        {isToday && (
                           <div className="absolute left-0 right-0 pointer-events-none" style={{ top: nowTopPx, zIndex: 5 }}>
                             <div
                               className="absolute w-2 h-2 rounded-full"
@@ -2490,7 +2465,7 @@ function CalendarContent() {
 
                         {/* Timed events – s detekcí překrytí */}
                         {layoutTimedEvents(timedEvs).map(ev => {
-                          const topPx = Math.max(0, (ev._startMin - calDayStart * 60) * (ROW_H / 60));
+                          const topPx = Math.max(0, ev._startMin * (ROW_H / 60));
                           const heightPx = Math.max(20, (ev._endMin - ev._startMin) * (ROW_H / 60));
                           const colW = 100 / ev._totalCols;
                           const leftPct = ev._col * colW;
@@ -3075,49 +3050,8 @@ function CalendarContent() {
               </button>
             </div>
             <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>
-              Rozsah hodin v časové mřížce a výchozí viditelná část při načtení.
+              Nastavte, kde se má kalendář při načtení stránky automaticky posunout. Mřížka zobrazuje celý den (0–23 h) a kdykoli lze scrollovat.
             </p>
-
-            {/* Rozsah dne */}
-            <p className="text-xs font-semibold mb-2" style={{ color: 'var(--text-secondary)' }}>Rozsah dne (scrollovatelná oblast)</p>
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-muted)' }}>Začátek</label>
-                <div className="relative">
-                  <select
-                    value={calSettingsForm.dayStart}
-                    onChange={e => setCalSettingsForm(f => ({ ...f, dayStart: parseInt(e.target.value) }))}
-                    className="w-full appearance-none px-3 py-2 pr-8 rounded-lg border text-base sm:text-sm"
-                    style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
-                  >
-                    {Array.from({ length: 24 }, (_, i) => (
-                      <option key={i} value={i}>{String(i).padStart(2, '0')}:00</option>
-                    ))}
-                  </select>
-                  <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: 'var(--text-muted)' }}>
-                    <polyline points="6 9 12 15 18 9" />
-                  </svg>
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-muted)' }}>Konec</label>
-                <div className="relative">
-                  <select
-                    value={calSettingsForm.dayEnd}
-                    onChange={e => setCalSettingsForm(f => ({ ...f, dayEnd: parseInt(e.target.value) }))}
-                    className="w-full appearance-none px-3 py-2 pr-8 rounded-lg border text-base sm:text-sm"
-                    style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
-                  >
-                    {Array.from({ length: 24 }, (_, i) => i + 1).filter(h => h > calSettingsForm.dayStart).map(h => (
-                      <option key={h} value={h}>{h === 24 ? '0:00 (půlnoc)' : `${String(h).padStart(2, '0')}:00`}</option>
-                    ))}
-                  </select>
-                  <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: 'var(--text-muted)' }}>
-                    <polyline points="6 9 12 15 18 9" />
-                  </svg>
-                </div>
-              </div>
-            </div>
 
             {/* Viditelná část */}
             <p className="text-xs font-semibold mb-2" style={{ color: 'var(--text-secondary)' }}>Výchozí viditelná část (při načtení stránky)</p>
@@ -3131,8 +3065,8 @@ function CalendarContent() {
                     className="w-full appearance-none px-3 py-2 pr-8 rounded-lg border text-base sm:text-sm"
                     style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
                   >
-                    {Array.from({ length: calSettingsForm.dayEnd - calSettingsForm.dayStart }, (_, i) => calSettingsForm.dayStart + i).map(h => (
-                      <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>
+                    {Array.from({ length: 24 }, (_, i) => (
+                      <option key={i} value={i}>{String(i).padStart(2, '0')}:00</option>
                     ))}
                   </select>
                   <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: 'var(--text-muted)' }}>
@@ -3149,7 +3083,7 @@ function CalendarContent() {
                     className="w-full appearance-none px-3 py-2 pr-8 rounded-lg border text-base sm:text-sm"
                     style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
                   >
-                    {Array.from({ length: calSettingsForm.dayEnd - calSettingsForm.dayStart }, (_, i) => calSettingsForm.dayStart + i + 1).filter(h => h > calSettingsForm.viewStart).map(h => (
+                    {Array.from({ length: 24 }, (_, i) => i + 1).filter(h => h > calSettingsForm.viewStart).map(h => (
                       <option key={h} value={h}>{h === 24 ? '0:00 (půlnoc)' : `${String(h).padStart(2, '0')}:00`}</option>
                     ))}
                   </select>
@@ -3173,11 +3107,10 @@ function CalendarContent() {
               </button>
               <button
                 onClick={saveCalSettings}
-                disabled={savingCalSettings || calSettingsForm.dayEnd <= calSettingsForm.dayStart}
-                className="px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50"
+                className="px-4 py-2 rounded-lg text-sm font-medium text-white"
                 style={{ background: 'var(--primary)' }}
               >
-                {savingCalSettings ? 'Ukládám...' : 'Uložit'}
+                Uložit
               </button>
             </div>
           </div>
