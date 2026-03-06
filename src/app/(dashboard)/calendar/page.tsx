@@ -2449,19 +2449,6 @@ function CalendarContent() {
                         {/* Indikátor aktuálního času */}
                         {isToday && nowTopPx !== null && (
                           <div className="absolute left-0 right-0 pointer-events-none" style={{ top: nowTopPx, zIndex: 5 }}>
-                            <span
-                              className="absolute text-[9px] font-semibold leading-none"
-                              style={{
-                                color: '#ef4444',
-                                right: '100%',
-                                top: -5,
-                                paddingRight: 3,
-                                whiteSpace: 'nowrap',
-                                background: 'var(--bg-card)',
-                              }}
-                            >
-                              {String(nowTime.getHours()).padStart(2, '0')}:{String(nowTime.getMinutes()).padStart(2, '0')}
-                            </span>
                             <div
                               className="absolute w-2 h-2 rounded-full"
                               style={{ background: '#ef4444', left: 2, top: -4 }}
