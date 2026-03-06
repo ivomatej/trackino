@@ -25,7 +25,7 @@ interface DisplayEvent {
   end_time?: string | null;
 }
 
-type ViewType = 'list' | 'week' | 'month' | 'today';
+type ViewType = 'list' | 'week' | 'month' | 'today' | 'year';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -441,6 +441,7 @@ function CalendarContent() {
     const d = new Date(currentDate);
     if (view === 'week') d.setDate(d.getDate() - 7);
     else if (view === 'today') d.setDate(d.getDate() - 1);
+    else if (view === 'year') d.setFullYear(d.getFullYear() - 1);
     else d.setMonth(d.getMonth() - 1);
     setCurrentDate(d);
     setMiniCalDate(d);
@@ -450,6 +451,7 @@ function CalendarContent() {
     const d = new Date(currentDate);
     if (view === 'week') d.setDate(d.getDate() + 7);
     else if (view === 'today') d.setDate(d.getDate() + 1);
+    else if (view === 'year') d.setFullYear(d.getFullYear() + 1);
     else d.setMonth(d.getMonth() + 1);
     setCurrentDate(d);
     setMiniCalDate(d);
@@ -467,6 +469,9 @@ function CalendarContent() {
       return { start: addDays(getMonday(start), -7), end: addDays(end, 14) };
     } else if (view === 'today') {
       return { start: currentDate, end: currentDate };
+    } else if (view === 'year') {
+      const year = currentDate.getFullYear();
+      return { start: new Date(year, 0, 1), end: new Date(year, 11, 31) };
     } else {
       const start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
       const end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 6, 0);
@@ -626,6 +631,9 @@ function CalendarContent() {
     if (view === 'today') {
       return currentDate.toLocaleDateString('cs-CZ', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     }
+    if (view === 'year') {
+      return String(currentDate.getFullYear());
+    }
     return formatMonthYear(currentDate);
   }, [view, currentDate]);
 
@@ -733,7 +741,7 @@ function CalendarContent() {
 
         {/* Přepínač pohledu – v hlavičce */}
         <div className="flex rounded-lg overflow-hidden border flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
-          {(['today', 'week', 'month', 'list'] as ViewType[]).map(v => (
+          {(['today', 'week', 'month', 'year', 'list'] as ViewType[]).map(v => (
             <button
               key={v}
               onClick={() => { if (v === 'today') { const t = new Date(); setCurrentDate(t); setMiniCalDate(t); } setView(v); }}
@@ -743,7 +751,7 @@ function CalendarContent() {
                 color: view === v ? 'white' : 'var(--text-secondary)',
               }}
             >
-              {v === 'today' ? 'Dnes' : v === 'week' ? 'Týden' : v === 'month' ? 'Měsíc' : 'Seznam'}
+              {v === 'today' ? 'Dnes' : v === 'week' ? 'Týden' : v === 'month' ? 'Měsíc' : v === 'year' ? 'Rok' : 'Seznam'}
             </button>
           ))}
         </div>
@@ -874,8 +882,8 @@ function CalendarContent() {
             </div>
           </div>
 
-          {/* ── Mini kalendář (dole) ─────────────────────────────────────── */}
-          <div className="px-3 pt-3 pb-3 border-t flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
+          {/* ── Mini kalendář (dole) – skrytý v ročním pohledu ──────────── */}
+          {view !== 'year' && <div className="px-3 pt-3 pb-3 border-t flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
             {/* Navigace mini kalu */}
             <div className="flex items-center justify-between mb-1.5">
               <button
@@ -943,7 +951,7 @@ function CalendarContent() {
                 })}
               </div>
             ))}
-          </div>
+          </div>}
         </div>
 
         {/* ── Zobrazení kalendáře ───────────────────────────────────────── */}
@@ -1294,6 +1302,85 @@ function CalendarContent() {
                 );
               })()}
 
+              {/* ══ ROČNÍ POHLED ══════════════════════════════════════════════ */}
+              {view === 'year' && (() => {
+                const year = currentDate.getFullYear();
+                return (
+                  <div className="p-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                      {Array.from({ length: 12 }, (_, monthIdx) => {
+                        const firstDay = new Date(year, monthIdx, 1);
+                        const lastDay = new Date(year, monthIdx + 1, 0);
+                        const gridStart = getMonday(firstDay);
+                        const weeks: Date[][] = [];
+                        let cur = new Date(gridStart);
+                        while (true) {
+                          const week: Date[] = [];
+                          for (let i = 0; i < 7; i++) {
+                            week.push(new Date(cur));
+                            cur = addDays(cur, 1);
+                          }
+                          weeks.push(week);
+                          if (cur > lastDay && weeks.length >= 4) break;
+                        }
+                        return (
+                          <div
+                            key={monthIdx}
+                            className="rounded-xl border p-3"
+                            style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}
+                          >
+                            <div className="text-sm font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+                              {MONTH_NAMES[monthIdx]}
+                            </div>
+                            <div className="grid grid-cols-7 mb-1">
+                              {DAY_NAMES_SHORT.map(d => (
+                                <div key={d} className="text-center text-[9px] font-semibold py-0.5" style={{ color: 'var(--text-muted)' }}>
+                                  {d.charAt(0)}
+                                </div>
+                              ))}
+                            </div>
+                            {weeks.map((week, wi) => (
+                              <div key={wi} className="grid grid-cols-7">
+                                {week.map((day, di) => {
+                                  const isCurrentMonth = day.getMonth() === monthIdx;
+                                  const isDayToday = isSameDay(day, today);
+                                  const dayEvs = isCurrentMonth ? eventsOnDay(day) : [];
+                                  return (
+                                    <div key={di} className="flex items-center justify-center py-0.5">
+                                      <div className="relative">
+                                        <button
+                                          onClick={() => { setCurrentDate(day); setMiniCalDate(day); setView('today'); }}
+                                          className="w-6 h-6 flex items-center justify-center rounded-full text-[10px] font-medium transition-colors"
+                                          style={{
+                                            background: isDayToday ? 'var(--primary)' : 'transparent',
+                                            color: isDayToday ? 'white' : isCurrentMonth ? 'var(--text-primary)' : 'var(--text-muted)',
+                                          }}
+                                          onMouseEnter={e => { if (!isDayToday) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                                          onMouseLeave={e => { e.currentTarget.style.background = isDayToday ? 'var(--primary)' : 'transparent'; }}
+                                          title={toDateStr(day)}
+                                        >
+                                          {day.getDate()}
+                                        </button>
+                                        {dayEvs.length > 0 && isCurrentMonth && !isDayToday && (
+                                          <span
+                                            className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full"
+                                            style={{ background: dayEvs[0].color }}
+                                          />
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* ══ LISTOVÝ POHLED ════════════════════════════════════════════ */}
               {view === 'list' && (
                 <div className="max-w-2xl p-4">
@@ -1388,29 +1475,39 @@ function CalendarContent() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Začátek dne</label>
-                <select
-                  value={calSettingsForm.dayStart}
-                  onChange={e => setCalSettingsForm(f => ({ ...f, dayStart: parseInt(e.target.value) }))}
-                  className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm"
-                  style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
-                >
-                  {Array.from({ length: 24 }, (_, i) => (
-                    <option key={i} value={i}>{String(i).padStart(2, '0')}:00</option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <select
+                    value={calSettingsForm.dayStart}
+                    onChange={e => setCalSettingsForm(f => ({ ...f, dayStart: parseInt(e.target.value) }))}
+                    className="w-full appearance-none px-3 py-2 pr-8 rounded-lg border text-base sm:text-sm"
+                    style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
+                  >
+                    {Array.from({ length: 24 }, (_, i) => (
+                      <option key={i} value={i}>{String(i).padStart(2, '0')}:00</option>
+                    ))}
+                  </select>
+                  <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: 'var(--text-muted)' }}>
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </div>
               </div>
               <div>
                 <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Konec dne</label>
-                <select
-                  value={calSettingsForm.dayEnd}
-                  onChange={e => setCalSettingsForm(f => ({ ...f, dayEnd: parseInt(e.target.value) }))}
-                  className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm"
-                  style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
-                >
-                  {Array.from({ length: 24 }, (_, i) => i + 1).filter(h => h > calSettingsForm.dayStart).map(h => (
-                    <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <select
+                    value={calSettingsForm.dayEnd}
+                    onChange={e => setCalSettingsForm(f => ({ ...f, dayEnd: parseInt(e.target.value) }))}
+                    className="w-full appearance-none px-3 py-2 pr-8 rounded-lg border text-base sm:text-sm"
+                    style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
+                  >
+                    {Array.from({ length: 24 }, (_, i) => i + 1).filter(h => h > calSettingsForm.dayStart).map(h => (
+                      <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>
+                    ))}
+                  </select>
+                  <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: 'var(--text-muted)' }}>
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </div>
               </div>
             </div>
             <div className="flex gap-2 justify-end mt-6">
@@ -1466,16 +1563,21 @@ function CalendarContent() {
               {calendars.length > 1 && (
                 <div>
                   <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Kalendář</label>
-                  <select
-                    value={eventForm.calendar_id}
-                    onChange={e => setEventForm(f => ({ ...f, calendar_id: e.target.value }))}
-                    className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm"
-                    style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
-                  >
-                    {calendars.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <select
+                      value={eventForm.calendar_id}
+                      onChange={e => setEventForm(f => ({ ...f, calendar_id: e.target.value }))}
+                      className="w-full appearance-none px-3 py-2 pr-8 rounded-lg border text-base sm:text-sm"
+                      style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
+                    >
+                      {calendars.map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                    <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: 'var(--text-muted)' }}>
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </div>
                 </div>
               )}
 
