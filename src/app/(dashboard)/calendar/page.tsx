@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useWorkspace, WorkspaceProvider } from '@/contexts/WorkspaceContext';
 import DashboardLayout from '@/components/DashboardLayout';
 import type { Calendar, CalendarEvent, VacationEntry, ImportantDay, CalendarSubscription } from '@/types/database';
+import { getCzechHolidays } from '@/lib/czech-calendar';
 
 // ─── Local Types ─────────────────────────────────────────────────────────────
 
@@ -16,7 +17,7 @@ interface DisplayEvent {
   start_date: string;
   end_date: string;
   color: string;
-  source: 'manual' | 'vacation' | 'important_day' | 'subscription';
+  source: 'manual' | 'vacation' | 'important_day' | 'subscription' | 'holiday';
   source_id: string;
   calendar_id?: string;
   description?: string;
@@ -274,8 +275,12 @@ function sourceBadgeLabel(source: DisplayEvent['source']): string {
   if (source === 'vacation') return 'Dovolená';
   if (source === 'important_day') return 'Důležitý den';
   if (source === 'subscription') return 'Ext. kalendář';
+  if (source === 'holiday') return 'Státní svátek';
   return '';
 }
+
+/** ROW_H – px na hodinu v týdenním/denním pohledu */
+const ROW_H = 60;
 
 // ─── Vnitřní komponenta ───────────────────────────────────────────────────────
 
@@ -367,6 +372,12 @@ function CalendarContent() {
     try { return JSON.parse(localStorage.getItem('trackino_subs_order') ?? '[]'); } catch { return []; }
   });
 
+  // Státní svátky – toggle (localStorage, default zapnuto)
+  const [showHolidays, setShowHolidays] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    return localStorage.getItem('trackino_cal_holidays') !== '0';
+  });
+
   const initializedRef = useRef(false);
 
   // ── Sync nastavení kalendáře z profilu ────────────────────────────────────
@@ -382,12 +393,12 @@ function CalendarContent() {
   }, [profile]);
 
   // ── Auto-scroll časové mřížky na calViewStart ─────────────────────────────
+  // Dependency na `loading` zajistí, že scroll proběhne až po vykreslení mřížky
   useEffect(() => {
-    if ((view === 'week' || view === 'today') && weekGridRef.current) {
+    if (!loading && (view === 'week' || view === 'today') && weekGridRef.current) {
       weekGridRef.current.scrollTop = Math.max(0, calViewStart - calDayStart) * ROW_H;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view, calViewStart, calDayStart]);
+  }, [loading, view, calViewStart, calDayStart]);
 
   // Aktualizace aktuálního času každou minutu
   useEffect(() => {
@@ -832,6 +843,31 @@ function CalendarContent() {
     }
   }, [view, currentDate]);
 
+  // ── České státní svátky ───────────────────────────────────────────────────
+
+  const czechHolidayEvents = useMemo<DisplayEvent[]>(() => {
+    if (!showHolidays) return [];
+    const startYear = visibleRange.start.getFullYear();
+    const endYear = visibleRange.end.getFullYear();
+    const result: DisplayEvent[] = [];
+    for (let y = startYear; y <= endYear; y++) {
+      for (const h of getCzechHolidays(y)) {
+        const dateStr = toDateStr(h.date);
+        result.push({
+          id: `holiday-${dateStr}`,
+          title: h.name,
+          start_date: dateStr,
+          end_date: dateStr,
+          color: '#ef4444',
+          source: 'holiday',
+          source_id: dateStr,
+          is_all_day: true,
+        });
+      }
+    }
+    return result;
+  }, [showHolidays, visibleRange]);
+
   // ── DisplayEvents ─────────────────────────────────────────────────────────
 
   const displayEvents = useMemo<DisplayEvent[]>(() => {
@@ -896,8 +932,13 @@ function CalendarContent() {
       }
     }
 
+    // České státní svátky
+    for (const ev of czechHolidayEvents) {
+      result.push(ev);
+    }
+
     return result.sort((a, b) => a.start_date.localeCompare(b.start_date) || a.title.localeCompare(b.title));
-  }, [events, vacationEntries, importantDays, calendars, selectedCalendarIds, visibleRange, subscriptionEvents]);
+  }, [events, vacationEntries, importantDays, calendars, selectedCalendarIds, visibleRange, subscriptionEvents, czechHolidayEvents]);
 
   // ── Mřížka měsíce ─────────────────────────────────────────────────────────
 
@@ -1051,8 +1092,6 @@ function CalendarContent() {
       </div>
     </DashboardLayout>
   );
-
-  const ROW_H = 60; // px per hour in week view
 
   // Pozice indikátoru aktuálního času v týdenním pohledu
   const nowH = nowTime.getHours();
@@ -1247,6 +1286,29 @@ function CalendarContent() {
               <div className="flex items-center gap-2 py-1">
                 <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ background: 'linear-gradient(135deg, #f59e0b, #8b5cf6)' }} />
                 <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Důležité dny</span>
+              </div>
+            </div>
+
+            {/* Další kalendáře – Státní svátky */}
+            <div className="mb-3">
+              <div className="mb-2">
+                <span className="text-[10px] font-semibold tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                  DALŠÍ KALENDÁŘE
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 py-0.5">
+                <input
+                  type="checkbox"
+                  checked={showHolidays}
+                  onChange={e => {
+                    setShowHolidays(e.target.checked);
+                    localStorage.setItem('trackino_cal_holidays', e.target.checked ? '1' : '0');
+                  }}
+                  className="w-3.5 h-3.5 rounded cursor-pointer flex-shrink-0"
+                  style={{ accentColor: '#ef4444' }}
+                />
+                <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ background: '#ef4444' }} />
+                <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Státní svátky</span>
               </div>
             </div>
 
@@ -1612,15 +1674,16 @@ function CalendarContent() {
                           {isToday && nowTopPx !== null && (
                             <div
                               className="absolute left-0 right-0 pointer-events-none"
-                              style={{ top: nowTopPx, zIndex: 10 }}
+                              style={{ top: nowTopPx, zIndex: 5 }}
                             >
-                              <div className="relative flex items-center">
-                                <div
-                                  className="absolute w-2.5 h-2.5 rounded-full flex-shrink-0"
-                                  style={{ background: '#ef4444', left: -5, top: -5 }}
-                                />
-                                <div className="w-full h-px" style={{ background: '#ef4444', opacity: 0.8 }} />
-                              </div>
+                              <div
+                                className="absolute w-2 h-2 rounded-full"
+                                style={{ background: '#ef4444', left: 2, top: -4 }}
+                              />
+                              <div
+                                className="absolute left-0 right-0"
+                                style={{ height: 2, background: '#ef4444', opacity: 0.85, top: -1 }}
+                              />
                             </div>
                           )}
 
@@ -1727,11 +1790,15 @@ function CalendarContent() {
 
                         {/* Indikátor aktuálního času */}
                         {isToday && nowTopPx !== null && (
-                          <div className="absolute left-0 right-0 pointer-events-none" style={{ top: nowTopPx, zIndex: 10 }}>
-                            <div className="relative flex items-center">
-                              <div className="absolute w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: '#ef4444', left: -5, top: -5 }} />
-                              <div className="w-full h-px" style={{ background: '#ef4444', opacity: 0.8 }} />
-                            </div>
+                          <div className="absolute left-0 right-0 pointer-events-none" style={{ top: nowTopPx, zIndex: 5 }}>
+                            <div
+                              className="absolute w-2 h-2 rounded-full"
+                              style={{ background: '#ef4444', left: 2, top: -4 }}
+                            />
+                            <div
+                              className="absolute left-0 right-0"
+                              style={{ height: 2, background: '#ef4444', opacity: 0.85, top: -1 }}
+                            />
                           </div>
                         )}
 
