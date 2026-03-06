@@ -1638,7 +1638,14 @@ function CalendarContent() {
         return {
           key,
           label: `${MONTH_NAMES[parseInt(m) - 1]} ${y}`,
-          events: evs,
+          events: evs.sort((a, b) => {
+            const dateCmp = a.start_date.localeCompare(b.start_date);
+            if (dateCmp !== 0) return dateCmp;
+            if (!a.start_time && !b.start_time) return a.title.localeCompare(b.title);
+            if (!a.start_time) return -1;
+            if (!b.start_time) return 1;
+            return a.start_time.localeCompare(b.start_time);
+          }),
         };
       });
   }, [displayEvents, visibleRange]);
@@ -2617,8 +2624,31 @@ function CalendarContent() {
                   .sort((a, b) => a[0].localeCompare(b[0]))
                   .map(([key, evs]) => {
                     const [y, m] = key.split('-');
-                    return { key, label: `${MONTH_NAMES[parseInt(m) - 1]} ${y}`, events: evs };
+                    return {
+                      key,
+                      label: `${MONTH_NAMES[parseInt(m) - 1]} ${y}`,
+                      events: evs.sort((a, b) => {
+                        const dateCmp = a.start_date.localeCompare(b.start_date);
+                        if (dateCmp !== 0) return dateCmp;
+                        if (!a.start_time && !b.start_time) return a.title.localeCompare(b.title);
+                        if (!a.start_time) return -1;
+                        if (!b.start_time) return 1;
+                        return a.start_time.localeCompare(b.start_time);
+                      }),
+                    };
                   });
+
+                // Červená linka aktuálního času – najdi první event který je "v budoucnosti" vůči now
+                const nowHH = String(nowTime.getHours()).padStart(2, '0');
+                const nowMM = String(nowTime.getMinutes()).padStart(2, '0');
+                const nowTimeStr = `${nowHH}:${nowMM}`;
+                let nowLineBeforeEvId: string | null = null;
+                if (!listSearch) {
+                  for (const ev of allVisible) {
+                    if (ev.start_date > todayStr) { nowLineBeforeEvId = ev.id; break; }
+                    if (ev.start_date === todayStr && ev.start_time && ev.start_time > nowTimeStr) { nowLineBeforeEvId = ev.id; break; }
+                  }
+                }
 
                 return (
                   <div className="flex-1 overflow-auto">
@@ -2891,7 +2921,15 @@ function CalendarContent() {
                                   const isSelected = openNoteEventIds.has(ev.id);
                                   const noteVisible = isSelected || noteHasContent;
                                   return (
-                                    <div key={ev.id} className="flex flex-col md:flex-row gap-3 items-start">
+                                    <div key={ev.id}>
+                                      {nowLineBeforeEvId === ev.id && (
+                                        <div className="flex items-center gap-2 py-1.5 mb-1">
+                                          <span className="text-[11px] font-semibold whitespace-nowrap" style={{ color: '#ef4444' }}>{nowTimeStr}</span>
+                                          <div className="flex-1 rounded-full" style={{ height: 2, background: '#ef4444', opacity: 0.75 }} />
+                                          <div className="flex-shrink-0 w-2 h-2 rounded-full" style={{ background: '#ef4444' }} />
+                                        </div>
+                                      )}
+                                    <div className="flex flex-col md:flex-row gap-3 items-start">
                                       <div
                                         onClick={() => { if (isClickable) { const orig = events.find(x => x.id === ev.source_id); if (orig) openEditEvent(orig); } }}
                                         className="group/ev flex-1 min-w-0 flex items-start gap-3 p-3 rounded-lg border transition-colors"
@@ -2960,6 +2998,7 @@ function CalendarContent() {
                                           </div>
                                         )}
                                       </div>
+                                    </div>
                                     </div>
                                   );
                                 })}
