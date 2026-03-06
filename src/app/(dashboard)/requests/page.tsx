@@ -541,81 +541,67 @@ function RequestsContent() {
                 </p>
                 {archivedRequests.map(req => (
                   <div key={req.id} className="rounded-xl border p-4" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
-                    {/* Řádek: podavatel + datum podání */}
-                    <div className="flex items-center gap-2 mb-3">
-                      {req.profile ? (
-                        <>
-                          <div
-                            className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0"
-                            style={{ background: req.profile.avatar_color }}
-                          >
-                            {initials(req.profile.display_name)}
+                    <div className="flex items-start justify-between gap-4 flex-wrap">
+                      {/* Levá část: avatar + info */}
+                      <div className="flex items-start gap-3 min-w-0">
+                        <div
+                          className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mt-0.5"
+                          style={{ background: req.profile?.avatar_color ?? 'var(--primary)' }}
+                        >
+                          {req.profile ? initials(req.profile.display_name) : '?'}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                            {req.profile?.display_name ?? 'Neznámý uživatel'}
                           </div>
-                          <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{req.profile.display_name}</span>
-                        </>
-                      ) : (
-                        <div className="w-7 h-7 rounded-full flex-shrink-0" style={{ background: 'var(--bg-hover)' }} />
-                      )}
-                      <span className="text-xs ml-auto flex-shrink-0" style={{ color: 'var(--text-muted)' }}>
-                        Podáno {new Date(req.created_at).toLocaleDateString('cs-CZ')}
-                      </span>
-                    </div>
-
-                    {/* Typ + status */}
-                    <div className="flex items-center gap-2 flex-wrap mb-2">
-                      <span className="text-[11px] font-medium px-2 py-0.5 rounded" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>
-                        {REQUEST_TYPE_LABELS[req.type]}
-                      </span>
-                      <StatusBadge status={req.status} />
-                    </div>
-
-                    {/* Název + poznámka */}
-                    <h3 className="font-semibold text-sm mb-1" style={{ color: 'var(--text-primary)' }}>{req.title}</h3>
-                    {req.note && (
-                      <p className="text-xs mb-2" style={{ color: 'var(--text-secondary)' }}>{req.note}</p>
-                    )}
-
-                    {/* Rozhodnutí reviewera */}
-                    <div
-                      className="mt-3 pt-3 border-t flex items-start gap-2"
-                      style={{ borderColor: 'var(--border)' }}
-                    >
-                      {/* Ikona rozhodnutí */}
-                      <div
-                        className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
-                        style={{ background: req.status === 'approved' ? '#d1fae5' : '#fee2e2' }}
-                      >
-                        {req.status === 'approved' ? (
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#065f46" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points="20 6 9 17 4 12" />
-                          </svg>
-                        ) : (
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#991b1b" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                            <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                          </svg>
-                        )}
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                          <span className="font-medium" style={{ color: 'var(--text-primary)' }}>
-                            {req.status === 'approved' ? 'Schválil/a' : 'Zamítl/a'}
-                            {req.reviewerProfile ? `: ${req.reviewerProfile.display_name}` : ''}
-                          </span>
-                          {req.reviewed_at && (
-                            <span style={{ color: 'var(--text-muted)' }}>
-                              {' '}· {new Date(req.reviewed_at).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'long', year: 'numeric' })}
+                          <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                            <span className="text-[11px] font-medium px-2 py-0.5 rounded" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>
+                              {REQUEST_TYPE_LABELS[req.type]}
                             </span>
+                            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                              Podáno {new Date(req.created_at).toLocaleDateString('cs-CZ')}
+                            </span>
+                          </div>
+                          <h3 className="font-semibold text-sm mt-1.5" style={{ color: 'var(--text-primary)' }}>{req.title}</h3>
+                          {req.note && (
+                            <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>{req.note}</p>
                           )}
-                        </p>
-                        {/* Důvod zamítnutí */}
-                        {req.status === 'rejected' && req.reviewer_note && (
-                          <p className="text-xs mt-1 italic" style={{ color: 'var(--text-muted)' }}>
-                            „{req.reviewer_note}"
-                          </p>
+                          {/* Info o vyřízení */}
+                          {req.reviewerProfile && req.reviewed_at && (
+                            <p className="text-xs mt-1.5" style={{ color: 'var(--text-muted)' }}>
+                              {req.status === 'approved' ? 'Schválil/a' : 'Zamítnul/a'}{' '}
+                              <span className="font-medium" style={{ color: 'var(--text-secondary)' }}>
+                                {req.reviewerProfile.display_name}
+                              </span>
+                              {' · '}
+                              {new Date(req.reviewed_at).toLocaleDateString('cs-CZ')}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      {/* Badge stavu */}
+                      <div className="flex-shrink-0">
+                        {req.status === 'approved' ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold" style={{ background: '#dcfce7', color: '#166534' }}>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                            Schváleno
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold" style={{ background: '#fee2e2', color: '#991b1b' }}>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                            Zamítnuto
+                          </span>
                         )}
                       </div>
                     </div>
+                    {/* Důvod zamítnutí */}
+                    {req.status === 'rejected' && (
+                      <div className="mt-3 px-3 py-2 rounded-lg text-xs" style={{ background: '#fee2e2', color: '#991b1b' }}>
+                        {req.reviewer_note
+                          ? <><strong>Důvod zamítnutí:</strong> {req.reviewer_note}</>
+                          : 'Zamítnuto bez uvedení důvodu.'}
+                      </div>
+                    )}
                   </div>
                 ))}
               </>

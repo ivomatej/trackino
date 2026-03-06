@@ -244,7 +244,7 @@ function parseICS(icsText: string, subId: string, color: string): DisplayEvent[]
     }
 
     result.push({
-      id: `sub-${subId}-${uid.replace(/[^a-zA-Z0-9@._-]/g, '').slice(0, 40)}`,
+      id: `sub-${subId}-${uid.replace(/[^a-zA-Z0-9@._-]/g, '').slice(0, 40)}-${startDate}`,
       title: summary,
       start_date: startDate,
       end_date: endDate,
@@ -285,16 +285,40 @@ const ROW_H = 60;
 // ─── Poznámky k událostem ─────────────────────────────────────────────────────
 
 interface TaskItem { id: string; text: string; checked: boolean; }
-interface EventNote { id?: string; content: string; tasks: TaskItem[]; }
+interface EventNote {
+  id?: string;
+  content: string;
+  tasks: TaskItem[];
+  is_important?: boolean;
+  is_done?: boolean;
+  is_favorite?: boolean;
+}
+
+/** Převede HTML na prostý text (stripuje tagy) */
+function stripHtmlToText(html: string): string {
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return tmp.textContent ?? tmp.innerText ?? '';
+}
+
+/** Obalí plaintext URL v HTML do klikatelného odkazu */
+function linkifyHtml(html: string): string {
+  // Pouze obalí URL které NEJSOU již uvnitř tagu (heuristika: nepředchází je href=")
+  return html.replace(/(?<!["'>])(https?:\/\/[^\s<>"'\]]+)/g, (url) => {
+    return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color:var(--primary);text-decoration:underline">${url}</a>`;
+  });
+}
 
 function NotePanel({
   eventRef,
   note,
   onSave,
+  onDelete,
 }: {
   eventRef: string;
   note: EventNote;
-  onSave: (eventRef: string, content: string, tasks: TaskItem[]) => void;
+  onSave: (eventRef: string, content: string, tasks: TaskItem[], meta: { is_important: boolean; is_done: boolean; is_favorite: boolean }) => void;
+  onDelete: (eventRef: string) => void;
 }) {
   const editorRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -304,8 +328,13 @@ function NotePanel({
   const taskInputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
   const [focusLastTask, setFocusLastTask] = useState(false);
 
+  // Meta flagy (local state + ref pro closure)
+  const [isImportant, setIsImportant] = useState(note.is_important ?? false);
+  const [isDone, setIsDone] = useState(note.is_done ?? false);
+  const [isFavorite, setIsFavorite] = useState(note.is_favorite ?? false);
+  const metaRef = useRef({ is_important: note.is_important ?? false, is_done: note.is_done ?? false, is_favorite: note.is_favorite ?? false });
+
   // Set initial HTML content on mount
-  // Remount is handled externally via key prop when note loads from DB
   useEffect(() => {
     if (editorRef.current) {
       editorRef.current.innerHTML = savedContentRef.current;
@@ -325,7 +354,14 @@ function NotePanel({
 
   function schedule(content: string, tasks: TaskItem[]) {
     clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => onSave(eventRef, content, tasks), 800);
+    timerRef.current = setTimeout(() => onSave(eventRef, content, tasks, metaRef.current), 800);
+  }
+
+  function saveMetaImmediate(meta: { is_important: boolean; is_done: boolean; is_favorite: boolean }) {
+    clearTimeout(timerRef.current);
+    const html = editorRef.current?.innerHTML ?? '';
+    const empty = !html || html === '<br>';
+    onSave(eventRef, empty ? '' : html, localTasks, meta);
   }
 
   function execFmt(cmd: string) {
@@ -338,6 +374,63 @@ function NotePanel({
     const empty = !html || html === '<br>';
     setIsEmpty(empty);
     schedule(empty ? '' : html, localTasks);
+  }
+
+  function handleBlur() {
+    // Auto-linkify URLs při opuštění editoru
+    if (!editorRef.current) return;
+    const html = editorRef.current.innerHTML;
+    const linked = linkifyHtml(html);
+    if (linked !== html) {
+      editorRef.current.innerHTML = linked;
+      const empty = !linked || linked === '<br>';
+      setIsEmpty(empty);
+      schedule(empty ? '' : linked, localTasks);
+    }
+  }
+
+  function handleEditorClick(e: React.MouseEvent<HTMLDivElement>) {
+    const target = e.target as HTMLElement;
+    const anchor = target.closest('a');
+    if (anchor) {
+      e.preventDefault();
+      const href = anchor.getAttribute('href');
+      if (href) window.open(href, '_blank', 'noopener,noreferrer');
+    }
+  }
+
+  function toggleImportant() {
+    const next = !isImportant;
+    setIsImportant(next);
+    if (next) setIsFavorite(false);
+    const meta = { is_important: next, is_done: isDone, is_favorite: next ? false : isFavorite };
+    metaRef.current = meta;
+    saveMetaImmediate(meta);
+  }
+
+  function toggleDone() {
+    const next = !isDone;
+    setIsDone(next);
+    const meta = { is_important: isImportant, is_done: next, is_favorite: isFavorite };
+    metaRef.current = meta;
+    saveMetaImmediate(meta);
+  }
+
+  function toggleFavorite() {
+    const next = !isFavorite;
+    setIsFavorite(next);
+    if (next) setIsImportant(false);
+    const meta = { is_important: next ? false : isImportant, is_done: isDone, is_favorite: next };
+    metaRef.current = meta;
+    saveMetaImmediate(meta);
+  }
+
+  function copyContent() {
+    const html = editorRef.current?.innerHTML ?? '';
+    const text = stripHtmlToText(html).trim();
+    const taskLines = localTasks.map(t => `${t.checked ? '✓' : '•'} ${t.text}`).join('\n');
+    const combined = [text, taskLines].filter(Boolean).join('\n\n');
+    navigator.clipboard.writeText(combined.trim()).catch(() => {});
   }
 
   function toggleTask(id: string) {
@@ -371,14 +464,19 @@ function NotePanel({
     background: 'transparent', border: 'none', cursor: 'pointer', flexShrink: 0,
   } as React.CSSProperties;
 
+  // Barva okraje a pozadí dle meta flagů
+  const borderColor = isImportant ? '#ef4444' : isFavorite ? '#f59e0b' : isDone ? 'var(--text-muted)' : 'var(--border)';
+  const bgColor = isImportant ? '#fff1f1' : isFavorite ? '#fffbeb' : 'var(--bg-sidebar)';
+
   return (
     <div
       className="flex-1 min-w-0 rounded-lg border flex flex-col gap-1.5 p-2.5"
-      style={{ borderColor: 'var(--border)', background: 'var(--bg-sidebar)' }}
+      style={{ borderColor, background: bgColor, opacity: isDone ? 0.7 : 1, transition: 'border-color 0.15s, background 0.15s' }}
       onClick={e => e.stopPropagation()}
     >
       {/* Toolbar */}
-      <div className="flex items-center gap-0.5">
+      <div className="flex items-center gap-0.5 flex-wrap">
+        {/* Formátování */}
         {(['bold', 'italic', 'underline'] as const).map((cmd, idx) => (
           <button
             key={cmd}
@@ -393,42 +491,94 @@ function NotePanel({
         ))}
         <div style={{ width: 1, height: 12, background: 'var(--border)', margin: '0 2px', flexShrink: 0 }} />
         {/* Odrážkový seznam */}
-        <button
-          onMouseDown={e => { e.preventDefault(); execFmt('insertUnorderedList'); }}
-          style={btnStyle}
-          title="Odrážkový seznam"
-          onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
-          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-        >
+        <button onMouseDown={e => { e.preventDefault(); execFmt('insertUnorderedList'); }} style={btnStyle} title="Odrážkový seznam" onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/>
             <circle cx="4" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1.5" fill="currentColor" stroke="none"/>
           </svg>
         </button>
         {/* Číselný seznam */}
-        <button
-          onMouseDown={e => { e.preventDefault(); execFmt('insertOrderedList'); }}
-          style={btnStyle}
-          title="Číselný seznam"
-          onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
-          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-        >
+        <button onMouseDown={e => { e.preventDefault(); execFmt('insertOrderedList'); }} style={btnStyle} title="Číselný seznam" onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/>
             <path d="M4 6h1v4" strokeLinecap="round"/><path d="M4 10h2" strokeLinecap="round"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1" strokeLinecap="round"/>
           </svg>
         </button>
+        <div style={{ width: 1, height: 12, background: 'var(--border)', margin: '0 2px', flexShrink: 0 }} />
+        {/* Praporek – důležitá */}
+        <button
+          onMouseDown={e => { e.preventDefault(); toggleImportant(); }}
+          style={{ ...btnStyle, color: isImportant ? '#ef4444' : 'var(--text-secondary)' }}
+          title={isImportant ? 'Zrušit označení důležité' : 'Označit jako důležitou'}
+          onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+        >
+          <svg width="10" height="10" viewBox="0 0 24 24" fill={isImportant ? '#ef4444' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>
+          </svg>
+        </button>
+        {/* Check – hotová */}
+        <button
+          onMouseDown={e => { e.preventDefault(); toggleDone(); }}
+          style={{ ...btnStyle, color: isDone ? '#22c55e' : 'var(--text-secondary)' }}
+          title={isDone ? 'Znovu otevřít' : 'Označit jako hotovou'}
+          onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+        >
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={isDone ? 3 : 2} strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        </button>
+        {/* Hvězdička – oblíbená */}
+        <button
+          onMouseDown={e => { e.preventDefault(); toggleFavorite(); }}
+          style={{ ...btnStyle, color: isFavorite ? '#f59e0b' : 'var(--text-secondary)' }}
+          title={isFavorite ? 'Zrušit oblíbenou' : 'Přidat do oblíbených'}
+          onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+        >
+          <svg width="10" height="10" viewBox="0 0 24 24" fill={isFavorite ? '#f59e0b' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+          </svg>
+        </button>
+        <div style={{ width: 1, height: 12, background: 'var(--border)', margin: '0 2px', flexShrink: 0 }} />
+        {/* Kopírovat */}
+        <button
+          onMouseDown={e => { e.preventDefault(); copyContent(); }}
+          style={btnStyle}
+          title="Kopírovat obsah poznámky"
+          onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+        >
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+        </button>
+        {/* Koš – smazat poznámku */}
+        <button
+          onMouseDown={e => { e.preventDefault(); if (confirm('Smazat celou poznámku?')) onDelete(eventRef); }}
+          style={{ ...btnStyle, color: 'var(--text-muted)' }}
+          title="Smazat poznámku"
+          onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = '#ef4444'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+        >
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+          </svg>
+        </button>
       </div>
 
-      {/* Contenteditable editor – pl-3 pro správné odsazení vlevo */}
+      {/* Contenteditable editor */}
       <div className="relative">
         <div
           ref={editorRef}
           contentEditable
           suppressContentEditableWarning
           onInput={handleInput}
-          className="text-xs outline-none min-h-[40px] leading-relaxed pl-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5"
-          style={{ color: 'var(--text-primary)', caretColor: 'var(--primary)' }}
+          onBlur={handleBlur}
+          onClick={handleEditorClick}
+          className="text-xs outline-none min-h-[40px] leading-relaxed pl-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:underline [&_a]:cursor-pointer"
+          style={{ color: 'var(--text-primary)', caretColor: 'var(--primary)', textDecoration: isDone ? 'line-through' : 'none', opacity: isDone ? 0.7 : 1 }}
         />
         {isEmpty && (
           <div className="absolute top-0 left-3 text-xs pointer-events-none select-none" style={{ color: 'var(--text-muted)' }}>
@@ -546,6 +696,7 @@ function CalendarContent() {
   // Stránkování a vyhledávání v listovém pohledu
   const [listVisibleCount, setListVisibleCount] = useState(10);
   const [listSearch, setListSearch] = useState('');
+  const [listHistoryMonths, setListHistoryMonths] = useState(0);
 
   // Odběry externích ICS kalendářů
   const [subscriptions, setSubscriptions] = useState<CalendarSubscription[]>([]);
@@ -587,6 +738,12 @@ function CalendarContent() {
     if (typeof window === 'undefined') return true;
     return localStorage.getItem('trackino_cal_holidays') !== '0';
   });
+
+  // Collapse stav sekcí v levém panelu
+  const [myCalExpanded, setMyCalExpanded] = useState(true);
+  const [extCalExpanded, setExtCalExpanded] = useState(true);
+  const [autoExpanded, setAutoExpanded] = useState(true);
+  const [otherExpanded, setOtherExpanded] = useState(true);
 
   // Poznámky k událostem – per-event otevřenost
   const [openNoteEventIds, setOpenNoteEventIds] = useState<Set<string>>(new Set());
@@ -640,10 +797,11 @@ function CalendarContent() {
     return () => clearInterval(id);
   }, []);
 
-  // Reset stránkování a vyhledávání při přepnutí pohledu nebo navigaci
+  // Reset stránkování, vyhledávání a historie při přepnutí pohledu nebo navigaci
   useEffect(() => {
     setListVisibleCount(10);
     setListSearch('');
+    setListHistoryMonths(0);
   }, [view, currentDate]);
 
   // Načtení ICS událostí při změně odběrů nebo manuálním refreshi
@@ -869,30 +1027,51 @@ function CalendarContent() {
       setNotesByRef(prev => {
         const next = { ...prev };
         for (const n of data) {
-          next[n.event_ref] = { id: n.id, content: n.content ?? '', tasks: (n.tasks as TaskItem[]) ?? [] };
+          next[n.event_ref] = {
+            id: n.id,
+            content: n.content ?? '',
+            tasks: (n.tasks as TaskItem[]) ?? [],
+            is_important: n.is_important ?? false,
+            is_done: n.is_done ?? false,
+            is_favorite: n.is_favorite ?? false,
+          };
         }
         return next;
       });
     }
   }
 
-  async function handleNoteSave(eventRef: string, content: string, tasks: TaskItem[]) {
+  async function handleNoteSave(
+    eventRef: string,
+    content: string,
+    tasks: TaskItem[],
+    meta: { is_important: boolean; is_done: boolean; is_favorite: boolean } = { is_important: false, is_done: false, is_favorite: false }
+  ) {
     if (!currentWorkspace || !user) return;
     const existing = notesByRef[eventRef];
+    const payload = { content, tasks, is_important: meta.is_important, is_done: meta.is_done, is_favorite: meta.is_favorite, updated_at: new Date().toISOString() };
     if (existing?.id) {
-      await supabase.from('trackino_calendar_event_notes')
-        .update({ content, tasks, updated_at: new Date().toISOString() })
-        .eq('id', existing.id);
+      await supabase.from('trackino_calendar_event_notes').update(payload).eq('id', existing.id);
     } else {
       const { data } = await supabase.from('trackino_calendar_event_notes')
-        .insert({ workspace_id: currentWorkspace.id, user_id: user.id, event_ref: eventRef, content, tasks })
+        .insert({ workspace_id: currentWorkspace.id, user_id: user.id, event_ref: eventRef, content, tasks, is_important: meta.is_important, is_done: meta.is_done, is_favorite: meta.is_favorite })
         .select('id')
         .single();
       if (data) {
-        setNotesByRef(prev => ({ ...prev, [eventRef]: { id: data.id, content, tasks } }));
+        setNotesByRef(prev => ({ ...prev, [eventRef]: { id: data.id, content, tasks, ...meta } }));
+        return;
       }
     }
-    setNotesByRef(prev => ({ ...prev, [eventRef]: { ...prev[eventRef], content, tasks } }));
+    setNotesByRef(prev => ({ ...prev, [eventRef]: { ...prev[eventRef], content, tasks, ...meta } }));
+  }
+
+  async function handleNoteDelete(eventRef: string) {
+    const existing = notesByRef[eventRef];
+    if (existing?.id) {
+      await supabase.from('trackino_calendar_event_notes').delete().eq('id', existing.id);
+      setNotesByRef(prev => { const n = { ...prev }; delete n[eventRef]; return n; });
+    }
+    setOpenNoteEventIds(prev => { const n = new Set(prev); n.delete(eventRef); return n; });
   }
 
   // ── CRUD – Kalendáře ──────────────────────────────────────────────────────
@@ -1113,11 +1292,11 @@ function CalendarContent() {
       const year = currentDate.getFullYear();
       return { start: new Date(year, 0, 1), end: new Date(year, 11, 31) };
     } else {
-      const start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+      const start = new Date(currentDate.getFullYear(), currentDate.getMonth() - listHistoryMonths, 1);
       const end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 6, 0);
       return { start, end };
     }
-  }, [view, currentDate]);
+  }, [view, currentDate, listHistoryMonths]);
 
   // ── České státní svátky ───────────────────────────────────────────────────
 
@@ -1498,9 +1677,16 @@ function CalendarContent() {
           <div className="px-3 pt-3 flex-1">
             <div className="mb-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-semibold tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                <button
+                  onClick={() => setMyCalExpanded(p => !p)}
+                  className="flex items-center gap-1 text-[10px] font-semibold tracking-wider"
+                  style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                >
                   MÉ KALENDÁŘE
-                </span>
+                  <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ transform: myCalExpanded ? 'none' : 'rotate(-90deg)', transition: 'transform 0.15s', flexShrink: 0 }}>
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
+                </button>
                 <button
                   onClick={openNewCalendar}
                   className="p-0.5 rounded transition-colors"
@@ -1514,7 +1700,7 @@ function CalendarContent() {
                   </svg>
                 </button>
               </div>
-              {sortedCalendars.map((cal, calIdx) => (
+              {myCalExpanded && sortedCalendars.map((cal, calIdx) => (
                 <div key={cal.id} className="flex items-center gap-1.5 py-0.5 group/cal">
                   <input
                     type="checkbox"
@@ -1530,7 +1716,6 @@ function CalendarContent() {
                     className="w-3.5 h-3.5 rounded cursor-pointer flex-shrink-0"
                     style={{ accentColor: cal.color }}
                   />
-                  <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ background: cal.color }} />
                   <span className="text-sm flex-1 truncate min-w-0" style={{ color: 'var(--text-primary)' }}>
                     {cal.name}
                   </span>
@@ -1558,52 +1743,19 @@ function CalendarContent() {
               ))}
             </div>
 
-            {/* Automatické zdroje */}
-            <div className="mb-3">
-              <div className="mb-2">
-                <span className="text-[10px] font-semibold tracking-wider" style={{ color: 'var(--text-muted)' }}>
-                  AUTOMATICKY
-                </span>
-              </div>
-              <div className="flex items-center gap-2 py-1">
-                <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ background: '#0ea5e9' }} />
-                <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Dovolená</span>
-              </div>
-              <div className="flex items-center gap-2 py-1">
-                <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ background: 'linear-gradient(135deg, #f59e0b, #8b5cf6)' }} />
-                <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Důležité dny</span>
-              </div>
-            </div>
-
-            {/* Další kalendáře – Státní svátky */}
-            <div className="mb-3">
-              <div className="mb-2">
-                <span className="text-[10px] font-semibold tracking-wider" style={{ color: 'var(--text-muted)' }}>
-                  DALŠÍ KALENDÁŘE
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5 py-0.5">
-                <input
-                  type="checkbox"
-                  checked={showHolidays}
-                  onChange={e => {
-                    setShowHolidays(e.target.checked);
-                    localStorage.setItem('trackino_cal_holidays', e.target.checked ? '1' : '0');
-                  }}
-                  className="w-3.5 h-3.5 rounded cursor-pointer flex-shrink-0"
-                  style={{ accentColor: '#ef4444' }}
-                />
-                <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ background: '#ef4444' }} />
-                <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Státní svátky</span>
-              </div>
-            </div>
-
-            {/* EXTERNÍ KALENDÁŘE */}
+            {/* EXTERNÍ KALENDÁŘE (přesunuto nad Automaticky) */}
             <div className="mb-3">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-semibold tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                <button
+                  onClick={() => setExtCalExpanded(p => !p)}
+                  className="flex items-center gap-1 text-[10px] font-semibold tracking-wider"
+                  style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                >
                   EXTERNÍ KALENDÁŘE
-                </span>
+                  <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ transform: extCalExpanded ? 'none' : 'rotate(-90deg)', transition: 'transform 0.15s', flexShrink: 0 }}>
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
+                </button>
                 <div className="flex items-center gap-0.5">
                   {/* Tlačítko Refresh */}
                   {subscriptions.some(s => s.is_enabled) && (
@@ -1615,11 +1767,7 @@ function CalendarContent() {
                       onMouseEnter={e => (e.currentTarget.style.color = 'var(--primary)')}
                       onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
                     >
-                      <svg
-                        width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-                        className={icsRefreshing ? 'animate-spin' : ''}
-                      >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={icsRefreshing ? 'animate-spin' : ''}>
                         <polyline points="23 4 23 10 17 10" />
                         <polyline points="1 20 1 14 7 14" />
                         <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
@@ -1641,51 +1789,111 @@ function CalendarContent() {
                   </button>
                 </div>
               </div>
-              {subscriptions.length === 0 ? (
-                <button
-                  onClick={openNewSub}
-                  className="text-xs w-full text-left px-1 py-1 rounded transition-colors"
-                  style={{ color: 'var(--text-muted)' }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                >
-                  + Přidat ICS odkaz
-                </button>
-              ) : (
-                sortedSubscriptions.map((sub, subIdx) => (
-                  <div key={sub.id} className="flex items-center gap-1.5 py-0.5 group/sub">
-                    <input
-                      type="checkbox"
-                      checked={sub.is_enabled}
-                      onChange={() => toggleSubscription(sub.id, !sub.is_enabled)}
-                      className="w-3.5 h-3.5 rounded cursor-pointer flex-shrink-0"
-                      style={{ accentColor: sub.color }}
-                    />
-                    <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ background: sub.color }} />
-                    <span className="text-xs flex-1 truncate min-w-0" style={{ color: 'var(--text-primary)' }} title={sub.name}>{sub.name}</span>
-                    {/* Šipky nahoru/dolů */}
-                    <div className="opacity-0 group-hover/sub:opacity-100 flex flex-col transition-opacity flex-shrink-0">
-                      <button onClick={() => moveSubscription(sub.id, -1)} disabled={subIdx === 0} className="p-0 leading-none disabled:opacity-20" style={{ color: 'var(--text-muted)' }} title="Nahoru">
-                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
-                      </button>
-                      <button onClick={() => moveSubscription(sub.id, 1)} disabled={subIdx === sortedSubscriptions.length - 1} className="p-0 leading-none disabled:opacity-20" style={{ color: 'var(--text-muted)' }} title="Dolů">
-                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+              {extCalExpanded && (
+                subscriptions.length === 0 ? (
+                  <button
+                    onClick={openNewSub}
+                    className="text-xs w-full text-left px-1 py-1 rounded transition-colors"
+                    style={{ color: 'var(--text-muted)' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    + Přidat ICS odkaz
+                  </button>
+                ) : (
+                  sortedSubscriptions.map((sub, subIdx) => (
+                    <div key={sub.id} className="flex items-center gap-1.5 py-0.5 group/sub">
+                      <input
+                        type="checkbox"
+                        checked={sub.is_enabled}
+                        onChange={() => toggleSubscription(sub.id, !sub.is_enabled)}
+                        className="w-3.5 h-3.5 rounded cursor-pointer flex-shrink-0"
+                        style={{ accentColor: sub.color }}
+                      />
+                      <span className="text-xs flex-1 truncate min-w-0" style={{ color: 'var(--text-primary)' }} title={sub.name}>{sub.name}</span>
+                      {/* Šipky nahoru/dolů */}
+                      <div className="opacity-0 group-hover/sub:opacity-100 flex flex-col transition-opacity flex-shrink-0">
+                        <button onClick={() => moveSubscription(sub.id, -1)} disabled={subIdx === 0} className="p-0 leading-none disabled:opacity-20" style={{ color: 'var(--text-muted)' }} title="Nahoru">
+                          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+                        </button>
+                        <button onClick={() => moveSubscription(sub.id, 1)} disabled={subIdx === sortedSubscriptions.length - 1} className="p-0 leading-none disabled:opacity-20" style={{ color: 'var(--text-muted)' }} title="Dolů">
+                          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                        </button>
+                      </div>
+                      {/* Tlačítko Upravit */}
+                      <button
+                        onClick={() => openEditSub(sub)}
+                        className="opacity-0 group-hover/sub:opacity-60 hover:!opacity-100 transition-opacity p-0.5 rounded flex-shrink-0"
+                        style={{ color: 'var(--text-muted)' }}
+                        title="Upravit odběr"
+                      >
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                        </svg>
                       </button>
                     </div>
-                    {/* Tlačítko Upravit */}
-                    <button
-                      onClick={() => openEditSub(sub)}
-                      className="opacity-0 group-hover/sub:opacity-60 hover:!opacity-100 transition-opacity p-0.5 rounded flex-shrink-0"
-                      style={{ color: 'var(--text-muted)' }}
-                      title="Upravit odběr"
-                    >
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                      </svg>
-                    </button>
+                  ))
+                )
+              )}
+            </div>
+
+            {/* Automatické zdroje */}
+            <div className="mb-3">
+              <div className="mb-2">
+                <button
+                  onClick={() => setAutoExpanded(p => !p)}
+                  className="flex items-center gap-1 text-[10px] font-semibold tracking-wider"
+                  style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                >
+                  AUTOMATICKY
+                  <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ transform: autoExpanded ? 'none' : 'rotate(-90deg)', transition: 'transform 0.15s', flexShrink: 0 }}>
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
+                </button>
+              </div>
+              {autoExpanded && (
+                <>
+                  <div className="flex items-center gap-2 py-1">
+                    <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ background: '#0ea5e9' }} />
+                    <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Dovolená</span>
                   </div>
-                ))
+                  <div className="flex items-center gap-2 py-1">
+                    <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ background: 'linear-gradient(135deg, #f59e0b, #8b5cf6)' }} />
+                    <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Důležité dny</span>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Další kalendáře – Státní svátky */}
+            <div className="mb-3">
+              <div className="mb-2">
+                <button
+                  onClick={() => setOtherExpanded(p => !p)}
+                  className="flex items-center gap-1 text-[10px] font-semibold tracking-wider"
+                  style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                >
+                  DALŠÍ KALENDÁŘE
+                  <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ transform: otherExpanded ? 'none' : 'rotate(-90deg)', transition: 'transform 0.15s', flexShrink: 0 }}>
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
+                </button>
+              </div>
+              {otherExpanded && (
+                <div className="flex items-center gap-1.5 py-0.5">
+                  <input
+                    type="checkbox"
+                    checked={showHolidays}
+                    onChange={e => {
+                      setShowHolidays(e.target.checked);
+                      localStorage.setItem('trackino_cal_holidays', e.target.checked ? '1' : '0');
+                    }}
+                    className="w-3.5 h-3.5 rounded cursor-pointer flex-shrink-0"
+                    style={{ accentColor: '#ef4444' }}
+                  />
+                  <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Státní svátky</span>
+                </div>
               )}
             </div>
 
@@ -2281,6 +2489,22 @@ function CalendarContent() {
                       </div>
                     </div>
 
+                    {/* Tlačítko pro načtení starších událostí */}
+                    {!listSearch && (
+                      <button
+                        onClick={() => setListHistoryMonths(m => m + 6)}
+                        className="w-full py-2 rounded-lg border text-xs font-medium flex items-center justify-center gap-1.5 mb-4 transition-colors"
+                        style={{ borderColor: 'var(--border)', color: 'var(--text-muted)', background: 'var(--bg-card)' }}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'var(--bg-card)')}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="18 15 12 9 6 15"/>
+                        </svg>
+                        Zobrazit dřívější události {listHistoryMonths > 0 ? `(zobrazeno −${listHistoryMonths} měs.)` : ''}
+                      </button>
+                    )}
+
                     {listGroups.length === 0 ? (
                       <div className="text-center py-12">
                         <div className="w-14 h-14 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ background: 'var(--bg-hover)' }}>
@@ -2389,6 +2613,7 @@ function CalendarContent() {
                                         eventRef={ev.id}
                                         note={evNote ?? { content: '', tasks: [] }}
                                         onSave={handleNoteSave}
+                                        onDelete={handleNoteDelete}
                                       />
                                     )}
                                   </div>
