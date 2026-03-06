@@ -486,6 +486,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.20.9 | 7. 3. 2026 | Kalendář/Týden: scroll na calViewStart přes useLayoutEffect (synchronní, bez záblesku 0:00 při prvním načtení na mobilu i desktopu); odstraněn retry mechanismus 30×/50ms |
 | v2.20.8 | 7. 3. 2026 | Žádosti/Archiv: badge Zamítnuto přesunut pod hlavní obsah (před Důvod zamítnutí), Schváleno zůstává vpravo nahoře; Kalendář/Levý panel: ikona koše (červená, hover) přidána vedle tužky pro ne-výchozí kalendáře |
 | v2.20.1 | 6. 3. 2026 | Kalendář/Nastavení: odstraněn "Rozsah dne", grid vždy 0–24h (24 řádků); calDayStart/calDayEnd state odstraněny; topPx = _startMin*(ROW_H/60); scroll = calViewStart*ROW_H; nowTopPx vždy počítán; selecty viditelné části 0..24 |
 | v2.20.0 | 6. 3. 2026 | Kalendář/Seznam mobil: md:items-start, w-full md:flex-1 na event card, tlačítko pozn. opacity-30 md:opacity-0; badge zobrazuje sub.name místo 'Ext. kalendář'; saveCalSettings: double-rAF scroll po uložení; vlastní checkbox (button+bílá fajfka) pro Mé kalendáře i Ext. odběry; iOS text-base na selectCls v settings/admin/app-changes |

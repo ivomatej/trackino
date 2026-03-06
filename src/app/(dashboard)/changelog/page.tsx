@@ -11,6 +11,11 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.20.9 – 7. 3. 2026</h3>
+<ul>
+  <li><strong>Kalendář – Týdenní pohled: scroll na počáteční hodinu</strong> – opravena chyba, kdy se při prvním načtení stránky mřížka zobrazila od 0:00 místo od nakonfigurované hodiny (např. 9:00). Problém postihoval mobil i desktop. Scroll se nyní nastavuje synchronně před prvním malováním prohlížeče (<code>useLayoutEffect</code>), takže nedochází k záblesku 0:00. Přepínání mezi pohledy fungovalo správně i dříve.</li>
+</ul>
+
 <h3>v2.20.8 – 7. 3. 2026</h3>
 <ul>
   <li><strong>Žádosti – Archiv: pozice štítku „Zamítnuto"</strong> – štítek „Zamítnuto" byl přesunut z pravého horního rohu kartičky dolů, těsně nad blok „Důvod zamítnutí". Štítek „Schváleno" zůstává vpravo nahoře. Konzistentní s layoutem Dovolená → Archiv.</li>
