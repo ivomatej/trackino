@@ -853,10 +853,16 @@ function CalendarContent() {
   }, [view]);
 
   // ── Auto-scroll časové mřížky na calViewStart ─────────────────────────────
-  // Dependency na `loading` zajistí, že scroll proběhne až po vykreslení mřížky
+  // Double-rAF: flex layout se dořeší po prvním framu, scrollTop se nastaví ve druhém.
   useEffect(() => {
-    if (!loading && (view === 'week' || view === 'today') && weekGridRef.current) {
-      weekGridRef.current.scrollTop = calViewStart * ROW_H;
+    if (!loading && (view === 'week' || view === 'today')) {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (weekGridRef.current) {
+            weekGridRef.current.scrollTop = calViewStart * ROW_H;
+          }
+        });
+      });
     }
   }, [loading, view, calViewStart]);
 
@@ -2291,7 +2297,7 @@ function CalendarContent() {
                   })()}
 
                   {/* Časová mřížka – POUZE tato část scrolluje vertikálně */}
-                  <div ref={weekGridRef} className="flex-1 overflow-y-auto overflow-x-hidden">
+                  <div ref={weekGridRef} className="flex-1 overflow-y-auto overflow-x-hidden" style={{ minHeight: 0 }}>
                   <div className="flex">
                     {/* Sloupec hodin */}
                     <div className="flex-shrink-0 border-r" style={{ width: 56, borderColor: 'var(--border)' }}>
@@ -2422,7 +2428,7 @@ function CalendarContent() {
                     )}
 
                     {/* Časová mřížka – POUZE tato část scrolluje vertikálně */}
-                    <div ref={weekGridRef} className="flex-1 overflow-auto">
+                    <div ref={weekGridRef} className="flex-1 overflow-auto" style={{ minHeight: 0 }}>
                     <div className="flex">
                       {/* Sloupec hodin */}
                       <div className="flex-shrink-0 border-r" style={{ width: 56, borderColor: 'var(--border)' }}>
