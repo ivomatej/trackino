@@ -835,40 +835,55 @@ function CalendarContent() {
   // ── (calendar_day_start/end z profilu se již nepoužívají – grid je vždy 0–24) ──
 
   // ── Výška calWeekWrapperRef = celá dostupná výška viewportu ─────────────
-  // ── Výška + počáteční scroll pro týdenní/denní pohled ────────────────────
-  // DashboardLayout má min-h-screen (ne h-screen), takže flex-1 chain nekončí
-  // na viewport výšce. Nutno nastavit explicitní výšky přes DOM.
-  // Záhlaví jsou VNĚ weekGridRef → weekGridRef = zbytek po záhlaví, scrolluje vertikálně.
+  // ── Výška pro týdenní/denní pohled ────────────────────────────────────────
+  // Nastaví explicitní výšku wrapperu i gridu (flex-1 chain nefunguje s min-h-screen).
   useLayoutEffect(() => {
     const wrapper = calWeekWrapperRef.current;
     const grid = weekGridRef.current;
     if (!wrapper || (view !== 'week' && view !== 'today')) return;
 
-    const applyLayout = () => {
+    const applyHeight = () => {
       const wRect = wrapper.getBoundingClientRect();
       const totalH = window.innerHeight - wRect.top;
       wrapper.style.height = `${totalH}px`;
-
       if (grid) {
-        // Vynucení layout reflow – zajistí aktuální pozici gridu po výšce wrapperu
-        void wrapper.offsetHeight;
-        const gTop = grid.getBoundingClientRect().top;
-        const headerH = Math.max(0, gTop - wRect.top);
+        void wrapper.offsetHeight; // force reflow
+        const headerH = Math.max(0, grid.getBoundingClientRect().top - wRect.top);
         grid.style.height = `${Math.max(60, totalH - headerH)}px`;
-        grid.scrollTop = calViewStart * ROW_H;
       }
     };
 
-    applyLayout();
-    window.addEventListener('resize', applyLayout);
-    return () => window.removeEventListener('resize', applyLayout);
-  }, [view, calViewStart]);
+    applyHeight();
+    window.addEventListener('resize', applyHeight);
+    return () => window.removeEventListener('resize', applyHeight);
+  }, [view]);
 
-  // ── Scroll po načtení dat (loading false) ────────────────────────────────
+  // ── Scroll na calViewStart – retry dokud grid nepřijme scrollTop ──────────
+  // Na desktopu (Chrome) layout může být dořešen až po 1–2 frame cyklech.
+  // Opakujeme nastavení scrollTop (max 30 pokusů / ~1,5 s) dokud se neprojeví.
   useEffect(() => {
-    if (!loading && (view === 'week' || view === 'today') && weekGridRef.current) {
-      weekGridRef.current.scrollTop = calViewStart * ROW_H;
+    if (view !== 'week' && view !== 'today') return;
+    let cancelled = false;
+    let attempts = 0;
+    const target = calViewStart * ROW_H;
+
+    const tryScroll = () => {
+      if (cancelled) return;
+      const grid = weekGridRef.current;
+      if (grid) {
+        grid.scrollTop = target;
+        if (Math.abs(grid.scrollTop - target) > 5 && attempts < 30) {
+          attempts++;
+          setTimeout(tryScroll, 50);
+        }
+      }
+    };
+
+    // Spustit až po načtení dat i po přepnutí pohledu
+    if (!loading) {
+      tryScroll();
     }
+    return () => { cancelled = true; };
   }, [loading, view, calViewStart]);
 
   // Aktualizace aktuálního času každou minutu
