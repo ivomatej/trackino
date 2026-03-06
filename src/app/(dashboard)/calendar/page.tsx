@@ -795,6 +795,8 @@ function CalendarContent() {
 
   // Ref pro automatické scrollování časové mřížky na calViewStart
   const weekGridRef = useRef<HTMLDivElement>(null);
+  // Ref pro outer wrapper týdenního/denního pohledu (useLayoutEffect nastavuje výšku)
+  const calWeekWrapperRef = useRef<HTMLDivElement>(null);
 
   // Sort order pro Moje kalendáře a Externí kalendáře (localStorage)
   const [calendarOrder, setCalendarOrder] = useState<string[]>(() => {
@@ -832,12 +834,12 @@ function CalendarContent() {
 
   // ── (calendar_day_start/end z profilu se již nepoužívají – grid je vždy 0–24) ──
 
-  // ── Výška weekGridRef = celá dostupná výška viewportu ────────────────────
-  // Grid vyplní vše od horní hrany containeru dolů. Sticky záhlaví (dny + celý den)
-  // uvnitř gridu zůstávají při vertikálním scrollu nahoře.
-  // Počáteční scroll pozice (calViewStart) je řízena samostatným useEffectem níže.
+  // ── Výška calWeekWrapperRef = celá dostupná výška viewportu ─────────────
+  // Záhlaví dnů a pás celodenních událostí jsou VNĚ scroll containeru (weekGridRef).
+  // Při scrollu mřížky se záhlaví nehýbe. DashboardLayout má min-h-screen,
+  // proto nutno nastavit explicitní výšku přes useLayoutEffect.
   useLayoutEffect(() => {
-    const el = weekGridRef.current;
+    const el = calWeekWrapperRef.current;
     if (!el || (view !== 'week' && view !== 'today')) return;
 
     const setHeight = () => {
@@ -2219,10 +2221,10 @@ function CalendarContent() {
 
               {/* ══ TÝDENNÍ POHLED ════════════════════════════════════════════ */}
               {view === 'week' && (
-                <div ref={weekGridRef} className="flex-1 overflow-auto" style={{ minHeight: 0 }}>
-                  <div className="flex flex-col" style={{ minWidth: 640 }}>
-                  {/* Záhlaví dnů – sticky */}
-                  <div className="flex border-b" style={{ borderColor: 'var(--border)', position: 'sticky', top: 0, zIndex: 20, background: 'var(--bg-card)' }}>
+                <div ref={calWeekWrapperRef} className="flex-1 flex flex-col overflow-x-auto overflow-y-hidden" style={{ minHeight: 0 }}>
+                  <div className="flex flex-col" style={{ minWidth: 640, height: '100%' }}>
+                  {/* Záhlaví dnů – MIMO scroll kontejner, vždy viditelné */}
+                  <div className="flex-shrink-0 flex border-b" style={{ borderColor: 'var(--border)', background: 'var(--bg-card)' }}>
                     <div className="flex-shrink-0 border-r" style={{ width: 56, borderColor: 'var(--border)' }} />
                     {weekDays.map((day, i) => {
                       const isToday = isSameDay(day, today);
@@ -2252,7 +2254,7 @@ function CalendarContent() {
                     })}
                   </div>
 
-                  {/* Pás celodennních událostí – sticky pod záhlavím */}
+                  {/* Pás celodennních událostí – MIMO scroll kontejner, vždy viditelné */}
                   {(() => {
                     const allDayRows = weekDays.map(day =>
                       eventsOnDay(day).filter(ev => ev.is_all_day || !ev.start_time)
@@ -2260,7 +2262,7 @@ function CalendarContent() {
                     const hasAny = allDayRows.some(r => r.length > 0);
                     if (!hasAny) return null;
                     return (
-                      <div className="flex border-b" style={{ borderColor: 'var(--border)', position: 'sticky', top: 57, zIndex: 20, background: 'var(--bg-card)' }}>
+                      <div className="flex-shrink-0 flex border-b" style={{ borderColor: 'var(--border)', background: 'var(--bg-card)' }}>
                         <div
                           className="flex-shrink-0 border-r flex items-center justify-end pr-1.5"
                           style={{ width: 56, borderColor: 'var(--border)' }}
@@ -2288,7 +2290,8 @@ function CalendarContent() {
                     );
                   })()}
 
-                  {/* Časová mřížka */}
+                  {/* Časová mřížka – POUZE tato část scrolluje vertikálně */}
+                  <div ref={weekGridRef} className="flex-1 overflow-y-auto overflow-x-hidden">
                   <div className="flex">
                     {/* Sloupec hodin */}
                     <div className="flex-shrink-0 border-r" style={{ width: 56, borderColor: 'var(--border)' }}>
@@ -2394,6 +2397,7 @@ function CalendarContent() {
                     })}
                   </div>
                   </div>
+                  </div>
                 </div>
               )}
 
@@ -2404,10 +2408,10 @@ function CalendarContent() {
                 const timedEvs = eventsOnDay(day).filter(ev => !ev.is_all_day && ev.start_time);
                 const allDayEvs = eventsOnDay(day).filter(ev => ev.is_all_day || !ev.start_time);
                 return (
-                  <div ref={weekGridRef} className="flex-1 overflow-auto" style={{ minHeight: 0, minWidth: 320 }}>
-                    {/* All-day strip – sticky */}
+                  <div ref={calWeekWrapperRef} className="flex-1 flex flex-col" style={{ minHeight: 0, minWidth: 320, overflowY: 'hidden' }}>
+                    {/* All-day strip – MIMO scroll kontejner, vždy viditelné */}
                     {allDayEvs.length > 0 && (
-                      <div className="flex border-b" style={{ borderColor: 'var(--border)', position: 'sticky', top: 0, zIndex: 20, background: 'var(--bg-card)' }}>
+                      <div className="flex-shrink-0 flex border-b" style={{ borderColor: 'var(--border)', background: 'var(--bg-card)' }}>
                         <div className="flex-shrink-0 border-r text-[10px] px-1 py-1 flex items-center" style={{ width: 56, borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
                           celý den
                         </div>
@@ -2417,7 +2421,8 @@ function CalendarContent() {
                       </div>
                     )}
 
-                    {/* Časová mřížka */}
+                    {/* Časová mřížka – POUZE tato část scrolluje vertikálně */}
+                    <div ref={weekGridRef} className="flex-1 overflow-auto">
                     <div className="flex">
                       {/* Sloupec hodin */}
                       <div className="flex-shrink-0 border-r" style={{ width: 56, borderColor: 'var(--border)' }}>
@@ -2506,6 +2511,7 @@ function CalendarContent() {
                           );
                         })}
                       </div>
+                    </div>
                     </div>
                   </div>
                 );
