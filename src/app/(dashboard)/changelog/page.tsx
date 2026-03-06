@@ -11,6 +11,13 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.18.0 – 6. 3. 2026</h3>
+<ul>
+  <li><strong>Kalendář – Seznam: dvousloupcové rozvržení</strong> – pohled Seznam je nyní rozdělen na dvě části: levý sloupec obsahuje čistý výpis událostí, pravý sloupec zobrazuje panel poznámek pro vybranou událost. Kliknutím na ikonku 📄 u události ji vyberete a pravý panel se otevře; vybraná událost je zvýrazněna primární barvou. Panel obsahuje záhlaví s názvem události a tlačítko × pro zavření. Na mobilech se panel zobrazuje pod seznamem, na větších obrazovkách vedle sebe.</li>
+  <li><strong>Kalendář – Seznam: „Zobrazit dřívější události"</strong> – tlačítko nyní načítá vždy přesně 10 starších událostí (místo 6 měsíců). Historický rozsah je natvrdo nastaven na 24 měsíců zpět, takže jsou data vždy dostupná.</li>
+  <li><strong>Kalendář – Mé kalendáře: velikost písma</strong> – názvy vlastních kalendářů v levém panelu jsou nyní stejně velké jako položky Externích kalendářů (text-xs).</li>
+</ul>
+
 <h3>v2.17.2 – 6. 3. 2026</h3>
 <ul>
   <li><strong>Sidebar – optimalizace načítání badge</strong> – 5 nezávislých dotazů na badge počty bylo sloučeno do jednoho Promise.all s jedním setState, což eliminuje kaskádové překreslování a zpoždění při načítání navigace.</li>

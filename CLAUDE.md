@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 6. 3. 2026 (v2.17.3)
+> Aktualizováno: 6. 3. 2026 (v2.18.0)
 
 ---
 
@@ -486,6 +486,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.18.0 | 6. 3. 2026 | Kalendář/Seznam: dvousloupcové rozvržení (vlevo výpis, vpravo panel poznámek pro vybranou událost); „Zobrazit dřívější události" – event-count-based (10 událostí, ne 6 měsíců), fixní rozsah 24 měsíců zpět; Mé kalendáře – font-size sjednocen na text-xs |
 | v2.17.3 | 6. 3. 2026 | Žádosti/Archiv: sjednocení stylingu s Dovolenou (badge top-right, reviewer info inline, červený blok pro důvod zamítnutí); Kalendář/ICS: fix bug – opakující se události sdílí poznámky (přidán startDate do ID: `sub-{subId}-{uid}-{startDate}`); Kalendář/Poznámky: URL auto-linking (onBlur linkifyHtml), nové ikonky Praporek/Check/Hvězdička/Kopírovat/Koš, flagy is_important/is_done/is_favorite (DB migrace); Kalendář/Seznam: tlačítko „Zobrazit dřívější události" (listHistoryMonths +6 měs.); Kalendář/Levý panel: přesun Ext. kalendářů pod Mé kalendáře, odebrání barevných teček u checkboxů, collapse šipky u všech sekcí |
 | v2.17.2 | 6. 3. 2026 | Sidebar: optimalizace badge (Promise.all místo 5 useEffects); Badge kruhy na stránkách Žádosti, Připomínky, Tým, Fakturace (nahrazení „(N)" za červený badge) |
 | v2.17.1 | 6. 3. 2026 | Přehled: sjednocení formátu hodin v grafu (fmtHours); Sidebar: badge u Žádostí (pending), Připomínek (unresolved), Fakturace (pending approval) |
@@ -668,10 +669,19 @@ interface EventNote {
 - **Meta flagy**: uloženy do DB; vizuálně mění barvu rámečku a pozadí panelu
 - **Koš**: volá `onDelete(eventRef)` → smaže řádek z DB + skryje panel
 
-### Seznam – Zobrazit dřívější události (v2.17.3)
-- State `listHistoryMonths: number` (default 0) – resetuje se při změně pohledu/navigaci
-- Tlačítko nad seznamem → `setListHistoryMonths(m => m + 6)`
-- `visibleRange` pro list pohled: `start = new Date(year, month - listHistoryMonths, 1)`
+### Seznam – dvousloupcové rozvržení (v2.18.0)
+- Levý sloupec: čistý výpis událostí (flex-1), pravý sloupec: panel poznámek (md:w-[360px])
+- State `selectedListEventId: string | null` – vybraná událost pro pravý panel
+- Kliknutím na 📄 ikonku u události → `setSelectedListEventId(id)` (toggle)
+- Pravý panel: záhlaví s názvem události + barvy, tlačítko × zavřít, NotePanel klíč `right-{id}-{noteId}`
+- Responzivní: `flex-col md:flex-row`, border-t na mobilu / border-l na md+
+
+### Seznam – Zobrazit dřívější události (v2.18.0, přepis z v2.17.3)
+- State `listHistoryCount: number` (default 0) – event-count-based (místo měsíců)
+- `visibleRange` pro list pohled: pevný rozsah 24 měsíců zpět (nezávislý na stavu)
+- Tlačítko: `setListHistoryCount(n => n + 10)` – načte 10 dalších starších událostí
+- `pastEvents.slice(Math.max(0, len - listHistoryCount))` → zobrazí posledních N z pastEvents
+- Podmínka zobrazení tlačítka: `pastEvents.length > listHistoryCount && !listSearch`
 
 ### SQL migrace (nutno spustit v Supabase)
 ```sql
