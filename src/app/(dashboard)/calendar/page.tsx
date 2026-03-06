@@ -2714,7 +2714,7 @@ function CalendarContent() {
                               <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Žádné sirotčí poznámky</p>
                             </div>
                           ) : (
-                            <div className="divide-y" style={{ divideColor: 'var(--border)' }}>
+                            <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
                               {orphanNotes.map(on => {
                                 const hasContent = !!(on.content && on.content !== '<br>');
                                 const tasksDone = on.tasks.filter(t => t.checked).length;
