@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, useLayoutEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -301,6 +301,8 @@ function NotePanel({
   const [localTasks, setLocalTasks] = useState<TaskItem[]>(note.tasks);
   const [isEmpty, setIsEmpty] = useState(!note.content);
   const savedContentRef = useRef(note.content);
+  const taskInputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
+  const [focusLastTask, setFocusLastTask] = useState(false);
 
   // Set initial HTML content on mount
   // Remount is handled externally via key prop when note loads from DB
@@ -311,6 +313,15 @@ function NotePanel({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Auto-focus nového úkolu po přidání přes Enter
+  useEffect(() => {
+    if (focusLastTask && localTasks.length > 0) {
+      const lastTask = localTasks[localTasks.length - 1];
+      taskInputRefs.current.get(lastTask.id)?.focus();
+      setFocusLastTask(false);
+    }
+  }, [focusLastTask, localTasks]);
 
   function schedule(content: string, tasks: TaskItem[]) {
     clearTimeout(timerRef.current);
@@ -344,6 +355,7 @@ function NotePanel({
   function addTask() {
     const next = [...localTasks, { id: crypto.randomUUID(), text: '', checked: false }];
     setLocalTasks(next);
+    setFocusLastTask(true);
     schedule(editorRef.current?.innerHTML ?? '', next);
   }
 
@@ -361,7 +373,7 @@ function NotePanel({
 
   return (
     <div
-      className="w-64 flex-shrink-0 rounded-lg border flex flex-col gap-1.5 p-2.5"
+      className="flex-1 min-w-0 rounded-lg border flex flex-col gap-1.5 p-2.5"
       style={{ borderColor: 'var(--border)', background: 'var(--bg-sidebar)' }}
       onClick={e => e.stopPropagation()}
     >
@@ -380,10 +392,11 @@ function NotePanel({
           </button>
         ))}
         <div style={{ width: 1, height: 12, background: 'var(--border)', margin: '0 2px', flexShrink: 0 }} />
+        {/* Odrážkový seznam */}
         <button
           onMouseDown={e => { e.preventDefault(); execFmt('insertUnorderedList'); }}
           style={btnStyle}
-          title="Odrážky"
+          title="Odrážkový seznam"
           onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
           onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
         >
@@ -392,20 +405,33 @@ function NotePanel({
             <circle cx="4" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1.5" fill="currentColor" stroke="none"/>
           </svg>
         </button>
+        {/* Číselný seznam */}
+        <button
+          onMouseDown={e => { e.preventDefault(); execFmt('insertOrderedList'); }}
+          style={btnStyle}
+          title="Číselný seznam"
+          onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+        >
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/>
+            <path d="M4 6h1v4" strokeLinecap="round"/><path d="M4 10h2" strokeLinecap="round"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1" strokeLinecap="round"/>
+          </svg>
+        </button>
       </div>
 
-      {/* Contenteditable editor */}
+      {/* Contenteditable editor – pl-3 pro správné odsazení vlevo */}
       <div className="relative">
         <div
           ref={editorRef}
           contentEditable
           suppressContentEditableWarning
           onInput={handleInput}
-          className="text-xs outline-none min-h-[40px] leading-relaxed"
+          className="text-xs outline-none min-h-[40px] leading-relaxed pl-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5"
           style={{ color: 'var(--text-primary)', caretColor: 'var(--primary)' }}
         />
         {isEmpty && (
-          <div className="absolute top-0 left-0 text-xs pointer-events-none select-none" style={{ color: 'var(--text-muted)' }}>
+          <div className="absolute top-0 left-3 text-xs pointer-events-none select-none" style={{ color: 'var(--text-muted)' }}>
             Poznámky k události…
           </div>
         )}
@@ -423,6 +449,7 @@ function NotePanel({
               style={{ accentColor: 'var(--primary)' }}
             />
             <input
+              ref={el => { if (el) taskInputRefs.current.set(task.id, el); else taskInputRefs.current.delete(task.id); }}
               type="text"
               value={task.text}
               onChange={e => updateTaskText(task.id, e.target.value)}
@@ -561,11 +588,8 @@ function CalendarContent() {
     return localStorage.getItem('trackino_cal_holidays') !== '0';
   });
 
-  // Poznámky k událostem – zobrazení (localStorage)
-  const [showNotes, setShowNotes] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    return localStorage.getItem('trackino_cal_show_notes') === '1';
-  });
+  // Poznámky k událostem – per-event otevřenost
+  const [openNoteEventIds, setOpenNoteEventIds] = useState<Set<string>>(new Set());
   const [notesByRef, setNotesByRef] = useState<Record<string, EventNote>>({});
   const notesLoadedRefs = useRef<Set<string>>(new Set());
 
@@ -582,6 +606,24 @@ function CalendarContent() {
       setCalSettingsForm(f => ({ ...f, dayStart: start, dayEnd: end }));
     }
   }, [profile]);
+
+  // ── Sticky fix: nastavení explicitní výšky weekGridRef ───────────────────
+  // Protože DashboardLayout používá min-h-screen (ne h-screen), flex-1 uvnitř
+  // calendar page nemá ohraničenou výšku → sticky záhlaví nefunguje.
+  // Řešení: explicitně nastavíme výšku scroll containeru dle polohy v viewportu.
+  useLayoutEffect(() => {
+    const el = weekGridRef.current;
+    if (!el || (view !== 'week' && view !== 'today')) return;
+
+    const setHeight = () => {
+      const rect = el.getBoundingClientRect();
+      el.style.height = `${window.innerHeight - rect.top}px`;
+    };
+
+    setHeight();
+    window.addEventListener('resize', setHeight);
+    return () => window.removeEventListener('resize', setHeight);
+  }, [view]);
 
   // ── Auto-scroll časové mřížky na calViewStart ─────────────────────────────
   // Dependency na `loading` zajistí, že scroll proběhne až po vykreslení mřížky
@@ -1174,15 +1216,15 @@ function CalendarContent() {
     return result.sort((a, b) => a.start_date.localeCompare(b.start_date) || a.title.localeCompare(b.title));
   }, [events, vacationEntries, importantDays, calendars, selectedCalendarIds, visibleRange, subscriptionEvents, czechHolidayEvents]);
 
-  // Načtení poznámek pro viditelné události (seznam pohled)
+  // Načtení poznámek pro viditelné události (seznam pohled) – vždy při seznam pohledu
   // Umístěno ZDE aby se mohlo odkazovat na displayEvents
   useEffect(() => {
-    if (showNotes && view === 'list' && !loading) {
+    if (view === 'list' && !loading) {
       const refs = displayEvents.map(ev => ev.id);
       fetchNotesBatch(refs);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showNotes, view, loading, displayEvents]);
+  }, [view, loading, displayEvents]);
 
   // ── Mřížka měsíce ─────────────────────────────────────────────────────────
 
@@ -2196,7 +2238,7 @@ function CalendarContent() {
 
                 return (
                   <div className="flex-1 overflow-auto">
-                  <div className={`${showNotes ? 'max-w-5xl' : 'max-w-2xl'} p-4 transition-all`}>
+                  <div className="max-w-5xl p-4">
                     {/* Panel nástrojů: hledání + přepínač poznámek */}
                     <div className="mb-4 flex items-center gap-2">
                       {/* Vyhledávací pole */}
@@ -2237,29 +2279,6 @@ function CalendarContent() {
                           </button>
                         )}
                       </div>
-                      {/* Přepínač poznámek */}
-                      <button
-                        onClick={() => {
-                          const next = !showNotes;
-                          setShowNotes(next);
-                          localStorage.setItem('trackino_cal_show_notes', next ? '1' : '0');
-                        }}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium flex-shrink-0 transition-colors"
-                        style={{
-                          borderColor: showNotes ? 'var(--primary)' : 'var(--border)',
-                          color: showNotes ? 'var(--primary)' : 'var(--text-secondary)',
-                          background: showNotes ? 'color-mix(in srgb, var(--primary) 8%, transparent)' : 'var(--bg-card)',
-                        }}
-                        title={showNotes ? 'Skrýt poznámky' : 'Zobrazit poznámky k událostem'}
-                        onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
-                        onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-                      >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
-                          <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
-                        </svg>
-                        <span className="hidden sm:inline">{showNotes ? 'Skrýt poznámky' : 'Poznámky'}</span>
-                      </button>
                     </div>
 
                     {listGroups.length === 0 ? (
@@ -2296,13 +2315,21 @@ function CalendarContent() {
                                 const evEnd = parseDate(ev.end_date);
                                 const multiDay = ev.start_date !== ev.end_date;
                                 const isClickable = ev.source === 'manual';
+                                const evNote = notesByRef[ev.id];
+                                const noteHasContent = !!(evNote?.content || (evNote?.tasks?.length ?? 0) > 0);
+                                const noteVisible = noteHasContent || openNoteEventIds.has(ev.id);
                                 return (
-                                  <div key={ev.id} className="flex items-start gap-2">
-                                    {/* Karta události */}
+                                  <div key={ev.id} className="flex items-start gap-3">
+                                    {/* Karta události – při zobrazené poznámce má fixní šířku */}
                                     <div
                                       onClick={() => { if (isClickable) { const orig = events.find(x => x.id === ev.source_id); if (orig) openEditEvent(orig); } }}
-                                      className="flex items-start gap-3 p-3 rounded-lg border transition-colors flex-1 min-w-0"
-                                      style={{ borderColor: 'var(--border)', background: 'var(--bg-card)', cursor: isClickable ? 'pointer' : 'default' }}
+                                      className={`group/ev flex items-start gap-3 p-3 rounded-lg border transition-colors min-w-0 ${noteVisible ? 'flex-shrink-0' : 'flex-1'}`}
+                                      style={{
+                                        borderColor: 'var(--border)',
+                                        background: 'var(--bg-card)',
+                                        cursor: isClickable ? 'pointer' : 'default',
+                                        width: noteVisible ? 340 : undefined,
+                                      }}
                                       onMouseEnter={e => { if (isClickable) e.currentTarget.style.background = 'var(--bg-hover)'; }}
                                       onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-card)'; }}
                                     >
@@ -2327,13 +2354,40 @@ function CalendarContent() {
                                           <div className="text-xs mt-1 truncate" style={{ color: 'var(--text-muted)' }}>{ev.description}</div>
                                         )}
                                       </div>
+                                      {/* Tlačítko pro přidání/zobrazení poznámky – viditelné při hoveru na kartě */}
+                                      <button
+                                        onClick={e => {
+                                          e.stopPropagation();
+                                          setOpenNoteEventIds(prev => {
+                                            const next = new Set(prev);
+                                            if (next.has(ev.id)) next.delete(ev.id);
+                                            else next.add(ev.id);
+                                            return next;
+                                          });
+                                        }}
+                                        className={`flex-shrink-0 p-1 rounded transition-all ${noteHasContent ? 'opacity-60' : 'opacity-0'} group-hover/ev:opacity-100`}
+                                        style={{
+                                          color: noteHasContent ? 'var(--primary)' : 'var(--text-muted)',
+                                          background: 'none',
+                                          border: 'none',
+                                          cursor: 'pointer',
+                                        }}
+                                        onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                                        onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}
+                                        title={noteVisible ? 'Skrýt poznámku' : 'Přidat / zobrazit poznámku'}
+                                      >
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                                          <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+                                        </svg>
+                                      </button>
                                     </div>
-                                    {/* Panel poznámek – key zahrnuje note.id pro remount po načtení z DB */}
-                                    {showNotes && (
+                                    {/* Panel poznámek – zobrazí se jen pokud má obsah nebo je otevřený */}
+                                    {noteVisible && (
                                       <NotePanel
-                                        key={`${ev.id}-${notesByRef[ev.id]?.id ?? 'new'}`}
+                                        key={`${ev.id}-${evNote?.id ?? 'new'}`}
                                         eventRef={ev.id}
-                                        note={notesByRef[ev.id] ?? { content: '', tasks: [] }}
+                                        note={evNote ?? { content: '', tasks: [] }}
                                         onSave={handleNoteSave}
                                       />
                                     )}
