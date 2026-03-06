@@ -788,7 +788,7 @@ function CalendarContent() {
   const [otherExpanded, setOtherExpanded] = useState(true);
 
   // Poznámky k událostem – vybraná událost pro pravý panel
-  const [selectedListEventId, setSelectedListEventId] = useState<string | null>(null);
+  const [openNoteEventIds, setOpenNoteEventIds] = useState<Set<string>>(new Set());
   const [notesByRef, setNotesByRef] = useState<Record<string, EventNote>>({});
   const notesLoadedRefs = useRef<Set<string>>(new Set());
 
@@ -844,7 +844,7 @@ function CalendarContent() {
     setListVisibleCount(10);
     setListSearch('');
     setListHistoryCount(0);
-    setSelectedListEventId(null);
+    setOpenNoteEventIds(new Set());
   }, [view, currentDate]);
 
   // Načtení ICS událostí při změně odběrů nebo manuálním refreshi
@@ -1114,7 +1114,7 @@ function CalendarContent() {
       await supabase.from('trackino_calendar_event_notes').delete().eq('id', existing.id);
       setNotesByRef(prev => { const n = { ...prev }; delete n[eventRef]; return n; });
     }
-    setSelectedListEventId(prev => prev === eventRef ? null : prev);
+    setOpenNoteEventIds(prev => { const n = new Set(prev); n.delete(eventRef); return n; });
   }
 
   // ── CRUD – Kalendáře ──────────────────────────────────────────────────────
@@ -2606,10 +2606,10 @@ function CalendarContent() {
                                   const isClickable = ev.source === 'manual';
                                   const evNote = notesByRef[ev.id];
                                   const noteHasContent = !!(evNote?.content || (evNote?.tasks?.length ?? 0) > 0);
-                                  const isSelected = selectedListEventId === ev.id;
+                                  const isSelected = openNoteEventIds.has(ev.id);
                                   const noteVisible = isSelected || noteHasContent;
                                   return (
-                                    <div key={ev.id} className={`flex gap-3 items-start ${noteVisible ? 'flex-row' : 'flex-col'}`}>
+                                    <div key={ev.id} className="flex flex-row gap-3 items-start">
                                       <div
                                         onClick={() => { if (isClickable) { const orig = events.find(x => x.id === ev.source_id); if (orig) openEditEvent(orig); } }}
                                         className="group/ev flex-1 min-w-0 flex items-start gap-3 p-3 rounded-lg border transition-colors"
@@ -2646,7 +2646,7 @@ function CalendarContent() {
                                         <button
                                           onClick={e => {
                                             e.stopPropagation();
-                                            setSelectedListEventId(prev => prev === ev.id ? null : ev.id);
+                                            setOpenNoteEventIds(prev => { const n = new Set(prev); if (n.has(ev.id)) n.delete(ev.id); else n.add(ev.id); return n; });
                                           }}
                                           className={`flex-shrink-0 p-1 rounded transition-all ${isSelected || noteHasContent ? 'opacity-70' : 'opacity-0'} group-hover/ev:opacity-100`}
                                           style={{
@@ -2665,17 +2665,19 @@ function CalendarContent() {
                                           </svg>
                                         </button>
                                       </div>
-                                      {noteVisible && (
-                                        <div className="w-[340px] flex-shrink-0 overflow-y-auto max-h-[220px]">
-                                          <NotePanel
-                                            key={`inline-${ev.id}-${evNote?.id ?? 'new'}`}
-                                            eventRef={ev.id}
-                                            note={evNote ?? { content: '', tasks: [] }}
-                                            onSave={handleNoteSave}
-                                            onDelete={handleNoteDelete}
-                                          />
-                                        </div>
-                                      )}
+                                      <div className="w-[340px] flex-shrink-0">
+                                        {noteVisible && (
+                                          <div className="overflow-y-auto max-h-[220px]">
+                                            <NotePanel
+                                              key={`inline-${ev.id}-${evNote?.id ?? 'new'}`}
+                                              eventRef={ev.id}
+                                              note={evNote ?? { content: '', tasks: [] }}
+                                              onSave={handleNoteSave}
+                                              onDelete={handleNoteDelete}
+                                            />
+                                          </div>
+                                        )}
+                                      </div>
                                     </div>
                                   );
                                 })}
