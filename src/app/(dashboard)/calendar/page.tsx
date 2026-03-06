@@ -220,6 +220,10 @@ function parseICS(icsText: string, subId: string, color: string): DisplayEvent[]
     const uid = get('UID') || `${subId}-${Math.random()}`;
     const description = unescapeIcs(get('DESCRIPTION'));
     const isDateTime = dtstart.includes('T');
+    // Opakující se události (RRULE) nebo výjimky (RECURRENCE-ID) musí mít datum v ID,
+    // aby se rozlišily jednotlivé výskyty. Nerekurentní události datum nepotřebují –
+    // UID je dostatečně stabilní i při přesunutí schůzky na jiný den/čas.
+    const isRecurring = get('RRULE') !== '' || get('RECURRENCE-ID') !== '';
 
     let startDate: string;
     let endDate: string;
@@ -243,8 +247,13 @@ function parseICS(icsText: string, subId: string, color: string): DisplayEvent[]
       if (endDate < startDate) endDate = startDate;
     }
 
+    const uidClean = uid.replace(/[^a-zA-Z0-9@._-]/g, '').slice(0, 40);
+    const eventId = isRecurring
+      ? `sub-${subId}-${uidClean}-${startDate}${startTime ? '-' + startTime.replace(':', '') : ''}`
+      : `sub-${subId}-${uidClean}`;
+
     result.push({
-      id: `sub-${subId}-${uid.replace(/[^a-zA-Z0-9@._-]/g, '').slice(0, 40)}-${startDate}${startTime ? '-' + startTime.replace(':', '') : ''}`,
+      id: eventId,
       title: summary,
       start_date: startDate,
       end_date: endDate,
