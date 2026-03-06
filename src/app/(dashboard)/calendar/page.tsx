@@ -282,6 +282,189 @@ function sourceBadgeLabel(source: DisplayEvent['source']): string {
 /** ROW_H – px na hodinu v týdenním/denním pohledu */
 const ROW_H = 60;
 
+// ─── Poznámky k událostem ─────────────────────────────────────────────────────
+
+interface TaskItem { id: string; text: string; checked: boolean; }
+interface EventNote { id?: string; content: string; tasks: TaskItem[]; }
+
+function NotePanel({
+  eventRef,
+  note,
+  onSave,
+}: {
+  eventRef: string;
+  note: EventNote;
+  onSave: (eventRef: string, content: string, tasks: TaskItem[]) => void;
+}) {
+  const editorRef = useRef<HTMLDivElement>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const [localTasks, setLocalTasks] = useState<TaskItem[]>(note.tasks);
+  const [isEmpty, setIsEmpty] = useState(!note.content);
+  const savedContentRef = useRef(note.content);
+
+  // Set initial HTML content on mount
+  // Remount is handled externally via key prop when note loads from DB
+  useEffect(() => {
+    if (editorRef.current) {
+      editorRef.current.innerHTML = savedContentRef.current;
+      setIsEmpty(!savedContentRef.current || savedContentRef.current === '<br>');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function schedule(content: string, tasks: TaskItem[]) {
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => onSave(eventRef, content, tasks), 800);
+  }
+
+  function execFmt(cmd: string) {
+    editorRef.current?.focus();
+    document.execCommand(cmd, false);
+  }
+
+  function handleInput() {
+    const html = editorRef.current?.innerHTML ?? '';
+    const empty = !html || html === '<br>';
+    setIsEmpty(empty);
+    schedule(empty ? '' : html, localTasks);
+  }
+
+  function toggleTask(id: string) {
+    const next = localTasks.map(t => t.id === id ? { ...t, checked: !t.checked } : t);
+    setLocalTasks(next);
+    schedule(editorRef.current?.innerHTML ?? '', next);
+  }
+
+  function updateTaskText(id: string, text: string) {
+    const next = localTasks.map(t => t.id === id ? { ...t, text } : t);
+    setLocalTasks(next);
+    schedule(editorRef.current?.innerHTML ?? '', next);
+  }
+
+  function addTask() {
+    const next = [...localTasks, { id: crypto.randomUUID(), text: '', checked: false }];
+    setLocalTasks(next);
+    schedule(editorRef.current?.innerHTML ?? '', next);
+  }
+
+  function removeTask(id: string) {
+    const next = localTasks.filter(t => t.id !== id);
+    setLocalTasks(next);
+    schedule(editorRef.current?.innerHTML ?? '', next);
+  }
+
+  const btnStyle = {
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    width: 20, height: 20, borderRadius: 4, color: 'var(--text-secondary)',
+    background: 'transparent', border: 'none', cursor: 'pointer', flexShrink: 0,
+  } as React.CSSProperties;
+
+  return (
+    <div
+      className="w-64 flex-shrink-0 rounded-lg border flex flex-col gap-1.5 p-2.5"
+      style={{ borderColor: 'var(--border)', background: 'var(--bg-sidebar)' }}
+      onClick={e => e.stopPropagation()}
+    >
+      {/* Toolbar */}
+      <div className="flex items-center gap-0.5">
+        {(['bold', 'italic', 'underline'] as const).map((cmd, idx) => (
+          <button
+            key={cmd}
+            onMouseDown={e => { e.preventDefault(); execFmt(cmd); }}
+            style={{ ...btnStyle, fontWeight: idx === 0 ? 700 : undefined, fontStyle: idx === 1 ? 'italic' : undefined, textDecoration: idx === 2 ? 'underline' : undefined, fontSize: 11 }}
+            title={['Tučné', 'Kurzíva', 'Podtržené'][idx]}
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+          >
+            {['B', 'I', 'U'][idx]}
+          </button>
+        ))}
+        <div style={{ width: 1, height: 12, background: 'var(--border)', margin: '0 2px', flexShrink: 0 }} />
+        <button
+          onMouseDown={e => { e.preventDefault(); execFmt('insertUnorderedList'); }}
+          style={btnStyle}
+          title="Odrážky"
+          onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+        >
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/>
+            <circle cx="4" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1.5" fill="currentColor" stroke="none"/>
+          </svg>
+        </button>
+      </div>
+
+      {/* Contenteditable editor */}
+      <div className="relative">
+        <div
+          ref={editorRef}
+          contentEditable
+          suppressContentEditableWarning
+          onInput={handleInput}
+          className="text-xs outline-none min-h-[40px] leading-relaxed"
+          style={{ color: 'var(--text-primary)', caretColor: 'var(--primary)' }}
+        />
+        {isEmpty && (
+          <div className="absolute top-0 left-0 text-xs pointer-events-none select-none" style={{ color: 'var(--text-muted)' }}>
+            Poznámky k události…
+          </div>
+        )}
+      </div>
+
+      {/* Checklist */}
+      <div className="border-t pt-1.5 space-y-1" style={{ borderColor: 'var(--border)' }}>
+        {localTasks.map(task => (
+          <div key={task.id} className="flex items-center gap-1.5 group/task">
+            <input
+              type="checkbox"
+              checked={task.checked}
+              onChange={() => toggleTask(task.id)}
+              className="w-3 h-3 flex-shrink-0 cursor-pointer"
+              style={{ accentColor: 'var(--primary)' }}
+            />
+            <input
+              type="text"
+              value={task.text}
+              onChange={e => updateTaskText(task.id, e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') { e.preventDefault(); addTask(); }
+                if (e.key === 'Backspace' && task.text === '') { e.preventDefault(); removeTask(task.id); }
+              }}
+              className="flex-1 text-xs bg-transparent outline-none min-w-0"
+              style={{
+                color: task.checked ? 'var(--text-muted)' : 'var(--text-primary)',
+                textDecoration: task.checked ? 'line-through' : 'none',
+              }}
+              placeholder="Úkol…"
+            />
+            <button
+              onClick={() => removeTask(task.id)}
+              className="opacity-0 group-hover/task:opacity-60 hover:!opacity-100 flex-shrink-0 transition-opacity"
+              style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+            >
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+        ))}
+        <button
+          onClick={addTask}
+          className="flex items-center gap-1 text-[10px] transition-colors"
+          style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: '1px 0' }}
+          onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
+          onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+        >
+          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Přidat úkol
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Vnitřní komponenta ───────────────────────────────────────────────────────
 
 function CalendarContent() {
@@ -377,6 +560,14 @@ function CalendarContent() {
     if (typeof window === 'undefined') return true;
     return localStorage.getItem('trackino_cal_holidays') !== '0';
   });
+
+  // Poznámky k událostem – zobrazení (localStorage)
+  const [showNotes, setShowNotes] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem('trackino_cal_show_notes') === '1';
+  });
+  const [notesByRef, setNotesByRef] = useState<Record<string, EventNote>>({});
+  const notesLoadedRefs = useRef<Set<string>>(new Set());
 
   const initializedRef = useRef(false);
 
@@ -617,6 +808,49 @@ function CalendarContent() {
     setDeletingEventId(null);
     setShowEventForm(false);
     await fetchData();
+  }
+
+  // ── Poznámky k událostem ───────────────────────────────────────────────────
+
+  async function fetchNotesBatch(refs: string[]) {
+    if (!currentWorkspace || !user || refs.length === 0) return;
+    const newRefs = refs.filter(r => !notesLoadedRefs.current.has(r));
+    if (newRefs.length === 0) return;
+    newRefs.forEach(r => notesLoadedRefs.current.add(r));
+    const { data } = await supabase
+      .from('trackino_calendar_event_notes')
+      .select('*')
+      .eq('workspace_id', currentWorkspace.id)
+      .eq('user_id', user.id)
+      .in('event_ref', newRefs);
+    if (data && data.length > 0) {
+      setNotesByRef(prev => {
+        const next = { ...prev };
+        for (const n of data) {
+          next[n.event_ref] = { id: n.id, content: n.content ?? '', tasks: (n.tasks as TaskItem[]) ?? [] };
+        }
+        return next;
+      });
+    }
+  }
+
+  async function handleNoteSave(eventRef: string, content: string, tasks: TaskItem[]) {
+    if (!currentWorkspace || !user) return;
+    const existing = notesByRef[eventRef];
+    if (existing?.id) {
+      await supabase.from('trackino_calendar_event_notes')
+        .update({ content, tasks, updated_at: new Date().toISOString() })
+        .eq('id', existing.id);
+    } else {
+      const { data } = await supabase.from('trackino_calendar_event_notes')
+        .insert({ workspace_id: currentWorkspace.id, user_id: user.id, event_ref: eventRef, content, tasks })
+        .select('id')
+        .single();
+      if (data) {
+        setNotesByRef(prev => ({ ...prev, [eventRef]: { id: data.id, content, tasks } }));
+      }
+    }
+    setNotesByRef(prev => ({ ...prev, [eventRef]: { ...prev[eventRef], content, tasks } }));
   }
 
   // ── CRUD – Kalendáře ──────────────────────────────────────────────────────
@@ -939,6 +1173,16 @@ function CalendarContent() {
 
     return result.sort((a, b) => a.start_date.localeCompare(b.start_date) || a.title.localeCompare(b.title));
   }, [events, vacationEntries, importantDays, calendars, selectedCalendarIds, visibleRange, subscriptionEvents, czechHolidayEvents]);
+
+  // Načtení poznámek pro viditelné události (seznam pohled)
+  // Umístěno ZDE aby se mohlo odkazovat na displayEvents
+  useEffect(() => {
+    if (showNotes && view === 'list' && !loading) {
+      const refs = displayEvents.map(ev => ev.id);
+      fetchNotesBatch(refs);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showNotes, view, loading, displayEvents]);
 
   // ── Mřížka měsíce ─────────────────────────────────────────────────────────
 
@@ -1494,7 +1738,7 @@ function CalendarContent() {
         </div>
 
         {/* ── Zobrazení kalendáře ───────────────────────────────────────── */}
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-hidden flex flex-col" style={{ minHeight: 0 }}>
           {loading ? (
             <div className="flex items-center justify-center h-48">
               <div className="w-6 h-6 border-2 rounded-full animate-spin" style={{ borderColor: 'var(--primary)', borderTopColor: 'transparent' }} />
@@ -1503,6 +1747,7 @@ function CalendarContent() {
             <>
               {/* ══ MĚSÍČNÍ POHLED ═══════════════════════════════════════════ */}
               {view === 'month' && (
+                <div className="flex-1 overflow-auto">
                 <div className="min-w-[560px] p-4">
                   <div className="grid grid-cols-7 mb-1">
                     {DAY_NAMES_SHORT.map(d => (
@@ -1556,13 +1801,15 @@ function CalendarContent() {
                     ))}
                   </div>
                 </div>
+                </div>
               )}
 
               {/* ══ TÝDENNÍ POHLED ════════════════════════════════════════════ */}
               {view === 'week' && (
-                <div className="flex flex-col h-full" style={{ minWidth: 640 }}>
-                  {/* Záhlaví dnů */}
-                  <div className="flex border-b flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
+                <div ref={weekGridRef} className="flex-1 overflow-auto" style={{ minHeight: 0 }}>
+                  <div className="flex flex-col" style={{ minWidth: 640 }}>
+                  {/* Záhlaví dnů – sticky */}
+                  <div className="flex border-b" style={{ borderColor: 'var(--border)', position: 'sticky', top: 0, zIndex: 20, background: 'var(--bg-card)' }}>
                     <div className="flex-shrink-0 border-r" style={{ width: 56, borderColor: 'var(--border)' }} />
                     {weekDays.map((day, i) => {
                       const isToday = isSameDay(day, today);
@@ -1592,7 +1839,7 @@ function CalendarContent() {
                     })}
                   </div>
 
-                  {/* Pás celodennních událostí */}
+                  {/* Pás celodennních událostí – sticky pod záhlavím */}
                   {(() => {
                     const allDayRows = weekDays.map(day =>
                       eventsOnDay(day).filter(ev => ev.is_all_day || !ev.start_time)
@@ -1600,7 +1847,7 @@ function CalendarContent() {
                     const hasAny = allDayRows.some(r => r.length > 0);
                     if (!hasAny) return null;
                     return (
-                      <div className="flex border-b flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
+                      <div className="flex border-b" style={{ borderColor: 'var(--border)', position: 'sticky', top: 57, zIndex: 20, background: 'var(--bg-card)' }}>
                         <div
                           className="flex-shrink-0 border-r flex items-center justify-end pr-1.5"
                           style={{ width: 56, borderColor: 'var(--border)' }}
@@ -1629,7 +1876,7 @@ function CalendarContent() {
                   })()}
 
                   {/* Časová mřížka */}
-                  <div ref={weekGridRef} className="flex overflow-auto flex-1">
+                  <div className="flex">
                     {/* Sloupec hodin */}
                     <div className="flex-shrink-0 border-r" style={{ width: 56, borderColor: 'var(--border)' }}>
                       {Array.from({ length: calDayEnd - calDayStart }, (_, i) => (
@@ -1733,6 +1980,7 @@ function CalendarContent() {
                       );
                     })}
                   </div>
+                  </div>
                 </div>
               )}
 
@@ -1743,10 +1991,10 @@ function CalendarContent() {
                 const timedEvs = eventsOnDay(day).filter(ev => !ev.is_all_day && ev.start_time);
                 const allDayEvs = eventsOnDay(day).filter(ev => ev.is_all_day || !ev.start_time);
                 return (
-                  <div className="flex flex-col h-full" style={{ minWidth: 320 }}>
-                    {/* All-day strip */}
+                  <div ref={weekGridRef} className="flex-1 overflow-auto" style={{ minHeight: 0, minWidth: 320 }}>
+                    {/* All-day strip – sticky */}
                     {allDayEvs.length > 0 && (
-                      <div className="flex border-b flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
+                      <div className="flex border-b" style={{ borderColor: 'var(--border)', position: 'sticky', top: 0, zIndex: 20, background: 'var(--bg-card)' }}>
                         <div className="flex-shrink-0 border-r text-[10px] px-1 py-1 flex items-center" style={{ width: 56, borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
                           celý den
                         </div>
@@ -1757,7 +2005,7 @@ function CalendarContent() {
                     )}
 
                     {/* Časová mřížka */}
-                    <div ref={weekGridRef} className="flex overflow-auto flex-1">
+                    <div className="flex">
                       {/* Sloupec hodin */}
                       <div className="flex-shrink-0 border-r" style={{ width: 56, borderColor: 'var(--border)' }}>
                         {Array.from({ length: calDayEnd - calDayStart }, (_, i) => (
@@ -1854,6 +2102,7 @@ function CalendarContent() {
               {view === 'year' && (() => {
                 const year = currentDate.getFullYear();
                 return (
+                  <div className="flex-1 overflow-auto">
                   <div className="p-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                       {Array.from({ length: 12 }, (_, monthIdx) => {
@@ -1926,6 +2175,7 @@ function CalendarContent() {
                       })}
                     </div>
                   </div>
+                  </div>
                 );
               })()}
 
@@ -1945,44 +2195,71 @@ function CalendarContent() {
                   .filter(Boolean) as typeof filteredListGroups;
 
                 return (
-                  <div className="max-w-2xl p-4">
-                    {/* Vyhledávací pole */}
-                    <div className="mb-4 relative">
-                      <svg
-                        className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-                        width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                        style={{ color: 'var(--text-muted)' }}
-                      >
-                        <circle cx="11" cy="11" r="8" />
-                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                      </svg>
-                      <input
-                        type="text"
-                        value={listSearch}
-                        onChange={e => { setListSearch(e.target.value); setListVisibleCount(10); }}
-                        placeholder="Hledat událost..."
-                        className="w-full pl-9 py-2 rounded-lg border text-base sm:text-sm"
-                        style={{
-                          paddingRight: listSearch ? '2.5rem' : '0.75rem',
-                          borderColor: 'var(--border)',
-                          background: 'var(--bg-hover)',
-                          color: 'var(--text-primary)',
-                        }}
-                      />
-                      {listSearch && (
-                        <button
-                          onClick={() => setListSearch('')}
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded"
+                  <div className="flex-1 overflow-auto">
+                  <div className={`${showNotes ? 'max-w-5xl' : 'max-w-2xl'} p-4 transition-all`}>
+                    {/* Panel nástrojů: hledání + přepínač poznámek */}
+                    <div className="mb-4 flex items-center gap-2">
+                      {/* Vyhledávací pole */}
+                      <div className="flex-1 relative">
+                        <svg
+                          className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                          width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                          strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
                           style={{ color: 'var(--text-muted)' }}
-                          onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
-                          onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
                         >
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                          </svg>
-                        </button>
-                      )}
+                          <circle cx="11" cy="11" r="8" />
+                          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                        </svg>
+                        <input
+                          type="text"
+                          value={listSearch}
+                          onChange={e => { setListSearch(e.target.value); setListVisibleCount(10); }}
+                          placeholder="Hledat událost..."
+                          className="w-full pl-9 py-2 rounded-lg border text-base sm:text-sm"
+                          style={{
+                            paddingRight: listSearch ? '2.5rem' : '0.75rem',
+                            borderColor: 'var(--border)',
+                            background: 'var(--bg-hover)',
+                            color: 'var(--text-primary)',
+                          }}
+                        />
+                        {listSearch && (
+                          <button
+                            onClick={() => setListSearch('')}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded"
+                            style={{ color: 'var(--text-muted)' }}
+                            onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
+                            onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+                          >
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                      {/* Přepínač poznámek */}
+                      <button
+                        onClick={() => {
+                          const next = !showNotes;
+                          setShowNotes(next);
+                          localStorage.setItem('trackino_cal_show_notes', next ? '1' : '0');
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium flex-shrink-0 transition-colors"
+                        style={{
+                          borderColor: showNotes ? 'var(--primary)' : 'var(--border)',
+                          color: showNotes ? 'var(--primary)' : 'var(--text-secondary)',
+                          background: showNotes ? 'color-mix(in srgb, var(--primary) 8%, transparent)' : 'var(--bg-card)',
+                        }}
+                        title={showNotes ? 'Skrýt poznámky' : 'Zobrazit poznámky k událostem'}
+                        onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+                        onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                          <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+                        </svg>
+                        <span className="hidden sm:inline">{showNotes ? 'Skrýt poznámky' : 'Poznámky'}</span>
+                      </button>
                     </div>
 
                     {listGroups.length === 0 ? (
@@ -2020,35 +2297,46 @@ function CalendarContent() {
                                 const multiDay = ev.start_date !== ev.end_date;
                                 const isClickable = ev.source === 'manual';
                                 return (
-                                  <div
-                                    key={ev.id}
-                                    onClick={() => { if (isClickable) { const orig = events.find(x => x.id === ev.source_id); if (orig) openEditEvent(orig); } }}
-                                    className="flex items-start gap-3 p-3 rounded-lg border transition-colors"
-                                    style={{ borderColor: 'var(--border)', background: 'var(--bg-card)', cursor: isClickable ? 'pointer' : 'default' }}
-                                    onMouseEnter={e => { if (isClickable) e.currentTarget.style.background = 'var(--bg-hover)'; }}
-                                    onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-card)'; }}
-                                  >
-                                    <div className="w-1 self-stretch rounded-full flex-shrink-0" style={{ background: ev.color }} />
-                                    <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-2 flex-wrap">
-                                        <span className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>{ev.title}</span>
-                                        {ev.source !== 'manual' && (
-                                          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: ev.color + '22', color: ev.color }}>
-                                            {sourceBadgeLabel(ev.source)}
-                                          </span>
+                                  <div key={ev.id} className="flex items-start gap-2">
+                                    {/* Karta události */}
+                                    <div
+                                      onClick={() => { if (isClickable) { const orig = events.find(x => x.id === ev.source_id); if (orig) openEditEvent(orig); } }}
+                                      className="flex items-start gap-3 p-3 rounded-lg border transition-colors flex-1 min-w-0"
+                                      style={{ borderColor: 'var(--border)', background: 'var(--bg-card)', cursor: isClickable ? 'pointer' : 'default' }}
+                                      onMouseEnter={e => { if (isClickable) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                                      onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-card)'; }}
+                                    >
+                                      <div className="w-1 self-stretch rounded-full flex-shrink-0" style={{ background: ev.color }} />
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <span className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>{ev.title}</span>
+                                          {ev.source !== 'manual' && (
+                                            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: ev.color + '22', color: ev.color }}>
+                                              {sourceBadgeLabel(ev.source)}
+                                            </span>
+                                          )}
+                                        </div>
+                                        <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                                          {multiDay
+                                            ? `${evStart.toLocaleDateString('cs-CZ')} – ${evEnd.toLocaleDateString('cs-CZ')}`
+                                            : evStart.toLocaleDateString('cs-CZ', { weekday: 'long', day: 'numeric', month: 'long' })
+                                          }
+                                          {!ev.is_all_day && ev.start_time ? ` · ${ev.start_time.slice(0, 5)}${ev.end_time ? `–${ev.end_time.slice(0, 5)}` : ''}` : ''}
+                                        </div>
+                                        {ev.description && (
+                                          <div className="text-xs mt-1 truncate" style={{ color: 'var(--text-muted)' }}>{ev.description}</div>
                                         )}
                                       </div>
-                                      <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                                        {multiDay
-                                          ? `${evStart.toLocaleDateString('cs-CZ')} – ${evEnd.toLocaleDateString('cs-CZ')}`
-                                          : evStart.toLocaleDateString('cs-CZ', { weekday: 'long', day: 'numeric', month: 'long' })
-                                        }
-                                        {!ev.is_all_day && ev.start_time ? ` · ${ev.start_time.slice(0, 5)}${ev.end_time ? `–${ev.end_time.slice(0, 5)}` : ''}` : ''}
-                                      </div>
-                                      {ev.description && (
-                                        <div className="text-xs mt-1 truncate" style={{ color: 'var(--text-muted)' }}>{ev.description}</div>
-                                      )}
                                     </div>
+                                    {/* Panel poznámek – key zahrnuje note.id pro remount po načtení z DB */}
+                                    {showNotes && (
+                                      <NotePanel
+                                        key={`${ev.id}-${notesByRef[ev.id]?.id ?? 'new'}`}
+                                        eventRef={ev.id}
+                                        note={notesByRef[ev.id] ?? { content: '', tasks: [] }}
+                                        onSave={handleNoteSave}
+                                      />
+                                    )}
                                   </div>
                                 );
                               })}
@@ -2073,6 +2361,7 @@ function CalendarContent() {
                         )}
                       </div>
                     )}
+                  </div>
                   </div>
                 );
               })()}
