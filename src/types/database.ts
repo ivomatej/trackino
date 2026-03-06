@@ -457,7 +457,7 @@ export interface Calendar {
   updated_at: string;
 }
 
-export type CalendarEventSource = 'manual' | 'vacation' | 'important_day';
+export type CalendarEventSource = 'manual' | 'vacation' | 'important_day' | 'subscription';
 
 export interface CalendarEvent {
   id: string;
@@ -483,6 +483,17 @@ export interface CalendarShare {
   calendar_id: string;
   shared_with_user_id: string;
   can_edit: boolean;
+  created_at: string;
+}
+
+export interface CalendarSubscription {
+  id: string;
+  workspace_id: string;
+  user_id: string;
+  name: string;
+  url: string;
+  color: string;
+  is_enabled: boolean;
   created_at: string;
 }
 
