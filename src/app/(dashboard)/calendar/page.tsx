@@ -215,7 +215,7 @@ function CalendarContent() {
   const { currentWorkspace } = useWorkspace();
   const today = useMemo(() => new Date(), []);
 
-  const [view, setView] = useState<ViewType>('month');
+  const [view, setView] = useState<ViewType>('week');
   const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
   const [calendars, setCalendars] = useState<Calendar[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -267,9 +267,12 @@ function CalendarContent() {
   const [subscriptions, setSubscriptions] = useState<CalendarSubscription[]>([]);
   const [subscriptionEvents, setSubscriptionEvents] = useState<DisplayEvent[]>([]);
   const [showSubForm, setShowSubForm] = useState(false);
+  const [editingSub, setEditingSub] = useState<CalendarSubscription | null>(null);
   const [subForm, setSubForm] = useState({ name: '', url: '', color: '#8b5cf6' });
   const [savingSub, setSavingSub] = useState(false);
   const [subUrlError, setSubUrlError] = useState('');
+  const [icsRefreshToken, setIcsRefreshToken] = useState(0);
+  const [icsRefreshing, setIcsRefreshing] = useState(false);
 
   const initializedRef = useRef(false);
 
@@ -298,30 +301,38 @@ function CalendarContent() {
     setListSearch('');
   }, [view, currentDate]);
 
-  // Načtení ICS událostí při změně odběrů
+  // Načtení ICS událostí při změně odběrů nebo manuálním refreshi
   useEffect(() => {
     const enabled = subscriptions.filter(s => s.is_enabled);
     if (enabled.length === 0) {
       setSubscriptionEvents([]);
+      setIcsRefreshing(false);
       return;
     }
     let cancelled = false;
+    setIcsRefreshing(true);
     (async () => {
       const allEvents: DisplayEvent[] = [];
+      // Cache-busting parametr při manuálním refreshi
+      const cacheBust = icsRefreshToken > 0 ? `&t=${icsRefreshToken}` : '';
       await Promise.all(
         enabled.map(async sub => {
           try {
-            const res = await fetch(`/api/ics-proxy?url=${encodeURIComponent(sub.url)}`);
+            const res = await fetch(`/api/ics-proxy?url=${encodeURIComponent(sub.url)}${cacheBust}`);
             if (!res.ok) return;
             const text = await res.text();
             if (!cancelled) allEvents.push(...parseICS(text, sub.id, sub.color));
           } catch { /* ignoruj chyby jednotlivých odběrů */ }
         })
       );
-      if (!cancelled) setSubscriptionEvents(allEvents);
+      if (!cancelled) {
+        setSubscriptionEvents(allEvents);
+        setIcsRefreshing(false);
+      }
     })();
     return () => { cancelled = true; };
-  }, [subscriptions]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subscriptions, icsRefreshToken]);
 
   // ── Načtení dat ──────────────────────────────────────────────────────────
 
@@ -537,6 +548,20 @@ function CalendarContent() {
 
   // ── CRUD – ICS Odběry ─────────────────────────────────────────────────────
 
+  function openNewSub() {
+    setEditingSub(null);
+    setSubForm({ name: '', url: '', color: '#8b5cf6' });
+    setSubUrlError('');
+    setShowSubForm(true);
+  }
+
+  function openEditSub(sub: CalendarSubscription) {
+    setEditingSub(sub);
+    setSubForm({ name: sub.name, url: sub.url, color: sub.color });
+    setSubUrlError('');
+    setShowSubForm(true);
+  }
+
   async function saveSubscription() {
     if (!user || !currentWorkspace || !subForm.name.trim() || !subForm.url.trim()) return;
     setSubUrlError('');
@@ -548,15 +573,25 @@ function CalendarContent() {
         setSavingSub(false);
         return;
       }
-      await supabase.from('trackino_calendar_subscriptions').insert({
-        workspace_id: currentWorkspace.id,
-        user_id: user.id,
-        name: subForm.name.trim(),
-        url: subForm.url.trim(),
-        color: subForm.color,
-        is_enabled: true,
-      });
+      if (editingSub) {
+        // Editace existujícího odběru
+        await supabase
+          .from('trackino_calendar_subscriptions')
+          .update({ name: subForm.name.trim(), url: subForm.url.trim(), color: subForm.color })
+          .eq('id', editingSub.id);
+      } else {
+        // Nový odběr
+        await supabase.from('trackino_calendar_subscriptions').insert({
+          workspace_id: currentWorkspace.id,
+          user_id: user.id,
+          name: subForm.name.trim(),
+          url: subForm.url.trim(),
+          color: subForm.color,
+          is_enabled: true,
+        });
+      }
       setShowSubForm(false);
+      setEditingSub(null);
       await fetchSubscriptions();
     } finally {
       setSavingSub(false);
@@ -1055,22 +1090,46 @@ function CalendarContent() {
                 <span className="text-[10px] font-semibold tracking-wider" style={{ color: 'var(--text-muted)' }}>
                   EXTERNÍ KALENDÁŘE
                 </span>
-                <button
-                  onClick={() => { setSubForm({ name: '', url: '', color: '#8b5cf6' }); setSubUrlError(''); setShowSubForm(true); }}
-                  className="p-0.5 rounded transition-colors"
-                  title="Přidat ICS/iCal kalendář"
-                  style={{ color: 'var(--text-muted)' }}
-                  onMouseEnter={e => (e.currentTarget.style.color = 'var(--primary)')}
-                  onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-                  </svg>
-                </button>
+                <div className="flex items-center gap-0.5">
+                  {/* Tlačítko Refresh */}
+                  {subscriptions.some(s => s.is_enabled) && (
+                    <button
+                      onClick={() => setIcsRefreshToken(t => t + 1)}
+                      className="p-0.5 rounded transition-colors"
+                      title="Aktualizovat externí kalendáře"
+                      style={{ color: 'var(--text-muted)' }}
+                      onMouseEnter={e => (e.currentTarget.style.color = 'var(--primary)')}
+                      onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+                    >
+                      <svg
+                        width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                        className={icsRefreshing ? 'animate-spin' : ''}
+                      >
+                        <polyline points="23 4 23 10 17 10" />
+                        <polyline points="1 20 1 14 7 14" />
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                      </svg>
+                    </button>
+                  )}
+                  {/* Tlačítko Přidat */}
+                  <button
+                    onClick={openNewSub}
+                    className="p-0.5 rounded transition-colors"
+                    title="Přidat ICS/iCal kalendář"
+                    style={{ color: 'var(--text-muted)' }}
+                    onMouseEnter={e => (e.currentTarget.style.color = 'var(--primary)')}
+                    onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                  </button>
+                </div>
               </div>
               {subscriptions.length === 0 ? (
                 <button
-                  onClick={() => { setSubForm({ name: '', url: '', color: '#8b5cf6' }); setSubUrlError(''); setShowSubForm(true); }}
+                  onClick={openNewSub}
                   className="text-xs w-full text-left px-1 py-1 rounded transition-colors"
                   style={{ color: 'var(--text-muted)' }}
                   onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
@@ -1080,7 +1139,7 @@ function CalendarContent() {
                 </button>
               ) : (
                 subscriptions.map(sub => (
-                  <div key={sub.id} className="flex items-center gap-2 py-1 group/sub">
+                  <div key={sub.id} className="flex items-center gap-1.5 py-1 group/sub">
                     <input
                       type="checkbox"
                       checked={sub.is_enabled}
@@ -1090,14 +1149,16 @@ function CalendarContent() {
                     />
                     <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ background: sub.color }} />
                     <span className="text-xs flex-1 truncate" style={{ color: 'var(--text-primary)' }} title={sub.name}>{sub.name}</span>
+                    {/* Tlačítko Upravit */}
                     <button
-                      onClick={() => { if (confirm(`Odebrat odběr „${sub.name}"?`)) deleteSubscription(sub.id); }}
+                      onClick={() => openEditSub(sub)}
                       className="opacity-0 group-hover/sub:opacity-60 hover:!opacity-100 transition-opacity p-0.5 rounded flex-shrink-0"
-                      style={{ color: '#ef4444' }}
-                      title="Odebrat odběr"
+                      style={{ color: 'var(--text-muted)' }}
+                      title="Upravit odběr"
                     >
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                       </svg>
                     </button>
                   </div>
@@ -2031,22 +2092,26 @@ function CalendarContent() {
         </div>
       )}
 
-      {/* ══ MODAL – Přidat ICS odběr ══════════════════════════════════════════ */}
+      {/* ══ MODAL – Přidat / Upravit ICS odběr ═══════════════════════════════ */}
       {showSubForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="w-full max-w-md rounded-xl shadow-xl border p-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Přidat ICS kalendář</h2>
-              <button onClick={() => setShowSubForm(false)} className="p-1 rounded" style={{ color: 'var(--text-muted)' }}>
+              <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
+                {editingSub ? 'Upravit ICS kalendář' : 'Přidat ICS kalendář'}
+              </h2>
+              <button onClick={() => { setShowSubForm(false); setEditingSub(null); }} className="p-1 rounded" style={{ color: 'var(--text-muted)' }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
               </button>
             </div>
 
-            <div className="mb-4 p-3 rounded-lg text-xs" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>
-              📅 Zkopíruj ICS/iCal URL z Google Kalendáře, Outlooku, Apple Kalendáře nebo jiné aplikace a vlož ji sem.
-            </div>
+            {!editingSub && (
+              <div className="mb-4 p-3 rounded-lg text-xs" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>
+                📅 Zkopíruj ICS/iCal URL z Google Kalendáře, Outlooku, Apple Kalendáře nebo jiné aplikace a vlož ji sem.
+              </div>
+            )}
 
             <div className="space-y-4">
               <div>
@@ -2075,7 +2140,7 @@ function CalendarContent() {
                 {subUrlError ? (
                   <p className="text-xs mt-1" style={{ color: '#ef4444' }}>{subUrlError}</p>
                 ) : (
-                  <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Odkaz musí končit .ics nebo být platná ICS URL</p>
+                  <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Odkaz na ICS/iCal soubor (Google, Outlook, Apple, ...)</p>
                 )}
               </div>
 
@@ -2098,22 +2163,41 @@ function CalendarContent() {
               </div>
             </div>
 
-            <div className="flex gap-2 justify-end mt-6">
-              <button
-                onClick={() => setShowSubForm(false)}
-                className="px-4 py-2 rounded-lg text-sm border"
-                style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
-              >
-                Zrušit
-              </button>
-              <button
-                onClick={saveSubscription}
-                disabled={savingSub || !subForm.name.trim() || !subForm.url.trim()}
-                className="px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50"
-                style={{ background: 'var(--primary)' }}
-              >
-                {savingSub ? 'Přidávám...' : 'Přidat'}
-              </button>
+            <div className="flex items-center justify-between mt-6">
+              {editingSub ? (
+                <button
+                  onClick={async () => {
+                    if (confirm(`Odebrat odběr „${editingSub.name}"?`)) {
+                      await deleteSubscription(editingSub.id);
+                      setShowSubForm(false);
+                      setEditingSub(null);
+                    }
+                  }}
+                  className="px-3 py-2 rounded-lg text-sm transition-colors"
+                  style={{ color: '#ef4444' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = '#fee2e244')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                >
+                  Odebrat
+                </button>
+              ) : <div />}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setShowSubForm(false); setEditingSub(null); }}
+                  className="px-4 py-2 rounded-lg text-sm border"
+                  style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
+                >
+                  Zrušit
+                </button>
+                <button
+                  onClick={saveSubscription}
+                  disabled={savingSub || !subForm.name.trim() || !subForm.url.trim()}
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50"
+                  style={{ background: 'var(--primary)' }}
+                >
+                  {savingSub ? 'Ukládám...' : editingSub ? 'Uložit' : 'Přidat'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
