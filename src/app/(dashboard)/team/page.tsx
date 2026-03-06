@@ -623,20 +623,18 @@ function TeamContent() {
                             <div className="flex items-center gap-2">
                               <button
                                 onClick={() => approveMember(member.id)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-                                style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #86efac' }}
-                                onMouseEnter={(e) => { e.currentTarget.style.background = '#bbf7d0'; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.background = '#dcfce7'; }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                                style={{ background: 'var(--success)' }}
                               >
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                                 Schválit
                               </button>
                               <button
                                 onClick={() => rejectMember(member.id, p?.display_name ?? '')}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-                                style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5' }}
-                                onMouseEnter={(e) => { e.currentTarget.style.background = '#fecaca'; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.background = '#fee2e2'; }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors"
+                                style={{ borderColor: 'var(--danger)', color: 'var(--danger)', background: 'transparent' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--danger-light)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                               >
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                   <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />

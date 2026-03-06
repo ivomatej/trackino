@@ -719,19 +719,21 @@ function VacationContent() {
                         <button
                           onClick={() => approveEntry(entry.id)}
                           disabled={approving === entry.id}
-                          className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
                           style={{ background: 'var(--success)' }}
                         >
-                          {approving === entry.id ? '...' : '✓ Schválit'}
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                          {approving === entry.id ? '...' : 'Schválit'}
                         </button>
                         <button
                           onClick={() => setRejectModal({ id: entry.id, note: '' })}
-                          className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors border"
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors border"
                           style={{ borderColor: 'var(--danger)', color: 'var(--danger)', background: 'transparent' }}
                           onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--danger-light)'; }}
                           onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                         >
-                          ✕ Zamítnout
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                          Zamítnout
                         </button>
                       </div>
                     </div>

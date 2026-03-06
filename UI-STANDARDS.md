@@ -88,6 +88,64 @@
 </button>
 ```
 
+### Schválit / Zamítnout (inline akce v seznamu)
+
+Používá se v řádcích tabulky/seznamu pro schvalování žádostí, dovolené apod. Vždy s SVG ikonou vlevo.
+
+```tsx
+// Schválit – zelené vyplněné tlačítko s fajfkou
+<button
+  onClick={() => approve(item.id)}
+  disabled={approving === item.id}
+  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+  style={{ background: 'var(--success)' }}
+>
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+  {approving === item.id ? '...' : 'Schválit'}
+</button>
+
+// Zamítnout – červené outlined tlačítko s ×
+<button
+  onClick={() => setRejectModal({ id: item.id, note: '' })}
+  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors"
+  style={{ borderColor: 'var(--danger)', color: 'var(--danger)', background: 'transparent' }}
+  onMouseEnter={e => e.currentTarget.style.background = 'var(--danger-light)'}
+  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+>
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+  Zamítnout
+</button>
+```
+
+**Pravidla:**
+- Vždy `flex items-center gap-1.5` pro zarovnání ikony s textem
+- Ikona vždy `width="12" height="12"` (menší než standardní 14px – tlačítka jsou kompaktnější)
+- Schválit: zelené vyplněné (`var(--success)`), bílý text + ikona
+- Zamítnout: červené outlined (`var(--danger)` border + text), hover → světlé červené pozadí
+- Loading stav: `{approving === item.id ? '...' : 'Schválit'}`
+- NIKDY nepoužívat textové symboly ✓ nebo ✕ – vždy SVG ikona
+
+### Vrátit k opravě (inline akce)
+
+```tsx
+<button
+  onClick={() => openReturnModal(item)}
+  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors"
+  style={{ borderColor: 'var(--warning)', color: 'var(--warning)', background: 'transparent' }}
+  onMouseEnter={e => e.currentTarget.style.background = 'var(--warning-light)'}
+  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+>
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 .49-3.63" />
+  </svg>
+  Vrátit k opravě
+</button>
+```
+
 ### Dvojice tlačítek ve formuláři (Cancel + Submit)
 
 ```tsx

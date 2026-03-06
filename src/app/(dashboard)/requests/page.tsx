@@ -469,20 +469,22 @@ function RequestsContent() {
                   <div className="flex items-center justify-end gap-2 mt-3 pt-3 border-t" style={{ borderColor: 'var(--border)' }}>
                     <button
                       onClick={() => setRejectModal({ id: req.id, note: '' })}
-                      className="px-3 py-1.5 rounded-lg text-sm border transition-colors"
-                      style={{ borderColor: 'var(--danger)', color: 'var(--danger)' }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors"
+                      style={{ borderColor: 'var(--danger)', color: 'var(--danger)', background: 'transparent' }}
                       onMouseEnter={e => (e.currentTarget.style.background = 'var(--danger-light)')}
                       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                     >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                       Zamítnout
                     </button>
                     <button
                       onClick={() => approveRequest(req)}
                       disabled={approving === req.id}
-                      className="px-3 py-1.5 rounded-lg text-sm font-medium text-white transition-opacity disabled:opacity-50"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
                       style={{ background: 'var(--success)' }}
                     >
-                      {approving === req.id ? 'Schvaluji...' : 'Schválit'}
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                      {approving === req.id ? '...' : 'Schválit'}
                     </button>
                   </div>
                 </div>
