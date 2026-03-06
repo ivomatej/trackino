@@ -74,7 +74,7 @@ interface RequestWithProfile extends TrackingRequest {
   reviewerProfile?: Profile;
 }
 
-type ActiveTab = 'mine' | 'pending';
+type ActiveTab = 'mine' | 'pending' | 'archive';
 
 // ─── Interní komponenta ───────────────────────────────────────────────────────
 
@@ -86,6 +86,7 @@ function RequestsContent() {
 
   const [myRequests, setMyRequests] = useState<RequestWithProfile[]>([]);
   const [pendingRequests, setPendingRequests] = useState<RequestWithProfile[]>([]);
+  const [archivedRequests, setArchivedRequests] = useState<RequestWithProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<ActiveTab>('mine');
   const [showForm, setShowForm] = useState(false);
@@ -144,7 +145,7 @@ function RequestsContent() {
     }
     setMyRequests(myReqs);
 
-    // Čekající žádosti ostatních (pro reviewery)
+    // Čekající žádosti ostatních (pro reviewery) + archiv
     if (canProcessRequests) {
       const { data: pendData } = await supabase
         .from('trackino_requests')
@@ -163,10 +164,39 @@ function RequestsContent() {
           .select('id, display_name, avatar_color')
           .in('id', userIds);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const profMap = Object.fromEntries((profData ?? []).map((p: any) => [p.id, p as Profile]));
+        const profMap = Object.fromEntries((profData ?? []).map((p: any) => [p.id, p as Profile]));
         pendReqs.forEach(r => { r.profile = profMap[r.user_id]; });
       }
       setPendingRequests(pendReqs);
+
+      // Archiv – všechny schválené/zamítnuté v celém workspace
+      const { data: archData } = await supabase
+        .from('trackino_requests')
+        .select('*')
+        .eq('workspace_id', currentWorkspace.id)
+        .in('status', ['approved', 'rejected'])
+        .order('reviewed_at', { ascending: false });
+
+      const archReqs = (archData ?? []) as RequestWithProfile[];
+
+      if (archReqs.length > 0) {
+        // Potřebujeme profily jak podavatelů, tak recenzentů
+        const allIds = [...new Set([
+          ...archReqs.map(r => r.user_id),
+          ...archReqs.filter(r => r.reviewed_by).map(r => r.reviewed_by!),
+        ])];
+        const { data: archProfData } = await supabase
+          .from('trackino_profiles')
+          .select('id, display_name, avatar_color')
+          .in('id', allIds);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const archProfMap = Object.fromEntries((archProfData ?? []).map((p: any) => [p.id, p as Profile]));
+        archReqs.forEach(r => {
+          r.profile = archProfMap[r.user_id];
+          if (r.reviewed_by) r.reviewerProfile = archProfMap[r.reviewed_by];
+        });
+      }
+      setArchivedRequests(archReqs);
     }
 
     setLoading(false);
@@ -325,6 +355,7 @@ function RequestsContent() {
             {([
               { key: 'mine' as ActiveTab, label: 'Moje žádosti', count: 0 },
               { key: 'pending' as ActiveTab, label: 'Ke zpracování', count: pendingRequests.length },
+              { key: 'archive' as ActiveTab, label: 'Archiv', count: 0 },
             ]).map(tab => (
               <button
                 key={tab.key}
@@ -489,6 +520,105 @@ function RequestsContent() {
                   </div>
                 </div>
               ))
+            )}
+          </div>
+        )}
+
+        {/* ── Tab: Archiv ── */}
+        {activeTab === 'archive' && canProcessRequests && (
+          <div className="space-y-3">
+            {archivedRequests.length === 0 ? (
+              <div className="rounded-xl border p-10 text-center" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mx-auto mb-3" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)' }}>
+                  <polyline points="21 8 21 21 3 21 3 8" /><rect x="1" y="3" width="22" height="5" /><line x1="10" y1="12" x2="14" y2="12" />
+                </svg>
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Archiv je prázdný. Vyřízené žádosti se zde zobrazí po schválení nebo zamítnutí.</p>
+              </div>
+            ) : (
+              <>
+                <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>
+                  {archivedRequests.length} vyřízených žádostí · seřazeno od nejnovějšího rozhodnutí
+                </p>
+                {archivedRequests.map(req => (
+                  <div key={req.id} className="rounded-xl border p-4" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+                    {/* Řádek: podavatel + datum podání */}
+                    <div className="flex items-center gap-2 mb-3">
+                      {req.profile ? (
+                        <>
+                          <div
+                            className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0"
+                            style={{ background: req.profile.avatar_color }}
+                          >
+                            {initials(req.profile.display_name)}
+                          </div>
+                          <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{req.profile.display_name}</span>
+                        </>
+                      ) : (
+                        <div className="w-7 h-7 rounded-full flex-shrink-0" style={{ background: 'var(--bg-hover)' }} />
+                      )}
+                      <span className="text-xs ml-auto flex-shrink-0" style={{ color: 'var(--text-muted)' }}>
+                        Podáno {new Date(req.created_at).toLocaleDateString('cs-CZ')}
+                      </span>
+                    </div>
+
+                    {/* Typ + status */}
+                    <div className="flex items-center gap-2 flex-wrap mb-2">
+                      <span className="text-[11px] font-medium px-2 py-0.5 rounded" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>
+                        {REQUEST_TYPE_LABELS[req.type]}
+                      </span>
+                      <StatusBadge status={req.status} />
+                    </div>
+
+                    {/* Název + poznámka */}
+                    <h3 className="font-semibold text-sm mb-1" style={{ color: 'var(--text-primary)' }}>{req.title}</h3>
+                    {req.note && (
+                      <p className="text-xs mb-2" style={{ color: 'var(--text-secondary)' }}>{req.note}</p>
+                    )}
+
+                    {/* Rozhodnutí reviewera */}
+                    <div
+                      className="mt-3 pt-3 border-t flex items-start gap-2"
+                      style={{ borderColor: 'var(--border)' }}
+                    >
+                      {/* Ikona rozhodnutí */}
+                      <div
+                        className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
+                        style={{ background: req.status === 'approved' ? '#d1fae5' : '#fee2e2' }}
+                      >
+                        {req.status === 'approved' ? (
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#065f46" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                        ) : (
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#991b1b" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                          </svg>
+                        )}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                          <span className="font-medium" style={{ color: 'var(--text-primary)' }}>
+                            {req.status === 'approved' ? 'Schválil/a' : 'Zamítl/a'}
+                            {req.reviewerProfile ? `: ${req.reviewerProfile.display_name}` : ''}
+                          </span>
+                          {req.reviewed_at && (
+                            <span style={{ color: 'var(--text-muted)' }}>
+                              {' '}· {new Date(req.reviewed_at).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'long', year: 'numeric' })}
+                            </span>
+                          )}
+                        </p>
+                        {/* Důvod zamítnutí */}
+                        {req.status === 'rejected' && req.reviewer_note && (
+                          <p className="text-xs mt-1 italic" style={{ color: 'var(--text-muted)' }}>
+                            „{req.reviewer_note}"
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </>
             )}
           </div>
         )}
