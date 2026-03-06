@@ -1091,21 +1091,31 @@ function CalendarContent() {
     meta: { is_important: boolean; is_done: boolean; is_favorite: boolean } = { is_important: false, is_done: false, is_favorite: false }
   ) {
     if (!currentWorkspace || !user) return;
-    const existing = notesByRef[eventRef];
-    const payload = { content, tasks, is_important: meta.is_important, is_done: meta.is_done, is_favorite: meta.is_favorite, updated_at: new Date().toISOString() };
-    if (existing?.id) {
-      await supabase.from('trackino_calendar_event_notes').update(payload).eq('id', existing.id);
-    } else {
-      const { data } = await supabase.from('trackino_calendar_event_notes')
-        .insert({ workspace_id: currentWorkspace.id, user_id: user.id, event_ref: eventRef, content, tasks, is_important: meta.is_important, is_done: meta.is_done, is_favorite: meta.is_favorite })
-        .select('id')
-        .single();
-      if (data) {
-        setNotesByRef(prev => ({ ...prev, [eventRef]: { id: data.id, content, tasks, ...meta } }));
-        return;
-      }
+    // Upsert – bezpečné pro insert i update, řeší UNIQUE (workspace_id, user_id, event_ref)
+    const { data, error } = await supabase.from('trackino_calendar_event_notes')
+      .upsert(
+        {
+          workspace_id: currentWorkspace.id,
+          user_id: user.id,
+          event_ref: eventRef,
+          content,
+          tasks,
+          is_important: meta.is_important,
+          is_done: meta.is_done,
+          is_favorite: meta.is_favorite,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'workspace_id,user_id,event_ref' }
+      )
+      .select('id')
+      .single();
+    if (error) {
+      console.error('[Trackino] Poznámka – chyba ukládání:', error.message, error.code, error.details);
+      return; // Neaktualizuj lokální stav pokud DB selhalo
     }
-    setNotesByRef(prev => ({ ...prev, [eventRef]: { ...prev[eventRef], content, tasks, ...meta } }));
+    if (data) {
+      setNotesByRef(prev => ({ ...prev, [eventRef]: { id: data.id, content, tasks, ...meta } }));
+    }
   }
 
   async function handleNoteDelete(eventRef: string) {
