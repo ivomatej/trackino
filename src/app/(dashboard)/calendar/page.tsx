@@ -835,34 +835,39 @@ function CalendarContent() {
   // ── (calendar_day_start/end z profilu se již nepoužívají – grid je vždy 0–24) ──
 
   // ── Výška calWeekWrapperRef = celá dostupná výška viewportu ─────────────
-  // Záhlaví dnů a pás celodenních událostí jsou VNĚ scroll containeru (weekGridRef).
-  // Při scrollu mřížky se záhlaví nehýbe. DashboardLayout má min-h-screen,
-  // proto nutno nastavit explicitní výšku přes useLayoutEffect.
+  // ── Výška + počáteční scroll pro týdenní/denní pohled ────────────────────
+  // DashboardLayout má min-h-screen (ne h-screen), takže flex-1 chain nekončí
+  // na viewport výšce. Nutno nastavit explicitní výšky přes DOM.
+  // Záhlaví jsou VNĚ weekGridRef → weekGridRef = zbytek po záhlaví, scrolluje vertikálně.
   useLayoutEffect(() => {
-    const el = calWeekWrapperRef.current;
-    if (!el || (view !== 'week' && view !== 'today')) return;
+    const wrapper = calWeekWrapperRef.current;
+    const grid = weekGridRef.current;
+    if (!wrapper || (view !== 'week' && view !== 'today')) return;
 
-    const setHeight = () => {
-      const rect = el.getBoundingClientRect();
-      el.style.height = `${window.innerHeight - rect.top}px`;
+    const applyLayout = () => {
+      const wRect = wrapper.getBoundingClientRect();
+      const totalH = window.innerHeight - wRect.top;
+      wrapper.style.height = `${totalH}px`;
+
+      if (grid) {
+        // Vynucení layout reflow – zajistí aktuální pozici gridu po výšce wrapperu
+        void wrapper.offsetHeight;
+        const gTop = grid.getBoundingClientRect().top;
+        const headerH = Math.max(0, gTop - wRect.top);
+        grid.style.height = `${Math.max(60, totalH - headerH)}px`;
+        grid.scrollTop = calViewStart * ROW_H;
+      }
     };
 
-    setHeight();
-    window.addEventListener('resize', setHeight);
-    return () => window.removeEventListener('resize', setHeight);
-  }, [view]);
+    applyLayout();
+    window.addEventListener('resize', applyLayout);
+    return () => window.removeEventListener('resize', applyLayout);
+  }, [view, calViewStart]);
 
-  // ── Auto-scroll časové mřížky na calViewStart ─────────────────────────────
-  // Double-rAF: flex layout se dořeší po prvním framu, scrollTop se nastaví ve druhém.
+  // ── Scroll po načtení dat (loading false) ────────────────────────────────
   useEffect(() => {
-    if (!loading && (view === 'week' || view === 'today')) {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          if (weekGridRef.current) {
-            weekGridRef.current.scrollTop = calViewStart * ROW_H;
-          }
-        });
-      });
+    if (!loading && (view === 'week' || view === 'today') && weekGridRef.current) {
+      weekGridRef.current.scrollTop = calViewStart * ROW_H;
     }
   }, [loading, view, calViewStart]);
 
