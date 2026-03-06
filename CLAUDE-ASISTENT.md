@@ -64,6 +64,7 @@ Na iOS Safari se stránka automaticky přiblíží (zoom), pokud má `<input>` n
 - Aktivní workspace: **Four Crowns** (ID: `cfb0b233-eff6-476a-b195-4521c17265bc`)
 - Přihlášen jako **Master Admin** (tarif Max)
 - Při generování testovacích SQL dat vždy používej tento workspace_id
+- **Neotevírej Preview (Dev server)** při běžných úpravách – uživatel testuje vše sám na produkci (desktop + mobil). Preview používej jen v nutných případech (např. ladění složitého layoutu).
 
 ### 9. Responzivita a světlý/tmavý režim
 Každý nový modul nebo funkce musí být plně funkční na:

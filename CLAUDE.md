@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 6. 3. 2026 (v2.17.0)
+> Aktualizováno: 6. 3. 2026 (v2.17.1)
 
 ---
 
@@ -310,6 +310,15 @@ NÁSTROJE
 - Oblíbená položka má hvězdičku trvale zlatou (opacity 0.8)
 - V sekci OBLÍBENÉ je ikona × pro odebrání z oblíbených (viditelná na hover)
 
+### Badge (odznaky) v navigaci
+Červené kulaté odznaky s počtem nevyřízených položek u nav items:
+| Stránka | Badge count | Oprávnění |
+|---------|------------|-----------|
+| Dovolená (`/vacation`) | `pendingVacationCount` – čekající žádosti o dovolenou | admin, manager |
+| Žádosti (`/requests`) | `pendingRequestCount` – čekající žádosti ke schválení | admin, manager, masterAdmin, can_process_requests |
+| Fakturace (`/invoices`) | `returnedInvoiceCount + pendingInvoiceApprovalCount` – vrácené + čekající ke schválení | returned: can_invoice; approval: admin, manager |
+| Připomínky (`/feedback`) | `unresolvedFeedbackCount` – nevyřízené připomínky | masterAdmin, admin, can_receive_feedback |
+
 ---
 
 ## 8. Plánovač (planner/page.tsx)
@@ -476,6 +485,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.17.1 | 6. 3. 2026 | Přehled: sjednocení formátu hodin v grafu (fmtHours); Sidebar: badge u Žádostí (pending), Připomínek (unresolved), Fakturace (pending approval) |
 | v2.17.0 | 6. 3. 2026 | Přehled: notifikační panel „K vyřízení" (čekající dovolené, žádosti, připomínky, faktury); Přehled: týdenní sloupcový graf odpracovaných hodin (Recharts, 7 dní, průměr, trend) |
 | v2.16.2 | 5. 3. 2026 | Sjednocení nadpisů stránek (text-xl, 14 stránek); sjednocení výšek toolbarových prvků na py-2 (7 stránek); Záložky+Prompty jméno autora místo avataru; záložky doména bez www. |
 | v2.16.1 | 5. 3. 2026 | iOS auto-zoom prevence: text-base sm:text-sm na všech input/textarea/select v celé aplikaci (98 elementů, 25 souborů); FolderTree ⋮ mobilní dropdown (Prompty+Záložky); Sdílení složek „Nesdílet s nikým"; FolderTree dropdown fixed position (position:fixed+getBoundingClientRect); Záložky popis inline; Mobilní responzivita: Settings nav, Tým tabs, Admin karty, App-Settings tabulka, Kalendář časy |

@@ -271,6 +271,7 @@ const DEFAULT_HELP_CONTENT = `
 
 <h3>Navigace – rozbalovací sekce</h3>
 <p>Levý sidebar je členěn do šesti sekcí: <strong>SLEDOVÁNÍ</strong>, <strong>ANALÝZA</strong>, <strong>NÁSTROJE</strong>, <strong>SPRÁVA</strong>, <strong>SPOLEČNOST</strong> (dostupná od tarifu Pro) a <strong>SYSTÉM</strong> (viditelná pouze pro Master Adminy). Každou sekci lze kliknutím na její název sbalit nebo rozbalit – šipka indikuje aktuální stav. Stav sbalení se ukládá v prohlížeči a přetrvá i po obnovení stránky.</p>
+<p><strong>Odznaky (badge) v navigaci:</strong> U položek Dovolená, Žádosti, Fakturace a Připomínky se v sidebaru zobrazují červené odznaky s počtem nevyřízených položek. U Dovolené jde o čekající žádosti o dovolenou, u Žádostí o čekající žádosti zaměstnanců, u Fakturace o vrácené a čekající faktury, u Připomínek o nevyřízené anonymní připomínky. Odznaky se zobrazují pouze oprávněným uživatelům (manažeři, admini, uživatelé s příslušným oprávněním).</p>
 
 <h3>Detailní nastavení (osobní profil)</h3>
 <p>V levém dolním rohu sidebaru je panel přihlášeného uživatele. Kliknutím na něj se rozbalí možnosti: odkaz <strong>Detailní nastavení</strong> (profil, jméno, e-mail, telefon, barva avataru, barevný režim) a tlačítko <strong>Odhlásit se</strong>. Pole <strong>Pozice</strong> v profilu je editovatelné pouze pro adminy – ostatní vidí hodnotu nastavenou adminem.</p>

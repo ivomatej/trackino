@@ -11,6 +11,12 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.17.1 – 6. 3. 2026</h3>
+<ul>
+  <li><strong>Přehled – sjednocení formátu hodin v grafu</strong> – celkový součet v týdenním grafu nyní používá stejný formát jako statistické karty nahoře (např. „1 h 7 min celkem" místo „1.1 h celkem").</li>
+  <li><strong>Navigace – odznaky (badge) u dalších stránek</strong> – v levém sidebaru se nyní zobrazují červené odznaky s počtem nevyřízených položek u Žádostí (čekající žádosti ke schválení), Připomínek (nevyřízené anonymní připomínky) a Fakturace (čekající faktury ke schválení). Odznaky se zobrazují pouze oprávněným uživatelům.</li>
+</ul>
+
 <h3>v2.17.0 – 6. 3. 2026</h3>
 <ul>
   <li><strong>Přehled – panel „K vyřízení"</strong> – nový notifikační panel na úvodní stránce zobrazující čekající položky: žádosti o dovolenou, žádosti zaměstnanců, nevyřízené anonymní připomínky a faktury ke schválení. Každá položka zobrazuje typ (barevná ikona), název, datum a čas. Kliknutím přejdete přímo na příslušnou stránku. Panel se zobrazuje pouze oprávněným uživatelům (manažeři, admini) a pouze pokud existují nevyřízené položky.</li>

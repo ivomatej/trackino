@@ -166,7 +166,7 @@ export default function Sidebar({ open, onClose, collapsed = false, onCollapseDe
       .then(({ data }) => setPendingVacationCount((data ?? []).length));
   }, [user, currentWorkspace, isManagerOrAdminForVacation]);
 
-  // Červená tečka u Fakturace – vrácené faktury k opravě (bez těch, které už byly znovu podány)
+  // Badge u Fakturace – vrácené faktury k opravě + čekající ke schválení
   const canInvoice = currentMembership?.can_invoice ?? false;
   const [returnedInvoiceCount, setReturnedInvoiceCount] = useState(0);
 
@@ -182,7 +182,6 @@ export default function Sidebar({ open, onClose, collapsed = false, onCollapseDe
       .eq('user_id', user.id)
       .then(({ data }) => {
         const list = (data ?? []) as Array<{ id: string; billing_period_year: number; billing_period_month: number; status: string }>;
-        // Počítáme jen vrácené faktury, pro které uživatel NEPODAL novou (non-returned, non-cancelled)
         const count = list.filter(inv => {
           if (inv.status !== 'returned') return false;
           return !list.some(
@@ -196,6 +195,66 @@ export default function Sidebar({ open, onClose, collapsed = false, onCollapseDe
         setReturnedInvoiceCount(count);
       });
   }, [user, currentWorkspace, canInvoice]);
+
+  // Badge u Fakturace – čekající faktury ke schválení (pro managery/adminy)
+  const canApproveInvoicesSidebar = useMemo(
+    () => checkWsAdmin(userRole) || checkIsManager(userRole),
+    [userRole]
+  );
+  const [pendingInvoiceApprovalCount, setPendingInvoiceApprovalCount] = useState(0);
+
+  useEffect(() => {
+    if (!user || !currentWorkspace || !canApproveInvoicesSidebar) {
+      setPendingInvoiceApprovalCount(0);
+      return;
+    }
+    supabase
+      .from('trackino_invoices')
+      .select('id')
+      .eq('workspace_id', currentWorkspace.id)
+      .eq('status', 'pending')
+      .then(({ data }) => setPendingInvoiceApprovalCount((data ?? []).length));
+  }, [user, currentWorkspace, canApproveInvoicesSidebar]);
+
+  // Badge u Žádostí – čekající žádosti ke schválení
+  const canProcessRequestsSidebar = useMemo(
+    () => checkWsAdmin(userRole) || checkIsManager(userRole) || checkMasterAdmin(profile ?? null) || (currentMembership?.can_process_requests ?? false),
+    [userRole, profile, currentMembership]
+  );
+  const [pendingRequestCount, setPendingRequestCount] = useState(0);
+
+  useEffect(() => {
+    if (!user || !currentWorkspace || !canProcessRequestsSidebar) {
+      setPendingRequestCount(0);
+      return;
+    }
+    supabase
+      .from('trackino_requests')
+      .select('id')
+      .eq('workspace_id', currentWorkspace.id)
+      .eq('status', 'pending')
+      .then(({ data }) => setPendingRequestCount((data ?? []).length));
+  }, [user, currentWorkspace, canProcessRequestsSidebar]);
+
+  // Badge u Připomínek – nevyřízené připomínky
+  const canViewFeedbackSidebar = useMemo(
+    () => checkMasterAdmin(profile ?? null) || checkWsAdmin(userRole) || (currentMembership?.can_receive_feedback ?? false),
+    [userRole, profile, currentMembership]
+  );
+  const [unresolvedFeedbackCount, setUnresolvedFeedbackCount] = useState(0);
+
+  useEffect(() => {
+    if (!user || !currentWorkspace || !canViewFeedbackSidebar) {
+      setUnresolvedFeedbackCount(0);
+      return;
+    }
+    supabase
+      .from('trackino_feedback')
+      .select('id')
+      .eq('workspace_id', currentWorkspace.id)
+      .eq('is_resolved', false)
+      .then(({ data }) => setUnresolvedFeedbackCount((data ?? []).length));
+  }, [user, currentWorkspace, canViewFeedbackSidebar]);
 
   // Dynamicky sestavit navigaci dle oprávnění a povolených modulů
   const navGroups = useMemo<NavGroup[]>(() => {
@@ -402,9 +461,14 @@ export default function Sidebar({ open, onClose, collapsed = false, onCollapseDe
   // Render položky s hvězdičkou (pro hlavní navigaci)
   const renderNavItem = (item: NavItem) => {
     const active = pathname === item.href;
-    const hasReturnedBadge = item.href === '/invoices' && returnedInvoiceCount > 0;
-    const hasPendingVacationBadge = item.href === '/vacation' && pendingVacationCount > 0;
     const isFavorited = favorites.includes(item.href);
+
+    // Badge count per nav item
+    let badgeCount = 0;
+    if (item.href === '/vacation') badgeCount = pendingVacationCount;
+    else if (item.href === '/invoices') badgeCount = returnedInvoiceCount + pendingInvoiceApprovalCount;
+    else if (item.href === '/requests') badgeCount = pendingRequestCount;
+    else if (item.href === '/feedback') badgeCount = unresolvedFeedbackCount;
 
     return (
       <div key={item.href} className="relative group/nav">
@@ -421,20 +485,12 @@ export default function Sidebar({ open, onClose, collapsed = false, onCollapseDe
         >
           {item.icon}
           <span className="flex-1">{item.label}</span>
-          {hasReturnedBadge && (
+          {badgeCount > 0 && (
             <span
               className="flex-shrink-0 min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[10px] font-bold text-white"
               style={{ background: '#ef4444' }}
             >
-              {returnedInvoiceCount}
-            </span>
-          )}
-          {hasPendingVacationBadge && (
-            <span
-              className="flex-shrink-0 min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[10px] font-bold text-white"
-              style={{ background: '#ef4444' }}
-            >
-              {pendingVacationCount}
+              {badgeCount}
             </span>
           )}
         </Link>

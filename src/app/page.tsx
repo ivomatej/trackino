@@ -501,7 +501,7 @@ function DashboardContent() {
                   </h2>
                 </div>
                 <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                  {Math.round(weekData.reduce((a, b) => a + b.hours, 0) * 10) / 10} h celkem
+                  {fmtHours(Math.round(weekData.reduce((a, b) => a + b.hours, 0) * 3600))} celkem
                 </span>
               </div>
               <div style={{ width: '100%', height: 160 }}>
