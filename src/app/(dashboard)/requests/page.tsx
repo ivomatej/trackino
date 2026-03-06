@@ -340,7 +340,7 @@ function RequestsContent() {
                 {tab.count > 0 && (
                   <span
                     className="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[10px] font-bold text-white"
-                    style={{ background: '#ef4444' }}
+                    style={{ background: 'var(--danger)' }}
                   >
                     {tab.count}
                   </span>
@@ -470,8 +470,8 @@ function RequestsContent() {
                     <button
                       onClick={() => setRejectModal({ id: req.id, note: '' })}
                       className="px-3 py-1.5 rounded-lg text-sm border transition-colors"
-                      style={{ borderColor: '#ef444444', color: '#ef4444' }}
-                      onMouseEnter={e => (e.currentTarget.style.background = '#fee2e244')}
+                      style={{ borderColor: 'var(--danger)', color: 'var(--danger)' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'var(--danger-light)')}
                       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                     >
                       Zamítnout
@@ -480,7 +480,7 @@ function RequestsContent() {
                       onClick={() => approveRequest(req)}
                       disabled={approving === req.id}
                       className="px-3 py-1.5 rounded-lg text-sm font-medium text-white transition-opacity disabled:opacity-50"
-                      style={{ background: '#10b981' }}
+                      style={{ background: 'var(--success)' }}
                     >
                       {approving === req.id ? 'Schvaluji...' : 'Schválit'}
                     </button>
@@ -495,7 +495,7 @@ function RequestsContent() {
       {/* ══ MODAL – Nová žádost ════════════════════════════════════════════════ */}
       {showForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="w-full max-w-md rounded-2xl shadow-2xl p-6" style={{ background: 'var(--bg-card)' }}>
+          <div className="w-full max-w-md rounded-xl shadow-xl border p-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Nová žádost</h2>
               <button
@@ -584,7 +584,7 @@ function RequestsContent() {
       {/* ══ MODAL – Zamítnutí ══════════════════════════════════════════════════ */}
       {rejectModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="w-full max-w-sm rounded-2xl shadow-2xl p-6" style={{ background: 'var(--bg-card)' }}>
+          <div className="w-full max-w-sm rounded-xl shadow-xl border p-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
             <h2 className="text-base font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Zamítnout žádost</h2>
             <div className="mb-4">
               <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Důvod zamítnutí (volitelné)</label>
@@ -610,7 +610,7 @@ function RequestsContent() {
                 onClick={rejectRequest}
                 disabled={rejecting}
                 className="px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50"
-                style={{ background: '#ef4444' }}
+                style={{ background: 'var(--danger)' }}
               >
                 {rejecting ? 'Zamítám...' : 'Zamítnout'}
               </button>

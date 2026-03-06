@@ -815,7 +815,7 @@ function SettingsContent() {
             {editingBillingProfile !== null && (
               <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                 <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={() => setEditingBillingProfile(null)} />
-                <div className="relative w-full max-w-lg rounded-2xl shadow-2xl z-10 flex flex-col" style={{ maxHeight: '90vh', background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+                <div className="relative w-full max-w-lg rounded-xl shadow-xl z-10 flex flex-col" style={{ maxHeight: '90vh', background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
                   <div className="flex items-center justify-between px-6 pt-6 pb-4 flex-shrink-0">
                     <h3 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>
                       {editingBillingProfile.id ? 'Upravit profil' : 'Nový fakturační profil'}
@@ -1331,7 +1331,7 @@ function SettingsContent() {
         {activeTab === 'subscription' && (
           <div className="space-y-5">
             {/* Aktuální plán */}
-            <div className="rounded-2xl border p-5" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+            <div className="rounded-xl border p-5" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
               <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -1373,7 +1373,7 @@ function SettingsContent() {
             </div>
 
             {/* Platební údaje – placeholder */}
-            <div className="rounded-2xl border p-5" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+            <div className="rounded-xl border p-5" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
               <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>Platební metoda</h3>
               <div className="flex items-center gap-3 p-3 rounded-xl" style={{ background: 'var(--bg-hover)' }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ color: 'var(--text-muted)' }}>
@@ -1384,7 +1384,7 @@ function SettingsContent() {
             </div>
 
             {/* Historie */}
-            <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+            <div className="rounded-xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
               <div className="px-5 py-3 border-b" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
                 <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Historie faktur</h3>
               </div>
@@ -1416,7 +1416,7 @@ function SettingsContent() {
 
             {/* Zrušení */}
             {currentWorkspace.tariff !== 'free' && (isMasterAdmin || currentMembership?.role === 'owner') && (
-              <div className="rounded-2xl border p-5" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+              <div className="rounded-xl border p-5" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
                 <h3 className="text-sm font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Zrušení tarifu</h3>
                 <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>
                   Přechod na Free plán omezí dostupné funkce workspace. Záznamy a data zůstanou zachovány.
@@ -1439,7 +1439,7 @@ function SettingsContent() {
         {/* ── TAB: Společnost ── */}
         {activeTab === 'society' && (
           <div className="space-y-5">
-            <div className="rounded-2xl border p-5" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+            <div className="rounded-xl border p-5" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
               <h2 className="text-sm font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Sekce Společnost</h2>
               <p className="text-xs mb-5" style={{ color: 'var(--text-muted)' }}>
                 Sekce Společnost obsahuje firemní dokumenty, pravidla a znalostní bázi. Moduly jsou dostupné od tarifu Pro.

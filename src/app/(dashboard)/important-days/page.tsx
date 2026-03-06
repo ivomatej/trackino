@@ -354,7 +354,7 @@ CREATE POLICY "Auth full" ON trackino_important_days
                   className="p-1.5 rounded-lg transition-colors"
                   title="Smazat"
                   style={{ color: 'var(--text-muted)' }}
-                  onMouseEnter={e => { e.currentTarget.style.background = '#fee2e2'; e.currentTarget.style.color = '#ef4444'; }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--danger-light)'; e.currentTarget.style.color = 'var(--danger)'; }}
                   onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; }}
                 >
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -372,8 +372,8 @@ CREATE POLICY "Auth full" ON trackino_important_days
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
           <div
-            className="w-full max-w-md rounded-2xl shadow-2xl p-6"
-            style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+            className="w-full max-w-md rounded-xl shadow-xl border p-6"
+            style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}
           >
             <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
               {editEntry ? 'Upravit záznam' : 'Nový důležitý den'}
@@ -497,7 +497,7 @@ CREATE POLICY "Auth full" ON trackino_important_days
 
               {/* Chyba */}
               {formError && (
-                <p className="text-xs rounded-lg px-3 py-2" style={{ background: '#fee2e2', color: '#dc2626' }}>{formError}</p>
+                <p className="text-xs rounded-lg px-3 py-2" style={{ background: 'var(--danger-light)', color: 'var(--danger)' }}>{formError}</p>
               )}
             </div>
 

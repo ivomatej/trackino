@@ -117,7 +117,7 @@ function AuditContent() {
             <p className="text-sm">Zatím žádné záznamy v audit logu.</p>
           </div>
         ) : (
-          <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+          <div className="rounded-xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
             {entries.map((entry, idx) => {
               const actor = profiles[entry.actor_user_id];
               const target = entry.target_user_id ? profiles[entry.target_user_id] : null;

@@ -1219,7 +1219,7 @@ function CalendarContent() {
       {/* ══ MODAL – Nastavení kalendáře ════════════════════════════════════════ */}
       {showCalSettings && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="w-full max-w-sm rounded-2xl shadow-2xl p-6" style={{ background: 'var(--bg-card)' }}>
+          <div className="w-full max-w-sm rounded-xl shadow-xl border p-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Nastavení kalendáře</h2>
               <button onClick={() => setShowCalSettings(false)} className="p-1 rounded" style={{ color: 'var(--text-muted)' }}>
@@ -1283,7 +1283,7 @@ function CalendarContent() {
       {/* ══ MODAL – Nová / Upravit událost ════════════════════════════════════ */}
       {showEventForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="w-full max-w-md rounded-2xl shadow-2xl p-6" style={{ background: 'var(--bg-card)' }}>
+          <div className="w-full max-w-md rounded-xl shadow-xl border p-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
                 {editingEvent ? 'Upravit událost' : 'Nová událost'}
@@ -1461,7 +1461,7 @@ function CalendarContent() {
       {/* ══ MODAL – Nový / Upravit kalendář ══════════════════════════════════ */}
       {showCalendarForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="w-full max-w-sm rounded-2xl shadow-2xl p-6" style={{ background: 'var(--bg-card)' }}>
+          <div className="w-full max-w-sm rounded-xl shadow-xl border p-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
                 {editingCalendar ? 'Upravit kalendář' : 'Nový kalendář'}

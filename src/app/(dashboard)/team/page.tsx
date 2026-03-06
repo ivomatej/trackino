@@ -601,7 +601,7 @@ function TeamContent() {
                         Čeká na schválení
                         <span
                           className="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[10px] font-bold text-white"
-                          style={{ background: '#ef4444' }}
+                          style={{ background: 'var(--danger)' }}
                         >
                           {members.filter(m => !m.approved).length}
                         </span>
@@ -1029,7 +1029,7 @@ function TeamContent() {
           <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={() => setEditingMember(null)} />
 
           <div
-            className="relative w-full max-w-md rounded-2xl shadow-2xl z-10 flex flex-col"
+            className="relative w-full max-w-md rounded-xl shadow-xl z-10 flex flex-col"
             style={{ maxHeight: '90vh', background: 'var(--bg-card)', border: '1px solid var(--border)' }}
           >
             {/* Header */}

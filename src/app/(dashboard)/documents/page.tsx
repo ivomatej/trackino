@@ -526,7 +526,7 @@ function DocumentsContent() {
       {/* ── Modal: Složka ── */}
       {folderModal.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.5)' }}>
-          <div className="rounded-2xl shadow-xl p-6 w-full max-w-sm" style={{ background: 'var(--bg-card)' }}>
+          <div className="rounded-xl shadow-xl border p-6 w-full max-w-sm" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
             <h2 className="text-base font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
               {folderModal.id ? 'Upravit složku' : 'Nová složka'}
             </h2>
@@ -581,7 +581,7 @@ function DocumentsContent() {
       {/* ── Modal: Přidat dokument ── */}
       {docForm.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.5)' }}>
-          <div className="rounded-2xl shadow-xl p-6 w-full max-w-md" style={{ background: 'var(--bg-card)' }}>
+          <div className="rounded-xl shadow-xl border p-6 w-full max-w-md" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
             <h2 className="text-base font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Přidat dokument</h2>
 
             {/* Přepínač soubor / odkaz */}

@@ -720,7 +720,7 @@ function InvoicesContent() {
           if (!inv) return null;
           return (
             <div
-              className="mb-5 rounded-2xl border overflow-hidden"
+              className="mb-5 rounded-xl border overflow-hidden"
               style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}
             >
               <div
@@ -800,7 +800,7 @@ function InvoicesContent() {
 
         {/* Formulář pro podání faktury */}
         {showSubmitForm && canInvoice && (
-          <div className="mb-6 rounded-2xl border p-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+          <div className="mb-6 rounded-xl border p-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
@@ -1073,7 +1073,7 @@ function InvoicesContent() {
           <>
             {/* Moje faktury */}
             {activeTab === 'my' && (
-              <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+              <div className="rounded-xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
                 {myInvoices.length === 0 ? (
                   <div className="px-6 py-16 text-center">
                     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-3" style={{ color: 'var(--text-muted)' }}>
@@ -1092,7 +1092,7 @@ function InvoicesContent() {
 
             {/* Ke schválení */}
             {activeTab === 'approve' && canApprove && (
-              <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+              <div className="rounded-xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
                 {pendingInvoicesFiltered.length === 0 ? (
                   <div className="px-6 py-16 text-center">
                     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-3" style={{ color: 'var(--text-muted)' }}>
@@ -1113,7 +1113,7 @@ function InvoicesContent() {
 
             {/* Přehled faktur */}
             {activeTab === 'billing' && (canManageBilling || isWorkspaceAdmin) && (
-              <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+              <div className="rounded-xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
                 {billingInvoicesFiltered.length === 0 ? (
                   <div className="px-6 py-16 text-center">
                     <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
@@ -1133,7 +1133,7 @@ function InvoicesContent() {
       {approveModalInvoice && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={() => setApproveModalInvoice(null)} />
-          <div className="relative w-full max-w-md rounded-2xl shadow-2xl z-10" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+          <div className="relative w-full max-w-md rounded-xl shadow-xl z-10" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
             <div className="flex items-center justify-between px-6 pt-6 pb-4">
               <div>
                 <h3 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>Schválit fakturu</h3>
@@ -1214,7 +1214,7 @@ function InvoicesContent() {
       {returnModalInvoice && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={() => { setReturnModalInvoice(null); setReturnNote(''); }} />
-          <div className="relative w-full max-w-sm rounded-2xl shadow-2xl z-10" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+          <div className="relative w-full max-w-sm rounded-xl shadow-xl z-10" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
             <div className="px-6 pt-6 pb-6">
               <div className="flex items-center justify-between mb-1">
                 <h3 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>Vrátit fakturu k opravě</h3>
@@ -1265,7 +1265,7 @@ function InvoicesContent() {
       {detailInvoice && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={() => { setDetailInvoice(null); setEditingDetailId(null); }} />
-          <div className="relative w-full max-w-lg rounded-2xl shadow-2xl z-10" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', maxHeight: '90vh', overflowY: 'auto' }}>
+          <div className="relative w-full max-w-lg rounded-xl shadow-xl z-10" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', maxHeight: '90vh', overflowY: 'auto' }}>
 
             {/* Hlavička */}
             <div className="flex items-center justify-between px-6 pt-6 pb-4 sticky top-0" style={{ background: 'var(--bg-card)', borderBottom: '1px solid var(--border)' }}>

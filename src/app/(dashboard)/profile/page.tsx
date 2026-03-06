@@ -86,7 +86,7 @@ function ProfileContent() {
 
         <div className="space-y-5">
           {/* ── Profil ── */}
-          <div className="rounded-2xl border p-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+          <div className="rounded-xl border p-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
             <h2 className="text-sm font-semibold mb-5" style={{ color: 'var(--text-primary)' }}>Profil</h2>
 
             {/* Avatar preview + barva */}
@@ -202,7 +202,7 @@ function ProfileContent() {
           </div>
 
           {/* ── Vzhled ── */}
-          <div className="rounded-2xl border p-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+          <div className="rounded-xl border p-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
             <h2 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Barevný režim</h2>
             <div className="flex gap-3">
               {(['light', 'dark', 'system'] as const).map((t) => (
@@ -224,7 +224,7 @@ function ProfileContent() {
           </div>
 
           {/* ── Zobrazení aplikace ── */}
-          <div className="rounded-2xl border p-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+          <div className="rounded-xl border p-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
             <h2 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Zobrazení aplikace</h2>
             <label
               className="flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-colors"
@@ -248,7 +248,7 @@ function ProfileContent() {
           </div>
 
           {/* ── Info o účtu ── */}
-          <div className="rounded-2xl border p-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+          <div className="rounded-xl border p-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
             <h2 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Informace o účtu</h2>
             <div className="space-y-2 text-xs" style={{ color: 'var(--text-muted)' }}>
               <div className="flex gap-2">
@@ -276,7 +276,7 @@ function ProfileContent() {
               onClick={save}
               disabled={saving}
               className="px-6 py-2.5 rounded-xl text-sm font-medium text-white disabled:opacity-50 transition-all"
-              style={{ background: saved ? '#16a34a' : 'var(--primary)' }}
+              style={{ background: saved ? 'var(--success)' : 'var(--primary)' }}
             >
               {saving ? 'Ukládám...' : saved ? '✓ Uloženo' : 'Uložit změny'}
             </button>

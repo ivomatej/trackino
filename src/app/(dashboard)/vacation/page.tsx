@@ -420,7 +420,7 @@ function VacationContent() {
                 {tab.key === 'requests' && pendingRequestEntries.length > 0 && (
                   <span
                     className="inline-flex items-center justify-center w-4 h-4 rounded-full text-[10px] font-bold text-white"
-                    style={{ background: '#ef4444' }}
+                    style={{ background: 'var(--danger)' }}
                   >
                     {pendingRequestEntries.length}
                   </span>
@@ -720,15 +720,15 @@ function VacationContent() {
                           onClick={() => approveEntry(entry.id)}
                           disabled={approving === entry.id}
                           className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-                          style={{ background: '#16a34a' }}
+                          style={{ background: 'var(--success)' }}
                         >
                           {approving === entry.id ? '...' : '✓ Schválit'}
                         </button>
                         <button
                           onClick={() => setRejectModal({ id: entry.id, note: '' })}
                           className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors border"
-                          style={{ borderColor: '#ef4444', color: '#ef4444', background: 'transparent' }}
-                          onMouseEnter={(e) => { e.currentTarget.style.background = '#fee2e2'; }}
+                          style={{ borderColor: 'var(--danger)', color: 'var(--danger)', background: 'transparent' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--danger-light)'; }}
                           onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                         >
                           ✕ Zamítnout
@@ -749,7 +749,7 @@ function VacationContent() {
           className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/50"
           onClick={e => { if (e.target === e.currentTarget) setRejectModal(null); }}
         >
-          <div className="w-full max-w-md rounded-2xl border shadow-xl" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+          <div className="w-full max-w-md rounded-xl border shadow-xl" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
             <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
               <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>Zamítnout žádost</h2>
               <button
@@ -791,8 +791,8 @@ function VacationContent() {
               <button
                 onClick={rejectEntry}
                 disabled={rejecting}
-                className="px-5 py-2 rounded-lg text-white text-sm font-medium disabled:opacity-50"
-                style={{ background: '#ef4444' }}
+                className="px-4 py-2 rounded-lg text-white text-sm font-medium disabled:opacity-50"
+                style={{ background: 'var(--danger)' }}
               >
                 {rejecting ? 'Ukládám…' : 'Zamítnout'}
               </button>

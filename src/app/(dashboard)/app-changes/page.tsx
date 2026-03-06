@@ -413,10 +413,8 @@ function AppChangesContent() {
             {selectedIds.size > 0 && (
               <button
                 onClick={permanentDeleteSelected}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-colors"
-                style={{ background: '#ef4444' }}
-                onMouseEnter={(e) => e.currentTarget.style.background = '#dc2626'}
-                onMouseLeave={(e) => e.currentTarget.style.background = '#ef4444'}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-colors hover:opacity-90"
+                style={{ background: 'var(--danger)' }}
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6" /><path d="M14 11v6" />
@@ -649,7 +647,7 @@ function AppChangesContent() {
             onClick={(e) => { if (e.target === e.currentTarget) setShowForm(false); }}
           >
             <div
-              className="w-full max-w-2xl rounded-2xl border shadow-xl flex flex-col"
+              className="w-full max-w-2xl rounded-xl border shadow-xl flex flex-col"
               style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', maxHeight: '90vh' }}
             >
               {/* Modal hlavička */}

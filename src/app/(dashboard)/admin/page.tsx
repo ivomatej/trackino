@@ -706,7 +706,7 @@ function AdminContent() {
                       <button
                         onClick={() => hardDeleteWorkspace(ws)}
                         className="px-2.5 py-1 rounded-lg text-xs font-medium text-white transition-colors"
-                        style={{ background: '#dc2626' }}
+                        style={{ background: 'var(--danger)' }}
                         onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
                         onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
                       >
@@ -729,7 +729,7 @@ function AdminContent() {
           onClick={(e) => { if (e.target === e.currentTarget) setEditingWorkspace(null); }}
         >
           <div
-            className="relative w-full max-w-lg rounded-2xl shadow-2xl z-10 flex flex-col"
+            className="relative w-full max-w-lg rounded-xl shadow-xl z-10 flex flex-col"
             style={{ maxHeight: '90vh', background: 'var(--bg-card)', color: 'var(--text-primary)' }}
           >
             {/* Header */}
