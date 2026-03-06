@@ -244,7 +244,7 @@ function parseICS(icsText: string, subId: string, color: string): DisplayEvent[]
     }
 
     result.push({
-      id: `sub-${subId}-${uid.replace(/[^a-zA-Z0-9@._-]/g, '').slice(0, 40)}-${startDate}`,
+      id: `sub-${subId}-${uid.replace(/[^a-zA-Z0-9@._-]/g, '').slice(0, 40)}-${startDate}${startTime ? '-' + startTime.replace(':', '') : ''}`,
       title: summary,
       start_date: startDate,
       end_date: endDate,
@@ -2612,12 +2612,12 @@ function CalendarContent() {
                                         onClick={() => { if (isClickable) { const orig = events.find(x => x.id === ev.source_id); if (orig) openEditEvent(orig); } }}
                                         className="group/ev flex items-start gap-3 p-3 rounded-lg border transition-colors"
                                         style={{
-                                          borderColor: isSelected ? 'var(--primary)' : 'var(--border)',
-                                          background: isSelected ? 'color-mix(in srgb, var(--primary) 6%, var(--bg-card))' : 'var(--bg-card)',
+                                          borderColor: 'var(--border)',
+                                          background: 'var(--bg-card)',
                                           cursor: isClickable ? 'pointer' : 'default',
                                         }}
-                                        onMouseEnter={e => { if (isClickable && !isSelected) e.currentTarget.style.background = 'var(--bg-hover)'; }}
-                                        onMouseLeave={e => { e.currentTarget.style.background = isSelected ? 'color-mix(in srgb, var(--primary) 6%, var(--bg-card))' : 'var(--bg-card)'; }}
+                                        onMouseEnter={e => { if (isClickable) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                                        onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-card)'; }}
                                       >
                                         <div className="w-1 self-stretch rounded-full flex-shrink-0" style={{ background: ev.color }} />
                                         <div className="flex-1 min-w-0">
