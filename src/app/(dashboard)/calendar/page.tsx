@@ -696,7 +696,7 @@ function CalendarContent() {
   // Stránkování a vyhledávání v listovém pohledu
   const [listVisibleCount, setListVisibleCount] = useState(10);
   const [listSearch, setListSearch] = useState('');
-  const [listHistoryMonths, setListHistoryMonths] = useState(0);
+  const [listHistoryCount, setListHistoryCount] = useState(0);
 
   // Odběry externích ICS kalendářů
   const [subscriptions, setSubscriptions] = useState<CalendarSubscription[]>([]);
@@ -745,8 +745,8 @@ function CalendarContent() {
   const [autoExpanded, setAutoExpanded] = useState(true);
   const [otherExpanded, setOtherExpanded] = useState(true);
 
-  // Poznámky k událostem – per-event otevřenost
-  const [openNoteEventIds, setOpenNoteEventIds] = useState<Set<string>>(new Set());
+  // Poznámky k událostem – vybraná událost pro pravý panel
+  const [selectedListEventId, setSelectedListEventId] = useState<string | null>(null);
   const [notesByRef, setNotesByRef] = useState<Record<string, EventNote>>({});
   const notesLoadedRefs = useRef<Set<string>>(new Set());
 
@@ -801,7 +801,8 @@ function CalendarContent() {
   useEffect(() => {
     setListVisibleCount(10);
     setListSearch('');
-    setListHistoryMonths(0);
+    setListHistoryCount(0);
+    setSelectedListEventId(null);
   }, [view, currentDate]);
 
   // Načtení ICS událostí při změně odběrů nebo manuálním refreshi
@@ -1071,7 +1072,7 @@ function CalendarContent() {
       await supabase.from('trackino_calendar_event_notes').delete().eq('id', existing.id);
       setNotesByRef(prev => { const n = { ...prev }; delete n[eventRef]; return n; });
     }
-    setOpenNoteEventIds(prev => { const n = new Set(prev); n.delete(eventRef); return n; });
+    setSelectedListEventId(prev => prev === eventRef ? null : prev);
   }
 
   // ── CRUD – Kalendáře ──────────────────────────────────────────────────────
@@ -1292,11 +1293,11 @@ function CalendarContent() {
       const year = currentDate.getFullYear();
       return { start: new Date(year, 0, 1), end: new Date(year, 11, 31) };
     } else {
-      const start = new Date(currentDate.getFullYear(), currentDate.getMonth() - listHistoryMonths, 1);
+      const start = new Date(currentDate.getFullYear(), currentDate.getMonth() - 24, 1);
       const end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 6, 0);
       return { start, end };
     }
-  }, [view, currentDate, listHistoryMonths]);
+  }, [view, currentDate]);
 
   // ── České státní svátky ───────────────────────────────────────────────────
 
@@ -1716,7 +1717,7 @@ function CalendarContent() {
                     className="w-3.5 h-3.5 rounded cursor-pointer flex-shrink-0"
                     style={{ accentColor: cal.color }}
                   />
-                  <span className="text-sm flex-1 truncate min-w-0" style={{ color: 'var(--text-primary)' }}>
+                  <span className="text-xs flex-1 truncate min-w-0" style={{ color: 'var(--text-primary)' }}>
                     {cal.name}
                   </span>
                   {/* Šipky nahoru/dolů – zobrazí se na hover */}
@@ -2431,131 +2432,157 @@ function CalendarContent() {
 
               {/* ══ LISTOVÝ POHLED ════════════════════════════════════════════ */}
               {view === 'list' && (() => {
-                const totalEvents = filteredListGroups.reduce((sum, g) => sum + g.events.length, 0);
+                const todayStr = toDateStr(today);
 
-                // Vezme první listVisibleCount událostí celkem (přes všechny skupiny)
-                let remaining = listVisibleCount;
-                const visibleGroups = filteredListGroups
-                  .map(group => {
-                    if (remaining <= 0) return null;
-                    const visibleEvents = group.events.slice(0, remaining);
-                    remaining -= visibleEvents.length;
-                    return { ...group, events: visibleEvents };
-                  })
-                  .filter(Boolean) as typeof filteredListGroups;
+                // Všechny události ze skupin
+                const allGroupedEvents = filteredListGroups.flatMap(g => g.events);
+
+                // Rozdělení na minulé a budoucí
+                const pastEvents = allGroupedEvents.filter(ev => ev.start_date < todayStr);
+                const futureEvents = allGroupedEvents.filter(ev => ev.start_date >= todayStr);
+
+                // Viditelné minulé: posledních listHistoryCount (nejstarší první)
+                const visiblePastEvents = listHistoryCount > 0
+                  ? pastEvents.slice(Math.max(0, pastEvents.length - listHistoryCount))
+                  : [];
+                const hasMorePast = pastEvents.length > listHistoryCount;
+                const morePastCount = pastEvents.length - listHistoryCount;
+
+                // Viditelné budoucí: prvních listVisibleCount
+                const visibleFutureEvents = futureEvents.slice(0, listVisibleCount);
+                const hasMoreFuture = futureEvents.length > listVisibleCount;
+
+                // Přeskupení pro zobrazení
+                const allVisible = [...visiblePastEvents, ...visibleFutureEvents];
+                const groupMap = new Map<string, DisplayEvent[]>();
+                for (const ev of allVisible) {
+                  const d = parseDate(ev.start_date);
+                  const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                  if (!groupMap.has(key)) groupMap.set(key, []);
+                  groupMap.get(key)!.push(ev);
+                }
+                const visibleGroups = [...groupMap.entries()]
+                  .sort((a, b) => a[0].localeCompare(b[0]))
+                  .map(([key, evs]) => {
+                    const [y, m] = key.split('-');
+                    return { key, label: `${MONTH_NAMES[parseInt(m) - 1]} ${y}`, events: evs };
+                  });
+
+                // Vybraná událost pro panel poznámek vpravo
+                const selEv = selectedListEventId ? allGroupedEvents.find(e => e.id === selectedListEventId) : null;
+                const selNote = selectedListEventId ? (notesByRef[selectedListEventId] ?? { content: '', tasks: [] }) : null;
 
                 return (
-                  <div className="flex-1 overflow-auto">
-                  <div className="max-w-5xl p-4">
-                    {/* Panel nástrojů: hledání + přepínač poznámek */}
-                    <div className="mb-4 flex items-center gap-2">
+                  <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+                    {/* ── LEVÝ SLOUPEC: seznam událostí ────────────────────── */}
+                    <div className="flex-1 overflow-auto min-w-0">
+                    <div className="max-w-3xl p-4">
                       {/* Vyhledávací pole */}
-                      <div className="flex-1 relative">
-                        <svg
-                          className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-                          width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                          strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                          style={{ color: 'var(--text-muted)' }}
-                        >
-                          <circle cx="11" cy="11" r="8" />
-                          <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                        </svg>
-                        <input
-                          type="text"
-                          value={listSearch}
-                          onChange={e => { setListSearch(e.target.value); setListVisibleCount(10); }}
-                          placeholder="Hledat událost..."
-                          className="w-full pl-9 py-2 rounded-lg border text-base sm:text-sm"
-                          style={{
-                            paddingRight: listSearch ? '2.5rem' : '0.75rem',
-                            borderColor: 'var(--border)',
-                            background: 'var(--bg-hover)',
-                            color: 'var(--text-primary)',
-                          }}
-                        />
-                        {listSearch && (
-                          <button
-                            onClick={() => setListSearch('')}
-                            className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded"
+                      <div className="mb-4 flex items-center gap-2">
+                        <div className="flex-1 relative">
+                          <svg
+                            className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                            width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
                             style={{ color: 'var(--text-muted)' }}
-                            onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
-                            onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
                           >
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                            </svg>
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Tlačítko pro načtení starších událostí */}
-                    {!listSearch && (
-                      <button
-                        onClick={() => setListHistoryMonths(m => m + 6)}
-                        className="w-full py-2 rounded-lg border text-xs font-medium flex items-center justify-center gap-1.5 mb-4 transition-colors"
-                        style={{ borderColor: 'var(--border)', color: 'var(--text-muted)', background: 'var(--bg-card)' }}
-                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
-                        onMouseLeave={e => (e.currentTarget.style.background = 'var(--bg-card)')}
-                      >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="18 15 12 9 6 15"/>
-                        </svg>
-                        Zobrazit dřívější události {listHistoryMonths > 0 ? `(zobrazeno −${listHistoryMonths} měs.)` : ''}
-                      </button>
-                    )}
-
-                    {listGroups.length === 0 ? (
-                      <div className="text-center py-12">
-                        <div className="w-14 h-14 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ background: 'var(--bg-hover)' }}>
-                          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)' }}>
-                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                            <line x1="16" y1="2" x2="16" y2="6" />
-                            <line x1="8" y1="2" x2="8" y2="6" />
-                            <line x1="3" y1="10" x2="21" y2="10" />
+                            <circle cx="11" cy="11" r="8" />
+                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
                           </svg>
+                          <input
+                            type="text"
+                            value={listSearch}
+                            onChange={e => { setListSearch(e.target.value); setListVisibleCount(10); }}
+                            placeholder="Hledat událost..."
+                            className="w-full pl-9 py-2 rounded-lg border text-base sm:text-sm"
+                            style={{
+                              paddingRight: listSearch ? '2.5rem' : '0.75rem',
+                              borderColor: 'var(--border)',
+                              background: 'var(--bg-hover)',
+                              color: 'var(--text-primary)',
+                            }}
+                          />
+                          {listSearch && (
+                            <button
+                              onClick={() => setListSearch('')}
+                              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded"
+                              style={{ color: 'var(--text-muted)' }}
+                              onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
+                              onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+                            >
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                              </svg>
+                            </button>
+                          )}
                         </div>
-                        <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>Žádné události v tomto období</p>
-                        <button onClick={() => openNewEvent()} className="px-4 py-2 rounded-lg text-sm font-medium text-white" style={{ background: 'var(--primary)' }}>
-                          Přidat první událost
+                      </div>
+
+                      {/* Tlačítko: načíst 10 starších událostí */}
+                      {!listSearch && hasMorePast && (
+                        <button
+                          onClick={() => setListHistoryCount(n => n + 10)}
+                          className="w-full py-2 rounded-lg border text-xs font-medium flex items-center justify-center gap-1.5 mb-4 transition-colors"
+                          style={{ borderColor: 'var(--border)', color: 'var(--text-muted)', background: 'var(--bg-card)' }}
+                          onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+                          onMouseLeave={e => (e.currentTarget.style.background = 'var(--bg-card)')}
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="18 15 12 9 6 15"/>
+                          </svg>
+                          Zobrazit dřívější události {listHistoryCount > 0 ? `(ještě ${morePastCount})` : ''}
                         </button>
-                      </div>
-                    ) : filteredListGroups.length === 0 ? (
-                      <div className="text-center py-10">
-                        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                          Žádné výsledky pro „{listSearch}"
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="space-y-6">
-                        {visibleGroups.map(group => (
-                          <div key={group.key}>
-                            <h3 className="text-sm font-semibold capitalize mb-2 pb-1 border-b" style={{ color: 'var(--text-muted)', borderColor: 'var(--border)' }}>
-                              {group.label}
-                            </h3>
-                            <div className="space-y-2">
-                              {group.events.map(ev => {
-                                const evStart = parseDate(ev.start_date);
-                                const evEnd = parseDate(ev.end_date);
-                                const multiDay = ev.start_date !== ev.end_date;
-                                const isClickable = ev.source === 'manual';
-                                const evNote = notesByRef[ev.id];
-                                const noteHasContent = !!(evNote?.content || (evNote?.tasks?.length ?? 0) > 0);
-                                const noteVisible = noteHasContent || openNoteEventIds.has(ev.id);
-                                return (
-                                  <div key={ev.id} className="flex items-start gap-3">
-                                    {/* Karta události – při zobrazené poznámce má fixní šířku */}
+                      )}
+
+                      {listGroups.length === 0 ? (
+                        <div className="text-center py-12">
+                          <div className="w-14 h-14 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ background: 'var(--bg-hover)' }}>
+                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)' }}>
+                              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                              <line x1="16" y1="2" x2="16" y2="6" />
+                              <line x1="8" y1="2" x2="8" y2="6" />
+                              <line x1="3" y1="10" x2="21" y2="10" />
+                            </svg>
+                          </div>
+                          <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>Žádné události v tomto období</p>
+                          <button onClick={() => openNewEvent()} className="px-4 py-2 rounded-lg text-sm font-medium text-white" style={{ background: 'var(--primary)' }}>
+                            Přidat první událost
+                          </button>
+                        </div>
+                      ) : filteredListGroups.length === 0 ? (
+                        <div className="text-center py-10">
+                          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                            Žádné výsledky pro „{listSearch}"
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-6">
+                          {visibleGroups.map(group => (
+                            <div key={group.key}>
+                              <h3 className="text-sm font-semibold capitalize mb-2 pb-1 border-b" style={{ color: 'var(--text-muted)', borderColor: 'var(--border)' }}>
+                                {group.label}
+                              </h3>
+                              <div className="space-y-2">
+                                {group.events.map(ev => {
+                                  const evStart = parseDate(ev.start_date);
+                                  const evEnd = parseDate(ev.end_date);
+                                  const multiDay = ev.start_date !== ev.end_date;
+                                  const isClickable = ev.source === 'manual';
+                                  const evNote = notesByRef[ev.id];
+                                  const noteHasContent = !!(evNote?.content || (evNote?.tasks?.length ?? 0) > 0);
+                                  const isSelected = selectedListEventId === ev.id;
+                                  return (
                                     <div
+                                      key={ev.id}
                                       onClick={() => { if (isClickable) { const orig = events.find(x => x.id === ev.source_id); if (orig) openEditEvent(orig); } }}
-                                      className={`group/ev flex items-start gap-3 p-3 rounded-lg border transition-colors min-w-0 ${noteVisible ? 'flex-shrink-0' : 'flex-1'}`}
+                                      className="group/ev flex items-start gap-3 p-3 rounded-lg border transition-colors"
                                       style={{
-                                        borderColor: 'var(--border)',
-                                        background: 'var(--bg-card)',
+                                        borderColor: isSelected ? 'var(--primary)' : 'var(--border)',
+                                        background: isSelected ? 'color-mix(in srgb, var(--primary) 6%, var(--bg-card))' : 'var(--bg-card)',
                                         cursor: isClickable ? 'pointer' : 'default',
-                                        width: noteVisible ? 340 : undefined,
                                       }}
-                                      onMouseEnter={e => { if (isClickable) e.currentTarget.style.background = 'var(--bg-hover)'; }}
-                                      onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-card)'; }}
+                                      onMouseEnter={e => { if (isClickable && !isSelected) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                                      onMouseLeave={e => { e.currentTarget.style.background = isSelected ? 'color-mix(in srgb, var(--primary) 6%, var(--bg-card))' : 'var(--bg-card)'; }}
                                     >
                                       <div className="w-1 self-stretch rounded-full flex-shrink-0" style={{ background: ev.color }} />
                                       <div className="flex-1 min-w-0">
@@ -2578,27 +2605,22 @@ function CalendarContent() {
                                           <div className="text-xs mt-1 truncate" style={{ color: 'var(--text-muted)' }}>{ev.description}</div>
                                         )}
                                       </div>
-                                      {/* Tlačítko pro přidání/zobrazení poznámky – viditelné při hoveru na kartě */}
+                                      {/* Tlačítko pro otevření panelu poznámek vpravo */}
                                       <button
                                         onClick={e => {
                                           e.stopPropagation();
-                                          setOpenNoteEventIds(prev => {
-                                            const next = new Set(prev);
-                                            if (next.has(ev.id)) next.delete(ev.id);
-                                            else next.add(ev.id);
-                                            return next;
-                                          });
+                                          setSelectedListEventId(prev => prev === ev.id ? null : ev.id);
                                         }}
-                                        className={`flex-shrink-0 p-1 rounded transition-all ${noteHasContent ? 'opacity-60' : 'opacity-0'} group-hover/ev:opacity-100`}
+                                        className={`flex-shrink-0 p-1 rounded transition-all ${isSelected || noteHasContent ? 'opacity-70' : 'opacity-0'} group-hover/ev:opacity-100`}
                                         style={{
-                                          color: noteHasContent ? 'var(--primary)' : 'var(--text-muted)',
+                                          color: isSelected || noteHasContent ? 'var(--primary)' : 'var(--text-muted)',
                                           background: 'none',
                                           border: 'none',
                                           cursor: 'pointer',
                                         }}
                                         onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
                                         onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}
-                                        title={noteVisible ? 'Skrýt poznámku' : 'Přidat / zobrazit poznámku'}
+                                        title={isSelected ? 'Skrýt poznámku' : 'Přidat / zobrazit poznámku'}
                                       >
                                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
@@ -2606,41 +2628,69 @@ function CalendarContent() {
                                         </svg>
                                       </button>
                                     </div>
-                                    {/* Panel poznámek – zobrazí se jen pokud má obsah nebo je otevřený */}
-                                    {noteVisible && (
-                                      <NotePanel
-                                        key={`${ev.id}-${evNote?.id ?? 'new'}`}
-                                        eventRef={ev.id}
-                                        note={evNote ?? { content: '', tasks: [] }}
-                                        onSave={handleNoteSave}
-                                        onDelete={handleNoteDelete}
-                                      />
-                                    )}
-                                  </div>
-                                );
-                              })}
+                                  );
+                                })}
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
 
-                        {/* Tlačítko Zobrazit více */}
-                        {totalEvents > listVisibleCount && (
+                          {/* Tlačítko Zobrazit více */}
+                          {!listSearch && hasMoreFuture && (
+                            <button
+                              onClick={() => setListVisibleCount(c => c + 10)}
+                              className="w-full py-2.5 rounded-lg border text-sm font-medium flex items-center justify-center gap-2 transition-colors"
+                              style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)', background: 'var(--bg-card)' }}
+                              onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+                              onMouseLeave={e => (e.currentTarget.style.background = 'var(--bg-card)')}
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="6 9 12 15 18 9" />
+                              </svg>
+                              Zobrazit více ({futureEvents.length - listVisibleCount} dalších)
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    </div>
+
+                    {/* ── PRAVÝ SLOUPEC: panel poznámek ────────────────────── */}
+                    {selEv && selNote && (
+                      <div
+                        className="md:w-[360px] flex-shrink-0 border-t md:border-t-0 md:border-l flex flex-col"
+                        style={{ borderColor: 'var(--border)', background: 'var(--bg-card)' }}
+                      >
+                        {/* Záhlaví panelu */}
+                        <div className="flex items-center justify-between p-3 border-b gap-2 flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: selEv.color }} />
+                            <span className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{selEv.title}</span>
+                          </div>
                           <button
-                            onClick={() => setListVisibleCount(c => c + 10)}
-                            className="w-full py-2.5 rounded-lg border text-sm font-medium flex items-center justify-center gap-2 transition-colors"
-                            style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)', background: 'var(--bg-card)' }}
-                            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
-                            onMouseLeave={e => (e.currentTarget.style.background = 'var(--bg-card)')}
+                            onClick={() => setSelectedListEventId(null)}
+                            className="flex-shrink-0 p-1 rounded transition-colors"
+                            style={{ color: 'var(--text-muted)', background: 'none' }}
+                            onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}
+                            title="Zavřít panel poznámek"
                           >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                              <polyline points="6 9 12 15 18 9" />
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
                             </svg>
-                            Zobrazit více ({totalEvents - listVisibleCount} dalších)
                           </button>
-                        )}
+                        </div>
+                        {/* NotePanel */}
+                        <div className="flex-1 overflow-auto p-2 flex flex-col">
+                          <NotePanel
+                            key={`right-${selectedListEventId}-${selNote.id ?? 'new'}`}
+                            eventRef={selectedListEventId!}
+                            note={selNote}
+                            onSave={handleNoteSave}
+                            onDelete={(ref) => { handleNoteDelete(ref); setSelectedListEventId(null); }}
+                          />
+                        </div>
                       </div>
                     )}
-                  </div>
                   </div>
                 );
               })()}
