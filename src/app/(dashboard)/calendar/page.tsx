@@ -2512,7 +2512,7 @@ function CalendarContent() {
 
                 return (
                   <div className="flex-1 overflow-auto">
-                    <div className="max-w-5xl p-4">
+                    <div className="max-w-7xl p-4">
                       {/* Vyhledávací pole */}
                       <div className="mb-4 flex items-center gap-2">
                         <div className="flex-1 relative">
@@ -2665,9 +2665,9 @@ function CalendarContent() {
                                           </svg>
                                         </button>
                                       </div>
-                                      <div className="w-[340px] flex-shrink-0">
+                                      <div className="w-[520px] flex-shrink-0">
                                         {noteVisible && (
-                                          <div className="overflow-y-auto max-h-[220px]">
+                                          <div className="overflow-y-auto max-h-[300px]">
                                             <NotePanel
                                               key={`inline-${ev.id}-${evNote?.id ?? 'new'}`}
                                               eventRef={ev.id}
