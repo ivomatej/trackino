@@ -303,6 +303,20 @@ interface EventNote {
   is_favorite?: boolean;
 }
 
+/** Poznámka, jejíž původní událost již neexistuje */
+interface OrphanNote {
+  id: string;
+  event_ref: string;
+  event_title: string;
+  event_date: string;
+  content: string;
+  tasks: TaskItem[];
+  is_important: boolean;
+  is_done: boolean;
+  is_favorite: boolean;
+  updated_at: string;
+}
+
 /** Převede HTML na prostý text (stripuje tagy) */
 function stripHtmlToText(html: string): string {
   const tmp = document.createElement('div');
@@ -801,6 +815,11 @@ function CalendarContent() {
   const [notesByRef, setNotesByRef] = useState<Record<string, EventNote>>({});
   const notesLoadedRefs = useRef<Set<string>>(new Set());
 
+  // Sirotčí poznámky (bez přiřazené události)
+  const [showOrphanPanel, setShowOrphanPanel] = useState(false);
+  const [orphanNotes, setOrphanNotes] = useState<OrphanNote[]>([]);
+  const [orphanLoading, setOrphanLoading] = useState(false);
+
   const initializedRef = useRef(false);
 
   // ── Sync nastavení kalendáře z profilu ────────────────────────────────────
@@ -1097,7 +1116,9 @@ function CalendarContent() {
     eventRef: string,
     content: string,
     tasks: TaskItem[],
-    meta: { is_important: boolean; is_done: boolean; is_favorite: boolean } = { is_important: false, is_done: false, is_favorite: false }
+    meta: { is_important: boolean; is_done: boolean; is_favorite: boolean } = { is_important: false, is_done: false, is_favorite: false },
+    eventTitle = '',
+    eventDate = ''
   ) {
     if (!currentWorkspace || !user) return;
     // Upsert – bezpečné pro insert i update, řeší UNIQUE (workspace_id, user_id, event_ref)
@@ -1112,6 +1133,8 @@ function CalendarContent() {
           is_important: meta.is_important,
           is_done: meta.is_done,
           is_favorite: meta.is_favorite,
+          event_title: eventTitle,
+          event_date: eventDate,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'workspace_id,user_id,event_ref' }
@@ -1134,6 +1157,57 @@ function CalendarContent() {
       setNotesByRef(prev => { const n = { ...prev }; delete n[eventRef]; return n; });
     }
     setOpenNoteEventIds(prev => { const n = new Set(prev); n.delete(eventRef); return n; });
+  }
+
+  /** Načte všechny poznámky a najde ty bez přiřazené události */
+  async function fetchOrphanNotes() {
+    if (!currentWorkspace || !user) return;
+    setOrphanLoading(true);
+
+    // 1. Načti všechny poznámky uživatele v tomto workspace
+    const { data: allNotes, error } = await supabase
+      .from('trackino_calendar_event_notes')
+      .select('*')
+      .eq('workspace_id', currentWorkspace.id)
+      .eq('user_id', user.id)
+      .order('updated_at', { ascending: false });
+
+    if (error || !allNotes) { setOrphanLoading(false); return; }
+
+    // 2. Aktuálně viditelné event_refs (z displayEvents)
+    const visibleRefs = new Set(displayEvents.map(ev => ev.id));
+
+    // 3. Pro ruční události (UUID – nezačínají na 'sub-') ověř existenci v DB
+    const uuidRefs = allNotes.map(n => n.event_ref).filter(r => !r.startsWith('sub-'));
+    const existingManualIds = new Set<string>();
+    if (uuidRefs.length > 0) {
+      const { data: existing } = await supabase
+        .from('trackino_calendar_events')
+        .select('id')
+        .eq('workspace_id', currentWorkspace.id)
+        .in('id', uuidRefs);
+      existing?.forEach(e => existingManualIds.add(e.id));
+    }
+
+    // 4. Vyfiltruj sirotky
+    const orphans = allNotes.filter(n => {
+      if (n.event_ref.startsWith('sub-')) {
+        // ICS událost: sirotek pokud není ve viditelném rozsahu (24 měsíců zpět)
+        return !visibleRefs.has(n.event_ref);
+      } else {
+        // Ruční událost: sirotek pokud neexistuje v DB
+        return !existingManualIds.has(n.event_ref);
+      }
+    });
+
+    setOrphanNotes(orphans as OrphanNote[]);
+    setOrphanLoading(false);
+  }
+
+  /** Trvale smaže sirotčí poznámku */
+  async function deleteOrphanNote(id: string) {
+    await supabase.from('trackino_calendar_event_notes').delete().eq('id', id);
+    setOrphanNotes(prev => prev.filter(n => n.id !== id));
   }
 
   // ── CRUD – Kalendáře ──────────────────────────────────────────────────────
@@ -2532,7 +2606,7 @@ function CalendarContent() {
                 return (
                   <div className="flex-1 overflow-auto">
                     <div className="max-w-7xl p-4">
-                      {/* Vyhledávací pole */}
+                      {/* Vyhledávací pole + tlačítko Sirotčí poznámky */}
                       <div className="mb-4 flex items-center gap-2">
                         <div className="flex-1 relative">
                           <svg
@@ -2571,7 +2645,170 @@ function CalendarContent() {
                             </button>
                           )}
                         </div>
+
+                        {/* Tlačítko: Sirotčí poznámky */}
+                        <button
+                          onClick={() => {
+                            const next = !showOrphanPanel;
+                            setShowOrphanPanel(next);
+                            if (next) fetchOrphanNotes();
+                          }}
+                          className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-medium transition-colors"
+                          style={{
+                            borderColor: showOrphanPanel ? 'var(--primary)' : 'var(--border)',
+                            color: showOrphanPanel ? 'var(--primary)' : 'var(--text-muted)',
+                            background: showOrphanPanel ? 'color-mix(in srgb, var(--primary) 8%, transparent)' : 'var(--bg-card)',
+                          }}
+                          onMouseEnter={e => { if (!showOrphanPanel) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                          onMouseLeave={e => { if (!showOrphanPanel) e.currentTarget.style.background = 'var(--bg-card)'; }}
+                          title="Zobrazit poznámky, jejichž událost již neexistuje"
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                            <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/>
+                          </svg>
+                          <span className="hidden sm:inline">Bez události</span>
+                          {orphanNotes.length > 0 && (
+                            <span className="inline-flex items-center justify-center w-4 h-4 rounded-full text-[10px] font-bold text-white" style={{ background: '#ef4444' }}>
+                              {orphanNotes.length}
+                            </span>
+                          )}
+                        </button>
                       </div>
+
+                      {/* Panel: Sirotčí poznámky */}
+                      {showOrphanPanel && (
+                        <div className="mb-5 rounded-xl border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
+                          {/* Záhlaví */}
+                          <div className="flex items-center justify-between px-4 py-2.5 border-b text-xs font-semibold" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-secondary)' }}>
+                            <div className="flex items-center gap-2">
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                              </svg>
+                              Poznámky bez události
+                              {!orphanLoading && <span className="font-normal" style={{ color: 'var(--text-muted)' }}>({orphanNotes.length})</span>}
+                            </div>
+                            <button
+                              onClick={() => setShowOrphanPanel(false)}
+                              className="p-0.5 rounded transition-colors"
+                              style={{ color: 'var(--text-muted)' }}
+                              onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
+                              onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+                            >
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                              </svg>
+                            </button>
+                          </div>
+
+                          {/* Obsah */}
+                          {orphanLoading ? (
+                            <div className="flex items-center justify-center py-8 gap-2 text-xs" style={{ color: 'var(--text-muted)' }}>
+                              <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                              </svg>
+                              Načítám…
+                            </div>
+                          ) : orphanNotes.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-8 gap-2">
+                              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)' }}>
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                                <polyline points="22 4 12 14.01 9 11.01"/>
+                              </svg>
+                              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Žádné sirotčí poznámky</p>
+                            </div>
+                          ) : (
+                            <div className="divide-y" style={{ divideColor: 'var(--border)' }}>
+                              {orphanNotes.map(on => {
+                                const hasContent = !!(on.content && on.content !== '<br>');
+                                const tasksDone = on.tasks.filter(t => t.checked).length;
+                                const dateLabel = on.event_date
+                                  ? (() => {
+                                      try {
+                                        return parseDate(on.event_date).toLocaleDateString('cs-CZ', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' });
+                                      } catch { return on.event_date; }
+                                    })()
+                                  : null;
+                                const isIcs = on.event_ref.startsWith('sub-');
+                                return (
+                                  <div key={on.id} className="flex items-start gap-3 px-4 py-3 group/orphan" style={{ background: 'var(--bg-card)' }}
+                                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+                                    onMouseLeave={e => (e.currentTarget.style.background = 'var(--bg-card)')}
+                                  >
+                                    {/* Barevný proužek / ikonka stavu */}
+                                    <div className="flex flex-col items-center gap-1 pt-0.5 flex-shrink-0">
+                                      <div className="w-1 h-8 rounded-full" style={{ background: on.is_important ? '#ef4444' : on.is_favorite ? '#f59e0b' : 'var(--border)' }} />
+                                    </div>
+
+                                    {/* Obsah */}
+                                    <div className="flex-1 min-w-0">
+                                      {/* Název události */}
+                                      <div className="flex items-center gap-1.5 flex-wrap">
+                                        <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                                          {on.event_title || '(Bez názvu)'}
+                                        </span>
+                                        {on.is_important && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: '#fef2f2', color: '#ef4444' }}>Důležitá</span>}
+                                        {on.is_favorite && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: '#fffbeb', color: '#f59e0b' }}>Oblíbená</span>}
+                                        {on.is_done && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>Hotovo</span>}
+                                      </div>
+
+                                      {/* Datum + typ */}
+                                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                        {dateLabel && (
+                                          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                                            📅 {dateLabel}
+                                          </span>
+                                        )}
+                                        {isIcs && (
+                                          <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>
+                                            Ext. kalendář
+                                          </span>
+                                        )}
+                                        {on.tasks.length > 0 && (
+                                          <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+                                            ✓ {tasksDone}/{on.tasks.length} úkolů
+                                          </span>
+                                        )}
+                                        <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+                                          Upraveno {(() => { try { return new Date(on.updated_at).toLocaleDateString('cs-CZ'); } catch { return ''; } })()}
+                                        </span>
+                                      </div>
+
+                                      {/* Náhled obsahu */}
+                                      {hasContent && (
+                                        <div className="mt-1 text-xs line-clamp-2" style={{ color: 'var(--text-secondary)' }}
+                                          dangerouslySetInnerHTML={{ __html: on.content }}
+                                        />
+                                      )}
+                                    </div>
+
+                                    {/* Tlačítko smazat */}
+                                    <button
+                                      onClick={() => deleteOrphanNote(on.id)}
+                                      className="flex-shrink-0 p-1.5 rounded opacity-0 group-hover/orphan:opacity-100 transition-opacity"
+                                      style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer' }}
+                                      onMouseEnter={e => (e.currentTarget.style.background = '#fef2f2')}
+                                      onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                                      title="Trvale smazat poznámku"
+                                    >
+                                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                                      </svg>
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+
+                          {/* Popis pro ICS poznámky */}
+                          {!orphanLoading && orphanNotes.some(n => n.event_ref.startsWith('sub-')) && (
+                            <div className="px-4 py-2 border-t text-[10px]" style={{ borderColor: 'var(--border)', color: 'var(--text-muted)', background: 'var(--bg-hover)' }}>
+                              Poznámky z externích kalendářů jsou zobrazeny jako sirotčí, pokud jejich událost není v aktuálním rozsahu (24 měsíců zpět). Mohla být přesunuta mimo tento rozsah nebo smazána.
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                       {/* Tlačítko: načíst 10 starších událostí */}
                       {!listSearch && hasMorePast && (
@@ -2691,7 +2928,7 @@ function CalendarContent() {
                                               key={`inline-${ev.id}-${evNote?.id ?? 'new'}`}
                                               eventRef={ev.id}
                                               note={evNote ?? { content: '', tasks: [] }}
-                                              onSave={handleNoteSave}
+                                              onSave={(ref, content, tasks, meta) => handleNoteSave(ref, content, tasks, meta, ev.title, ev.start_date)}
                                               onDelete={handleNoteDelete}
                                             />
                                           </div>
