@@ -321,10 +321,11 @@ function NotePanel({
   onDelete: (eventRef: string) => void;
 }) {
   const editorRef = useRef<HTMLDivElement>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [localTasks, setLocalTasks] = useState<TaskItem[]>(note.tasks);
   const [isEmpty, setIsEmpty] = useState(!note.content);
+  const [isDirty, setIsDirty] = useState(false);
   const savedContentRef = useRef(note.content);
+  const savedTasksRef = useRef<TaskItem[]>(note.tasks);
   const taskInputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
   const [focusLastTask, setFocusLastTask] = useState(false);
 
@@ -352,18 +353,6 @@ function NotePanel({
     }
   }, [focusLastTask, localTasks]);
 
-  function schedule(content: string, tasks: TaskItem[]) {
-    clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => onSave(eventRef, content, tasks, metaRef.current), 800);
-  }
-
-  function saveMetaImmediate(meta: { is_important: boolean; is_done: boolean; is_favorite: boolean }) {
-    clearTimeout(timerRef.current);
-    const html = editorRef.current?.innerHTML ?? '';
-    const empty = !html || html === '<br>';
-    onSave(eventRef, empty ? '' : html, localTasks, meta);
-  }
-
   function execFmt(cmd: string) {
     editorRef.current?.focus();
     document.execCommand(cmd, false);
@@ -373,11 +362,11 @@ function NotePanel({
     const html = editorRef.current?.innerHTML ?? '';
     const empty = !html || html === '<br>';
     setIsEmpty(empty);
-    schedule(empty ? '' : html, localTasks);
+    setIsDirty(true);
   }
 
   function handleBlur() {
-    // Auto-linkify URLs při opuštění editoru
+    // Auto-linkify URLs při opuštění editoru (bez auto-save)
     if (!editorRef.current) return;
     const html = editorRef.current.innerHTML;
     const linked = linkifyHtml(html);
@@ -385,7 +374,7 @@ function NotePanel({
       editorRef.current.innerHTML = linked;
       const empty = !linked || linked === '<br>';
       setIsEmpty(empty);
-      schedule(empty ? '' : linked, localTasks);
+      setIsDirty(true);
     }
   }
 
@@ -397,6 +386,31 @@ function NotePanel({
       const href = anchor.getAttribute('href');
       if (href) window.open(href, '_blank', 'noopener,noreferrer');
     }
+  }
+
+  function save() {
+    const html = editorRef.current?.innerHTML ?? '';
+    const empty = !html || html === '<br>';
+    const content = empty ? '' : html;
+    savedContentRef.current = content;
+    savedTasksRef.current = localTasks;
+    onSave(eventRef, content, localTasks, metaRef.current);
+    setIsDirty(false);
+  }
+
+  function cancel() {
+    if (editorRef.current) {
+      editorRef.current.innerHTML = savedContentRef.current;
+      setIsEmpty(!savedContentRef.current || savedContentRef.current === '<br>');
+    }
+    setLocalTasks(savedTasksRef.current);
+    setIsDirty(false);
+  }
+
+  function saveMetaImmediate(meta: { is_important: boolean; is_done: boolean; is_favorite: boolean }) {
+    const html = editorRef.current?.innerHTML ?? '';
+    const empty = !html || html === '<br>';
+    onSave(eventRef, empty ? '' : html, localTasks, meta);
   }
 
   function toggleImportant() {
@@ -436,26 +450,26 @@ function NotePanel({
   function toggleTask(id: string) {
     const next = localTasks.map(t => t.id === id ? { ...t, checked: !t.checked } : t);
     setLocalTasks(next);
-    schedule(editorRef.current?.innerHTML ?? '', next);
+    setIsDirty(true);
   }
 
   function updateTaskText(id: string, text: string) {
     const next = localTasks.map(t => t.id === id ? { ...t, text } : t);
     setLocalTasks(next);
-    schedule(editorRef.current?.innerHTML ?? '', next);
+    setIsDirty(true);
   }
 
   function addTask() {
     const next = [...localTasks, { id: crypto.randomUUID(), text: '', checked: false }];
     setLocalTasks(next);
     setFocusLastTask(true);
-    schedule(editorRef.current?.innerHTML ?? '', next);
+    setIsDirty(true);
   }
 
   function removeTask(id: string) {
     const next = localTasks.filter(t => t.id !== id);
     setLocalTasks(next);
-    schedule(editorRef.current?.innerHTML ?? '', next);
+    setIsDirty(true);
   }
 
   const btnStyle = {
@@ -474,9 +488,8 @@ function NotePanel({
       style={{ borderColor, background: bgColor, opacity: isDone ? 0.7 : 1, transition: 'border-color 0.15s, background 0.15s' }}
       onClick={e => e.stopPropagation()}
     >
-      {/* Toolbar */}
+      {/* Toolbar – formátování + kopírovat + koš */}
       <div className="flex items-center gap-0.5 flex-wrap">
-        {/* Formátování */}
         {(['bold', 'italic', 'underline'] as const).map((cmd, idx) => (
           <button
             key={cmd}
@@ -490,14 +503,12 @@ function NotePanel({
           </button>
         ))}
         <div style={{ width: 1, height: 12, background: 'var(--border)', margin: '0 2px', flexShrink: 0 }} />
-        {/* Odrážkový seznam */}
         <button onMouseDown={e => { e.preventDefault(); execFmt('insertUnorderedList'); }} style={btnStyle} title="Odrážkový seznam" onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/>
             <circle cx="4" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1.5" fill="currentColor" stroke="none"/>
           </svg>
         </button>
-        {/* Číselný seznam */}
         <button onMouseDown={e => { e.preventDefault(); execFmt('insertOrderedList'); }} style={btnStyle} title="Číselný seznam" onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/>
@@ -505,56 +516,11 @@ function NotePanel({
           </svg>
         </button>
         <div style={{ width: 1, height: 12, background: 'var(--border)', margin: '0 2px', flexShrink: 0 }} />
-        {/* Praporek – důležitá */}
-        <button
-          onMouseDown={e => { e.preventDefault(); toggleImportant(); }}
-          style={{ ...btnStyle, color: isImportant ? '#ef4444' : 'var(--text-secondary)' }}
-          title={isImportant ? 'Zrušit označení důležité' : 'Označit jako důležitou'}
-          onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
-          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-        >
-          <svg width="10" height="10" viewBox="0 0 24 24" fill={isImportant ? '#ef4444' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>
-          </svg>
-        </button>
-        {/* Check – hotová */}
-        <button
-          onMouseDown={e => { e.preventDefault(); toggleDone(); }}
-          style={{ ...btnStyle, color: isDone ? '#22c55e' : 'var(--text-secondary)' }}
-          title={isDone ? 'Znovu otevřít' : 'Označit jako hotovou'}
-          onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
-          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-        >
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={isDone ? 3 : 2} strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="20 6 9 17 4 12"/>
-          </svg>
-        </button>
-        {/* Hvězdička – oblíbená */}
-        <button
-          onMouseDown={e => { e.preventDefault(); toggleFavorite(); }}
-          style={{ ...btnStyle, color: isFavorite ? '#f59e0b' : 'var(--text-secondary)' }}
-          title={isFavorite ? 'Zrušit oblíbenou' : 'Přidat do oblíbených'}
-          onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
-          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-        >
-          <svg width="10" height="10" viewBox="0 0 24 24" fill={isFavorite ? '#f59e0b' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-          </svg>
-        </button>
-        <div style={{ width: 1, height: 12, background: 'var(--border)', margin: '0 2px', flexShrink: 0 }} />
-        {/* Kopírovat */}
-        <button
-          onMouseDown={e => { e.preventDefault(); copyContent(); }}
-          style={btnStyle}
-          title="Kopírovat obsah poznámky"
-          onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
-          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-        >
+        <button onMouseDown={e => { e.preventDefault(); copyContent(); }} style={btnStyle} title="Kopírovat obsah" onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
           </svg>
         </button>
-        {/* Koš – smazat poznámku */}
         <button
           onMouseDown={e => { e.preventDefault(); if (confirm('Smazat celou poznámku?')) onDelete(eventRef); }}
           style={{ ...btnStyle, color: 'var(--text-muted)' }}
@@ -565,6 +531,56 @@ function NotePanel({
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
           </svg>
+        </button>
+      </div>
+
+      {/* Meta tagy – Důležitá / Oblíbená / Hotovo jako barevné pill tlačítka */}
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <button
+          onMouseDown={e => { e.preventDefault(); toggleImportant(); }}
+          className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium transition-all border"
+          style={{
+            background: isImportant ? '#fee2e2' : 'transparent',
+            color: isImportant ? '#dc2626' : 'var(--text-muted)',
+            borderColor: isImportant ? '#fca5a5' : 'var(--border)',
+          }}
+          title={isImportant ? 'Zrušit důležitou' : 'Označit jako důležitou'}
+        >
+          <svg width="9" height="9" viewBox="0 0 24 24" fill={isImportant ? '#dc2626' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>
+          </svg>
+          Důležitá
+        </button>
+        <button
+          onMouseDown={e => { e.preventDefault(); toggleFavorite(); }}
+          className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium transition-all border"
+          style={{
+            background: isFavorite ? '#fef3c7' : 'transparent',
+            color: isFavorite ? '#d97706' : 'var(--text-muted)',
+            borderColor: isFavorite ? '#fcd34d' : 'var(--border)',
+          }}
+          title={isFavorite ? 'Zrušit oblíbenou' : 'Přidat do oblíbených'}
+        >
+          <svg width="9" height="9" viewBox="0 0 24 24" fill={isFavorite ? '#d97706' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+          </svg>
+          Oblíbená
+        </button>
+        <button
+          onMouseDown={e => { e.preventDefault(); toggleDone(); }}
+          className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium transition-all border"
+          style={{
+            background: isDone ? 'var(--bg-hover)' : 'transparent',
+            color: isDone ? 'var(--text-muted)' : 'var(--text-muted)',
+            borderColor: 'var(--border)',
+            opacity: isDone ? 0.7 : 1,
+          }}
+          title={isDone ? 'Znovu otevřít' : 'Označit jako hotovou'}
+        >
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={isDone ? 3 : 2} strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          Hotovo
         </button>
       </div>
 
@@ -638,6 +654,30 @@ function NotePanel({
           Přidat úkol
         </button>
       </div>
+
+      {/* Uložit / Zrušit – zobrazí se jen když jsou neuložené změny */}
+      {isDirty && (
+        <div className="flex items-center justify-end gap-2 border-t pt-1.5" style={{ borderColor: 'var(--border)' }}>
+          <button
+            onClick={cancel}
+            className="px-3 py-1 rounded text-xs border transition-colors"
+            style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)', background: 'transparent' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+          >
+            Zrušit
+          </button>
+          <button
+            onClick={save}
+            className="px-3 py-1 rounded text-xs font-medium text-white transition-opacity"
+            style={{ background: 'var(--primary)' }}
+            onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+          >
+            Uložit
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -2468,15 +2508,9 @@ function CalendarContent() {
                     return { key, label: `${MONTH_NAMES[parseInt(m) - 1]} ${y}`, events: evs };
                   });
 
-                // Vybraná událost pro panel poznámek vpravo
-                const selEv = selectedListEventId ? allGroupedEvents.find(e => e.id === selectedListEventId) : null;
-                const selNote = selectedListEventId ? (notesByRef[selectedListEventId] ?? { content: '', tasks: [] }) : null;
-
                 return (
-                  <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-                    {/* ── LEVÝ SLOUPEC: seznam událostí ────────────────────── */}
-                    <div className="flex-1 overflow-auto min-w-0">
-                    <div className="max-w-3xl p-4">
+                  <div className="flex-1 overflow-auto">
+                    <div className="max-w-2xl p-4">
                       {/* Vyhledávací pole */}
                       <div className="mb-4 flex items-center gap-2">
                         <div className="flex-1 relative">
@@ -2571,62 +2605,75 @@ function CalendarContent() {
                                   const evNote = notesByRef[ev.id];
                                   const noteHasContent = !!(evNote?.content || (evNote?.tasks?.length ?? 0) > 0);
                                   const isSelected = selectedListEventId === ev.id;
+                                  const noteVisible = isSelected || noteHasContent;
                                   return (
-                                    <div
-                                      key={ev.id}
-                                      onClick={() => { if (isClickable) { const orig = events.find(x => x.id === ev.source_id); if (orig) openEditEvent(orig); } }}
-                                      className="group/ev flex items-start gap-3 p-3 rounded-lg border transition-colors"
-                                      style={{
-                                        borderColor: isSelected ? 'var(--primary)' : 'var(--border)',
-                                        background: isSelected ? 'color-mix(in srgb, var(--primary) 6%, var(--bg-card))' : 'var(--bg-card)',
-                                        cursor: isClickable ? 'pointer' : 'default',
-                                      }}
-                                      onMouseEnter={e => { if (isClickable && !isSelected) e.currentTarget.style.background = 'var(--bg-hover)'; }}
-                                      onMouseLeave={e => { e.currentTarget.style.background = isSelected ? 'color-mix(in srgb, var(--primary) 6%, var(--bg-card))' : 'var(--bg-card)'; }}
-                                    >
-                                      <div className="w-1 self-stretch rounded-full flex-shrink-0" style={{ background: ev.color }} />
-                                      <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 flex-wrap">
-                                          <span className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>{ev.title}</span>
-                                          {ev.source !== 'manual' && (
-                                            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: ev.color + '22', color: ev.color }}>
-                                              {sourceBadgeLabel(ev.source)}
-                                            </span>
+                                    <div key={ev.id} className="flex flex-col">
+                                      <div
+                                        onClick={() => { if (isClickable) { const orig = events.find(x => x.id === ev.source_id); if (orig) openEditEvent(orig); } }}
+                                        className="group/ev flex items-start gap-3 p-3 rounded-lg border transition-colors"
+                                        style={{
+                                          borderColor: isSelected ? 'var(--primary)' : 'var(--border)',
+                                          background: isSelected ? 'color-mix(in srgb, var(--primary) 6%, var(--bg-card))' : 'var(--bg-card)',
+                                          cursor: isClickable ? 'pointer' : 'default',
+                                        }}
+                                        onMouseEnter={e => { if (isClickable && !isSelected) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                                        onMouseLeave={e => { e.currentTarget.style.background = isSelected ? 'color-mix(in srgb, var(--primary) 6%, var(--bg-card))' : 'var(--bg-card)'; }}
+                                      >
+                                        <div className="w-1 self-stretch rounded-full flex-shrink-0" style={{ background: ev.color }} />
+                                        <div className="flex-1 min-w-0">
+                                          <div className="flex items-center gap-2 flex-wrap">
+                                            <span className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>{ev.title}</span>
+                                            {ev.source !== 'manual' && (
+                                              <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: ev.color + '22', color: ev.color }}>
+                                                {sourceBadgeLabel(ev.source)}
+                                              </span>
+                                            )}
+                                          </div>
+                                          <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                                            {multiDay
+                                              ? `${evStart.toLocaleDateString('cs-CZ')} – ${evEnd.toLocaleDateString('cs-CZ')}`
+                                              : evStart.toLocaleDateString('cs-CZ', { weekday: 'long', day: 'numeric', month: 'long' })
+                                            }
+                                            {!ev.is_all_day && ev.start_time ? ` · ${ev.start_time.slice(0, 5)}${ev.end_time ? `–${ev.end_time.slice(0, 5)}` : ''}` : ''}
+                                          </div>
+                                          {ev.description && (
+                                            <div className="text-xs mt-1 truncate" style={{ color: 'var(--text-muted)' }}>{ev.description}</div>
                                           )}
                                         </div>
-                                        <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                                          {multiDay
-                                            ? `${evStart.toLocaleDateString('cs-CZ')} – ${evEnd.toLocaleDateString('cs-CZ')}`
-                                            : evStart.toLocaleDateString('cs-CZ', { weekday: 'long', day: 'numeric', month: 'long' })
-                                          }
-                                          {!ev.is_all_day && ev.start_time ? ` · ${ev.start_time.slice(0, 5)}${ev.end_time ? `–${ev.end_time.slice(0, 5)}` : ''}` : ''}
-                                        </div>
-                                        {ev.description && (
-                                          <div className="text-xs mt-1 truncate" style={{ color: 'var(--text-muted)' }}>{ev.description}</div>
-                                        )}
+                                        {/* Tlačítko pro toggle inline poznámky */}
+                                        <button
+                                          onClick={e => {
+                                            e.stopPropagation();
+                                            setSelectedListEventId(prev => prev === ev.id ? null : ev.id);
+                                          }}
+                                          className={`flex-shrink-0 p-1 rounded transition-all ${isSelected || noteHasContent ? 'opacity-70' : 'opacity-0'} group-hover/ev:opacity-100`}
+                                          style={{
+                                            color: isSelected || noteHasContent ? 'var(--primary)' : 'var(--text-muted)',
+                                            background: 'none',
+                                            border: 'none',
+                                            cursor: 'pointer',
+                                          }}
+                                          onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                                          onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}
+                                          title={isSelected ? 'Skrýt poznámku' : 'Přidat / zobrazit poznámku'}
+                                        >
+                                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                                            <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+                                          </svg>
+                                        </button>
                                       </div>
-                                      {/* Tlačítko pro otevření panelu poznámek vpravo */}
-                                      <button
-                                        onClick={e => {
-                                          e.stopPropagation();
-                                          setSelectedListEventId(prev => prev === ev.id ? null : ev.id);
-                                        }}
-                                        className={`flex-shrink-0 p-1 rounded transition-all ${isSelected || noteHasContent ? 'opacity-70' : 'opacity-0'} group-hover/ev:opacity-100`}
-                                        style={{
-                                          color: isSelected || noteHasContent ? 'var(--primary)' : 'var(--text-muted)',
-                                          background: 'none',
-                                          border: 'none',
-                                          cursor: 'pointer',
-                                        }}
-                                        onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
-                                        onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}
-                                        title={isSelected ? 'Skrýt poznámku' : 'Přidat / zobrazit poznámku'}
-                                      >
-                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
-                                          <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
-                                        </svg>
-                                      </button>
+                                      {noteVisible && (
+                                        <div className="mt-1 overflow-y-auto max-h-[220px]">
+                                          <NotePanel
+                                            key={`inline-${ev.id}-${evNote?.id ?? 'new'}`}
+                                            eventRef={ev.id}
+                                            note={evNote ?? { content: '', tasks: [] }}
+                                            onSave={handleNoteSave}
+                                            onDelete={handleNoteDelete}
+                                          />
+                                        </div>
+                                      )}
                                     </div>
                                   );
                                 })}
@@ -2652,45 +2699,6 @@ function CalendarContent() {
                         </div>
                       )}
                     </div>
-                    </div>
-
-                    {/* ── PRAVÝ SLOUPEC: panel poznámek ────────────────────── */}
-                    {selEv && selNote && (
-                      <div
-                        className="md:w-[360px] flex-shrink-0 border-t md:border-t-0 md:border-l flex flex-col"
-                        style={{ borderColor: 'var(--border)', background: 'var(--bg-card)' }}
-                      >
-                        {/* Záhlaví panelu */}
-                        <div className="flex items-center justify-between p-3 border-b gap-2 flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
-                          <div className="flex items-center gap-2 min-w-0">
-                            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: selEv.color }} />
-                            <span className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{selEv.title}</span>
-                          </div>
-                          <button
-                            onClick={() => setSelectedListEventId(null)}
-                            className="flex-shrink-0 p-1 rounded transition-colors"
-                            style={{ color: 'var(--text-muted)', background: 'none' }}
-                            onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
-                            onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}
-                            title="Zavřít panel poznámek"
-                          >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                            </svg>
-                          </button>
-                        </div>
-                        {/* NotePanel */}
-                        <div className="flex-1 overflow-auto p-2 flex flex-col">
-                          <NotePanel
-                            key={`right-${selectedListEventId}-${selNote.id ?? 'new'}`}
-                            eventRef={selectedListEventId!}
-                            note={selNote}
-                            onSave={handleNoteSave}
-                            onDelete={(ref) => { handleNoteDelete(ref); setSelectedListEventId(null); }}
-                          />
-                        </div>
-                      </div>
-                    )}
                   </div>
                 );
               })()}
