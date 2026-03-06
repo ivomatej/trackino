@@ -579,28 +579,31 @@ function RequestsContent() {
                           )}
                         </div>
                       </div>
-                      {/* Badge stavu */}
+                      {/* Badge stavu – pouze Schváleno vpravo nahoře */}
                       <div className="flex-shrink-0">
-                        {req.status === 'approved' ? (
+                        {req.status === 'approved' && (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold" style={{ background: '#dcfce7', color: '#166534' }}>
                             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                             Schváleno
                           </span>
-                        ) : (
+                        )}
+                      </div>
+                    </div>
+                    {/* Badge Zamítnuto + Důvod zamítnutí – pod hlavním obsahem */}
+                    {req.status === 'rejected' && (
+                      <>
+                        <div className="mt-3">
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold" style={{ background: '#fee2e2', color: '#991b1b' }}>
                             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                             Zamítnuto
                           </span>
-                        )}
-                      </div>
-                    </div>
-                    {/* Důvod zamítnutí */}
-                    {req.status === 'rejected' && (
-                      <div className="mt-3 px-3 py-2 rounded-lg text-xs" style={{ background: '#fee2e2', color: '#991b1b' }}>
-                        {req.reviewer_note
-                          ? <><strong>Důvod zamítnutí:</strong> {req.reviewer_note}</>
-                          : 'Zamítnuto bez uvedení důvodu.'}
-                      </div>
+                        </div>
+                        <div className="mt-2 px-3 py-2 rounded-lg text-xs" style={{ background: '#fee2e2', color: '#991b1b' }}>
+                          {req.reviewer_note
+                            ? <><strong>Důvod zamítnutí:</strong> {req.reviewer_note}</>
+                            : 'Zamítnuto bez uvedení důvodu.'}
+                        </div>
+                      </>
                     )}
                   </div>
                 ))}
