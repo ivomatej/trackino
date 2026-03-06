@@ -171,6 +171,35 @@ Používá se v řádcích tabulky/seznamu pro schvalování žádostí, dovolen
 
 ---
 
+### Pořadí tlačítek (DŮLEŽITÉ – vždy dodržovat)
+
+Negativní/destruktivní akce vždy **VLEVO**, pozitivní/potvrzující akce vždy **VPRAVO**.
+
+| Dvojice | Vlevo ❌ | Vpravo ✅ |
+|---------|---------|---------|
+| Schválení | Zamítnout | Schválit |
+| Formulář | Zrušit | Uložit |
+| Potvrzení | Ne / Zrušit | Ano / Potvrdit |
+| Mazání | Zrušit | Smazat |
+
+**Důvod:** Uživatel si zvykne, že „bezpečná cesta zpět" je vždy vlevo a „potvrzení záměru" vždy vpravo. Konzistentní rozmístění zabraňuje nechtěným kliknutím.
+
+```tsx
+{/* SPRÁVNĚ – Zamítnout vlevo, Schválit vpravo */}
+<div className="flex items-center gap-2">
+  <button ...>Zamítnout</button>  {/* ❌ vlevo */}
+  <button ...>Schválit</button>   {/* ✅ vpravo */}
+</div>
+
+{/* SPRÁVNĚ – Zrušit vlevo, Uložit vpravo */}
+<div className="flex gap-2">
+  <button ...>Zrušit</button>    {/* ❌ vlevo */}
+  <button ...>Uložit</button>    {/* ✅ vpravo */}
+</div>
+```
+
+---
+
 ## 3. Ikonková tlačítka (akce v řádku)
 
 ```tsx
@@ -681,8 +710,9 @@ const COLORS = ['#2563eb','#dc2626','#16a34a','#ca8a04','#9333ea','#db2777','#ea
 4. **Ikony koše: vždy stejné SVG** – viz sekce 3 výše (čtyři path elementy)
 5. **Ikony: vždy `currentColor`** – aby barva reagovala na CSS proměnné rodiče
 6. **Disabled stav: `disabled:opacity-50`** – standardní ztlumení
-7. **Animace: `transition-colors`** pro barvy, `transition-all`** pro vše ostatní
+7. **Animace: `transition-colors`** pro barvy, **`transition-all`** pro vše ostatní
 8. **Rounded: `rounded-xl`** pro karty, **`rounded-lg`** pro tlačítka a inputy, **`rounded`** pro ikonová tlačítka
+9. **Pořadí tlačítek: negativní VLEVO, pozitivní VPRAVO** – Zamítnout→Schválit, Zrušit→Uložit (viz sekce 2)
 
 ---
 
