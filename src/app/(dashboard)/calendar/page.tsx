@@ -858,32 +858,16 @@ function CalendarContent() {
     return () => window.removeEventListener('resize', applyHeight);
   }, [view]);
 
-  // ── Scroll na calViewStart – retry dokud grid nepřijme scrollTop ──────────
-  // Na desktopu (Chrome) layout může být dořešen až po 1–2 frame cyklech.
-  // Opakujeme nastavení scrollTop (max 30 pokusů / ~1,5 s) dokud se neprojeví.
-  useEffect(() => {
+  // ── Scroll na calViewStart – useLayoutEffect zajistí scroll PŘED prvním malováním ──
+  // useLayoutEffect běží synchronně po DOM mutacích; výška (effect výše) se nastaví
+  // dříve (definován dříve v kódu), takže scrollTop dostane správné maximum hned.
+  // Tím odpadá nutnost retry a záblesk od 0:00 na mobilu i desktopu.
+  useLayoutEffect(() => {
     if (view !== 'week' && view !== 'today') return;
-    let cancelled = false;
-    let attempts = 0;
-    const target = calViewStart * ROW_H;
-
-    const tryScroll = () => {
-      if (cancelled) return;
-      const grid = weekGridRef.current;
-      if (grid) {
-        grid.scrollTop = target;
-        if (Math.abs(grid.scrollTop - target) > 5 && attempts < 30) {
-          attempts++;
-          setTimeout(tryScroll, 50);
-        }
-      }
-    };
-
-    // Spustit až po načtení dat i po přepnutí pohledu
-    if (!loading) {
-      tryScroll();
-    }
-    return () => { cancelled = true; };
+    if (loading) return;
+    const grid = weekGridRef.current;
+    if (!grid) return;
+    grid.scrollTop = calViewStart * ROW_H;
   }, [loading, view, calViewStart]);
 
   // Aktualizace aktuálního času každou minutu
