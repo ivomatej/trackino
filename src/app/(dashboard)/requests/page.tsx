@@ -323,13 +323,13 @@ function RequestsContent() {
         {canProcessRequests && (
           <div className="flex gap-1 p-1 rounded-xl mb-6 w-fit" style={{ background: 'var(--bg-hover)' }}>
             {([
-              { key: 'mine' as ActiveTab, label: 'Moje žádosti' },
-              { key: 'pending' as ActiveTab, label: `Ke zpracování${pendingRequests.length > 0 ? ` (${pendingRequests.length})` : ''}` },
+              { key: 'mine' as ActiveTab, label: 'Moje žádosti', count: 0 },
+              { key: 'pending' as ActiveTab, label: 'Ke zpracování', count: pendingRequests.length },
             ]).map(tab => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all"
                 style={{
                   background: activeTab === tab.key ? 'var(--bg-card)' : 'transparent',
                   color: activeTab === tab.key ? 'var(--text-primary)' : 'var(--text-muted)',
@@ -337,6 +337,14 @@ function RequestsContent() {
                 }}
               >
                 {tab.label}
+                {tab.count > 0 && (
+                  <span
+                    className="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[10px] font-bold text-white"
+                    style={{ background: '#ef4444' }}
+                  >
+                    {tab.count}
+                  </span>
+                )}
               </button>
             ))}
           </div>

@@ -205,8 +205,14 @@ function FeedbackContent() {
                 {/* Nevyřízené */}
                 {unresolved.length > 0 && (
                   <div>
-                    <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
-                      Nevyřízené ({unresolved.length})
+                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
+                      Nevyřízené
+                      <span
+                        className="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[10px] font-bold text-white normal-case"
+                        style={{ background: '#ef4444' }}
+                      >
+                        {unresolved.length}
+                      </span>
                     </div>
                     <div className="space-y-2">
                       {unresolved.map(fb => (
@@ -226,8 +232,14 @@ function FeedbackContent() {
                 {/* Vyřízené */}
                 {resolved.length > 0 && (
                   <div>
-                    <div className="text-xs font-semibold uppercase tracking-wide mb-2 mt-4" style={{ color: 'var(--text-muted)' }}>
-                      Vyřízené ({resolved.length})
+                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide mb-2 mt-4" style={{ color: 'var(--text-muted)' }}>
+                      Vyřízené
+                      <span
+                        className="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[10px] font-bold text-white normal-case"
+                        style={{ background: '#10b981' }}
+                      >
+                        {resolved.length}
+                      </span>
                     </div>
                     <div className="space-y-2 opacity-60">
                       {resolved.map(fb => (

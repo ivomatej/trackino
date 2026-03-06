@@ -11,6 +11,12 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.17.2 – 6. 3. 2026</h3>
+<ul>
+  <li><strong>Sidebar – optimalizace načítání badge</strong> – 5 nezávislých dotazů na badge počty bylo sloučeno do jednoho Promise.all s jedním setState, což eliminuje kaskádové překreslování a zpoždění při načítání navigace.</li>
+  <li><strong>Badge kruhy na stránkách</strong> – počty v závorkách (např. „(2)") byly nahrazeny červenými badge kruhy na stránkách: Žádosti (tab „Ke zpracování"), Připomínky (sekce „Nevyřízené"/„Vyřízené"), Tým (banner „Čeká na schválení") a Fakturace (tab counts).</li>
+</ul>
+
 <h3>v2.17.1 – 6. 3. 2026</h3>
 <ul>
   <li><strong>Přehled – sjednocení formátu hodin v grafu</strong> – celkový součet v týdenním grafu nyní používá stejný formát jako statistické karty nahoře (např. „1 h 7 min celkem" místo „1.1 h celkem").</li>

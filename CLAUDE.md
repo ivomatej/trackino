@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 6. 3. 2026 (v2.17.1)
+> Aktualizováno: 6. 3. 2026 (v2.17.2)
 
 ---
 
@@ -485,6 +485,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.17.2 | 6. 3. 2026 | Sidebar: optimalizace badge (Promise.all místo 5 useEffects); Badge kruhy na stránkách Žádosti, Připomínky, Tým, Fakturace (nahrazení „(N)" za červený badge) |
 | v2.17.1 | 6. 3. 2026 | Přehled: sjednocení formátu hodin v grafu (fmtHours); Sidebar: badge u Žádostí (pending), Připomínek (unresolved), Fakturace (pending approval) |
 | v2.17.0 | 6. 3. 2026 | Přehled: notifikační panel „K vyřízení" (čekající dovolené, žádosti, připomínky, faktury); Přehled: týdenní sloupcový graf odpracovaných hodin (Recharts, 7 dní, průměr, trend) |
 | v2.16.2 | 5. 3. 2026 | Sjednocení nadpisů stránek (text-xl, 14 stránek); sjednocení výšek toolbarových prvků na py-2 (7 stránek); Záložky+Prompty jméno autora místo avataru; záložky doména bez www. |

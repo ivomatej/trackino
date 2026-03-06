@@ -145,44 +145,59 @@ export default function Sidebar({ open, onClose, collapsed = false, onCollapseDe
     });
   };
 
-  // Badge u Dovolené – počet čekajících žádostí (pro managera/admina)
-  const isManagerOrAdminForVacation = useMemo(
+  // ── Badge counts (jeden hromadný fetch pro všechny badge) ───────────────
+  const isAdminOrManager = useMemo(
     () => checkWsAdmin(userRole) || checkIsManager(userRole),
     [userRole]
   );
-  const [pendingVacationCount, setPendingVacationCount] = useState(0);
+  const canProcessRequestsSidebar = useMemo(
+    () => isAdminOrManager || checkMasterAdmin(profile ?? null) || (currentMembership?.can_process_requests ?? false),
+    [isAdminOrManager, profile, currentMembership]
+  );
+  const canViewFeedbackSidebar = useMemo(
+    () => checkMasterAdmin(profile ?? null) || checkWsAdmin(userRole) || (currentMembership?.can_receive_feedback ?? false),
+    [userRole, profile, currentMembership]
+  );
+  const canInvoiceSidebar = currentMembership?.can_invoice ?? false;
+
+  const [badgeCounts, setBadgeCounts] = useState({
+    pendingVacation: 0,
+    returnedInvoice: 0,
+    pendingInvoiceApproval: 0,
+    pendingRequest: 0,
+    unresolvedFeedback: 0,
+  });
 
   useEffect(() => {
-    if (!user || !currentWorkspace || !isManagerOrAdminForVacation) {
-      setPendingVacationCount(0);
+    if (!user || !currentWorkspace) {
+      setBadgeCounts({ pendingVacation: 0, returnedInvoice: 0, pendingInvoiceApproval: 0, pendingRequest: 0, unresolvedFeedback: 0 });
       return;
     }
-    supabase
-      .from('trackino_vacation_entries')
-      .select('id')
-      .eq('workspace_id', currentWorkspace.id)
-      .eq('status', 'pending')
-      .neq('user_id', user.id)
-      .then(({ data }) => setPendingVacationCount((data ?? []).length));
-  }, [user, currentWorkspace, isManagerOrAdminForVacation]);
 
-  // Badge u Fakturace – vrácené faktury k opravě + čekající ke schválení
-  const canInvoice = currentMembership?.can_invoice ?? false;
-  const [returnedInvoiceCount, setReturnedInvoiceCount] = useState(0);
+    const wsId = currentWorkspace.id;
+    const uid = user.id;
 
-  useEffect(() => {
-    if (!user || !currentWorkspace || !canInvoice) {
-      setReturnedInvoiceCount(0);
-      return;
-    }
-    supabase
-      .from('trackino_invoices')
-      .select('id, billing_period_year, billing_period_month, status')
-      .eq('workspace_id', currentWorkspace.id)
-      .eq('user_id', user.id)
-      .then(({ data }) => {
-        const list = (data ?? []) as Array<{ id: string; billing_period_year: number; billing_period_month: number; status: string }>;
-        const count = list.filter(inv => {
+    Promise.all([
+      isAdminOrManager
+        ? supabase.from('trackino_vacation_entries').select('id').eq('workspace_id', wsId).eq('status', 'pending').neq('user_id', uid)
+        : Promise.resolve({ data: null }),
+      canInvoiceSidebar
+        ? supabase.from('trackino_invoices').select('id, billing_period_year, billing_period_month, status').eq('workspace_id', wsId).eq('user_id', uid)
+        : Promise.resolve({ data: null }),
+      isAdminOrManager
+        ? supabase.from('trackino_invoices').select('id').eq('workspace_id', wsId).eq('status', 'pending')
+        : Promise.resolve({ data: null }),
+      canProcessRequestsSidebar
+        ? supabase.from('trackino_requests').select('id').eq('workspace_id', wsId).eq('status', 'pending')
+        : Promise.resolve({ data: null }),
+      canViewFeedbackSidebar
+        ? supabase.from('trackino_feedback').select('id').eq('workspace_id', wsId).eq('is_resolved', false)
+        : Promise.resolve({ data: null }),
+    ]).then(([vacRes, invUserRes, invPendRes, reqRes, fbRes]) => {
+      let returnedCount = 0;
+      if (invUserRes.data) {
+        const list = invUserRes.data as Array<{ id: string; billing_period_year: number; billing_period_month: number; status: string }>;
+        returnedCount = list.filter(inv => {
           if (inv.status !== 'returned') return false;
           return !list.some(
             other => other.id !== inv.id &&
@@ -192,69 +207,16 @@ export default function Sidebar({ open, onClose, collapsed = false, onCollapseDe
               other.status !== 'cancelled'
           );
         }).length;
-        setReturnedInvoiceCount(count);
+      }
+      setBadgeCounts({
+        pendingVacation: (vacRes.data ?? []).length,
+        returnedInvoice: returnedCount,
+        pendingInvoiceApproval: (invPendRes.data ?? []).length,
+        pendingRequest: (reqRes.data ?? []).length,
+        unresolvedFeedback: (fbRes.data ?? []).length,
       });
-  }, [user, currentWorkspace, canInvoice]);
-
-  // Badge u Fakturace – čekající faktury ke schválení (pro managery/adminy)
-  const canApproveInvoicesSidebar = useMemo(
-    () => checkWsAdmin(userRole) || checkIsManager(userRole),
-    [userRole]
-  );
-  const [pendingInvoiceApprovalCount, setPendingInvoiceApprovalCount] = useState(0);
-
-  useEffect(() => {
-    if (!user || !currentWorkspace || !canApproveInvoicesSidebar) {
-      setPendingInvoiceApprovalCount(0);
-      return;
-    }
-    supabase
-      .from('trackino_invoices')
-      .select('id')
-      .eq('workspace_id', currentWorkspace.id)
-      .eq('status', 'pending')
-      .then(({ data }) => setPendingInvoiceApprovalCount((data ?? []).length));
-  }, [user, currentWorkspace, canApproveInvoicesSidebar]);
-
-  // Badge u Žádostí – čekající žádosti ke schválení
-  const canProcessRequestsSidebar = useMemo(
-    () => checkWsAdmin(userRole) || checkIsManager(userRole) || checkMasterAdmin(profile ?? null) || (currentMembership?.can_process_requests ?? false),
-    [userRole, profile, currentMembership]
-  );
-  const [pendingRequestCount, setPendingRequestCount] = useState(0);
-
-  useEffect(() => {
-    if (!user || !currentWorkspace || !canProcessRequestsSidebar) {
-      setPendingRequestCount(0);
-      return;
-    }
-    supabase
-      .from('trackino_requests')
-      .select('id')
-      .eq('workspace_id', currentWorkspace.id)
-      .eq('status', 'pending')
-      .then(({ data }) => setPendingRequestCount((data ?? []).length));
-  }, [user, currentWorkspace, canProcessRequestsSidebar]);
-
-  // Badge u Připomínek – nevyřízené připomínky
-  const canViewFeedbackSidebar = useMemo(
-    () => checkMasterAdmin(profile ?? null) || checkWsAdmin(userRole) || (currentMembership?.can_receive_feedback ?? false),
-    [userRole, profile, currentMembership]
-  );
-  const [unresolvedFeedbackCount, setUnresolvedFeedbackCount] = useState(0);
-
-  useEffect(() => {
-    if (!user || !currentWorkspace || !canViewFeedbackSidebar) {
-      setUnresolvedFeedbackCount(0);
-      return;
-    }
-    supabase
-      .from('trackino_feedback')
-      .select('id')
-      .eq('workspace_id', currentWorkspace.id)
-      .eq('is_resolved', false)
-      .then(({ data }) => setUnresolvedFeedbackCount((data ?? []).length));
-  }, [user, currentWorkspace, canViewFeedbackSidebar]);
+    });
+  }, [user, currentWorkspace, isAdminOrManager, canProcessRequestsSidebar, canViewFeedbackSidebar, canInvoiceSidebar]);
 
   // Dynamicky sestavit navigaci dle oprávnění a povolených modulů
   const navGroups = useMemo<NavGroup[]>(() => {
@@ -465,10 +427,10 @@ export default function Sidebar({ open, onClose, collapsed = false, onCollapseDe
 
     // Badge count per nav item
     let badgeCount = 0;
-    if (item.href === '/vacation') badgeCount = pendingVacationCount;
-    else if (item.href === '/invoices') badgeCount = returnedInvoiceCount + pendingInvoiceApprovalCount;
-    else if (item.href === '/requests') badgeCount = pendingRequestCount;
-    else if (item.href === '/feedback') badgeCount = unresolvedFeedbackCount;
+    if (item.href === '/vacation') badgeCount = badgeCounts.pendingVacation;
+    else if (item.href === '/invoices') badgeCount = badgeCounts.returnedInvoice + badgeCounts.pendingInvoiceApproval;
+    else if (item.href === '/requests') badgeCount = badgeCounts.pendingRequest;
+    else if (item.href === '/feedback') badgeCount = badgeCounts.unresolvedFeedback;
 
     return (
       <div key={item.href} className="relative group/nav">

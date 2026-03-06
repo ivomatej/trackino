@@ -597,8 +597,14 @@ function TeamContent() {
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
                       </svg>
-                      <span className="text-xs font-semibold" style={{ color: '#92400e' }}>
-                        Čeká na schválení ({members.filter(m => !m.approved).length})
+                      <span className="text-xs font-semibold flex items-center gap-1.5" style={{ color: '#92400e' }}>
+                        Čeká na schválení
+                        <span
+                          className="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[10px] font-bold text-white"
+                          style={{ background: '#ef4444' }}
+                        >
+                          {members.filter(m => !m.approved).length}
+                        </span>
                       </span>
                     </div>
                     <div style={{ background: 'var(--bg-card)' }}>

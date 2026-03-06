@@ -1031,7 +1031,7 @@ function InvoicesContent() {
                 >
                   {tab.label}
                   {tab.count !== undefined && tab.count > 0 && (
-                    <span className="ml-1.5 text-xs" style={{ color: 'var(--text-muted)' }}>{tab.count}</span>
+                    <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[10px] font-bold text-white" style={{ background: '#ef4444' }}>{tab.count}</span>
                   )}
                 </button>
               ))}
