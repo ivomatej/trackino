@@ -196,6 +196,9 @@ function CalendarContent() {
   // Aktuální čas (aktualizuje se každou minutu pro indikátor)
   const [nowTime, setNowTime] = useState<Date>(() => new Date());
 
+  // Stránkování v listovém pohledu
+  const [listVisibleCount, setListVisibleCount] = useState(10);
+
   const initializedRef = useRef(false);
 
   // ── Sync nastavení kalendáře z profilu ────────────────────────────────────
@@ -216,6 +219,11 @@ function CalendarContent() {
     const id = setInterval(tick, 60_000);
     return () => clearInterval(id);
   }, []);
+
+  // Reset stránkování při přepnutí pohledu nebo navigaci v listu
+  useEffect(() => {
+    setListVisibleCount(10);
+  }, [view, currentDate]);
 
   // ── Načtení dat ──────────────────────────────────────────────────────────
 
@@ -1382,76 +1390,107 @@ function CalendarContent() {
               })()}
 
               {/* ══ LISTOVÝ POHLED ════════════════════════════════════════════ */}
-              {view === 'list' && (
-                <div className="max-w-2xl p-4">
-                  {listGroups.length === 0 ? (
-                    <div className="text-center py-16">
-                      <div className="w-14 h-14 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ background: 'var(--bg-hover)' }}>
-                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)' }}>
-                          <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                          <line x1="16" y1="2" x2="16" y2="6" />
-                          <line x1="8" y1="2" x2="8" y2="6" />
-                          <line x1="3" y1="10" x2="21" y2="10" />
-                        </svg>
+              {view === 'list' && (() => {
+                const totalEvents = listGroups.reduce((sum, g) => sum + g.events.length, 0);
+
+                // Vezme první listVisibleCount událostí celkem (přes všechny skupiny)
+                let remaining = listVisibleCount;
+                const visibleGroups = listGroups
+                  .map(group => {
+                    if (remaining <= 0) return null;
+                    const visibleEvents = group.events.slice(0, remaining);
+                    remaining -= visibleEvents.length;
+                    return { ...group, events: visibleEvents };
+                  })
+                  .filter(Boolean) as typeof listGroups;
+
+                return (
+                  <div className="max-w-2xl p-4">
+                    {listGroups.length === 0 ? (
+                      <div className="text-center py-16">
+                        <div className="w-14 h-14 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ background: 'var(--bg-hover)' }}>
+                          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)' }}>
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                            <line x1="16" y1="2" x2="16" y2="6" />
+                            <line x1="8" y1="2" x2="8" y2="6" />
+                            <line x1="3" y1="10" x2="21" y2="10" />
+                          </svg>
+                        </div>
+                        <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>Žádné události v tomto období</p>
+                        <button onClick={() => openNewEvent()} className="px-4 py-2 rounded-lg text-sm font-medium text-white" style={{ background: 'var(--primary)' }}>
+                          Přidat první událost
+                        </button>
                       </div>
-                      <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>Žádné události v tomto období</p>
-                      <button onClick={() => openNewEvent()} className="px-4 py-2 rounded-lg text-sm font-medium text-white" style={{ background: 'var(--primary)' }}>
-                        Přidat první událost
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="space-y-6">
-                      {listGroups.map(group => (
-                        <div key={group.key}>
-                          <h3 className="text-sm font-semibold capitalize mb-2 pb-1 border-b" style={{ color: 'var(--text-muted)', borderColor: 'var(--border)' }}>
-                            {group.label}
-                          </h3>
-                          <div className="space-y-2">
-                            {group.events.map(ev => {
-                              const evStart = parseDate(ev.start_date);
-                              const evEnd = parseDate(ev.end_date);
-                              const multiDay = ev.start_date !== ev.end_date;
-                              const isClickable = ev.source === 'manual';
-                              return (
-                                <div
-                                  key={ev.id}
-                                  onClick={() => { if (isClickable) { const orig = events.find(x => x.id === ev.source_id); if (orig) openEditEvent(orig); } }}
-                                  className="flex items-start gap-3 p-3 rounded-lg border transition-colors"
-                                  style={{ borderColor: 'var(--border)', background: 'var(--bg-card)', cursor: isClickable ? 'pointer' : 'default' }}
-                                  onMouseEnter={e => { if (isClickable) e.currentTarget.style.background = 'var(--bg-hover)'; }}
-                                  onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-card)'; }}
-                                >
-                                  <div className="w-1 self-stretch rounded-full flex-shrink-0" style={{ background: ev.color }} />
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                      <span className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>{ev.title}</span>
-                                      {ev.source !== 'manual' && (
-                                        <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: ev.color + '22', color: ev.color }}>
-                                          {sourceBadgeLabel(ev.source)}
-                                        </span>
+                    ) : (
+                      <div className="space-y-6">
+                        {visibleGroups.map(group => (
+                          <div key={group.key}>
+                            <h3 className="text-sm font-semibold capitalize mb-2 pb-1 border-b" style={{ color: 'var(--text-muted)', borderColor: 'var(--border)' }}>
+                              {group.label}
+                            </h3>
+                            <div className="space-y-2">
+                              {group.events.map(ev => {
+                                const evStart = parseDate(ev.start_date);
+                                const evEnd = parseDate(ev.end_date);
+                                const multiDay = ev.start_date !== ev.end_date;
+                                const isClickable = ev.source === 'manual';
+                                return (
+                                  <div
+                                    key={ev.id}
+                                    onClick={() => { if (isClickable) { const orig = events.find(x => x.id === ev.source_id); if (orig) openEditEvent(orig); } }}
+                                    className="flex items-start gap-3 p-3 rounded-lg border transition-colors"
+                                    style={{ borderColor: 'var(--border)', background: 'var(--bg-card)', cursor: isClickable ? 'pointer' : 'default' }}
+                                    onMouseEnter={e => { if (isClickable) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-card)'; }}
+                                  >
+                                    <div className="w-1 self-stretch rounded-full flex-shrink-0" style={{ background: ev.color }} />
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <span className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>{ev.title}</span>
+                                        {ev.source !== 'manual' && (
+                                          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: ev.color + '22', color: ev.color }}>
+                                            {sourceBadgeLabel(ev.source)}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                                        {multiDay
+                                          ? `${evStart.toLocaleDateString('cs-CZ')} – ${evEnd.toLocaleDateString('cs-CZ')}`
+                                          : evStart.toLocaleDateString('cs-CZ', { weekday: 'long', day: 'numeric', month: 'long' })
+                                        }
+                                        {!ev.is_all_day && ev.start_time ? ` · ${ev.start_time.slice(0, 5)}${ev.end_time ? `–${ev.end_time.slice(0, 5)}` : ''}` : ''}
+                                      </div>
+                                      {ev.description && (
+                                        <div className="text-xs mt-1 truncate" style={{ color: 'var(--text-muted)' }}>{ev.description}</div>
                                       )}
                                     </div>
-                                    <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                                      {multiDay
-                                        ? `${evStart.toLocaleDateString('cs-CZ')} – ${evEnd.toLocaleDateString('cs-CZ')}`
-                                        : evStart.toLocaleDateString('cs-CZ', { weekday: 'long', day: 'numeric', month: 'long' })
-                                      }
-                                      {!ev.is_all_day && ev.start_time ? ` · ${ev.start_time.slice(0, 5)}${ev.end_time ? `–${ev.end_time.slice(0, 5)}` : ''}` : ''}
-                                    </div>
-                                    {ev.description && (
-                                      <div className="text-xs mt-1 truncate" style={{ color: 'var(--text-muted)' }}>{ev.description}</div>
-                                    )}
                                   </div>
-                                </div>
-                              );
-                            })}
+                                );
+                              })}
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
+                        ))}
+
+                        {/* Tlačítko Zobrazit více */}
+                        {totalEvents > listVisibleCount && (
+                          <button
+                            onClick={() => setListVisibleCount(c => c + 10)}
+                            className="w-full py-2.5 rounded-lg border text-sm font-medium flex items-center justify-center gap-2 transition-colors"
+                            style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)', background: 'var(--bg-card)' }}
+                            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+                            onMouseLeave={e => (e.currentTarget.style.background = 'var(--bg-card)')}
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="6 9 12 15 18 9" />
+                            </svg>
+                            Zobrazit více ({totalEvents - listVisibleCount} dalších)
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </>
           )}
         </div>
