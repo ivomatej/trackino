@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { WorkspaceProvider, useWorkspace } from '@/contexts/WorkspaceContext';
+import { usePermissions } from '@/hooks/usePermissions';
 import DashboardLayout from '@/components/DashboardLayout';
 import WorkspaceSelector from '@/components/WorkspaceSelector';
 import { supabase } from '@/lib/supabase';
@@ -17,7 +18,26 @@ import {
   getDaysInMonth,
   CZECH_MONTH_NAMES_TITLE,
 } from '@/lib/czech-calendar';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import type { WorkspaceMember, MemberRate } from '@/types/database';
+
+// ── notification types ────────────────────────────────────────────────────────
+
+interface NotificationItem {
+  id: string;
+  type: 'vacation' | 'request' | 'feedback' | 'invoice';
+  title: string;
+  date: string;
+  href: string;
+}
+
+interface WeekDayData {
+  day: string;
+  hours: number;
+  isToday: boolean;
+}
+
+const CZECH_SHORT_DAYS = ['Ne', 'Po', 'Út', 'St', 'Čt', 'Pá', 'So'];
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -72,12 +92,15 @@ function StatCard({ label, value, sub, accent, icon }: StatCardProps) {
 
 function DashboardContent() {
   const { user, profile } = useAuth();
-  const { currentWorkspace } = useWorkspace();
+  const { currentWorkspace, currentMembership, managerAssignments, isManagerOf, hasModule } = useWorkspace();
+  const { isWorkspaceAdmin, isManager, isMasterAdmin } = usePermissions();
 
   const [loading, setLoading] = useState(true);
   const [totalSeconds, setTotalSeconds] = useState(0);
   const [totalEarnings, setTotalEarnings] = useState(0);
   const [hasRate, setHasRate] = useState(false);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [weekData, setWeekData] = useState<WeekDayData[]>([]);
 
   const today = new Date();
   const year = today.getFullYear();
@@ -153,8 +176,141 @@ function DashboardContent() {
       setHasRate(rateFound || rateList.length > 0 || !!(membership as WorkspaceMember).hourly_rate);
     }
 
+    // ── Týdenní graf (posledních 7 dní) ──────────────────────────────────────
+    const weekDays: WeekDayData[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      weekDays.push({
+        day: CZECH_SHORT_DAYS[d.getDay()],
+        hours: 0,
+        isToday: i === 0,
+      });
+    }
+
+    const weekStart = new Date(today);
+    weekStart.setDate(weekStart.getDate() - 6);
+    weekStart.setHours(0, 0, 0, 0);
+    const weekEnd = new Date(today);
+    weekEnd.setHours(23, 59, 59, 999);
+
+    const { data: weekEntries } = await supabase
+      .from('trackino_time_entries')
+      .select('duration, start_time')
+      .eq('workspace_id', currentWorkspace.id)
+      .eq('user_id', user.id)
+      .eq('is_running', false)
+      .gte('start_time', weekStart.toISOString())
+      .lte('start_time', weekEnd.toISOString());
+
+    for (const e of weekEntries ?? []) {
+      if (!e.duration) continue;
+      const eDate = new Date(e.start_time);
+      const diffDays = Math.floor((eDate.getTime() - weekStart.getTime()) / (1000 * 60 * 60 * 24));
+      if (diffDays >= 0 && diffDays < 7) {
+        weekDays[diffDays].hours += e.duration / 3600;
+      }
+    }
+    // Zaokrouhlení
+    for (const wd of weekDays) wd.hours = Math.round(wd.hours * 10) / 10;
+    setWeekData(weekDays);
+
+    // ── Notifikace „K vyřízení" ───────────────────────────────────────────────
+    const canApproveVacation = isWorkspaceAdmin || isManager;
+    const canProcessRequests = isWorkspaceAdmin || isManager || isMasterAdmin || (currentMembership?.can_process_requests ?? false);
+    const canViewFeedback = isMasterAdmin || isWorkspaceAdmin || (currentMembership?.can_receive_feedback ?? false);
+    const canApproveInvoices = isWorkspaceAdmin || isManager;
+
+    const notifs: NotificationItem[] = [];
+
+    // Čekající dovolené
+    if (canApproveVacation && hasModule('vacation')) {
+      const subordinateIds = managerAssignments.map(a => a.member_user_id);
+      let vacQuery = supabase
+        .from('trackino_vacation_entries')
+        .select('id, user_id, start_date, end_date, days, created_at')
+        .eq('workspace_id', currentWorkspace.id)
+        .eq('status', 'pending');
+
+      if (isManager && !isWorkspaceAdmin) {
+        vacQuery = vacQuery.in('user_id', subordinateIds.length > 0 ? subordinateIds : ['__none__']);
+      }
+
+      const { data: pendingVacations } = await vacQuery;
+      for (const v of pendingVacations ?? []) {
+        notifs.push({
+          id: `vac-${v.id}`,
+          type: 'vacation',
+          title: `Žádost o dovolenou (${v.days} ${v.days === 1 ? 'den' : v.days < 5 ? 'dny' : 'dní'})`,
+          date: v.created_at,
+          href: '/vacation',
+        });
+      }
+    }
+
+    // Čekající žádosti
+    if (canProcessRequests && hasModule('requests')) {
+      const { data: pendingRequests } = await supabase
+        .from('trackino_requests')
+        .select('id, title, type, created_at')
+        .eq('workspace_id', currentWorkspace.id)
+        .eq('status', 'pending');
+
+      for (const r of pendingRequests ?? []) {
+        notifs.push({
+          id: `req-${r.id}`,
+          type: 'request',
+          title: r.title || 'Nová žádost',
+          date: r.created_at,
+          href: '/requests',
+        });
+      }
+    }
+
+    // Nevyřízené připomínky
+    if (canViewFeedback && hasModule('feedback')) {
+      const { data: unresolvedFeedback } = await supabase
+        .from('trackino_feedback')
+        .select('id, message, created_at')
+        .eq('workspace_id', currentWorkspace.id)
+        .eq('is_resolved', false);
+
+      for (const f of unresolvedFeedback ?? []) {
+        notifs.push({
+          id: `fb-${f.id}`,
+          type: 'feedback',
+          title: (f.message ?? '').substring(0, 60) + ((f.message ?? '').length > 60 ? '…' : ''),
+          date: f.created_at,
+          href: '/feedback',
+        });
+      }
+    }
+
+    // Čekající faktury ke schválení
+    if (canApproveInvoices && hasModule('invoices')) {
+      const { data: pendingInvoices } = await supabase
+        .from('trackino_invoices')
+        .select('id, variable_symbol, billing_period_year, billing_period_month, submitted_at, created_at')
+        .eq('workspace_id', currentWorkspace.id)
+        .eq('status', 'pending');
+
+      for (const inv of pendingInvoices ?? []) {
+        notifs.push({
+          id: `inv-${inv.id}`,
+          type: 'invoice',
+          title: `Faktura ${inv.variable_symbol || `${inv.billing_period_month}/${inv.billing_period_year}`}`,
+          date: inv.submitted_at || inv.created_at,
+          href: '/invoices',
+        });
+      }
+    }
+
+    // Seřadit dle data (nejnovější nahoře)
+    notifs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    setNotifications(notifs);
+
     setLoading(false);
-  }, [user, currentWorkspace, year, month]);
+  }, [user, currentWorkspace, year, month, isWorkspaceAdmin, isManager, isMasterAdmin, currentMembership, managerAssignments, hasModule]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -251,6 +407,160 @@ function DashboardContent() {
           }
         />
       </div>
+
+      {/* Notifikace „K vyřízení" + Týdenní graf – vedle sebe */}
+      {(notifications.length > 0 || weekData.length > 0) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Notifikace */}
+          {notifications.length > 0 && (
+            <div
+              className="rounded-xl border p-5"
+              style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                </svg>
+                <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                  K vyřízení
+                </h2>
+                <span
+                  className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                  style={{ background: 'var(--primary)', color: 'white' }}
+                >
+                  {notifications.length}
+                </span>
+              </div>
+              <div className="space-y-1 max-h-64 overflow-y-auto">
+                {notifications.map(n => {
+                  const icon = n.type === 'vacation' ? (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+                  ) : n.type === 'request' ? (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>
+                  ) : n.type === 'feedback' ? (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+                  ) : (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
+                  );
+
+                  const typeColor = n.type === 'vacation' ? '#10b981' : n.type === 'request' ? '#6366f1' : n.type === 'feedback' ? '#f59e0b' : '#3b82f6';
+                  const typeLabel = n.type === 'vacation' ? 'Dovolená' : n.type === 'request' ? 'Žádost' : n.type === 'feedback' ? 'Připomínka' : 'Faktura';
+
+                  const dateStr = new Date(n.date).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'short' });
+                  const timeStr = new Date(n.date).toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' });
+
+                  return (
+                    <a
+                      key={n.id}
+                      href={n.href}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors"
+                      style={{ color: 'var(--text-secondary)' }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                    >
+                      <span
+                        className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center"
+                        style={{ background: typeColor + '18', color: typeColor }}
+                      >
+                        {icon}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-medium truncate" style={{ color: 'var(--text-primary)' }}>
+                          {n.title}
+                        </div>
+                        <div className="text-[10px] flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }}>
+                          <span className="font-medium" style={{ color: typeColor }}>{typeLabel}</span>
+                          <span>·</span>
+                          <span>{dateStr}, {timeStr}</span>
+                        </div>
+                      </div>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" className="flex-shrink-0 opacity-40">
+                        <polyline points="9 18 15 12 9 6" />
+                      </svg>
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Týdenní graf */}
+          {weekData.length > 0 && (
+            <div
+              className="rounded-xl border p-5"
+              style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2">
+                    <path d="M18 20V10" /><path d="M12 20V4" /><path d="M6 20v-6" />
+                  </svg>
+                  <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                    Posledních 7 dní
+                  </h2>
+                </div>
+                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                  {Math.round(weekData.reduce((a, b) => a + b.hours, 0) * 10) / 10} h celkem
+                </span>
+              </div>
+              <div style={{ width: '100%', height: 160 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={weekData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                    <XAxis
+                      dataKey="day"
+                      tick={{ fontSize: 11, fill: 'var(--text-muted)' }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
+                      axisLine={false}
+                      tickLine={false}
+                      allowDecimals={false}
+                      unit="h"
+                    />
+                    <Tooltip
+                      cursor={{ fill: 'var(--bg-hover)', radius: 4 }}
+                      contentStyle={{
+                        background: 'var(--bg-card)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 8,
+                        fontSize: 12,
+                        boxShadow: 'var(--shadow-md)',
+                      }}
+                      formatter={(value: number | undefined) => [`${value ?? 0} h`, 'Odpracováno']}
+                      labelStyle={{ color: 'var(--text-primary)', fontWeight: 600 }}
+                    />
+                    <Bar
+                      dataKey="hours"
+                      radius={[4, 4, 0, 0]}
+                      maxBarSize={32}
+                      fill="var(--primary)"
+                      opacity={0.85}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              {(() => {
+                const avg = weekData.reduce((a, b) => a + b.hours, 0) / 7;
+                const todayH = weekData.find(d => d.isToday)?.hours ?? 0;
+                const diff = todayH - avg;
+                return avg > 0 ? (
+                  <div className="text-xs mt-2 text-center" style={{ color: 'var(--text-muted)' }}>
+                    Průměr: {Math.round(avg * 10) / 10} h/den
+                    {todayH > 0 && diff !== 0 && (
+                      <span style={{ color: diff > 0 ? '#10b981' : '#ef4444', marginLeft: 8 }}>
+                        {diff > 0 ? '▲' : '▼'} dnes {diff > 0 ? '+' : ''}{Math.round(diff * 10) / 10} h oproti průměru
+                      </span>
+                    )}
+                  </div>
+                ) : null;
+              })()}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Přehled měsíce */}
       <div className="rounded-xl border p-5" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>

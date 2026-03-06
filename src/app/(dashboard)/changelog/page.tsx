@@ -11,6 +11,12 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.17.0 – 6. 3. 2026</h3>
+<ul>
+  <li><strong>Přehled – panel „K vyřízení"</strong> – nový notifikační panel na úvodní stránce zobrazující čekající položky: žádosti o dovolenou, žádosti zaměstnanců, nevyřízené anonymní připomínky a faktury ke schválení. Každá položka zobrazuje typ (barevná ikona), název, datum a čas. Kliknutím přejdete přímo na příslušnou stránku. Panel se zobrazuje pouze oprávněným uživatelům (manažeři, admini) a pouze pokud existují nevyřízené položky.</li>
+  <li><strong>Přehled – týdenní graf hodin</strong> – nový sloupcový graf (Recharts) zobrazující odpracované hodiny za posledních 7 dní. Obsahuje celkový součet, denní průměr a porovnání dnešního dne oproti průměru (zelená šipka nahoru / červená dolů).</li>
+</ul>
+
 <h3>v2.16.2 – 5. 3. 2026</h3>
 <ul>
   <li><strong>Sjednocení nadpisů stránek</strong> – všechny hlavní nadpisy stránek (Fakturace, Dovolená, Reporty, Projekty, Tým, Prompty, Záložky, Podřízení, Poznámky, Profil, Důležité dny, Firemní pravidla, Pravidla v kanceláři, Nahlásit chybu) mají nyní jednotnou velikost <code>text-xl</code> jako ostatní stránky aplikace.</li>
