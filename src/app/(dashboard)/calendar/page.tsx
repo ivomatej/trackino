@@ -479,13 +479,13 @@ function NotePanel({
   } as React.CSSProperties;
 
   // Barva okraje a pozadí dle meta flagů
-  const borderColor = isImportant ? '#ef4444' : isFavorite ? '#f59e0b' : isDone ? 'var(--text-muted)' : 'var(--border)';
+  const borderColor = isImportant ? '#ef4444' : isFavorite ? '#f59e0b' : 'var(--border)';
   const bgColor = isImportant ? '#fff1f1' : isFavorite ? '#fffbeb' : 'var(--bg-sidebar)';
 
   return (
     <div
       className="flex-1 min-w-0 rounded-lg border flex flex-col gap-1.5 p-2.5"
-      style={{ borderColor, background: bgColor, opacity: isDone ? 0.7 : 1, transition: 'border-color 0.15s, background 0.15s' }}
+      style={{ borderColor, background: bgColor, opacity: isDone ? 0.28 : 1, transition: 'border-color 0.15s, background 0.15s' }}
       onClick={e => e.stopPropagation()}
     >
       {/* Řádek: Toolbar vlevo + Meta tagy vpravo */}
@@ -2667,7 +2667,7 @@ function CalendarContent() {
                                       </div>
                                       <div className="w-[520px] flex-shrink-0">
                                         {noteVisible && (
-                                          <div className="overflow-y-auto max-h-[300px]">
+                                          <div>
                                             <NotePanel
                                               key={`inline-${ev.id}-${evNote?.id ?? 'new'}`}
                                               eventRef={ev.id}
