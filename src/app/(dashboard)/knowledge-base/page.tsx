@@ -11,7 +11,7 @@ import type { KbFolder, KbPage, KbVersion, KbComment, KbReview, KbAccess, KbPage
 
 // ── Local types ──────────────────────────────────────────────────────────────
 
-type PageTab = 'comments' | 'history' | 'access' | 'backlinks';
+type PageTab = 'comments' | 'history' | 'access' | 'backlinks' | 'reviews';
 interface KbMember { user_id: string; display_name: string; avatar_color: string; }
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -92,6 +92,7 @@ function RichEditor({ value, onChange, members, pages }: {
   const [showMentionPicker, setShowMentionPicker] = useState(false);
   const [showPagePicker, setShowPagePicker] = useState(false);
   const [pickerSearch, setPickerSearch] = useState('');
+  const [calloutPicker, setCalloutPicker] = useState<{ el: HTMLElement; right: number; top: number } | null>(null);
 
   useEffect(() => {
     if (ref.current && ref.current.innerHTML !== value) ref.current.innerHTML = value;
@@ -126,6 +127,35 @@ function RichEditor({ value, onChange, members, pages }: {
     if (ref.current) onChange(ref.current.innerHTML);
   };
 
+  // insBlock: jako ins(), ale po vložení přesune kurzor do elementu s data-kbm atributem
+  const insBlock = (html: string) => {
+    setSelectionPopup(null);
+    if (savedRange.current) {
+      try {
+        const sel = window.getSelection();
+        if (sel) { sel.removeAllRanges(); sel.addRange(savedRange.current); }
+      } catch { /* ignore */ }
+      savedRange.current = null;
+    } else {
+      ref.current?.focus();
+    }
+    document.execCommand('insertHTML', false, html);
+    if (ref.current) {
+      const target = ref.current.querySelector('[data-kbm]') as HTMLElement | null;
+      if (target) {
+        target.removeAttribute('data-kbm');
+        try {
+          const range = document.createRange();
+          range.setStart(target, 0);
+          range.collapse(true);
+          const sel = window.getSelection();
+          if (sel) { sel.removeAllRanges(); sel.addRange(range); }
+        } catch { /* ignore */ }
+      }
+      onChange(ref.current.innerHTML);
+    }
+  };
+
   const insertLink = () => {
     if (!linkUrl) { setShowLinkModal(false); return; }
     const url = linkUrl.startsWith('http') ? linkUrl : `https://${linkUrl}`;
@@ -148,11 +178,20 @@ function RichEditor({ value, onChange, members, pages }: {
       const sel = window.getSelection();
       if (sel && sel.rangeCount > 0) {
         const node = sel.getRangeAt(0).startContainer;
-        const pre = (node.nodeType === Node.TEXT_NODE ? node.parentElement : node as Element)?.closest('pre');
+        const el = node.nodeType === Node.TEXT_NODE ? node.parentElement : node as Element;
+        const pre = el?.closest('pre');
         if (pre) {
           e.preventDefault();
           document.execCommand('insertText', false, '\n');
           if (ref.current) onChange(ref.current.innerHTML);
+          return;
+        }
+        const callout = el?.closest('.kb-callout');
+        if (callout) {
+          e.preventDefault();
+          document.execCommand('insertHTML', false, '<br>');
+          if (ref.current) onChange(ref.current.innerHTML);
+          return;
         }
       }
     }
@@ -201,7 +240,11 @@ function RichEditor({ value, onChange, members, pages }: {
           <TBtn onClick={() => {
             const sel = window.getSelection();
             const selected = sel && sel.rangeCount > 0 ? sel.getRangeAt(0).toString() : '';
-            ins(`<pre style="position:relative;background:var(--bg-hover);padding:12px 40px 12px 12px;border-radius:8px;font-family:monospace;font-size:13px;overflow-x:auto;margin:8px 0;border:1px solid var(--border);white-space:pre-wrap"><code style="display:block;min-height:3em;outline:none">${selected || ''}</code></pre><p><br></p>`);
+            if (selected) {
+              ins(`<pre style="position:relative;background:var(--bg-hover);padding:12px 40px 12px 12px;border-radius:8px;font-family:monospace;font-size:13px;overflow-x:auto;margin:16px 0;border:1px solid var(--border);white-space:pre-wrap"><code style="display:block;min-height:3em;outline:none">${selected}</code></pre><p><br></p>`);
+            } else {
+              insBlock(`<pre style="position:relative;background:var(--bg-hover);padding:12px 40px 12px 12px;border-radius:8px;font-family:monospace;font-size:13px;overflow-x:auto;margin:16px 0;border:1px solid var(--border);white-space:pre-wrap"><code data-kbm style="display:block;min-height:3em;outline:none"></code></pre><p><br></p>`);
+            }
           }} title="Blok kódu">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
             Kód
@@ -273,12 +316,12 @@ function RichEditor({ value, onChange, members, pages }: {
           </div>
           <Sep />
           {/* Úkol */}
-          <TBtn onClick={() => ins('<ul class="kb-checklist"><li class="kb-check-unchecked"><br></li></ul><p><br></p>')} title="Checklist / úkoly">
+          <TBtn onClick={() => insBlock('<ul class="kb-checklist"><li data-kbm class="kb-check-unchecked"></li></ul><p><br></p>')} title="Checklist / úkoly">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 12l2 2 4-4"/></svg>
             Úkol
           </TBtn>
           {/* Infobox */}
-          <TBtn onClick={() => ins('<div class="kb-callout"><br></div><p><br></p>')} title="Infobox / callout">
+          <TBtn onClick={() => insBlock('<div data-kbm class="kb-callout"><br></div><p><br></p>')} title="Infobox / callout">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
             Infobox
           </TBtn>
@@ -311,28 +354,51 @@ function RichEditor({ value, onChange, members, pages }: {
             if (e.clientX > rect.right - 36 && e.clientY < rect.top + 32) {
               navigator.clipboard.writeText(preEl.querySelector('code')?.textContent ?? '').catch(() => {});
             }
+            setCalloutPicker(null);
+            return;
+          }
+          const callout = (e.target as Element).closest('.kb-callout') as HTMLElement | null;
+          if (callout) {
+            const rect = callout.getBoundingClientRect();
+            if (e.clientX > rect.right - 32 && e.clientY < rect.top + 32) {
+              e.preventDefault();
+              setCalloutPicker(prev => prev?.el === callout ? null : { el: callout, right: window.innerWidth - rect.right + 4, top: rect.top + 4 });
+            } else {
+              setCalloutPicker(null);
+            }
+          } else {
+            setCalloutPicker(null);
           }
         }}
+        onBlur={() => setTimeout(() => setCalloutPicker(null), 150)}
         className="min-h-[280px] p-4 focus:outline-none prose-kb"
         style={{ color: 'var(--text-primary)', background: 'var(--bg-card)' }}
       />
       <style>{`
-        .prose-kb h1{font-size:1.6em;font-weight:800;margin:16px 0 8px;line-height:1.2}
-        .prose-kb h2{font-size:1.25em;font-weight:700;margin:14px 0 6px}
-        .prose-kb h3{font-size:1.05em;font-weight:600;margin:10px 0 4px}
+        .prose-kb h1{font-size:1.6em;font-weight:800;margin:28px 0 10px;line-height:1.2}
+        .prose-kb h2{font-size:1.25em;font-weight:700;margin:24px 0 8px}
+        .prose-kb h3{font-size:1.05em;font-weight:600;margin:20px 0 6px}
         .prose-kb ul{list-style:disc;padding-left:20px;margin:4px 0}
         .prose-kb ol{list-style:decimal;padding-left:20px;margin:4px 0}
         .prose-kb p{margin:4px 0;line-height:1.6}
-        .prose-kb pre{position:relative;background:var(--bg-hover);padding:12px 40px 12px 12px;border-radius:8px;font-family:monospace;font-size:13px;overflow-x:auto;margin:8px 0;border:1px solid var(--border);white-space:pre-wrap}
+        .prose-kb pre{position:relative;background:var(--bg-hover);padding:12px 40px 12px 12px;border-radius:8px;font-family:monospace;font-size:13px;overflow-x:auto;margin:16px 0;border:1px solid var(--border);white-space:pre-wrap}
         .prose-kb pre code{display:block;min-height:3em;white-space:pre-wrap;word-break:break-all;outline:none}
         .prose-kb pre::after{content:"";position:absolute;top:8px;right:8px;width:20px;height:20px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='13' height='13' rx='2' ry='2'/%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:center;cursor:pointer;opacity:0.5;transition:opacity 0.15s}
         .prose-kb pre:hover::after{opacity:1}
         .prose-kb .kb-checklist{list-style:none;padding-left:2px}
-        .prose-kb .kb-check-unchecked::before{content:"";display:inline-block;width:14px;height:14px;border:1.5px solid var(--border);border-radius:3px;margin-right:7px;vertical-align:text-bottom;background:transparent}
-        .prose-kb .kb-check-checked::before{content:"✓";display:inline-block;width:14px;height:14px;border:1.5px solid var(--primary);border-radius:3px;margin-right:7px;vertical-align:text-bottom;background:var(--primary);color:white;font-size:9px;font-weight:700;line-height:14px;text-align:center}
-        .prose-kb .kb-check-checked{opacity:0.6;text-decoration:line-through}
-        .prose-kb .kb-callout{border-radius:10px;padding:12px 16px;margin:10px 0;border:1.5px solid color-mix(in srgb,var(--primary) 35%,transparent);background:color-mix(in srgb,var(--primary) 8%,var(--bg-card));line-height:1.6;min-height:1.6em}
-        .prose-kb details.kb-toggle{border:none;border-radius:10px;background:var(--bg-hover);padding:0;margin:10px 0;overflow:hidden}
+        .prose-kb .kb-check-unchecked{line-height:1.8}
+        .prose-kb .kb-check-unchecked::before{content:"";display:inline-block;width:14px;height:14px;border:1.5px solid var(--border);border-radius:3px;margin-right:7px;vertical-align:middle;background:transparent;position:relative;top:-1px}
+        .prose-kb .kb-check-checked{opacity:0.6;text-decoration:line-through;line-height:1.8}
+        .prose-kb .kb-check-checked::before{content:"✓";display:inline-block;width:14px;height:14px;border:1.5px solid var(--primary);border-radius:3px;margin-right:7px;vertical-align:middle;background:var(--primary);color:white;font-size:9px;font-weight:700;line-height:14px;text-align:center;position:relative;top:-1px}
+        .prose-kb .kb-callout{position:relative;border-radius:10px;padding:12px 36px 12px 16px;margin:16px 0;border:1.5px solid color-mix(in srgb,var(--primary) 35%,transparent);background:color-mix(in srgb,var(--primary) 8%,var(--bg-card));line-height:1.6;min-height:1.6em}
+        .prose-kb .kb-callout[data-color="green"]{border-color:color-mix(in srgb,#22c55e 35%,transparent);background:color-mix(in srgb,#22c55e 8%,var(--bg-card))}
+        .prose-kb .kb-callout[data-color="yellow"]{border-color:color-mix(in srgb,#f59e0b 35%,transparent);background:color-mix(in srgb,#f59e0b 8%,var(--bg-card))}
+        .prose-kb .kb-callout[data-color="red"]{border-color:color-mix(in srgb,#ef4444 35%,transparent);background:color-mix(in srgb,#ef4444 8%,var(--bg-card))}
+        .prose-kb .kb-callout[data-color="purple"]{border-color:color-mix(in srgb,#8b5cf6 35%,transparent);background:color-mix(in srgb,#8b5cf6 8%,var(--bg-card))}
+        .prose-kb .kb-callout[data-color="gray"]{border-color:color-mix(in srgb,#6b7280 35%,transparent);background:color-mix(in srgb,#6b7280 8%,var(--bg-card))}
+        .prose-kb .kb-callout::after{content:"";position:absolute;top:8px;right:8px;width:18px;height:18px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Ccircle cx='9' cy='9' r='1.5' fill='%23888' stroke='none'/%3E%3Ccircle cx='15' cy='9' r='1.5' fill='%23888' stroke='none'/%3E%3Ccircle cx='9' cy='15' r='1.5' fill='%23888' stroke='none'/%3E%3Ccircle cx='15' cy='15' r='1.5' fill='%23888' stroke='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:center;cursor:pointer;opacity:0;transition:opacity 0.15s}
+        .prose-kb .kb-callout:hover::after{opacity:0.5}
+        .prose-kb details.kb-toggle{border:none;border-radius:10px;background:var(--bg-hover);padding:0;margin:16px 0;overflow:hidden}
         .prose-kb details.kb-toggle>summary{padding:10px 14px;cursor:pointer;font-weight:600;list-style:none;display:flex;align-items:center;gap:8px}
         .prose-kb details.kb-toggle>summary::-webkit-details-marker{display:none}
         .prose-kb details.kb-toggle>summary::before{content:"▶";font-size:0.65em;opacity:0.5;transition:transform 0.2s;display:inline-block}
@@ -341,6 +407,30 @@ function RichEditor({ value, onChange, members, pages }: {
       `}</style>
     </div>
     {/* Selection popup – fixed positioning escapes overflow:hidden */}
+    {calloutPicker && (
+      <div className="fixed z-[9999] flex items-center gap-1 p-1.5 rounded-lg border shadow-lg"
+        style={{ right: calloutPicker.right, top: calloutPicker.top, background: 'var(--bg-card)', borderColor: 'var(--border)' }}
+        onMouseDown={e => e.preventDefault()}>
+        {([
+          { id: '', color: 'var(--primary)', label: 'Výchozí' },
+          { id: 'green', color: '#22c55e', label: 'Zelená' },
+          { id: 'yellow', color: '#f59e0b', label: 'Žlutá' },
+          { id: 'red', color: '#ef4444', label: 'Červená' },
+          { id: 'purple', color: '#8b5cf6', label: 'Fialová' },
+          { id: 'gray', color: '#6b7280', label: 'Šedá' },
+        ] as { id: string; color: string; label: string }[]).map(c => (
+          <button key={c.id} type="button" title={c.label}
+            onMouseDown={e => {
+              e.preventDefault();
+              calloutPicker.el.setAttribute('data-color', c.id);
+              if (ref.current) onChange(ref.current.innerHTML);
+              setCalloutPicker(null);
+            }}
+            className="w-4 h-4 rounded-full transition-all"
+            style={{ background: c.color, border: (calloutPicker.el.dataset.color ?? '') === c.id ? '2px solid var(--text-primary)' : '2px solid transparent', outline: '1px solid rgba(0,0,0,0.1)' }} />
+        ))}
+      </div>
+    )}
     {selectionPopup && (
       <div className="fixed z-[9999] flex items-center gap-0.5 px-1.5 py-1 rounded-lg border shadow-lg"
         style={{ left: selectionPopup.x, top: selectionPopup.y - 46, transform: 'translateX(-50%)', background: 'var(--bg-card)', borderColor: 'var(--border)' }}
@@ -416,22 +506,27 @@ function PageViewer({ page, onChecklistToggle, onPageLinkClick }: {
     <>
       <div className="prose-kb prose-view" dangerouslySetInnerHTML={{ __html: page.content }} onClick={handleClick} style={{ color: 'var(--text-primary)' }} />
       <style>{`
-        .prose-view h1{font-size:1.6em;font-weight:800;margin:16px 0 8px;line-height:1.2}
-        .prose-view h2{font-size:1.25em;font-weight:700;margin:14px 0 6px}
-        .prose-view h3{font-size:1.05em;font-weight:600;margin:10px 0 4px}
+        .prose-view h1{font-size:1.6em;font-weight:800;margin:28px 0 10px;line-height:1.2}
+        .prose-view h2{font-size:1.25em;font-weight:700;margin:24px 0 8px}
+        .prose-view h3{font-size:1.05em;font-weight:600;margin:20px 0 6px}
         .prose-view ul{list-style:disc;padding-left:20px;margin:4px 0}
         .prose-view ol{list-style:decimal;padding-left:20px;margin:4px 0}
         .prose-view p{margin:4px 0;line-height:1.6}
-        .prose-view pre{position:relative;background:var(--bg-hover);padding:12px 40px 12px 12px;border-radius:8px;font-family:monospace;font-size:13px;overflow-x:auto;margin:8px 0;border:1px solid var(--border);cursor:default}
+        .prose-view pre{position:relative;background:var(--bg-hover);padding:12px 40px 12px 12px;border-radius:8px;font-family:monospace;font-size:13px;overflow-x:auto;margin:16px 0;border:1px solid var(--border);cursor:default}
         .prose-view pre::after{content:"";position:absolute;top:8px;right:8px;width:20px;height:20px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='13' height='13' rx='2' ry='2'/%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:center;cursor:pointer;opacity:0.5;transition:opacity 0.15s}
         .prose-view pre:hover::after{opacity:1}
         .prose-view .kb-checklist{list-style:none;padding-left:2px}
-        .prose-view .kb-check-unchecked,.prose-view .kb-check-checked{cursor:pointer}
-        .prose-view .kb-check-unchecked::before{content:"";display:inline-block;width:14px;height:14px;border:1.5px solid var(--border);border-radius:3px;margin-right:7px;vertical-align:text-bottom;background:transparent}
-        .prose-view .kb-check-checked::before{content:"✓";display:inline-block;width:14px;height:14px;border:1.5px solid var(--primary);border-radius:3px;margin-right:7px;vertical-align:text-bottom;background:var(--primary);color:white;font-size:9px;font-weight:700;line-height:14px;text-align:center}
+        .prose-view .kb-check-unchecked,.prose-view .kb-check-checked{cursor:pointer;line-height:1.8}
+        .prose-view .kb-check-unchecked::before{content:"";display:inline-block;width:14px;height:14px;border:1.5px solid var(--border);border-radius:3px;margin-right:7px;vertical-align:middle;background:transparent;position:relative;top:-1px}
+        .prose-view .kb-check-checked::before{content:"✓";display:inline-block;width:14px;height:14px;border:1.5px solid var(--primary);border-radius:3px;margin-right:7px;vertical-align:middle;background:var(--primary);color:white;font-size:9px;font-weight:700;line-height:14px;text-align:center;position:relative;top:-1px}
         .prose-view .kb-check-checked{opacity:0.6;text-decoration:line-through}
-        .prose-view .kb-callout{border-radius:10px;padding:12px 16px;margin:10px 0;border:1.5px solid color-mix(in srgb,var(--primary) 35%,transparent);background:color-mix(in srgb,var(--primary) 8%,var(--bg-card));line-height:1.6}
-        .prose-view details.kb-toggle{border:none;border-radius:10px;background:var(--bg-hover);padding:0;margin:10px 0;overflow:hidden}
+        .prose-view .kb-callout{border-radius:10px;padding:12px 16px;margin:16px 0;border:1.5px solid color-mix(in srgb,var(--primary) 35%,transparent);background:color-mix(in srgb,var(--primary) 8%,var(--bg-card));line-height:1.6}
+        .prose-view .kb-callout[data-color="green"]{border-color:color-mix(in srgb,#22c55e 35%,transparent);background:color-mix(in srgb,#22c55e 8%,var(--bg-card))}
+        .prose-view .kb-callout[data-color="yellow"]{border-color:color-mix(in srgb,#f59e0b 35%,transparent);background:color-mix(in srgb,#f59e0b 8%,var(--bg-card))}
+        .prose-view .kb-callout[data-color="red"]{border-color:color-mix(in srgb,#ef4444 35%,transparent);background:color-mix(in srgb,#ef4444 8%,var(--bg-card))}
+        .prose-view .kb-callout[data-color="purple"]{border-color:color-mix(in srgb,#8b5cf6 35%,transparent);background:color-mix(in srgb,#8b5cf6 8%,var(--bg-card))}
+        .prose-view .kb-callout[data-color="gray"]{border-color:color-mix(in srgb,#6b7280 35%,transparent);background:color-mix(in srgb,#6b7280 8%,var(--bg-card))}
+        .prose-view details.kb-toggle{border:none;border-radius:10px;background:var(--bg-hover);padding:0;margin:16px 0;overflow:hidden}
         .prose-view details.kb-toggle>summary{padding:10px 14px;cursor:pointer;font-weight:600;list-style:none;display:flex;align-items:center;gap:8px;user-select:none}
         .prose-view details.kb-toggle>summary::-webkit-details-marker{display:none}
         .prose-view details.kb-toggle>summary::before{content:"▶";font-size:0.65em;opacity:0.5;transition:transform 0.2s;display:inline-block}
@@ -569,6 +664,8 @@ function KnowledgeBaseContent() {
   const [statusSectionExpanded, setStatusSectionExpanded] = useState(false);
   const [statusFilter, setStatusFilter] = useState<KbPageStatus | null>(null);
   const [showUnfiled, setShowUnfiled] = useState(false);
+  const [mentionFilter, setMentionFilter] = useState<string | null>(null);
+  const [mentionSectionExpanded, setMentionSectionExpanded] = useState(false);
 
   // Folder modal
   const [folderModal, setFolderModal] = useState<{ mode: 'add' | 'edit'; parentId: string | null; depth: number; target: KbFolder | null; name: string } | null>(null);
@@ -909,6 +1006,8 @@ function KnowledgeBaseContent() {
       p = p.filter(pg => pg.title.toLowerCase().includes(q) || pg.content.toLowerCase().includes(q) || pg.tags.some(t => t.toLowerCase().includes(q)));
     } else if (showUnfiled) {
       p = p.filter(pg => !pg.folder_id);
+    } else if (mentionFilter) {
+      p = p.filter(pg => pg.content.includes(`data-user-id="${mentionFilter}"`));
     } else if (statusFilter) {
       p = p.filter(pg => pg.status === statusFilter);
     } else if (selectedFolderId) {
@@ -1020,8 +1119,8 @@ function KnowledgeBaseContent() {
             {!search && (
               <div
                 className="flex items-center gap-1.5 py-1 px-2 rounded-lg cursor-pointer transition-colors mb-1"
-                style={{ background: selectedFolderId === null && !showUnfiled && !statusFilter && !search ? 'var(--bg-hover)' : 'transparent' }}
-                onClick={() => { setSelectedFolderId(null); setShowUnfiled(false); setStatusFilter(null); }}>
+                style={{ background: selectedFolderId === null && !showUnfiled && !statusFilter && !mentionFilter && !search ? 'var(--bg-hover)' : 'transparent' }}
+                onClick={() => { setSelectedFolderId(null); setShowUnfiled(false); setStatusFilter(null); setMentionFilter(null); }}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)' }}><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></svg>
                 <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Všechny stránky</span>
                 <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>{pages.length}</span>
@@ -1033,7 +1132,7 @@ function KnowledgeBaseContent() {
               <div
                 className="flex items-center gap-1.5 py-1 px-2 rounded-lg cursor-pointer transition-colors mb-1"
                 style={{ background: showUnfiled ? 'var(--bg-hover)' : 'transparent' }}
-                onClick={() => { setShowUnfiled(v => !v); setSelectedFolderId(null); setStatusFilter(null); }}>
+                onClick={() => { setShowUnfiled(v => !v); setSelectedFolderId(null); setStatusFilter(null); setMentionFilter(null); }}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)' }}><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>
                 <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Nezařazené</span>
                 <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>{count}</span>
@@ -1057,9 +1156,37 @@ function KnowledgeBaseContent() {
                     <div key={s}
                       className="flex items-center gap-1.5 py-1 rounded-lg cursor-pointer transition-colors"
                       style={{ paddingLeft: 16, background: statusFilter === s ? 'var(--bg-hover)' : 'transparent' }}
-                      onClick={() => { setStatusFilter(prev => prev === s ? null : s); setSelectedFolderId(null); setShowUnfiled(false); }}>
+                      onClick={() => { setStatusFilter(prev => prev === s ? null : s); setSelectedFolderId(null); setShowUnfiled(false); setMentionFilter(null); }}>
                       <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: STATUS_CONFIG[s].color }} />
                       <span className="flex-1 text-xs" style={{ color: 'var(--text-secondary)' }}>{STATUS_CONFIG[s].label}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full mr-1" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>{count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Podle zmínky */}
+            {!search && members.some(m => pages.some(p => p.content.includes(`data-user-id="${m.user_id}"`))) && (
+              <div className="mb-1">
+                <button type="button" className="flex items-center gap-1.5 w-full px-2 py-1 rounded hover:bg-[var(--bg-hover)] transition-colors"
+                  onClick={() => setMentionSectionExpanded(v => !v)}>
+                  <svg width="8" height="8" viewBox="0 0 10 10" fill="currentColor" style={{ color: 'var(--text-muted)', transition: 'transform 0.15s', transform: mentionSectionExpanded ? 'rotate(90deg)' : 'rotate(0deg)', flexShrink: 0 }}>
+                    <path d="M3 2l4 3-4 3V2z"/>
+                  </svg>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)', flexShrink: 0 }}><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94"/></svg>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider flex-1 text-left" style={{ color: 'var(--text-muted)' }}>Podle zmínky</p>
+                </button>
+                {mentionSectionExpanded && members.map(m => {
+                  const count = pages.filter(p => p.content.includes(`data-user-id="${m.user_id}"`)).length;
+                  if (count === 0) return null;
+                  return (
+                    <div key={m.user_id}
+                      className="flex items-center gap-1.5 py-1 rounded-lg cursor-pointer transition-colors"
+                      style={{ paddingLeft: 16, background: mentionFilter === m.user_id ? 'var(--bg-hover)' : 'transparent' }}
+                      onClick={() => { setMentionFilter(prev => prev === m.user_id ? null : m.user_id); setSelectedFolderId(null); setShowUnfiled(false); setStatusFilter(null); }}>
+                      <div className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-[9px] font-bold text-white" style={{ background: m.avatar_color }}>{getInitials(m.display_name)}</div>
+                      <span className="flex-1 text-xs truncate" style={{ color: 'var(--text-secondary)' }}>{m.display_name}</span>
                       <span className="text-[10px] px-1.5 py-0.5 rounded-full mr-1" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>{count}</span>
                     </div>
                   );
@@ -1071,7 +1198,7 @@ function KnowledgeBaseContent() {
             {!search && (
               <KbFolderTree folders={folders} pages={pages} selectedFolderId={selectedFolderId} selectedPageId={selectedPage?.id ?? null}
                 expanded={expanded}
-                onSelectFolder={id => { setSelectedFolderId(prev => prev === id ? null : id); setShowUnfiled(false); setStatusFilter(null); }}
+                onSelectFolder={id => { setSelectedFolderId(prev => prev === id ? null : id); setShowUnfiled(false); setStatusFilter(null); setMentionFilter(null); }}
                 onSelectPage={selectPage}
                 onToggle={id => setExpanded(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; })}
                 onAddSub={(pid, d) => setFolderModal({ mode: 'add', parentId: pid, depth: d, target: null, name: '' })}
@@ -1081,10 +1208,11 @@ function KnowledgeBaseContent() {
             )}
 
             {/* Search results / Filtered pages list */}
-            {(search || !selectedFolderId || showUnfiled || statusFilter !== null) && (
+            {(search || !selectedFolderId || showUnfiled || statusFilter !== null || mentionFilter !== null) && (
               <div className="mt-1">
                 {search && <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Výsledky ({filteredPages.length})</p>}
                 {!search && showUnfiled && <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Nezařazené ({filteredPages.length})</p>}
+                {!search && mentionFilter && <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Zmínky: {members.find(m => m.user_id === mentionFilter)?.display_name} ({filteredPages.length})</p>}
                 {!search && statusFilter && <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>{STATUS_CONFIG[statusFilter].label} ({filteredPages.length})</p>}
                 {filteredPages.map(p => (
                   <div key={p.id} className="group/page flex items-center gap-1.5 py-1 rounded-lg cursor-pointer transition-colors relative"
@@ -1352,53 +1480,6 @@ function KnowledgeBaseContent() {
                   </div>
                 )}
 
-                {/* Revize v hlavičce stránky */}
-                {!selectedPage.id.startsWith('__new__') && (reviews.length > 0 || canAdmin) && !editing && (
-                  <div className="flex flex-wrap items-center gap-2 mb-4 px-3 py-2.5 rounded-xl border" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
-                    <div className="flex items-center gap-1.5 flex-shrink-0">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)' }}>
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
-                      </svg>
-                      <span className="text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>Revize</span>
-                      {reviews.filter(r => !r.is_done).length > 0 && (
-                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold text-white" style={{ background: '#ef4444' }}>
-                          {reviews.filter(r => !r.is_done).length}
-                        </span>
-                      )}
-                    </div>
-                    {reviews.map(r => {
-                      const overdue = !r.is_done && new Date(r.review_date + 'T23:59:59') < new Date();
-                      return (
-                        <div key={r.id} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs" style={{
-                          borderColor: overdue && !r.is_done ? '#ef4444' : 'var(--border)',
-                          color: r.is_done ? 'var(--text-muted)' : overdue ? '#ef4444' : 'var(--text-secondary)',
-                          opacity: r.is_done ? 0.55 : 1,
-                        }}>
-                          <button type="button" onClick={() => toggleReviewDone(r.id, !r.is_done)}
-                            className="w-3.5 h-3.5 rounded border flex-shrink-0 flex items-center justify-center transition-colors"
-                            style={{ borderColor: r.is_done ? 'var(--primary)' : 'currentColor', background: r.is_done ? 'var(--primary)' : 'transparent' }}>
-                            {r.is_done && <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
-                          </button>
-                          <span>{memberName(r.assigned_to)} · {new Date(r.review_date).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'short' })}</span>
-                          {r.note && <span title={r.note} className="opacity-70">ℹ</span>}
-                          {canAdmin && (
-                            <button type="button" onClick={() => deleteReview(r.id)} className="hover:opacity-70 flex items-center" style={{ color: 'inherit' }}>
-                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
-                    {canAdmin && (
-                      <button type="button" onClick={() => { setReviewModal(true); setReviewForm({ assigned_to: user?.id ?? '', review_date: '', note: '' }); }}
-                        className="flex items-center gap-1 px-2.5 py-1 rounded-full border text-xs hover:bg-[var(--bg-active)] transition-colors"
-                        style={{ borderColor: 'var(--border)', color: 'var(--text-muted)', background: 'transparent' }}>
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                        Přidat revizi
-                      </button>
-                    )}
-                  </div>
-                )}
 
                 {/* Restricted access toggle (admin only, edit mode) */}
                 {editing && canAdmin && (
@@ -1434,11 +1515,13 @@ function KnowledgeBaseContent() {
                     <div className="flex gap-1 mb-4 border-b" style={{ borderColor: 'var(--border)' }}>
                       {((() => {
                         const backlinksCount = pages.filter(p => p.id !== selectedPage.id && p.content.includes(`data-page-id="${selectedPage.id}"`)).length;
+                        const pendingReviews = reviews.filter(r => !r.is_done).length;
                         return [
                           { id: 'comments', label: `Komentáře (${comments.length})` },
                           { id: 'history', label: `Historie (${versions.length})` },
                           canAdmin ? { id: 'access', label: 'Přístupy' } : null,
                           { id: 'backlinks', label: `Odkazující (${backlinksCount})` },
+                          { id: 'reviews', label: `Revize${pendingReviews > 0 ? ` (${pendingReviews})` : ''}` },
                         ].filter(Boolean) as { id: string; label: string }[];
                       })()).map(tab => (
                         <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id as PageTab)}
@@ -1598,6 +1681,53 @@ function KnowledgeBaseContent() {
                             );
                           });
                         })()}
+                      </div>
+                    )}
+
+                    {/* Reviews tab */}
+                    {activeTab === 'reviews' && (
+                      <div>
+                        {reviews.length === 0 && !canAdmin && (
+                          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Žádné revize</p>
+                        )}
+                        <div className="flex flex-wrap gap-2 mb-4">
+                          {reviews.map(r => {
+                            const overdue = !r.is_done && new Date(r.review_date + 'T23:59:59') < new Date();
+                            return (
+                              <div key={r.id} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs" style={{
+                                borderColor: overdue && !r.is_done ? '#ef4444' : 'var(--border)',
+                                color: r.is_done ? 'var(--text-muted)' : overdue ? '#ef4444' : 'var(--text-secondary)',
+                                opacity: r.is_done ? 0.55 : 1,
+                                background: 'var(--bg-hover)',
+                              }}>
+                                <button type="button" onClick={() => toggleReviewDone(r.id, !r.is_done)}
+                                  className="w-3.5 h-3.5 rounded border flex-shrink-0 flex items-center justify-center transition-colors"
+                                  style={{ borderColor: r.is_done ? 'var(--primary)' : 'currentColor', background: r.is_done ? 'var(--primary)' : 'transparent' }}>
+                                  {r.is_done && <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
+                                </button>
+                                <span>{memberName(r.assigned_to)} · {new Date(r.review_date).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'short' })}</span>
+                                {r.note && (
+                                  <span title={r.note} className="opacity-70 flex items-center">
+                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+                                  </span>
+                                )}
+                                {canAdmin && (
+                                  <button type="button" onClick={() => deleteReview(r.id)} className="hover:opacity-70 flex items-center" style={{ color: 'inherit' }}>
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                        {canAdmin && (
+                          <button type="button" onClick={() => { setReviewModal(true); setReviewForm({ assigned_to: user?.id ?? '', review_date: '', note: '' }); }}
+                            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium hover:bg-[var(--bg-hover)] transition-colors"
+                            style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)', background: 'transparent' }}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            Přidat revizi
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>

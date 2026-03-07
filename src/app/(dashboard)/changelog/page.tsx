@@ -11,6 +11,17 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.39.3 – 7. 3. 2026</h3>
+<ul>
+  <li><strong>Znalostní báze – kurzor uvnitř vložených prvků</strong> – po vložení kódového bloku, checklistu nebo infoboxu se kurzor nyní správně umístí dovnitř daného prvku (namísto skoku pod prvek). Implementace: nový helper <code>insBlock(html)</code> s atributem <code>data-kbm</code> jako markerem pro cílovou pozici kurzoru.</li>
+  <li><strong>Znalostní báze – Infobox: volba barvy</strong> – v pravém horním rohu infoboxu se při hoveru zobrazí ikonka palety. Kliknutím otevřete plovoucí color picker se 6 barvami (výchozí, zelená, žlutá, červená, fialová, šedá). Barva se ukládá do atributu <code>data-color</code> a mění okraj i pozadí infoboxu. Picker se zobrazí jak v editoru, tak ve view modu.</li>
+  <li><strong>Znalostní báze – Infobox: Enter uvnitř</strong> – při stisku Enter v infoboxu se nyní zalomí řádek uvnitř bloku (místo vyskočení z infoboxu).</li>
+  <li><strong>Znalostní báze – Revize jako záložka</strong> – sekce Revize přesunuta z hlavičky stránky do záložek vedle Komentáře, Historie a Přístupy. Badge s počtem nesplněných revizí se zobrazuje přímo na záložce. Odstraněno použití emoji ℹ – nahrazeno SVG ikonou.</li>
+  <li><strong>Znalostní báze – Odsazení nadpisů a bloků</strong> – zvýšeny horní a dolní okraje u H1 (28px), H2 (24px), H3 (20px), kódových bloků, infoboxů a toggles (16px) pro lepší čitelnost textu.</li>
+  <li><strong>Znalostní báze – Checklist: zarovnání textu</strong> – opraveno vertikální zarovnání textu vůči ikoně checkboxu (vertical-align:middle, top:-1px, line-height:1.8).</li>
+  <li><strong>Znalostní báze – Filtrace podle zmínky</strong> – nová sekce „Podle zmínky" v levém panelu zobrazuje seznam členů @zmíněných v obsahu stránek. Kliknutím na člena se zobrazí jen stránky, kde je daný uživatel zmíněn.</li>
+</ul>
+
 <h3>v2.39.2 – 7. 3. 2026</h3>
 <ul>
   <li><strong>Znalostní báze – Naposledy upravené v levém sidebaru</strong> – přidána collapsible sekce „Naposledy upravené" zobrazující 10 posledně editovaných stránek včetně cesty složky (breadcrumb) a barevného stavu. Sekci lze sbalit/rozbalit šipkou.</li>

@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 7. 3. 2026 (v2.39.2)
+> Aktualizováno: 7. 3. 2026 (v2.39.3)
 
 ---
 
@@ -493,6 +493,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.39.3 | 7. 3. 2026 | Znalostní báze: kurzor uvnitř kód/checklist/infobox (insBlock+data-kbm), infobox color picker (6 barev, data-color, CSS variants, palette ::after, floating picker), Enter v infoboxu = br, Revize přesunuta z hlavičky → záložka reviews (ℹ→SVG), větší odsazení H1/H2/H3+bloky (16–28px), checklist vertical-align fix, filtr Podle zmínky v sidebaru (mentionFilter state) |
 | v2.39.2 | 7. 3. 2026 | Znalostní báze: Naposledy upravené v levém sidebaru (collapsible, top 10 s cestou složky), Nezařazené a Podle stavu filtry v sidebaru (s počty), dvousloupcová úvodní stránka (upravené+nové, 10 položek každý), tab Odkazující stránky (backlinks s cestou+stavem), oprava layoutu edit polí Status+Složka+Štítky, odsazení puntíku stavu v menu (ml-1 mr-2) |
 | v2.39.1 | 7. 3. 2026 | Automatizace: editace rozvrhu (tužka → modal s hodinam/minutami/dny/timezone), fix dvojitého lomítka v URL (trailing slash strip); Timer: auto manager note "Práce 8+h v kuse. Ověřit." po 8h s vybraným projektem+kategorií+úkolem; AI asistent: výška stránky s paddingem u patičky, Firecrawl kredity přesunuty do pravého panelu (kompaktní progress bar) |
 | v2.39.0 | 7. 3. 2026 | Automatizace: nová záložka v Nastavení (cron-job.org integrace), 5 šablon (weekly-report AI, inactive-check, kb-reviews-digest, feedback-summary AI, vacation-report), proxy routes /api/cron-jobs/*, 5 cron action handlers /api/cron/*, CRON_SECRET server-side injekce, výsledky v trackino_cron_results |
@@ -1490,7 +1491,7 @@ export interface KbAccess { id, workspace_id, page_id, user_id, can_edit, create
 
 ### Lokální typy (knowledge-base/page.tsx)
 ```typescript
-type PageTab = 'comments' | 'history' | 'access' | 'backlinks';
+type PageTab = 'comments' | 'history' | 'access' | 'backlinks' | 'reviews';
 interface KbMember { user_id: string; display_name: string; avatar_color: string; }
 const STATUS_CONFIG: Record<KbPageStatus, { label: string; color: string }>
 ```
@@ -1514,15 +1515,33 @@ const STATUS_CONFIG: Record<KbPageStatus, { label: string; color: string }>
 ### Layout
 - Dvoupanelový: záporný margin (`-m-4 lg:-m-6`) k eliminaci DashboardLayout paddingu, `flex flex-row`
 - Levý panel: 260px fixed width, na mobilu overlay (toggle tlačítkem), obsahuje hledání, stromovou strukturu, oblíbené
-- Pravý panel: flex-1, zobrazuje buď viewer nebo editor se záložkami (Komentáře / Historie / Recenze / Přístupy)
+- Pravý panel: flex-1, zobrazuje buď viewer nebo editor se záložkami (Komentáře / Historie / Přístupy / Odkazující / Revize)
 
-### Revize v hlavičce stránky (v2.38.0)
-- Sekce Revize přesunuta z záložky „Recenze" do **hlavičky stránky** (za meta row, před content)
-- Zobrazuje se jako flex row s pill odznaky; červený badge s počtem nesplněných
-- Každá revize: checkbox + jméno + datum + volitelná poznámka (ℹ) + × mazání (admin)
-- Tab „Recenze" odstraněn; záložky nyní: `comments | history | access | backlinks`
+### Revize jako záložka (v2.39.3)
+- Sekce Revize přesunuta z hlavičky stránky do **záložky `reviews`** (vedle Komentáře, Historie, Přístupy, Odkazující)
+- Záložky nyní: `comments | history | access | backlinks | reviews`
+- Badge s počtem nesplněných revizí zobrazeno přímo na záložce
+- Každá revize: checkbox + jméno + datum + volitelná poznámka (SVG info ikona, nikoliv ℹ emoji) + × mazání (admin)
 - Tab „Odkazující" (backlinks): klientsky detekuje stránky odkazující na aktuální stránku (hledání `data-page-id="${pageId}"` v content HTML); zobrazuje název + cestu složky (getFolderPath) + stav; kliknutí přejde na danou stránku
-- Modal title: „Přidat revizi" (dříve „Přidat revizní připomínku")
+
+### Infobox – color picker (v2.39.3)
+- Atribut `data-color` na `.kb-callout` pro uložení barvy (výchozí = '' nebo chybějící atribut)
+- 6 variant: `''` (výchozí/primary), `'green'`, `'yellow'`, `'red'`, `'purple'`, `'gray'`
+- CSS: `[data-color="green"] { border-color: #22c55e40; background: #22c55e10; }`  atd. v prose-kb + prose-view
+- Callout má `position:relative; padding-right:36px`; `::after` zobrazuje SVG palety (opacity 0 → 0.5 na hover)
+- V editoru: click v pravém horním rohu callout (32px oblast) → `calloutPicker` state → floating fixed div se 6 kulatými tlačítky
+- `onMouseDown={e => e.preventDefault()}` na picker div – zabraňuje ztrátě fokusu editoru před kliknutím
+
+### insBlock helper (v2.39.3)
+- Nová funkce `insBlock(html: string)` v RichEditor – obdoba `ins()`, ale po insertu přemístí kurzor dovnitř prvku označeného `data-kbm`
+- Atribut `data-kbm` se v HTML odstraní po insertu; kurzor se umístí přes `range.setStart(target, 0)`
+- Používán pro: kód (`<code data-kbm>`), checklist (`<li data-kbm>`), infobox (`<div data-kbm class="kb-callout">`)
+
+### Filtr Podle zmínky (v2.39.3)
+- State: `mentionFilter: string | null`, `mentionSectionExpanded: boolean`
+- `filteredPages` branch: `p.content.includes('data-user-id="${mentionFilter}"')` při aktivním filtru
+- Sidebar sekce „Podle zmínky": collapsible, zobrazuje členy s počtem stránek kde jsou zmíněni (> 0); kliknutí → `setMentionFilter(userId)`
+- Kliknutí na Všechny stránky / Nezařazené / Podle stavu / KbFolderTree onSelectFolder → resetuje `mentionFilter` na null
 
 ### Revize v Přehledu (page.tsx)
 - Přidán typ `'kb_review'` do NotificationItem
