@@ -155,21 +155,23 @@ const DEFAULT_HELP_CONTENT = `
 <p>V <strong>Tým → editace člena → sekce Fakturace</strong> lze každému členovi přiřadit konkrétní fakturační profil. Pokud není přiřazen žádný, použije se výchozí profil workspace. Přiřazený profil se uživateli zobrazí při podání žádosti o fakturaci v pravém panelu formuláře.</p>
 
 <h3>AI asistent</h3>
-<p>Modul <strong>AI asistent</strong> (dostupný v tarifu <strong>Pro a Max</strong>, sekce <strong>NÁSTROJE</strong>) je chatovací okno napojené na AI modely přes API. Aktuálně podporuje <strong>OpenAI</strong> (GPT-4o, GPT-4o mini, GPT-4 Turbo, o1-mini).</p>
+<p>Modul <strong>AI asistent</strong> (dostupný v tarifu <strong>Max</strong>, sekce <strong>NÁSTROJE</strong>) je chatovací okno napojené na AI modely přes API. Aktuálně podporuje <strong>OpenAI</strong> (GPT-4o, GPT-4o mini, GPT-4 Turbo, o1-mini).</p>
 <ul>
-  <li><strong>Výběr modelu</strong> – rozbalte panel Nastavení (tlačítko v pravém horním rohu) a zvolte AI model. Každý model má popis, velikost kontextového okna a informaci o podpoře streamingu.</li>
+  <li><strong>Konverzace</strong> – každá konverzace je uložena v databázi; v levém panelu vidíte historii svých konverzací. Konverzaci lze vyhledat, přejmenovat kliknutím nebo smazat.</li>
+  <li><strong>Přepínání modelu</strong> – pill tlačítka ve spodní části chatu umožňují rychlé přepnutí modelu. Tlačítko ℹ zobrazí podrobný popis každého modelu, jeho silné stránky a orientační cenu v Kč.</li>
+  <li><strong>Počítadlo tokenů</strong> – pod vstupním polem se zobrazuje odhadovaný počet tokenů v konverzaci a barevný progress bar ukazující, jak blízko jste limitu kontextového okna (zelená → žlutá → oranžová → červená).</li>
   <li><strong>Kreativita (temperature)</strong> – posuvník 0–1 v nastavení; nízká hodnota = přesné/konzervativní odpovědi, vysoká = kreativnější a méně předvídatelné.</li>
   <li><strong>System prompt</strong> – v nastavení lze rozbalit pole „System prompt" a zadat pokyny pro AI (např. „Odpovídej stručně a v češtině", „Jsi HR asistent"). Platí po celou dobu konverzace.</li>
   <li><strong>Odesílání zpráv</strong> – napište zprávu do textového pole a stiskněte <kbd>Enter</kbd> (nový řádek = <kbd>Shift+Enter</kbd>) nebo klikněte Odeslat.</li>
   <li><strong>Streamované odpovědi</strong> – u modelů s podporou streamingu se odpověď zobrazuje v reálném čase písmeno po písmenu. Generování lze přerušit červeným tlačítkem stop.</li>
   <li><strong>Formátování odpovědí</strong> – AI odpovědi automaticky renderují Markdown: nadpisy, tučný text, kurzívu, kódové bloky se zvýrazněním syntaxe, odrážkové seznamy.</li>
-  <li><strong>Vymazání konverzace</strong> – tlačítko Vymazat konverzaci smaže historii zpráv v prohlížeči (nezaznamenává se do databáze).</li>
   <li><strong>Rychlé návrhy</strong> – při prázdné konverzaci se zobrazí tlačítka s ukázkovými dotazy pro rychlé zahájení; pokud je Firecrawl dostupný, nabídnou se i návrhy s prohledáváním webu.</li>
   <li><strong>Web search (🌐)</strong> – globus tlačítko vlevo od vstupního pole. Kliknutím aktivujete webové vyhledávání: AI před každou odpovědí automaticky prohledá internet a výsledky zahrne do kontextu. Aktivní stav je indikován zeleným zvýrazněním tlačítka a štítkem „Web search aktivní". Dostupné pouze pokud je nastaven Firecrawl API klíč.</li>
   <li><strong>Automatické čtení URL</strong> – pokud vaše zpráva obsahuje URL adresu (začínající https://), AI ji automaticky přečte a obsah stránky použije jako kontext pro odpověď. Nad vstupním polem se zobrazí zelený štítek „Stránka bude přečtena". Lze vložit až 2 URL najednou.</li>
   <li><strong>Indikátor webového kontextu</strong> – u odeslaných zpráv, ke kterým byl přiložen webový kontext (vyhledávání nebo scraping), se zobrazí zelená ikonka 🌐 a text „web" pod bublinou.</li>
-  <li><strong>Počítadlo Firecrawl kreditů (🔥)</strong> – ve footeru chatu se zobrazuje stav spotřebovaných kreditů „🔥 X / 500". Barva: zelená (≥200 zbývá), oranžová (50–199), červená (&lt;50 – zobrazí se i varování). Free Plan má 500 jednorázových kreditů (1 kredit za URL, ~7 za web search).</li>
+  <li><strong>Počítadlo Firecrawl kreditů (🔥)</strong> – v levém panelu (pod seznamem konverzací) se zobrazuje stav spotřebovaných kreditů. Barva: zelená (≥200 zbývá), oranžová (50–199), červená (&lt;50 – zobrazí se i varování). Free Plan má 500 jednorázových kreditů (1 kredit za URL, ~7 za web search).</li>
 </ul>
+<p><strong>Přístupová práva</strong> – AI asistent je dostupný pro master admina, workspace admina (owner/admin) a uživatele s explicitně uděleným oprávněním <code>can_use_ai_assistant</code> (nastavitelné v záložce <strong>Nastavení → AI asistent</strong>). Admin tam může také omezit, které AI modely má každý uživatel k dispozici.</p>
 <p><strong>Nastavení API klíčů</strong> – AI asistent vyžaduje platný API klíč od OpenAI (<code>OPENAI_API_KEY</code>). Pro funkce web search a URL čtení je navíc potřeba Firecrawl klíč (<code>FIRECRAWL_API_KEY</code>). Oba klíče se přidávají do <code>.env.local</code> pro lokální vývoj a do Vercel Environment Variables pro produkci. Pokud OpenAI klíč chybí, zobrazí se červené upozornění přímo na stránce AI asistenta.</p>
 
 <h3>Převodník textu</h3>
@@ -274,8 +276,8 @@ const DEFAULT_HELP_CONTENT = `
 <p>Aplikace je rozdělena do <strong>modulů</strong>, které lze zapnout nebo vypnout. Výchozí sada modulů závisí na tarifu workspace:</p>
 <ul>
   <li><strong>Free</strong> – Měřič, Reporty, Projekty, Klienti, Štítky, Tým</li>
-  <li><strong>Pro</strong> – Free + Plánovač, Dovolená, Fakturace, Přehled hodin, Analýza kategorií, Podřízení, Poznámky manažera, Nastavení, Převodník textu, Důležité dny, Žádosti, <strong>Prompty</strong>, <strong>Záložky</strong>, <strong>AI asistent</strong>, sekce Společnost (Znalostní báze, Dokumenty, Firemní pravidla, Pravidla v kanceláři, Připomínky) + funkce <strong>Oblíbené</strong> v levém menu</li>
-  <li><strong>Max</strong> – Pro + Audit log + Kalendář</li>
+  <li><strong>Pro</strong> – Free + Plánovač, Dovolená, Fakturace, Přehled hodin, Analýza kategorií, Podřízení, Poznámky manažera, Nastavení, Převodník textu, Důležité dny, Žádosti, <strong>Prompty</strong>, <strong>Záložky</strong>, sekce Společnost (Znalostní báze, Dokumenty, Firemní pravidla, Pravidla v kanceláři, Připomínky) + funkce <strong>Oblíbené</strong> v levém menu</li>
+  <li><strong>Max</strong> – Pro + Audit log + Kalendář + <strong>AI asistent</strong></li>
 </ul>
 <p>Admin může v <strong>Nastavení → Moduly</strong> nastavit výjimky pro jednotlivé uživatele – přidat modul, který není v tarifu, nebo zakázat modul, který v tarifu je. Výjimky mají vždy přednost před výchozím tarifem. Moduly, které uživatel nemá povoleny, se nezobrazují v levém menu.</p>
 <p>Master Admin může v <strong>Nastavení aplikace</strong> (sekce Systém) globálně změnit, které moduly jsou součástí každého tarifu. Konfigurace se okamžitě projeví pro všechny workspace.</p>

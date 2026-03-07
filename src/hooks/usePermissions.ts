@@ -12,6 +12,7 @@ import {
   canManageWorkspaces as checkManageWs,
   canAccessSettings as checkAccessSettings,
   canAccessAuditLog as checkAccessAuditLog,
+  canUseAiAssistant as checkCanUseAi,
 } from '@/lib/permissions';
 
 export function usePermissions() {
@@ -35,6 +36,8 @@ export function usePermissions() {
     canAccessSettings: checkAccessSettings(userRole),
     /** Má přístup k audit logu */
     canAccessAuditLog: checkAccessAuditLog(userRole, profile, currentMembership),
+    /** Může používat AI asistenta (master admin, admin/owner, nebo can_use_ai_assistant) */
+    canUseAiAssistant: checkCanUseAi(userRole, profile, currentMembership),
     /** Aktuální role */
     role: userRole,
     /** Aktuální membership */

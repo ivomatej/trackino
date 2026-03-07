@@ -71,7 +71,6 @@ export const TARIFF_MODULES: Record<Tariff, ModuleId[]> = {
     'office_rules',
     'prompts',
     'bookmarks',
-    'ai_assistant',
   ],
   max: [
     'time_tracker',

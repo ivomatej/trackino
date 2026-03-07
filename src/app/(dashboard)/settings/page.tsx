@@ -37,8 +37,9 @@ const TIMEZONE_OPTIONS: { value: string; label: string }[] = [
   { value: 'Australia/Sydney',     label: 'Sydney (UTC+10/+11)' },
 ];
 import { useRouter } from 'next/navigation';
-import type { WorkspaceBilling, RequiredFields, Tariff, VacationAllowance, CooperationType, ModuleId, WorkspaceSubscription } from '@/types/database';
+import type { WorkspaceBilling, RequiredFields, Tariff, VacationAllowance, CooperationType, ModuleId, WorkspaceSubscription, AiLimitType } from '@/types/database';
 import { ALL_MODULES, TARIFF_MODULES } from '@/lib/modules';
+import { AI_MODELS, CZK_PER_USD } from '@/lib/ai-providers';
 
 // Typy pro správu modulů
 interface MemberModuleInfo {
@@ -55,7 +56,7 @@ function SettingsContent() {
   const { canAccessSettings, isMasterAdmin } = usePermissions();
   const router = useRouter();
 
-  const [activeTab, setActiveTab] = useState<'general' | 'subscription' | 'billing' | 'fields' | 'vacation' | 'cooperation' | 'modules' | 'society'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'subscription' | 'billing' | 'fields' | 'vacation' | 'cooperation' | 'modules' | 'society' | 'ai'>('general');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
 
@@ -114,6 +115,16 @@ function SettingsContent() {
     knowledge_base: true, documents: true, company_rules: true, office_rules: true,
   });
   const [savingSociety, setSavingSociety] = useState(false);
+
+  // AI asistent – nastavení
+  interface AiMemberInfo {
+    user_id: string; display_name: string; email: string; avatar_color: string; role: string;
+    can_use_ai_assistant: boolean; ai_allowed_models: string[] | null;
+  }
+  const [aiMembers, setAiMembers] = useState<AiMemberInfo[]>([]);
+  const [aiLimits, setAiLimits] = useState<{ daily: string; weekly: string; monthly: string }>({ daily: '', weekly: '', monthly: '' });
+  const [aiLoading, setAiLoading] = useState(false);
+  const [savingAi, setSavingAi] = useState(false);
 
   useEffect(() => {
     if (currentWorkspace) {
@@ -400,6 +411,9 @@ function SettingsContent() {
     if (activeTab === 'subscription' && currentWorkspace) {
       fetchSubscriptions(currentWorkspace.id);
     }
+    if (activeTab === 'ai') {
+      fetchAiSettings();
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, fetchModuleData, currentWorkspace?.id]);
 
@@ -424,6 +438,106 @@ function SettingsContent() {
   async function removeModuleOverride(overrideId: string) {
     await supabase.from('trackino_user_module_overrides').delete().eq('id', overrideId);
     fetchModuleData();
+  }
+
+  // ── AI asistent nastavení ────────────────────────────────────────────────
+  async function fetchAiSettings() {
+    if (!currentWorkspace) return;
+    setAiLoading(true);
+    try {
+      // Načti členy s AI oprávněními
+      const { data: members } = await supabase
+        .from('trackino_workspace_members')
+        .select('user_id, role, can_use_ai_assistant, ai_allowed_models')
+        .eq('workspace_id', currentWorkspace.id)
+        .eq('approved', true);
+
+      const userIds = (members ?? []).map((m: { user_id: string }) => m.user_id);
+      const { data: profiles } = await supabase
+        .from('trackino_profiles')
+        .select('id, display_name, email, avatar_color')
+        .in('id', userIds);
+
+      const profileMap: Record<string, { display_name: string; email: string; avatar_color: string }> = {};
+      for (const p of profiles ?? []) {
+        profileMap[(p as { id: string }).id] = p as { display_name: string; email: string; avatar_color: string };
+      }
+
+      setAiMembers((members ?? []).map((m: { user_id: string; role: string; can_use_ai_assistant: boolean; ai_allowed_models: string[] | null }) => ({
+        user_id: m.user_id,
+        display_name: profileMap[m.user_id]?.display_name ?? profileMap[m.user_id]?.email ?? 'Neznámý',
+        email: profileMap[m.user_id]?.email ?? '',
+        avatar_color: profileMap[m.user_id]?.avatar_color ?? '#6366f1',
+        role: m.role,
+        can_use_ai_assistant: m.can_use_ai_assistant ?? false,
+        ai_allowed_models: m.ai_allowed_models ?? null,
+      })));
+
+      // Načti limity
+      const { data: limits } = await supabase
+        .from('trackino_ai_usage_limits')
+        .select('*')
+        .eq('workspace_id', currentWorkspace.id)
+        .is('user_id', null);
+
+      const limitMap: Record<string, string> = { daily: '', weekly: '', monthly: '' };
+      for (const l of (limits ?? []) as { limit_type: string; token_limit: number | null }[]) {
+        if (l.token_limit !== null) limitMap[l.limit_type] = String(l.token_limit);
+      }
+      setAiLimits({ daily: limitMap.daily, weekly: limitMap.weekly, monthly: limitMap.monthly });
+    } catch { /* tabulky ještě neexistují */ }
+    setAiLoading(false);
+  }
+
+  async function saveAiLimits() {
+    if (!currentWorkspace) return;
+    setSavingAi(true);
+    const types: AiLimitType[] = ['daily', 'weekly', 'monthly'];
+    for (const lt of types) {
+      const val = aiLimits[lt];
+      if (val === '') {
+        await supabase.from('trackino_ai_usage_limits').delete()
+          .eq('workspace_id', currentWorkspace.id).is('user_id', null).eq('limit_type', lt);
+      } else {
+        await supabase.from('trackino_ai_usage_limits').upsert({
+          workspace_id: currentWorkspace.id, user_id: null, limit_type: lt, token_limit: parseInt(val),
+        }, { onConflict: 'workspace_id,user_id,limit_type' });
+      }
+    }
+    setSavingAi(false);
+    setMessage('Limity AI uloženy.');
+    setTimeout(() => setMessage(''), 3000);
+  }
+
+  async function toggleAiAccess(userId: string, value: boolean) {
+    if (!currentWorkspace) return;
+    await supabase.from('trackino_workspace_members').update({ can_use_ai_assistant: value })
+      .eq('workspace_id', currentWorkspace.id).eq('user_id', userId);
+    setAiMembers(prev => prev.map(m => m.user_id === userId ? { ...m, can_use_ai_assistant: value } : m));
+  }
+
+  async function toggleAiModel(userId: string, modelId: string) {
+    if (!currentWorkspace) return;
+    const member = aiMembers.find(m => m.user_id === userId);
+    let next: string[] | null;
+    if (modelId === '__clear__') {
+      // Reset – povol všechny modely (null = vše)
+      next = null;
+    } else {
+      const current: string[] = member?.ai_allowed_models ?? AI_MODELS.map(m => m.id);
+      const isChecked = current.includes(modelId);
+      if (isChecked) {
+        const removed = current.filter(id => id !== modelId);
+        next = removed.length === 0 ? null : removed;
+      } else {
+        next = [...current, modelId];
+        // Pokud jsou povoleny všechny, resetuj na null
+        if (next.length === AI_MODELS.length) next = null;
+      }
+    }
+    await supabase.from('trackino_workspace_members').update({ ai_allowed_models: next })
+      .eq('workspace_id', currentWorkspace.id).eq('user_id', userId);
+    setAiMembers(prev => prev.map(m => m.user_id === userId ? { ...m, ai_allowed_models: next } : m));
   }
 
   async function saveGeneral() {
@@ -511,6 +625,7 @@ function SettingsContent() {
     { id: 'vacation' as const, label: 'Dovolená' },
     { id: 'cooperation' as const, label: 'Spolupráce' },
     { id: 'modules' as const, label: 'Moduly' },
+    { id: 'ai' as const, label: 'AI asistent' },
   ];
 
   const inputCls = "w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent";
@@ -1486,6 +1601,169 @@ function SettingsContent() {
                 </button>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* TAB: AI asistent */}
+        {activeTab === 'ai' && (
+          <div className="space-y-5">
+            {aiLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="w-6 h-6 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : (
+              <>
+                {/* Limity tokenů */}
+                <div className="p-5 rounded-xl border" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+                  <h2 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>Limity tokenů (celý workspace)</h2>
+                  <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>Ponechte prázdné pro neomezený počet. Limity platí pro součet tokenů všech uživatelů workspace.</p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                    {(['daily', 'weekly', 'monthly'] as const).map(lt => {
+                      const labels: Record<string, string> = { daily: 'Denní limit (tokeny)', weekly: 'Týdenní limit (tokeny)', monthly: 'Měsíční limit (tokeny)' };
+                      const val = parseInt(aiLimits[lt] || '0') || 0;
+                      // Přibližná cena: průměrný model GPT-4o-mini ($0.15/$0.60 /1M)
+                      const avgCostPer1M = (0.15 + 0.60) / 2;
+                      const costUsd = (val / 1_000_000) * avgCostPer1M;
+                      const costCzk = costUsd * CZK_PER_USD;
+                      return (
+                        <div key={lt}>
+                          <label className={labelCls} style={{ color: 'var(--text-secondary)' }}>{labels[lt]}</label>
+                          <input
+                            type="number"
+                            min={0}
+                            value={aiLimits[lt]}
+                            onChange={e => setAiLimits(prev => ({ ...prev, [lt]: e.target.value }))}
+                            placeholder="Neomezeno"
+                            className={inputCls}
+                            style={inputStyle}
+                          />
+                          {val > 0 && (
+                            <p className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>
+                              ≈ {costCzk < 1 ? (costCzk * 100).toFixed(1) + ' h' : costCzk.toFixed(1) + ' Kč'} (GPT-4o mini průměr)
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Přehled cen modelů */}
+                  <div className="mb-4 p-3 rounded-lg" style={{ background: 'var(--bg-hover)' }}>
+                    <p className="text-xs font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>Orientační ceny OpenAI modelů (za 1 000 tokenů)</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {AI_MODELS.map(m => {
+                        const inCzk = (m.inputCostPer1M / 1000) * CZK_PER_USD;
+                        const outCzk = (m.outputCostPer1M / 1000) * CZK_PER_USD;
+                        return (
+                          <div key={m.id} className="text-xs">
+                            <div className="font-medium truncate" style={{ color: 'var(--text-primary)' }}>{m.name}</div>
+                            <div style={{ color: 'var(--text-muted)' }}>↓ {inCzk < 0.01 ? '<0,01' : inCzk.toFixed(3).replace('.', ',')} Kč</div>
+                            <div style={{ color: 'var(--text-muted)' }}>↑ {outCzk < 0.01 ? '<0,01' : outCzk.toFixed(3).replace('.', ',')} Kč</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <p className="text-[10px] mt-2" style={{ color: 'var(--text-muted)' }}>Kurz: 1 USD = {CZK_PER_USD} Kč. ↓ = vstupní tokeny, ↑ = výstupní tokeny.</p>
+                  </div>
+
+                  <button
+                    onClick={saveAiLimits}
+                    disabled={savingAi}
+                    className="px-5 py-2 rounded-lg text-white text-sm font-medium disabled:opacity-50"
+                    style={{ background: 'var(--primary)' }}
+                  >
+                    {savingAi ? 'Ukládám...' : 'Uložit limity'}
+                  </button>
+                </div>
+
+                {/* Per-user přístup a modely */}
+                <div className="p-5 rounded-xl border" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+                  <h2 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>Přístup a modely per uživatel</h2>
+                  <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>Master admin, owner a admin mají přístup vždy. Ostatní role potřebují explicitní zapnutí. Pokud necháte modely prázdné, uživatel má přístup ke všem.</p>
+
+                  <div className="space-y-3">
+                    {aiMembers.map(member => {
+                      const roleLabels: Record<string, string> = { owner: 'Vlastník', admin: 'Admin', manager: 'Manažer', member: 'Člen' };
+                      const isAlwaysGranted = member.role === 'owner' || member.role === 'admin';
+                      return (
+                        <div key={member.user_id} className="p-3 rounded-lg border" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
+                          <div className="flex items-center gap-3 mb-2">
+                            {/* Avatar */}
+                            <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                              style={{ background: member.avatar_color }}>
+                              {member.display_name.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <span className="text-sm font-medium truncate block" style={{ color: 'var(--text-primary)' }}>{member.display_name}</span>
+                              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{roleLabels[member.role] ?? member.role}</span>
+                            </div>
+                            {/* Toggle přístupu */}
+                            <label className="flex items-center gap-2 cursor-pointer flex-shrink-0">
+                              <span className="text-xs" style={{ color: isAlwaysGranted ? 'var(--success)' : 'var(--text-muted)' }}>
+                                {isAlwaysGranted ? 'Vždy' : 'Přístup'}
+                              </span>
+                              <div
+                                onClick={() => !isAlwaysGranted && toggleAiAccess(member.user_id, !member.can_use_ai_assistant)}
+                                className="relative w-9 h-5 rounded-full transition-colors flex-shrink-0"
+                                style={{
+                                  background: (isAlwaysGranted || member.can_use_ai_assistant) ? 'var(--primary)' : 'var(--border)',
+                                  cursor: isAlwaysGranted ? 'default' : 'pointer',
+                                  opacity: isAlwaysGranted ? 0.6 : 1,
+                                }}
+                              >
+                                <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform"
+                                  style={{ transform: (isAlwaysGranted || member.can_use_ai_assistant) ? 'translateX(16px)' : 'translateX(0)' }} />
+                              </div>
+                            </label>
+                          </div>
+
+                          {/* Modely – jen pokud má přístup */}
+                          {(isAlwaysGranted || member.can_use_ai_assistant) && (
+                            <div>
+                              <p className="text-[10px] mb-1.5" style={{ color: 'var(--text-muted)' }}>
+                                Povolené modely: {!member.ai_allowed_models || member.ai_allowed_models.length === 0 ? 'všechny' : member.ai_allowed_models.join(', ')}
+                              </p>
+                              <div className="flex flex-wrap gap-1.5">
+                                {AI_MODELS.map(m => {
+                                  const checked = !member.ai_allowed_models || member.ai_allowed_models.includes(m.id);
+                                  return (
+                                    <button
+                                      key={m.id}
+                                      onClick={() => toggleAiModel(member.user_id, m.id)}
+                                      className="px-2 py-0.5 rounded-full text-xs font-medium border transition-colors"
+                                      style={{
+                                        background: checked ? 'var(--bg-active)' : 'transparent',
+                                        borderColor: checked ? 'var(--primary)' : 'var(--border)',
+                                        color: checked ? 'var(--primary)' : 'var(--text-muted)',
+                                      }}
+                                    >
+                                      {m.name}
+                                    </button>
+                                  );
+                                })}
+                                {member.ai_allowed_models && member.ai_allowed_models.length > 0 && (
+                                  <button
+                                    onClick={() => toggleAiModel(member.user_id, '__clear__')}
+                                    className="px-2 py-0.5 rounded-full text-xs border transition-colors"
+                                    style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+                                  >
+                                    Reset (vše)
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {aiMembers.length === 0 && (
+                      <p className="text-sm text-center py-4" style={{ color: 'var(--text-muted)' }}>Žádní členové workspace.</p>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         )}
           </div>{/* /Pravý obsah */}

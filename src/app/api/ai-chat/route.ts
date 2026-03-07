@@ -22,6 +22,7 @@ export interface AiChatRequest {
 // Interní typy pro OpenAI API odpověď
 interface OpenAiStreamChunk {
   choices: { delta: { content?: string } }[];
+  usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
 }
 interface OpenAiResponse {
   choices: { message: { content: string } }[];
@@ -61,12 +62,15 @@ export async function POST(req: NextRequest) {
     ];
 
     // Připrav tělo požadavku (OpenAI-compatible formát)
+    const willStream = stream && modelConfig.supportsStreaming;
     const requestBody: Record<string, unknown> = {
       model,
       messages: allMessages,
-      stream: stream && modelConfig.supportsStreaming,
+      stream: willStream,
       temperature,
       ...(maxTokens ? { max_tokens: maxTokens } : {}),
+      // Požádat o usage data i ve streamu (OpenAI specifická funkce)
+      ...(willStream ? { stream_options: { include_usage: true } } : {}),
     };
 
     // Odešli požadavek na AI providera
@@ -100,6 +104,8 @@ export async function POST(req: NextRequest) {
           if (!reader) { controller.close(); return; }
 
           let buffer = '';
+          let lastUsage: { prompt_tokens: number; completion_tokens: number; total_tokens: number } | undefined;
+
           while (true) {
             const { done, value } = await reader.read();
             if (done) break;
@@ -111,11 +117,20 @@ export async function POST(req: NextRequest) {
             for (const line of lines) {
               if (!line.startsWith('data: ')) continue;
               const data = line.slice(6).trim();
-              if (data === '[DONE]') { controller.close(); return; }
+              if (data === '[DONE]') {
+                // Append usage data as special JSON line at end of stream
+                if (lastUsage) {
+                  controller.enqueue(encoder.encode(`\n__USAGE__:${JSON.stringify(lastUsage)}`));
+                }
+                controller.close();
+                return;
+              }
               try {
                 const chunk = JSON.parse(data) as OpenAiStreamChunk;
                 const text = chunk.choices?.[0]?.delta?.content ?? '';
                 if (text) controller.enqueue(encoder.encode(text));
+                // Capture usage if provided (stream_options: include_usage)
+                if (chunk.usage) lastUsage = chunk.usage;
               } catch { /* přeskoč poškozený chunk */ }
             }
           }

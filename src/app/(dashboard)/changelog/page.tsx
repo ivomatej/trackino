@@ -11,6 +11,15 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.37.0 – 7. 3. 2026</h3>
+<ul>
+  <li><strong>AI asistent – konverzace ukládány v databázi</strong> – každá konverzace se nyní ukládá per-user do DB (tabulky <code>trackino_ai_conversations</code> a <code>trackino_ai_messages</code>). V levém panelu vidíte historii konverzací s vyhledáváním a možností smazání. Auto-název se generuje z první zprávy.</li>
+  <li><strong>AI asistent – vylepšené UI</strong> – vstupní pole pro zprávy je nyní výrazně větší (min. 80 px, max. 300 px). Přidán barevný token counter (progress bar) ukazující blízkost k limitu kontextového okna. Rychlý přepínač modelu ve spodní liště (pill tlačítka). Tlačítko ℹ otevře detail každého modelu s popisem, silnými stránkami a cenou v Kč.</li>
+  <li><strong>AI asistent – přesun na tarif Max</strong> – modul AI asistent je nově dostupný pouze v tarifu <strong>Max</strong> (dříve Pro+Max). Přístup mají: master admin, workspace admin (owner/admin) a uživatelé s explicitně uděleným oprávněním <code>can_use_ai_assistant</code>.</li>
+  <li><strong>Nastavení workspace – záložka AI asistent</strong> – nová záložka v nastavení workspace. Umožňuje: nastavit denní/týdenní/měsíční limit tokenů pro celý workspace s orientační cenou v Kč; per-user přepínač přístupu k AI asistentovi; omezení dostupných AI modelů per uživatel (pill checkboxy).</li>
+  <li><strong>Usage data ze streamingu</strong> – API route nyní přidává usage statistiky (počet tokenů, cena) na konec každé streaming odpovědi jako speciální suffix <code>__USAGE__:{json}</code>, který klient parsuje a zobrazuje pod každou odpovědí AI.</li>
+</ul>
+
 <h3>v2.36.1 – 7. 3. 2026</h3>
 <ul>
   <li><strong>AI asistent – počítadlo Firecrawl kreditů</strong> – přidáno počítadlo spotřebovaných Firecrawl kreditů ve footeru chatu (🔥 X / 500). Stav kreditů se ukládá do localStorage a přežívá refresh. Barevné kódování: zelená (≥200 zbývá), oranžová (50–199), červená (&lt;50). Při méně než 50 zbývajících kreditech se zobrazí varování nad vstupním polem. Ceny: 1 kredit za scrapování URL, ~7 kreditů za web search (2 base + 5 výsledků).</li>
@@ -24,7 +33,7 @@ const DEFAULT_CHANGELOG = `
 
 <h3>v2.35.0 – 7. 3. 2026</h3>
 <ul>
-  <li><strong>AI asistent – nový modul (Pro+Max)</strong> – chatovací okno napojené na OpenAI API (GPT-4o, GPT-4o mini, GPT-4 Turbo, o1-mini). Funkce: výběr modelu, nastavitelná kreativita (temperature 0–1), volitelný system prompt, streamované odpovědi v reálném čase, vymazání konverzace, rychlé návrhy dotazů. Odpovědi renderují Markdown (nadpisy, tučné, kód, seznamy).</li>
+  <li><strong>AI asistent – nový modul (Max)</strong> – chatovací okno napojené na OpenAI API (GPT-4o, GPT-4o mini, GPT-4 Turbo, o1-mini). Funkce: výběr modelu, nastavitelná kreativita (temperature 0–1), volitelný system prompt, streamované odpovědi v reálném čase, vymazání konverzace, rychlé návrhy dotazů. Odpovědi renderují Markdown (nadpisy, tučné, kód, seznamy).</li>
   <li><strong>AI infrastructure</strong> – <code>src/lib/ai-providers.ts</code>: centrální konfigurace providerů a modelů připravená pro snadné přidání dalších AI providerů (Anthropic, Google Gemini, Mistral); <code>src/app/api/ai-chat/route.ts</code>: serverová API route (API klíče bezpečně na serveru), podpora streaming + non-streaming odpovědí.</li>
   <li><strong>Nastavení</strong> – API klíč se přidá jako env proměnná <code>OPENAI_API_KEY</code> do <code>.env.local</code> (local dev) a do Vercel Environment Variables (produkce).</li>
 </ul>
