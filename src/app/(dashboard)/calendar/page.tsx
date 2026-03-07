@@ -1045,21 +1045,26 @@ function CalendarContent() {
 
   const fetchWorkspaceMembers = useCallback(async () => {
     if (!user || !currentWorkspace) return;
-    const { data } = await supabase
+    // Krok 1: načti user_id všech členů workspace
+    const { data: membersData } = await supabase
       .from('trackino_workspace_members')
-      .select('user_id, trackino_profiles(display_name, display_nickname, avatar_color)')
+      .select('user_id')
       .eq('workspace_id', currentWorkspace.id);
-    if (!data) return;
-    const members: MemberWithProfile[] = data
-      .filter((m: Record<string, unknown>) => m.user_id !== user.id) // vyfiltruj sebe
-      .map((m: Record<string, unknown>) => {
-        const p = m.trackino_profiles as Record<string, string> | null;
-        return {
-          user_id: m.user_id as string,
-          display_name: p?.display_nickname?.trim() ? p.display_nickname : (p?.display_name ?? 'Uživatel'),
-          avatar_color: p?.avatar_color ?? '#6b7280',
-        };
-      });
+    if (!membersData || membersData.length === 0) return;
+    const userIds = membersData
+      .map((m: Record<string, unknown>) => m.user_id as string)
+      .filter(uid => uid !== user.id); // vyfiltruj sebe
+    if (userIds.length === 0) { setWorkspaceMembers([]); return; }
+    // Krok 2: načti profily
+    const { data: profilesData } = await supabase
+      .from('trackino_profiles')
+      .select('id, display_name, display_nickname, avatar_color')
+      .in('id', userIds);
+    const members: MemberWithProfile[] = (profilesData ?? []).map((p: Record<string, string>) => ({
+      user_id: p.id,
+      display_name: p.display_nickname?.trim() ? p.display_nickname : (p.display_name ?? 'Uživatel'),
+      avatar_color: p.avatar_color ?? '#6b7280',
+    }));
     setWorkspaceMembers(members);
   }, [user, currentWorkspace]);
 
