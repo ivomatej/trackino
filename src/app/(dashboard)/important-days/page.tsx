@@ -372,7 +372,7 @@ CREATE POLICY "Auth full" ON trackino_important_days
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
           <div
-            className="w-full max-w-md rounded-xl shadow-xl border p-6"
+            className="w-full max-w-md rounded-xl shadow-xl border p-6 overflow-x-hidden"
             style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}
           >
             <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>

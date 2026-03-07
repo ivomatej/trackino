@@ -132,36 +132,36 @@ export default function ManualTimeEntry({ onSaved, onCancel }: ManualTimeEntryPr
         style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
       />
 
-      {/* Datum + časy */}
-      <div className="grid grid-cols-3 gap-3 mb-3">
-        <div>
+      {/* Datum + časy: mobil = Datum přes celou šířku (2/2), Od+Do vedle sebe (1/2+1/2); desktop = 3 sloupce */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-3">
+        <div className="col-span-2 sm:col-span-1 min-w-0">
           <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Datum</label>
           <input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
             className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-            style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
+            style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)', maxWidth: '100%' }}
           />
         </div>
-        <div>
+        <div className="min-w-0">
           <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Od</label>
           <input
             type="time"
             value={startTime}
             onChange={(e) => setStartTime(e.target.value)}
             className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-            style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
+            style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)', maxWidth: '100%' }}
           />
         </div>
-        <div>
+        <div className="min-w-0">
           <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Do</label>
           <input
             type="time"
             value={endTime}
             onChange={(e) => setEndTime(e.target.value)}
             className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-            style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
+            style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)', maxWidth: '100%' }}
           />
         </div>
       </div>

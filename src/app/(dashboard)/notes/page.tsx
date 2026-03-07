@@ -253,28 +253,28 @@ function NotesContent() {
             </div>
 
             {preset === 'custom' && (
-              <>
-                <div>
+              <div className="w-full grid grid-cols-2 gap-3">
+                <div className="min-w-0">
                   <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Od</label>
                   <input
                     type="date"
                     value={customFrom}
                     onChange={(e) => setCustomFrom(e.target.value)}
-                    className="px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none"
+                    className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none"
                     style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
                   />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Do</label>
                   <input
                     type="date"
                     value={customTo}
                     onChange={(e) => setCustomTo(e.target.value)}
-                    className="px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none"
+                    className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none"
                     style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
                   />
                 </div>
-              </>
+              </div>
             )}
 
             {/* Uživatel */}

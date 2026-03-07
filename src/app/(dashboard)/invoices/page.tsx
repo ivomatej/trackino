@@ -807,7 +807,7 @@ function InvoicesContent() {
 
         {/* Formulář pro podání faktury */}
         {showSubmitForm && canInvoice && (
-          <div className="mb-6 rounded-xl border p-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+          <div className="mb-6 rounded-xl border p-6 overflow-x-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
@@ -827,14 +827,14 @@ function InvoicesContent() {
             <div className="flex gap-6">
               {/* Levá část – formulářová pole */}
               <div className="flex-1 min-w-0">
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                  <div className="min-w-0">
                     <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Datum vystavení *</label>
-                    <input type="date" value={submitIssueDate} onChange={(e) => setSubmitIssueDate(e.target.value)} className={inputCls} style={inputStyle} />
+                    <input type="date" value={submitIssueDate} onChange={(e) => setSubmitIssueDate(e.target.value)} className={inputCls} style={{ ...inputStyle, maxWidth: '100%' }} />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Datum splatnosti *</label>
-                    <input type="date" value={submitDueDate} onChange={(e) => setSubmitDueDate(e.target.value)} className={inputCls} style={inputStyle} />
+                    <input type="date" value={submitDueDate} onChange={(e) => setSubmitDueDate(e.target.value)} className={inputCls} style={{ ...inputStyle, maxWidth: '100%' }} />
                   </div>
                 </div>
 
