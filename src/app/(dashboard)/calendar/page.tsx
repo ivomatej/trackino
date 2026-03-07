@@ -904,6 +904,30 @@ function CalendarContent() {
   // Narozeniny – členové workspace
   const [birthdayMembers, setBirthdayMembers] = useState<BirthdayMember[]>([]);
 
+  // Dovolená – toggle + barva (localStorage)
+  const [showVacation, setShowVacation] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    return localStorage.getItem('trackino_cal_vacation') !== '0';
+  });
+  const [vacationColor, setVacationColor] = useState<string>(() => {
+    if (typeof window === 'undefined') return '#0ea5e9';
+    return localStorage.getItem('trackino_cal_vacation_color') ?? '#0ea5e9';
+  });
+
+  // Důležité dny – toggle + barva override (null = individuální barvy)
+  const [showImportantDays, setShowImportantDays] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    return localStorage.getItem('trackino_cal_important_days') !== '0';
+  });
+  const [importantDaysColor, setImportantDaysColor] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    const saved = localStorage.getItem('trackino_cal_important_days_color');
+    return saved && saved !== 'null' ? saved : null;
+  });
+
+  // Chyba při ukládání sdílení
+  const [shareError, setShareError] = useState('');
+
   // Collapse stav sekcí v levém panelu
   const [myCalExpanded, setMyCalExpanded] = useState(true);
   const [extCalExpanded, setExtCalExpanded] = useState(true);
@@ -1641,6 +1665,7 @@ function CalendarContent() {
     const calId = sharingCalendar?.id ?? sharingSubscription?.id ?? '';
     if (!calId) return;
     setSavingShare(true);
+    setShareError('');
     try {
       // Smaž všechny stávající shares pro tento kalendář
       await supabase.from('trackino_calendar_shares').delete().eq('calendar_id', calId);
@@ -1666,7 +1691,12 @@ function CalendarContent() {
         });
       }
       if (toInsert.length > 0) {
-        await supabase.from('trackino_calendar_shares').insert(toInsert);
+        const { error } = await supabase.from('trackino_calendar_shares').insert(toInsert);
+        if (error) {
+          console.error('saveShare error:', error);
+          setShareError('Uložení se nezdařilo. Zkontrolujte, zda byla spuštěna SQL migrace pro sdílení externích kalendářů.');
+          return;
+        }
       }
       setShowShareModal(false);
       // Refresh shares
@@ -2163,34 +2193,38 @@ function CalendarContent() {
       });
     }
 
-    for (const v of vacationEntries) {
-      result.push({
-        id: `vacation-${v.id}`,
-        title: 'Dovolená',
-        start_date: v.start_date,
-        end_date: v.end_date,
-        color: '#0ea5e9',
-        source: 'vacation',
-        source_id: v.id,
-        description: v.note || '',
-        is_all_day: true,
-      });
-    }
-
-    for (const day of importantDays) {
-      const occs = getImportantDayOccurrences(day, visibleRange.start, visibleRange.end);
-      for (const occ of occs) {
+    if (showVacation) {
+      for (const v of vacationEntries) {
         result.push({
-          id: `importantday-${day.id}-${occ.start}`,
-          title: day.title,
-          start_date: occ.start,
-          end_date: occ.end,
-          color: day.color,
-          source: 'important_day',
-          source_id: day.id,
-          description: day.note || '',
+          id: `vacation-${v.id}`,
+          title: 'Dovolená',
+          start_date: v.start_date,
+          end_date: v.end_date,
+          color: vacationColor,
+          source: 'vacation',
+          source_id: v.id,
+          description: v.note || '',
           is_all_day: true,
         });
+      }
+    }
+
+    if (showImportantDays) {
+      for (const day of importantDays) {
+        const occs = getImportantDayOccurrences(day, visibleRange.start, visibleRange.end);
+        for (const occ of occs) {
+          result.push({
+            id: `importantday-${day.id}-${occ.start}`,
+            title: day.title,
+            start_date: occ.start,
+            end_date: occ.end,
+            color: importantDaysColor ?? day.color,
+            source: 'important_day',
+            source_id: day.id,
+            description: day.note || '',
+            is_all_day: true,
+          });
+        }
       }
     }
 
@@ -2237,7 +2271,7 @@ function CalendarContent() {
     }
 
     return result.sort((a, b) => a.start_date.localeCompare(b.start_date) || a.title.localeCompare(b.title));
-  }, [events, vacationEntries, importantDays, calendars, selectedCalendarIds, visibleRange, subscriptionEvents, sharedEvents, attendeeEvents, czechHolidayEvents, namedayEvents, birthdayEvents]);
+  }, [events, vacationEntries, importantDays, calendars, selectedCalendarIds, visibleRange, subscriptionEvents, sharedEvents, attendeeEvents, czechHolidayEvents, namedayEvents, birthdayEvents, showVacation, vacationColor, showImportantDays, importantDaysColor]);
 
   // Načtení poznámek pro viditelné události (seznam pohled) – vždy při seznam pohledu
   // Umístěno ZDE aby se mohlo odkazovat na displayEvents
@@ -2474,7 +2508,7 @@ function CalendarContent() {
                 color: view === v ? 'white' : 'var(--text-secondary)',
               }}
             >
-              {v === 'today' ? 'Dnes' : v === 'week' ? 'Týden' : v === 'month' ? 'Měsíc' : v === 'year' ? 'Rok' : 'Seznam'}
+              {v === 'today' ? 'Den' : v === 'week' ? 'Týden' : v === 'month' ? 'Měsíc' : v === 'year' ? 'Rok' : 'Seznam'}
             </button>
           ))}
         </div>
@@ -2758,12 +2792,78 @@ function CalendarContent() {
               </div>
               {autoExpanded && (
                 <>
-                  <div className="flex items-center gap-2 py-1">
-                    <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ background: '#0ea5e9' }} />
+                  {/* Dovolená */}
+                  <div className="flex items-center gap-1.5 py-0.5">
+                    <input
+                      type="checkbox"
+                      checked={showVacation}
+                      onChange={e => {
+                        setShowVacation(e.target.checked);
+                        localStorage.setItem('trackino_cal_vacation', e.target.checked ? '1' : '0');
+                      }}
+                      className="w-3.5 h-3.5 rounded cursor-pointer flex-shrink-0"
+                      style={{ accentColor: vacationColor }}
+                    />
+                    <div className="relative group/vac flex-shrink-0">
+                      <button
+                        className="w-3 h-3 rounded-full border border-transparent hover:border-white/30 transition-all"
+                        style={{ background: vacationColor }}
+                        title="Změnit barvu"
+                      />
+                      <div className="absolute left-0 top-5 z-20 hidden group-hover/vac:flex flex-wrap gap-1 p-2 rounded-lg border shadow-xl" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', width: 112 }}>
+                        {DEFAULT_COLORS.map(c => (
+                          <button
+                            key={c}
+                            onClick={() => { setVacationColor(c); localStorage.setItem('trackino_cal_vacation_color', c); }}
+                            className="w-4 h-4 rounded-full transition-all"
+                            style={{ background: c, boxShadow: vacationColor === c ? `0 0 0 1.5px white, 0 0 0 3px ${c}` : 'none' }}
+                          />
+                        ))}
+                        <button
+                          onClick={() => { setVacationColor('#0ea5e9'); localStorage.setItem('trackino_cal_vacation_color', '#0ea5e9'); }}
+                          className="w-4 h-4 rounded-full border flex items-center justify-center text-[8px]"
+                          style={{ borderColor: 'var(--border)', color: 'var(--text-muted)', background: 'var(--bg-hover)' }}
+                          title="Výchozí barva"
+                        >○</button>
+                      </div>
+                    </div>
                     <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Dovolená</span>
                   </div>
-                  <div className="flex items-center gap-2 py-1">
-                    <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ background: 'linear-gradient(135deg, #f59e0b, #8b5cf6)' }} />
+                  {/* Důležité dny */}
+                  <div className="flex items-center gap-1.5 py-0.5">
+                    <input
+                      type="checkbox"
+                      checked={showImportantDays}
+                      onChange={e => {
+                        setShowImportantDays(e.target.checked);
+                        localStorage.setItem('trackino_cal_important_days', e.target.checked ? '1' : '0');
+                      }}
+                      className="w-3.5 h-3.5 rounded cursor-pointer flex-shrink-0"
+                      style={{ accentColor: importantDaysColor ?? '#f59e0b' }}
+                    />
+                    <div className="relative group/idays flex-shrink-0">
+                      <button
+                        className="w-3 h-3 rounded-sm border border-transparent hover:border-white/30 transition-all"
+                        style={{ background: importantDaysColor ?? 'linear-gradient(135deg, #f59e0b, #8b5cf6)' }}
+                        title="Změnit barvu (přebije individuální barvy)"
+                      />
+                      <div className="absolute left-0 top-5 z-20 hidden group-hover/idays:flex flex-wrap gap-1 p-2 rounded-lg border shadow-xl" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', width: 112 }}>
+                        {DEFAULT_COLORS.map(c => (
+                          <button
+                            key={c}
+                            onClick={() => { setImportantDaysColor(c); localStorage.setItem('trackino_cal_important_days_color', c); }}
+                            className="w-4 h-4 rounded-full transition-all"
+                            style={{ background: c, boxShadow: importantDaysColor === c ? `0 0 0 1.5px white, 0 0 0 3px ${c}` : 'none' }}
+                          />
+                        ))}
+                        <button
+                          onClick={() => { setImportantDaysColor(null); localStorage.setItem('trackino_cal_important_days_color', 'null'); }}
+                          className="w-4 h-4 rounded-full border flex items-center justify-center text-[8px]"
+                          style={{ borderColor: 'var(--border)', color: 'var(--text-muted)', background: 'var(--bg-hover)' }}
+                          title="Individuální barvy"
+                        >○</button>
+                      </div>
+                    </div>
                     <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Důležité dny</span>
                   </div>
                 </>
@@ -4691,9 +4791,15 @@ function CalendarContent() {
                 )}
               </div>
 
-              <div className="flex gap-2 justify-end mt-6">
+              {shareError && (
+                <p className="mt-4 text-xs rounded-lg px-3 py-2" style={{ color: '#ef4444', background: '#ef444415' }}>
+                  {shareError}
+                </p>
+              )}
+
+              <div className="flex gap-2 justify-end mt-4">
                 <button
-                  onClick={() => setShowShareModal(false)}
+                  onClick={() => { setShowShareModal(false); setShareError(''); }}
                   className="px-4 py-2 rounded-lg text-sm border"
                   style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
                 >

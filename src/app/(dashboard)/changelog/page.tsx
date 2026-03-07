@@ -11,6 +11,13 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.24.0 – 7. 3. 2026</h3>
+<ul>
+  <li><strong>Kalendář – Dovolená a Důležité dny: toggle + barva</strong> – sekce „Automaticky" v levém panelu nyní obsahuje zaškrtávátko pro zobrazení/skrytí těchto kalendářů (stejně jako Státní svátky). Kliknutím na barevnou tečku lze nastavit vlastní barvu: Dovolená má výchozí modrou, Důležité dny umožní přebít individuální barvy jednou společnou barvou (výchozí = individuální barvy).</li>
+  <li><strong>Kalendář – Zobrazení „Den"</strong> – pohled na jeden den byl přejmenován z „Dnes" na „Den" ve přepínači pohledů v záhlaví.</li>
+  <li><strong>Fix: Sdílení externího (ICS) kalendáře</strong> – opravena chyba kdy sdílení externího kalendáře s konkrétním uživatelem selžalo tiše kvůli FK omezení v DB. Přidáno zobrazení chyby + SQL migrace pro opravu (viz níže). SQL migrace: <code>ALTER TABLE trackino_calendar_shares DROP CONSTRAINT IF EXISTS trackino_calendar_shares_calendar_id_fkey;</code></li>
+</ul>
+
 <h3>v2.23.0 – 7. 3. 2026</h3>
 <ul>
   <li><strong>Kalendář – Jmeniny</strong> – nový automatický kalendář v sekci Další kalendáře (fialová barva). Zobrazuje jméno dle českého jméninového kalendáře pro každý den v roce. Dostupné pro všechny uživatele workspace, zapíná/vypíná se zaškrtnutím v levém panelu.</li>
