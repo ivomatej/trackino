@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 7. 3. 2026 (v2.38.0)
+> Aktualizováno: 7. 3. 2026 (v2.39.0)
 
 ---
 
@@ -493,6 +493,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.39.0 | 7. 3. 2026 | Automatizace: nová záložka v Nastavení (cron-job.org integrace), 5 šablon (weekly-report AI, inactive-check, kb-reviews-digest, feedback-summary AI, vacation-report), proxy routes /api/cron-jobs/*, 5 cron action handlers /api/cron/*, CRON_SECRET server-side injekce, výsledky v trackino_cron_results |
 | v2.38.0 | 7. 3. 2026 | Znalostní báze: vkládání kdekoliv (savedRange+onMouseDown), plovoucí selection popup (Odkaz/@/Stránka), nový vzhled Callout+Toggle (color-mix, animovaná šipka), checklist bez auto textu, Revize v hlavičce stránky (pill odznaky, červený badge, odebrán tab Recenze→záložky: Komentáře/Historie/Přístupy); AI asistent: měsíční statistiky tokenů per user, per-user token limity (denní/týdenní/měsíční) |
 | v2.37.3 | 7. 3. 2026 | Znalostní báze: 2řádkový toolbar (SVG ikony místo emoji), přiřazení stránky do složky (edit mód + hover v levém panelu), kopírování obsahu (clipboard), fix kódových bloků (min-height + Enter → nový řádek), standardní trash ikony |
 | v2.37.2 | 7. 3. 2026 | AI asistent – oblíbené konverzace (hvězdička, sekce OBLÍBENÉ v sidebaru, uloženo v DB is_favorite); šedé zvýraznění aktivní konverzace (var(--bg-hover)); standardní ikona koše; SQL: ALTER TABLE trackino_ai_conversations ADD COLUMN IF NOT EXISTS is_favorite boolean NOT NULL DEFAULT false |
@@ -1531,6 +1532,77 @@ const STATUS_CONFIG: Record<KbPageStatus, { label: string; color: string }>
 3. Popis procesu – H2 sekce: Účel/Kroky/Role/Poznámky
 4. Onboarding průvodce – H2 sekce: Vítejte/IT setup/Procesy/Kontakty
 5. Dokumentace projektu – H2 sekce: Přehled/Architektura/Deployment/FAQ
+
+---
+
+## 30. Automatizace – architektura (settings/page.tsx záložka Automatizace)
+
+### Co to je
+Modul pro správu naplánovaných cron jobů integrovaných s **cron-job.org REST API**. Dostupný v záložce **Nastavení → Automatizace**. Přístup jen pro workspace adminy.
+
+### Soubory
+| Soubor | Popis |
+|--------|-------|
+| `src/lib/supabase-admin.ts` | Supabase klient se service role klíčem (bypasuje RLS; jen server-side) |
+| `src/lib/cron-handler.ts` | Sdílené helpery: `verifyCronSecret()`, `saveCronResult()`, `parseCronBody()` |
+| `src/app/api/cron-jobs/route.ts` | Proxy GET (seznam) + PUT (vytvoření) – injektuje CRON_SECRET |
+| `src/app/api/cron-jobs/[jobId]/route.ts` | Proxy GET, PATCH (enable/disable), DELETE |
+| `src/app/api/cron-jobs/[jobId]/history/route.ts` | Proxy GET historie spuštění |
+| `src/app/api/cron/weekly-report/route.ts` | Týdenní AI report hodin (OpenAI) |
+| `src/app/api/cron/inactive-check/route.ts` | Kontrola neaktivních členů |
+| `src/app/api/cron/kb-reviews-digest/route.ts` | Digest revizí znalostní báze |
+| `src/app/api/cron/feedback-summary/route.ts` | AI shrnutí anonymních připomínek (OpenAI) |
+| `src/app/api/cron/vacation-report/route.ts` | Report čerpání dovolené |
+
+### Bezpečnost
+- `CRON_SECRET` – nikdy nedostane se na klienta; proxy route ho injektuje do `extendedData.headers['x-cron-secret']` při registraci jobu
+- Cron handlery ověřují `request.headers.get('x-cron-secret') === process.env.CRON_SECRET` → 401 jinak
+- `SUPABASE_SERVICE_ROLE_KEY` – jen v cron handlerech (server-side), bypasuje RLS
+
+### cron-job.org API
+- Base URL: `https://api.cron-job.org`
+- Auth: `Authorization: Bearer {CRON_JOB_API_KEY}`
+- Schedule format: `{ minutes: [0], hours: [8], wdays: [1], mdays: [-1], months: [-1], timezone: "Europe/Prague", expiresAt: 0 }` kde `[-1]` = každý
+- PUT /jobs → `{ job: { url, title, enabled, saveResponses, schedule, extendedData: { headers, method, body } } }`
+- PATCH /jobs/{id} → `{ job: { enabled: true/false } }`
+
+### DB tabulka trackino_cron_results
+```sql
+CREATE TABLE IF NOT EXISTS trackino_cron_results (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES trackino_workspaces(id) ON DELETE CASCADE,
+  action_id text NOT NULL,
+  title text NOT NULL DEFAULT '',
+  content text NOT NULL DEFAULT '',
+  status text NOT NULL DEFAULT 'success' CHECK (status IN ('success', 'error')),
+  created_at timestamptz DEFAULT now()
+);
+ALTER TABLE trackino_cron_results ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Auth full" ON trackino_cron_results
+  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+```
+
+### Env proměnné (přidat i do Vercel)
+```
+CRON_JOB_API_KEY=...          # Bearer token pro cron-job.org API
+CRON_SECRET=...               # Náhodný hex string pro ověření cron requestů (openssl rand -hex 32)
+NEXT_PUBLIC_APP_URL=https://... # Produkční URL (např. https://trackino.vercel.app)
+SUPABASE_SERVICE_ROLE_KEY=... # Supabase → Settings → API → service_role (server-side only)
+```
+
+### 5 šablon automatizací
+| ID | Název | Schedule |
+|----|-------|----------|
+| `weekly-report` | Týdenní AI report hodin | Pondělí 8:00 |
+| `inactive-check` | Kontrola neaktivních členů | Pondělí 8:30 |
+| `kb-reviews-digest` | Digest revizí KB | Pondělí 7:00 |
+| `feedback-summary` | Shrnutí feedbacku (AI) | Pátek 16:00 |
+| `vacation-report` | Report dovolených | 1. v měsíci 7:00 |
+
+### Workflow (jak přidat novou šablonu)
+1. Přidat objekt do `CRON_TEMPLATES` v `settings/page.tsx`
+2. Vytvořit handler `src/app/api/cron/{id}/route.ts` s `verifyCronSecret` + `parseCronBody` + `saveCronResult`
+3. Handler musí přijímat POST s `{ workspace_id: string }` v těle
 
 ---
 

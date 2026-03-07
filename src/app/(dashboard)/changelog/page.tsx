@@ -11,6 +11,15 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.39.0 – 7. 3. 2026</h3>
+<ul>
+  <li><strong>Automatizace – nová záložka v Nastavení workspace</strong> – nový modul automatizovaných úloh integrovaný s cron-job.org. Admini mohou přidávat naplánované joby ze 5 předpřipravených šablon, zapínat/vypínat je togglem, mazat a prohlížet historii spuštění (HTTP status, délka, čas).</li>
+  <li><strong>5 šablon automatizací:</strong> (1) Týdenní AI report hodin – každé pondělí v 8:00 vygeneruje GPT-4o-mini report odpracovaných hodin za minulý týden; (2) Kontrola neaktivních členů – každé pondělí v 8:30 vypíše členy bez záznamu za 14 dní; (3) Digest revizí KB – každé pondělí v 7:00 zobrazí revize znalostní báze splatné tento týden a po splatnosti; (4) Shrnutí feedbacku (AI) – každý pátek v 16:00 AI shrne a kategorizuje anonymní připomínky za týden; (5) Report dovolených – 1. každého měsíce v 7:00 zobrazí čerpání dovolené všech členů za aktuální rok.</li>
+  <li><strong>Bezpečnost</strong> – CRON_SECRET injektován server-side v proxy route (nikdy není exponován klientovi); cron handlery ověřují hlavičku X-Cron-Secret a odmítnou požadavky bez platného tokenu.</li>
+  <li><strong>Výsledky automatizací</strong> – každé spuštění uloží výsledek (Markdown obsah) do tabulky <code>trackino_cron_results</code>; admin vidí posledních 20 výsledků v záložce Automatizace s rozbalovacím náhledem obsahu.</li>
+  <li><strong>SQL migrace:</strong> <code>CREATE TABLE trackino_cron_results (...)</code> – viz dokumentace.</li>
+</ul>
+
 <h3>v2.38.0 – 7. 3. 2026</h3>
 <ul>
   <li><strong>Znalostní báze – vkládání kdekoliv v textu</strong> – @zmínky a /odkaz na stránku se nyní vloží na aktuální pozici kurzoru (ne na konec nebo do nadpisu). Implementace: <code>savedRange</code> ref zachytí selection před otevřením pickeru; <code>onMouseDown={e => e.preventDefault()}</code> na všech toolbar tlačítkách zamezí ztrátě fokusu; při insertu se selection obnoví ze <code>savedRange</code>.</li>
