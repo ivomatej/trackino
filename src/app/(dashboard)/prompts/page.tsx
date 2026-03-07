@@ -628,7 +628,7 @@ function PromptsContent() {
           <div className="flex items-center gap-3 flex-wrap">
             <input value={searchQ} onChange={e => setSearchQ(e.target.value)} placeholder="Hledat prompty…"
               className="px-3 py-2 rounded-lg border text-base sm:text-sm flex-1 min-w-[160px] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-              style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }} />
+              style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }} />
             <div className="relative flex-shrink-0">
               <select
                 value={sortBy}
@@ -757,7 +757,7 @@ function PromptsContent() {
             <input value={folderName} onChange={e => setFolderName(e.target.value)} placeholder="Název složky" autoFocus
               onKeyDown={e => e.key === 'Enter' && saveFolder()}
               className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-              style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }} />
+              style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }} />
             <div className="flex gap-2 mt-4">
               <button onClick={saveFolder} className="flex-1 py-2 rounded-lg text-sm font-medium text-white" style={{ background: 'var(--primary)' }}>Uložit</button>
               <button onClick={() => setFolderModal({ open: false, parentId: null, editing: null })} className="flex-1 py-2 rounded-lg text-sm font-medium border" style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}>Zrušit</button>
@@ -835,13 +835,13 @@ function PromptsContent() {
               <div className="space-y-4">
                 <input value={pmTitle} onChange={e => setPmTitle(e.target.value)} placeholder="Název promptu" autoFocus
                   className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-                  style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }} />
+                  style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }} />
                 <div>
                   <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Složka</label>
                   <div className="relative">
                     <select value={pmFolderId ?? ''} onChange={e => setPmFolderId(e.target.value || null)}
                       className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none appearance-none pr-8"
-                      style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}>
+                      style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}>
                       <option value="">— Bez složky —</option>
                       {folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
                     </select>

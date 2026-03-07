@@ -4532,17 +4532,17 @@ function CalendarContent() {
 
                 {/* Datum Od / Do */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
+                  <div className="min-w-0">
                     <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Od *</label>
                     <input
                       type="date"
                       value={eventForm.start_date}
                       onChange={e => setEventForm(f => ({ ...f, start_date: e.target.value, end_date: f.end_date < e.target.value ? e.target.value : f.end_date }))}
                       className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm"
-                      style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
+                      style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)', maxWidth: '100%' }}
                     />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Do</label>
                     <input
                       type="date"
@@ -4550,7 +4550,7 @@ function CalendarContent() {
                       min={eventForm.start_date}
                       onChange={e => setEventForm(f => ({ ...f, end_date: e.target.value }))}
                       className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm"
-                      style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
+                      style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)', maxWidth: '100%' }}
                     />
                   </div>
                 </div>
@@ -4573,24 +4573,24 @@ function CalendarContent() {
                 {/* Časy */}
                 {!eventForm.is_all_day && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
+                    <div className="min-w-0">
                       <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Čas začátku</label>
                       <input
                         type="time"
                         value={eventForm.start_time}
                         onChange={e => setEventForm(f => ({ ...f, start_time: e.target.value }))}
                         className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm"
-                        style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
+                        style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)', maxWidth: '100%' }}
                       />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Čas konce</label>
                       <input
                         type="time"
                         value={eventForm.end_time}
                         onChange={e => setEventForm(f => ({ ...f, end_time: e.target.value }))}
                         className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm"
-                        style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
+                        style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)', maxWidth: '100%' }}
                       />
                     </div>
                   </div>

@@ -129,7 +129,7 @@ export default function ManualTimeEntry({ onSaved, onCancel }: ManualTimeEntryPr
         onChange={(e) => setDescription(e.target.value)}
         placeholder="Na čem jste pracovali?"
         className="w-full px-3 py-2.5 rounded-lg border text-base sm:text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-        style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+        style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
       />
 
       {/* Datum + časy */}
@@ -141,7 +141,7 @@ export default function ManualTimeEntry({ onSaved, onCancel }: ManualTimeEntryPr
             value={date}
             onChange={(e) => setDate(e.target.value)}
             className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-            style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+            style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
           />
         </div>
         <div>
@@ -151,7 +151,7 @@ export default function ManualTimeEntry({ onSaved, onCancel }: ManualTimeEntryPr
             value={startTime}
             onChange={(e) => setStartTime(e.target.value)}
             className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-            style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+            style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
           />
         </div>
         <div>
@@ -161,7 +161,7 @@ export default function ManualTimeEntry({ onSaved, onCancel }: ManualTimeEntryPr
             value={endTime}
             onChange={(e) => setEndTime(e.target.value)}
             className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-            style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+            style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
           />
         </div>
       </div>
@@ -173,7 +173,7 @@ export default function ManualTimeEntry({ onSaved, onCancel }: ManualTimeEntryPr
             value={selectedProject}
             onChange={(e) => setSelectedProject(e.target.value)}
             className="w-full appearance-none px-3 py-2 pr-8 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-            style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+            style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
           >
             <option value="">Projekt</option>
             {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -187,7 +187,7 @@ export default function ManualTimeEntry({ onSaved, onCancel }: ManualTimeEntryPr
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
             className="w-full appearance-none px-3 py-2 pr-8 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-            style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+            style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
           >
             <option value="">Kategorie</option>
             {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -201,7 +201,7 @@ export default function ManualTimeEntry({ onSaved, onCancel }: ManualTimeEntryPr
             value={selectedTask}
             onChange={(e) => setSelectedTask(e.target.value)}
             className="w-full appearance-none px-3 py-2 pr-8 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-            style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+            style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
           >
             <option value="">Úkol</option>
             {tasks.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}

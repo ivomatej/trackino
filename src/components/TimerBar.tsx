@@ -525,7 +525,7 @@ export default function TimerBar({ onEntryChanged, playData, isBottomBar = false
         onChange={(e) => setDescription(e.target.value)}
         placeholder="Na čem pracuješ?"
         className="flex-1 min-w-0 px-3 py-1.5 sm:py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
-        style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+        style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
         onKeyDown={(e) => {
           if (e.key === 'Enter' && !isRunning) startTimer();
         }}
@@ -586,7 +586,7 @@ export default function TimerBar({ onEntryChanged, playData, isBottomBar = false
                 onChange={(e) => setProjectSearch(e.target.value)}
                 placeholder="Hledat projekt nebo klienta..."
                 className="w-full px-2.5 py-1.5 rounded-md border text-base sm:text-sm focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
-                style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
                 autoFocus
               />
             </div>
@@ -701,7 +701,7 @@ export default function TimerBar({ onEntryChanged, playData, isBottomBar = false
                 onChange={(e) => setTaskSearch(e.target.value)}
                 placeholder="Hledat kategorii nebo úkol..."
                 className="w-full px-2.5 py-1.5 rounded-md border text-base sm:text-sm focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
-                style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
                 autoFocus
               />
             </div>

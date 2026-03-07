@@ -195,7 +195,7 @@ function ProjectsContent() {
                   placeholder="např. Web redesign"
                   autoFocus
                   className="w-full px-3 py-2.5 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-                  style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                  style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
                 />
               </div>
               <div className="relative">
@@ -206,7 +206,7 @@ function ProjectsContent() {
                   type="button"
                   onClick={() => setShowClientPicker(!showClientPicker)}
                   className="w-full px-3 py-2.5 rounded-lg border text-sm text-left focus:outline-none focus:ring-2 focus:ring-[var(--primary)] flex items-center justify-between"
-                  style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: selectedClients.length > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}
+                  style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: selectedClients.length > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}
                 >
                   <span className="truncate">
                     {selectedClients.length > 0
@@ -322,7 +322,7 @@ function ProjectsContent() {
               value={projectSearch}
               onChange={e => setProjectSearch(e.target.value)}
               className="w-full pl-9 pr-8 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-              style={{ background: 'var(--bg-input)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+              style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
             />
             {projectSearch && (
               <button

@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 7. 3. 2026 (v2.31.0)
+> Aktualizováno: 7. 3. 2026 (v2.32.0)
 
 ---
 
@@ -493,6 +493,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.32.0 | 7. 3. 2026 | Overflow fix 2. kolo: min-w-0 + maxWidth:100% na date/time inputy (vacation/important-days/calendar/reports); reports filtr Od/Do → w-full grid grid-cols-2 s min-w-0 na buňkách; Reports položky → 3-řádkový layout (1=název, 2=projekt/kat/úkol/user, 3=čas+trvání+akce); 72× --bg-input→--bg-hover (24 souborů: 19 stránek + 5 komponent) |
 | v2.31.0 | 7. 3. 2026 | Přehled: notif panel „K vyřízení" + pozvánky do kalendáře (calendar_invite type, fialová, ikonka kalendáře, dotaz na trackino_calendar_event_attendees kde status='pending' a user_id=current); Mobilní opravy: grid-cols-2 → grid-cols-1 sm:grid-cols-2 v Dovolené, Důl. dnech, Kalendáři (event modal Od/Do+časy, settings Od/Do); Tým/Manažeři: flex-col sm:flex-row, hidden sm:block separator, sm:w-52 místo pevného w-52; Reporty: period tabs px-2 sm:px-3 + zkrácený text (hidden sm:inline "Tento ") |
 | v2.30.0 | 7. 3. 2026 | Mobil: auto-hide header při scrollu dolů (translateY(-100%)), zobrazí při velocity > 300px/s nebo upDelta > 100px; headerHiddenRef + scrollStateRef (stale closure safe); na desktopu vždy viditelné. TimerBar: prop `isBottomBar` – větší touch targety (w-11 h-11 start/stop), větší ikony, dropdowny nad lištou (rect.top - 324); DashboardLayout: safe-area-inset-bottom + 12px padding, calc(env(safe-area-inset-bottom)+130px) na content |
 | v2.29.0 | 7. 3. 2026 | Timer: nový sloupec `timer_bottom_mobile` v trackino_profiles – na mobilu (< 640px) přesune Měřič do fixního bottom baru; žádná kolize s timer_always_visible (shouldShowTimer řídí viditelnost, timerAtBottom řídí pozici); content pb-24 když aktivní. Kalendář: panel Pozvánky – tlačítko v headeru (všechny pohledy), badge s pending počtem, filtrace dle stavu (Vše/Čeká/Přijato/Nezávazně/Odmítnuto), textové hledání, RSVP tlačítka, stránkování po 20 |

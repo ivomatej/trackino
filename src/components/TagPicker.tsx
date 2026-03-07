@@ -97,7 +97,7 @@ export default function TagPicker({ selectedTagIds, onChange }: TagPickerProps) 
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Hledat štítek..."
               className="w-full px-2.5 py-1.5 rounded-md border text-base sm:text-sm focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
-              style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+              style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
               autoFocus
             />
           </div>

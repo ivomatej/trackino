@@ -389,7 +389,7 @@ CREATE POLICY "Auth full" ON trackino_important_days
                   onChange={e => setFTitle(e.target.value)}
                   placeholder="Např. Narozeniny, Výroční schůzka…"
                   className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm"
-                  style={{ borderColor: 'var(--border)', background: 'var(--bg-input, var(--bg-hover))', color: 'var(--text-primary)' }}
+                  style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
                   autoFocus
                 />
               </div>
@@ -402,7 +402,7 @@ CREATE POLICY "Auth full" ON trackino_important_days
                     value={fRecurring}
                     onChange={e => setFRecurring(e.target.value as ImportantDayRecurring)}
                     className="w-full px-3 py-2 pr-8 rounded-lg border text-base sm:text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
-                    style={{ borderColor: 'var(--border)', background: 'var(--bg-input, var(--bg-hover))', color: 'var(--text-primary)' }}
+                    style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
                   >
                     <option value="none">Jednorázově</option>
                     <option value="weekly">Každý týden (stejný den v týdnu)</option>
@@ -420,17 +420,17 @@ CREATE POLICY "Auth full" ON trackino_important_days
               {/* Datum(a) */}
               {fRecurring === 'none' ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
+                  <div className="min-w-0">
                     <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Od *</label>
                     <input
                       type="date"
                       value={fStartDate}
                       onChange={e => { setFStartDate(e.target.value); if (!fEndDate || e.target.value > fEndDate) setFEndDate(e.target.value); }}
                       className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm"
-                      style={{ borderColor: 'var(--border)', background: 'var(--bg-input, var(--bg-hover))', color: 'var(--text-primary)' }}
+                      style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)', maxWidth: '100%' }}
                     />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Do</label>
                     <input
                       type="date"
@@ -438,7 +438,7 @@ CREATE POLICY "Auth full" ON trackino_important_days
                       min={fStartDate}
                       onChange={e => setFEndDate(e.target.value)}
                       className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm"
-                      style={{ borderColor: 'var(--border)', background: 'var(--bg-input, var(--bg-hover))', color: 'var(--text-primary)' }}
+                      style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)', maxWidth: '100%' }}
                     />
                   </div>
                 </div>
@@ -452,7 +452,7 @@ CREATE POLICY "Auth full" ON trackino_important_days
                     value={fStartDate}
                     onChange={e => setFStartDate(e.target.value)}
                     className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm"
-                    style={{ borderColor: 'var(--border)', background: 'var(--bg-input, var(--bg-hover))', color: 'var(--text-primary)' }}
+                    style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
                   />
                   <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
                     {fRecurring === 'weekly' && 'Opakuje se každý týden ve stejný den v týdnu.'}
@@ -491,7 +491,7 @@ CREATE POLICY "Auth full" ON trackino_important_days
                   rows={2}
                   placeholder="Volitelná poznámka…"
                   className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm resize-none"
-                  style={{ borderColor: 'var(--border)', background: 'var(--bg-input, var(--bg-hover))', color: 'var(--text-primary)' }}
+                  style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
                 />
               </div>
 

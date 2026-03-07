@@ -484,7 +484,7 @@ function BugsContent() {
                         if (e.key === 'Escape') setNoteEditId(null);
                       }}
                       className="flex-1 px-2 py-1.5 rounded border text-base sm:text-sm focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
-                      style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                      style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
                       placeholder="Poznámka pro uživatele..."
                       autoFocus
                     />
@@ -611,7 +611,7 @@ function BugsContent() {
                 value={workspaceFilter}
                 onChange={(e) => setWorkspaceFilter(e.target.value)}
                 className="appearance-none pl-3 pr-8 py-1.5 rounded-lg border text-base sm:text-sm focus:outline-none"
-                style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
               >
                 <option value="all">Všechny workspace</option>
                 {workspaces.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
@@ -622,7 +622,7 @@ function BugsContent() {
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="appearance-none pl-3 pr-8 py-1.5 rounded-lg border text-base sm:text-sm focus:outline-none"
-                style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
               >
                 <option value="all">Všechny stavy</option>
                 <option value="open">Otevřeno</option>

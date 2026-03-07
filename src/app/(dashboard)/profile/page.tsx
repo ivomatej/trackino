@@ -78,7 +78,7 @@ function ProfileContent() {
     : (profile?.email?.charAt(0).toUpperCase() ?? '?');
 
   const inputCls = 'w-full px-3 py-2.5 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]';
-  const inputStyle = { borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' };
+  const inputStyle = { borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' };
 
   return (
     <DashboardLayout>
@@ -200,7 +200,7 @@ function ProfileContent() {
                   className={inputCls + ' disabled:opacity-60 disabled:cursor-not-allowed'}
                   style={{
                     ...inputStyle,
-                    background: !canEditPosition ? 'var(--bg-hover)' : 'var(--bg-input)',
+                    background: !canEditPosition ? 'var(--bg-hover)' : 'var(--bg-hover)',
                   }}
                 />
               </div>

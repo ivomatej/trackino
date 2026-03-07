@@ -355,7 +355,7 @@ function VacationContent() {
   };
 
   const inputCls = 'w-full px-3 py-2.5 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]';
-  const inputStyle = { borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' };
+  const inputStyle = { borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' };
 
   // Přidávání: admin přidává za sebe nebo jiného
   const isAddingForOther = isWorkspaceAdmin && formUserId && formUserId !== user?.id;
@@ -499,13 +499,13 @@ function VacationContent() {
                 )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-                  <div>
+                  <div className="min-w-0">
                     <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Datum od</label>
-                    <input type="date" value={formStartDate} onChange={(e) => setFormStartDate(e.target.value)} className={inputCls} style={inputStyle} />
+                    <input type="date" value={formStartDate} onChange={(e) => setFormStartDate(e.target.value)} className={inputCls} style={{ ...inputStyle, maxWidth: '100%' }} />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Datum do</label>
-                    <input type="date" value={formEndDate} min={formStartDate} onChange={(e) => setFormEndDate(e.target.value)} className={inputCls} style={inputStyle} />
+                    <input type="date" value={formEndDate} min={formStartDate} onChange={(e) => setFormEndDate(e.target.value)} className={inputCls} style={{ ...inputStyle, maxWidth: '100%' }} />
                   </div>
                 </div>
 
@@ -876,7 +876,7 @@ function VacationContent() {
                 rows={3}
                 placeholder="např. V daném termínu je plánovaný důležitý projekt."
                 className="w-full px-3 py-2.5 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] resize-none"
-                style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
                 autoFocus
               />
             </div>

@@ -426,7 +426,7 @@ function TeamContent() {
 
   const currencySymbol = currentWorkspace.currency === 'EUR' ? '€' : currentWorkspace.currency === 'USD' ? '$' : 'Kč';
   const inputCls = "w-full px-3 py-2.5 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]";
-  const inputStyle = { borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' };
+  const inputStyle = { borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' };
   const editInitials = editName.trim()
     ? editName.trim().split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
     : '?';
@@ -490,7 +490,7 @@ function TeamContent() {
                     className="flex items-center gap-2 px-4 py-3 rounded-lg border text-sm font-medium transition-colors whitespace-nowrap"
                     style={{
                       borderColor: codeCopied ? 'var(--success)' : 'var(--border)',
-                      background: codeCopied ? 'var(--bg-hover)' : 'var(--bg-input)',
+                      background: codeCopied ? 'var(--bg-hover)' : 'var(--bg-hover)',
                       color: codeCopied ? 'var(--success)' : 'var(--text-secondary)',
                     }}
                   >
@@ -550,7 +550,7 @@ function TeamContent() {
                     value={memberSearch}
                     onChange={e => setMemberSearch(e.target.value)}
                     className="w-full pl-9 pr-8 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+                    style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
                   />
                   {memberSearch && (
                     <button
@@ -1393,7 +1393,7 @@ function TeamContent() {
                               value={rateValidToEdits[rate.id] ?? ''}
                               onChange={(e) => setRateValidToEdits(prev => ({ ...prev, [rate.id]: e.target.value }))}
                               className="flex-1 px-2 py-1 rounded-md border text-base sm:text-sm focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
-                              style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                              style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
                             />
                             {rateValidToEdits[rate.id] && (
                               <button

@@ -11,6 +11,13 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.32.0 – 7. 3. 2026</h3>
+<ul>
+  <li><strong>Mobilní opravy – přetékání datových polí (2. kolo)</strong> – přidány atributy <code>min-w-0</code> a <code>maxWidth: 100 %</code> na všechna datová vstupní pole: Dovolená (formulář), Důležité dny (modal), Reporty (filtr Od/Do), Kalendář (modal události – datum i čas). Reporty filtr Od/Do přepracován na grid kontejner s <code>w-full</code> na vstupech – pole se nyní správně vejdou na mobil bez přetékání za okraj.</li>
+  <li><strong>Reporty – Nový mobilní layout položek</strong> – záznamy v seznamu reportů jsou nyní rozloženy do tří řádků: 1) název/popis (celá šířka), 2) projekt / kategorie / úkol / uživatel (celá šířka), 3) čas od–do + trvání + akce. Layout je přehlednější na mobilních zařízeních.</li>
+  <li><strong>Jednotné šedé pozadí vstupních polí</strong> – sjednocena barva pozadí všech formulářových polí (inputs, selects, textareas) v celé aplikaci na šedou variantu. Celkem upraveno 72 míst v 24 souborech.</li>
+</ul>
+
 <h3>v2.31.0 – 7. 3. 2026</h3>
 <ul>
   <li><strong>Přehled – Upozornění na pozvánky do kalendáře</strong> – panel „K vyřízení" na Přehledu nyní zobrazuje i čekající pozvánky do kalendáře (události, na které jste byli pozváni a dosud jste neodpověděli). Položka je fialová s ikonou kalendáře a odkazuje přímo na stránku Kalendáře. Zobrazuje se všem uživatelům s přístupem ke Kalendáři, kteří mají nevyřízené pozvánky.</li>

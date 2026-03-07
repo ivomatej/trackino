@@ -428,7 +428,7 @@ function ReportsContent() {
                   value={manualDate}
                   onChange={(e) => setManualDate(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
-                  style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                  style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
                 />
               </div>
               <div>
@@ -438,7 +438,7 @@ function ReportsContent() {
                   value={manualStart}
                   onChange={(e) => setManualStart(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-1 focus:ring-[var(--primary)] tabular-nums"
-                  style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                  style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
                 />
               </div>
               <div>
@@ -448,7 +448,7 @@ function ReportsContent() {
                   value={manualEnd}
                   onChange={(e) => setManualEnd(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-1 focus:ring-[var(--primary)] tabular-nums"
-                  style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                  style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
                 />
               </div>
             </div>
@@ -461,7 +461,7 @@ function ReportsContent() {
                     value={manualProject}
                     onChange={(e) => setManualProject(e.target.value)}
                     className="w-full px-3 py-2 pr-8 rounded-lg border text-base sm:text-sm focus:outline-none appearance-none cursor-pointer"
-                    style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                    style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
                   >
                     <option value="">— Bez projektu —</option>
                     {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -475,7 +475,7 @@ function ReportsContent() {
                     value={manualCategory}
                     onChange={(e) => setManualCategory(e.target.value)}
                     className="w-full px-3 py-2 pr-8 rounded-lg border text-base sm:text-sm focus:outline-none appearance-none cursor-pointer"
-                    style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                    style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
                   >
                     <option value="">— Bez kategorie —</option>
                     {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -492,7 +492,7 @@ function ReportsContent() {
                     value={manualTask}
                     onChange={(e) => setManualTask(e.target.value)}
                     className="w-full px-3 py-2 pr-8 rounded-lg border text-base sm:text-sm focus:outline-none appearance-none cursor-pointer"
-                    style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                    style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
                   >
                     <option value="">— Bez úkolu —</option>
                     {tasks.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
@@ -507,7 +507,7 @@ function ReportsContent() {
                       value={manualForUser}
                       onChange={(e) => setManualForUser(e.target.value)}
                       className="w-full px-3 py-2 pr-8 rounded-lg border text-base sm:text-sm focus:outline-none appearance-none cursor-pointer"
-                      style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                      style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
                     >
                       <option value="me">Já (vlastní záznam)</option>
                       {members.filter(m => m.user_id !== user?.id).map(m => (
@@ -528,7 +528,7 @@ function ReportsContent() {
                 onKeyDown={(e) => { if (e.key === 'Enter') saveManual(); }}
                 placeholder="Co jste dělali?"
                 className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
-                style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
               />
             </div>
 
@@ -585,28 +585,28 @@ function ReportsContent() {
             </div>
 
             {preset === 'custom' && (
-              <>
-                <div>
+              <div className="w-full grid grid-cols-2 gap-3">
+                <div className="min-w-0">
                   <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Od</label>
                   <input
                     type="date"
                     value={customFrom}
                     onChange={(e) => setCustomFrom(e.target.value)}
-                    className="px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none"
-                    style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                    className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none"
+                    style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)', maxWidth: '100%' }}
                   />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Do</label>
                   <input
                     type="date"
                     value={customTo}
                     onChange={(e) => setCustomTo(e.target.value)}
-                    className="px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none"
-                    style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                    className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none"
+                    style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)', maxWidth: '100%' }}
                   />
                 </div>
-              </>
+              </div>
             )}
 
             {/* User filter */}
@@ -618,7 +618,7 @@ function ReportsContent() {
                     value={userFilter}
                     onChange={(e) => setUserFilter(e.target.value)}
                     className="px-3 py-2 pr-8 rounded-lg border text-base sm:text-sm focus:outline-none appearance-none cursor-pointer"
-                    style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                    style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
                   >
                     <option value="me">Já</option>
                     <option value="all">Všichni</option>
@@ -638,7 +638,7 @@ function ReportsContent() {
                   value={projectFilter}
                   onChange={(e) => setProjectFilter(e.target.value)}
                   className="px-3 py-2 pr-8 rounded-lg border text-base sm:text-sm focus:outline-none appearance-none cursor-pointer"
-                  style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                  style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
                 >
                   <option value="all">Všechny projekty</option>
                   {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -738,99 +738,100 @@ function ReportsContent() {
                       const task = taskName(entry.task_id);
                       const proj = projects.find(p => p.id === entry.project_id);
                       return (
-                        <div key={entry.id} className="flex flex-col px-4 py-3 gap-1.5">
-                          {/* Hlavní řádek */}
-                          <div className="flex items-center gap-3">
-                            {/* Barva projektu */}
+                        <div key={entry.id} className="px-4 py-3">
+                          <div className="flex gap-3">
+                            {/* Barevný pruh projektu */}
                             <div
-                              className="w-1 self-stretch rounded-full flex-shrink-0"
-                              style={{ background: proj?.color ?? 'var(--border)', minHeight: '24px' }}
+                              className="w-1 rounded-full flex-shrink-0 self-stretch"
+                              style={{ background: proj?.color ?? 'var(--border)', minHeight: '20px' }}
                             />
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                {entry.description && (
-                                  <span className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
-                                    {entry.description}
-                                  </span>
-                                )}
-                                {proj && (
-                                  <span className="text-xs px-1.5 py-0.5 rounded-md font-medium" style={{ background: proj.color + '22', color: proj.color }}>
-                                    {proj.name}
-                                  </span>
-                                )}
-                                {cat && (
-                                  <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{cat}{task ? ` / ${task}` : ''}</span>
-                                )}
+                            {/* Obsah – 3 řádky */}
+                            <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+                              {/* Řádek 1: Název */}
+                              <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                                {entry.description || <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>—</span>}
                               </div>
-                              {canSeeOthers && userFilter !== 'me' && (
-                                <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                                  {memberName(entry.user_id)}
+
+                              {/* Řádek 2: Projekt / Kategorie / Úkol / Uživatel */}
+                              {(proj || cat || (canSeeOthers && userFilter !== 'me')) && (
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  {proj && (
+                                    <span className="text-xs px-1.5 py-0.5 rounded-md font-medium" style={{ background: proj.color + '22', color: proj.color }}>
+                                      {proj.name}
+                                    </span>
+                                  )}
+                                  {cat && (
+                                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{cat}{task ? ` / ${task}` : ''}</span>
+                                  )}
+                                  {canSeeOthers && userFilter !== 'me' && (
+                                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{memberName(entry.user_id)}</span>
+                                  )}
                                 </div>
                               )}
-                            </div>
-                            <div className="flex items-center gap-2 flex-shrink-0">
-                              <div className="text-xs tabular-nums text-right" style={{ color: 'var(--text-muted)' }}>
-                                {fmtTime(entry.start_time)} – {entry.end_time ? fmtTime(entry.end_time) : '—'}
-                              </div>
-                              {(() => {
-                                if (!canSeeOthers || !entry.duration) return null;
-                                const _rd = new Date(entry.start_time);
-                                const rateDay = `${_rd.getFullYear()}-${String(_rd.getMonth() + 1).padStart(2, '0')}-${String(_rd.getDate()).padStart(2, '0')}`;
-                                const rate = getRateForEntry(entry.user_id, rateDay);
-                                if (rate === null) return null;
-                                const cost = (entry.duration / 3600) * rate;
-                                return (
-                                  <div className="text-xs tabular-nums text-right hidden sm:block" style={{ color: 'var(--text-muted)', minWidth: '64px' }}>
-                                    {fmtCost(cost)} {currencySymbol}
-                                  </div>
-                                );
-                              })()}
-                              <div className="text-sm font-semibold tabular-nums w-16 text-right" style={{ color: 'var(--text-primary)' }}>
-                                {fmtDuration(entry.duration ?? 0)}
-                              </div>
 
-                              {/* Poznámka – jen pro manažery/adminy */}
-                              {canManageNotes && (
-                                <button
-                                  onClick={() => {
-                                    if (editingNoteId === entry.id) {
-                                      setEditingNoteId(null);
-                                    } else {
-                                      setEditingNoteId(entry.id);
-                                      setNoteText(entry.manager_note || '');
-                                    }
-                                  }}
-                                  title={entry.manager_note ? 'Upravit poznámku' : 'Přidat poznámku'}
-                                  className="p-1 rounded transition-colors"
-                                  style={{ color: entry.manager_note ? '#d97706' : 'var(--text-muted)' }}
-                                  onMouseEnter={(e) => { e.currentTarget.style.color = '#d97706'; }}
-                                  onMouseLeave={(e) => { e.currentTarget.style.color = entry.manager_note ? '#d97706' : 'var(--text-muted)'; }}
-                                >
-                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                                  </svg>
-                                </button>
-                              )}
-
-                              {/* Smazat – vždy viditelné */}
-                              {(canManageNotes || entry.user_id === user?.id) && (
-                                <button
-                                  onClick={() => deleteEntry(entry.id)}
-                                  className="p-1 rounded transition-colors"
-                                  style={{ color: 'var(--text-muted)' }}
-                                  onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--danger)'; }}
-                                  onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
-                                  title="Smazat"
-                                >
-                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <polyline points="3 6 5 6 21 6" />
-                                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                                    <path d="M10 11v6" /><path d="M14 11v6" />
-                                    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-                                  </svg>
-                                </button>
-                              )}
+                              {/* Řádek 3: Čas, trvání a akce */}
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs tabular-nums flex-1" style={{ color: 'var(--text-muted)' }}>
+                                  {fmtTime(entry.start_time)} – {entry.end_time ? fmtTime(entry.end_time) : '—'}
+                                </span>
+                                {(() => {
+                                  if (!canSeeOthers || !entry.duration) return null;
+                                  const _rd = new Date(entry.start_time);
+                                  const rateDay = `${_rd.getFullYear()}-${String(_rd.getMonth() + 1).padStart(2, '0')}-${String(_rd.getDate()).padStart(2, '0')}`;
+                                  const rate = getRateForEntry(entry.user_id, rateDay);
+                                  if (rate === null) return null;
+                                  const cost = (entry.duration / 3600) * rate;
+                                  return (
+                                    <div className="text-xs tabular-nums hidden sm:block text-right" style={{ color: 'var(--text-muted)', minWidth: '64px' }}>
+                                      {fmtCost(cost)} {currencySymbol}
+                                    </div>
+                                  );
+                                })()}
+                                <div className="text-sm font-semibold tabular-nums w-16 text-right" style={{ color: 'var(--text-primary)' }}>
+                                  {fmtDuration(entry.duration ?? 0)}
+                                </div>
+                                {/* Poznámka – jen pro manažery/adminy */}
+                                {canManageNotes && (
+                                  <button
+                                    onClick={() => {
+                                      if (editingNoteId === entry.id) {
+                                        setEditingNoteId(null);
+                                      } else {
+                                        setEditingNoteId(entry.id);
+                                        setNoteText(entry.manager_note || '');
+                                      }
+                                    }}
+                                    title={entry.manager_note ? 'Upravit poznámku' : 'Přidat poznámku'}
+                                    className="p-1 rounded transition-colors"
+                                    style={{ color: entry.manager_note ? '#d97706' : 'var(--text-muted)' }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.color = '#d97706'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.color = entry.manager_note ? '#d97706' : 'var(--text-muted)'; }}
+                                  >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                    </svg>
+                                  </button>
+                                )}
+                                {/* Smazat */}
+                                {(canManageNotes || entry.user_id === user?.id) && (
+                                  <button
+                                    onClick={() => deleteEntry(entry.id)}
+                                    className="p-1 rounded transition-colors"
+                                    style={{ color: 'var(--text-muted)' }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--danger)'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
+                                    title="Smazat"
+                                  >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                      <polyline points="3 6 5 6 21 6" />
+                                      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                                      <path d="M10 11v6" /><path d="M14 11v6" />
+                                      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                                    </svg>
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           </div>
 

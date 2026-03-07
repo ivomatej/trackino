@@ -233,7 +233,7 @@ function SubordinatesContent() {
 
   const periodLabel = timePeriod === 'today' ? 'za dnešek' : timePeriod === 'week' ? 'za posledních 7 dní' : 'za zvolené období';
 
-  const inputStyle = { borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' };
+  const inputStyle = { borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' };
 
   return (
     <DashboardLayout>
@@ -255,7 +255,7 @@ function SubordinatesContent() {
                   onClick={() => setTimePeriod(p)}
                   className="px-3 py-2 transition-colors"
                   style={{
-                    background: timePeriod === p ? 'var(--primary)' : 'var(--bg-input)',
+                    background: timePeriod === p ? 'var(--primary)' : 'var(--bg-hover)',
                     color: timePeriod === p ? '#fff' : 'var(--text-secondary)',
                     borderRight: p !== 'custom' ? '1px solid var(--border)' : 'none',
                   }}
@@ -363,7 +363,7 @@ function SubordinatesContent() {
                           onKeyDown={(e) => { if (e.key === 'Enter') saveDescription(entry.id); if (e.key === 'Escape') setEditingEntry(null); }}
                           autoFocus
                           className="flex-1 px-2 py-1 rounded border text-base sm:text-sm focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
-                          style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                          style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
                         />
                         <button onClick={() => saveDescription(entry.id)} className="px-2 py-1 rounded text-xs font-medium text-white" style={{ background: 'var(--primary)' }}>
                           OK
@@ -409,7 +409,7 @@ function SubordinatesContent() {
                           autoFocus
                           placeholder="Napište poznámku..."
                           className="flex-1 px-2 py-1 rounded border text-base sm:text-sm focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
-                          style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                          style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
                         />
                         <button onClick={() => saveNote(entry.id)} className="px-2 py-1 rounded text-xs font-medium text-white" style={{ background: 'var(--primary)' }}>
                           OK

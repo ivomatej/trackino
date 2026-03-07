@@ -19,7 +19,7 @@ const DEFAULT_HELP_CONTENT = `
   <li><strong>Projekty</strong> – organizujte záznamy do projektů a přiřazujte klienty; seznam projektů lze prohledávat pomocí vyhledávacího pole nad seznamem</li>
   <li><strong>Klienti</strong> – spravujte klienty a propojujte je s projekty; seznam klientů lze filtrovat vyhledávacím polem</li>
   <li><strong>Štítky</strong> – označujte záznamy štítky pro lepší kategorizaci</li>
-  <li><strong>Reporty</strong> – analyzujte odpracovaný čas (včetně výdělku dle hodinové sazby) a přidávejte záznamy ručně</li>
+  <li><strong>Reporty</strong> – analyzujte odpracovaný čas (včetně výdělku dle hodinové sazby) a přidávejte záznamy ručně; mobilní layout položek ve výpisu: 1. řádek název, 2. řádek projekt/kategorie/úkol, 3. řádek čas a akce</li>
   <li><strong>Podřízení</strong> – Team Manažeři a Admini vidí záznamy podřízených; dostupné filtry: Dnes / Týden / Vlastní období</li>
   <li><strong>Dovolená</strong> – evidence termínů dovolené s automatickým výpočtem pracovních dnů a přehledem zbývajícího nároku</li>
   <li><strong>Fakturace</strong> – fakturace odvedené práce: podání žádosti, schvalování manažerem, proplacení správcem fakturace</li>

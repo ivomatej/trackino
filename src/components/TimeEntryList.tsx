@@ -277,7 +277,7 @@ export default function TimeEntryList({ refreshKey, onPlay }: TimeEntryListProps
                           onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(entry.id); if (e.key === 'Escape') setEditingEntry(null); }}
                           autoFocus
                           className="flex-1 px-2 py-1 rounded border text-base sm:text-sm focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
-                          style={{ borderColor: 'var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                          style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
                         />
                         <button
                           onClick={() => saveEdit(entry.id)}
