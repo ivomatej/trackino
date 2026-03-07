@@ -14,6 +14,15 @@ import type { KbFolder, KbPage, KbVersion, KbComment, KbReview, KbAccess, KbPage
 type PageTab = 'comments' | 'history' | 'access' | 'backlinks' | 'reviews';
 interface KbMember { user_id: string; display_name: string; avatar_color: string; }
 
+type ListFilter =
+  | { type: 'all' }
+  | { type: 'favorites' }
+  | { type: 'recent' }
+  | { type: 'unfiled' }
+  | { type: 'status'; value: KbPageStatus }
+  | { type: 'mention'; userId: string }
+  | { type: 'folder'; folderId: string };
+
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<KbPageStatus, { label: string; color: string }> = {
@@ -353,6 +362,8 @@ function RichEditor({ value, onChange, members, pages }: {
             const rect = preEl.getBoundingClientRect();
             if (e.clientX > rect.right - 36 && e.clientY < rect.top + 32) {
               navigator.clipboard.writeText(preEl.querySelector('code')?.textContent ?? '').catch(() => {});
+              preEl.classList.add('kb-code-copied');
+              setTimeout(() => preEl.classList.remove('kb-code-copied'), 1500);
             }
             setCalloutPicker(null);
             return;
@@ -383,8 +394,9 @@ function RichEditor({ value, onChange, members, pages }: {
         .prose-kb p{margin:4px 0;line-height:1.6}
         .prose-kb pre{position:relative;background:var(--bg-hover);padding:12px 40px 12px 12px;border-radius:8px;font-family:monospace;font-size:13px;overflow-x:auto;margin:16px 0;border:1px solid var(--border);white-space:pre-wrap}
         .prose-kb pre code{display:block;min-height:3em;white-space:pre-wrap;word-break:break-all;outline:none}
-        .prose-kb pre::after{content:"";position:absolute;top:8px;right:8px;width:20px;height:20px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='13' height='13' rx='2' ry='2'/%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:center;cursor:pointer;opacity:0.5;transition:opacity 0.15s}
+        .prose-kb pre::after{content:"";position:absolute;top:8px;right:8px;width:20px;height:20px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='13' height='13' rx='2' ry='2'/%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:center;cursor:pointer;opacity:0.5;transition:opacity 0.15s,background-image 0.1s}
         .prose-kb pre:hover::after{opacity:1}
+        .prose-kb pre.kb-code-copied::after{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2322c55e' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");opacity:1!important}
         .prose-kb .kb-checklist{list-style:none;padding-left:2px}
         .prose-kb .kb-check-unchecked{line-height:1.8}
         .prose-kb .kb-check-unchecked::before{content:"";display:inline-block;width:14px;height:14px;border:1.5px solid var(--border);border-radius:3px;margin-right:7px;vertical-align:middle;background:transparent;position:relative;top:-1px}
@@ -498,6 +510,8 @@ function PageViewer({ page, onChecklistToggle, onPageLinkClick }: {
       const rect = pre.getBoundingClientRect();
       if (e.clientX > rect.right - 36 && e.clientY < rect.top + 32) {
         navigator.clipboard.writeText(pre.querySelector('code')?.textContent ?? '').catch(() => {});
+        pre.classList.add('kb-code-copied');
+        setTimeout(() => pre.classList.remove('kb-code-copied'), 1500);
       }
     }
   };
@@ -513,8 +527,9 @@ function PageViewer({ page, onChecklistToggle, onPageLinkClick }: {
         .prose-view ol{list-style:decimal;padding-left:20px;margin:4px 0}
         .prose-view p{margin:4px 0;line-height:1.6}
         .prose-view pre{position:relative;background:var(--bg-hover);padding:12px 40px 12px 12px;border-radius:8px;font-family:monospace;font-size:13px;overflow-x:auto;margin:16px 0;border:1px solid var(--border);cursor:default}
-        .prose-view pre::after{content:"";position:absolute;top:8px;right:8px;width:20px;height:20px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='13' height='13' rx='2' ry='2'/%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:center;cursor:pointer;opacity:0.5;transition:opacity 0.15s}
+        .prose-view pre::after{content:"";position:absolute;top:8px;right:8px;width:20px;height:20px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='13' height='13' rx='2' ry='2'/%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:center;cursor:pointer;opacity:0.5;transition:opacity 0.15s,background-image 0.1s}
         .prose-view pre:hover::after{opacity:1}
+        .prose-view pre.kb-code-copied::after{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2322c55e' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");opacity:1!important}
         .prose-view .kb-checklist{list-style:none;padding-left:2px}
         .prose-view .kb-check-unchecked,.prose-view .kb-check-checked{cursor:pointer;line-height:1.8}
         .prose-view .kb-check-unchecked::before{content:"";display:inline-block;width:14px;height:14px;border:1.5px solid var(--border);border-radius:3px;margin-right:7px;vertical-align:middle;background:transparent;position:relative;top:-1px}
@@ -540,9 +555,9 @@ function PageViewer({ page, onChecklistToggle, onPageLinkClick }: {
 
 // ── Folder Tree ───────────────────────────────────────────────────────────────
 
-function KbFolderTree({ folders, pages, selectedFolderId, selectedPageId, expanded, onSelectFolder, onSelectPage, onToggle, onAddSub, onEditFolder, onDeleteFolder, userId, depth = 0, parentId = null }: {
-  folders: KbFolder[]; pages: KbPage[]; selectedFolderId: string | null; selectedPageId: string | null;
-  expanded: Set<string>; onSelectFolder: (id: string) => void; onSelectPage: (id: string) => void;
+function KbFolderTree({ folders, pages, selectedFolderId, expanded, onSelectFolder, onToggle, onAddSub, onEditFolder, onDeleteFolder, userId, depth = 0, parentId = null }: {
+  folders: KbFolder[]; pages: KbPage[]; selectedFolderId: string | null;
+  expanded: Set<string>; onSelectFolder: (id: string) => void;
   onToggle: (id: string) => void; onAddSub: (parentId: string, depth: number) => void;
   onEditFolder: (f: KbFolder) => void; onDeleteFolder: (f: KbFolder) => void;
   userId: string; depth?: number; parentId?: string | null;
@@ -554,22 +569,25 @@ function KbFolderTree({ folders, pages, selectedFolderId, selectedPageId, expand
       {children.map(folder => {
         const isExp = expanded.has(folder.id);
         const isSel = selectedFolderId === folder.id;
-        const fPages = pages.filter(p => p.folder_id === folder.id);
+        const pageCount = pages.filter(p => p.folder_id === folder.id).length;
         return (
           <div key={folder.id}>
             <div className="group/folder flex items-center gap-1 py-1 rounded-lg cursor-pointer transition-colors"
               style={{ paddingLeft: `${depth * 14 + 4}px`, background: isSel ? 'var(--bg-active)' : 'transparent' }}
+              onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+              onMouseLeave={e => { if (!isSel) e.currentTarget.style.background = 'transparent'; }}
               onClick={() => { onSelectFolder(folder.id); onToggle(folder.id); }}>
               <button type="button" onClick={e => { e.stopPropagation(); onToggle(folder.id); }}
                 className="w-4 h-4 flex-shrink-0 flex items-center justify-center" style={{ color: 'var(--text-muted)' }}>
-                <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
-                  {isExp ? <path d="M2 3l3 4 3-4H2z"/> : <path d="M3 2l4 3-4 3V2z"/>}
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" style={{ transition: 'transform 0.15s', transform: isExp ? 'rotate(90deg)' : 'rotate(0deg)' }}>
+                  <path d="M3 2l4 3-4 3V2z"/>
                 </svg>
               </button>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: isSel ? 'var(--primary)' : 'var(--text-muted)', flexShrink: 0 }}>
                 <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
               </svg>
-              <span className="flex-1 text-xs truncate" style={{ color: isSel ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: isSel ? 600 : 400 }}>{folder.name}</span>
+              <span className="flex-1 text-xs truncate" style={{ color: isSel ? 'var(--primary)' : 'var(--text-secondary)', fontWeight: isSel ? 600 : 400 }}>{folder.name}</span>
+              {pageCount > 0 && <span className="text-[10px] px-1 mr-1 rounded" style={{ color: 'var(--text-muted)', background: 'var(--bg-hover)' }}>{pageCount}</span>}
               <div className="opacity-0 group-hover/folder:opacity-100 flex items-center gap-0.5 flex-shrink-0 transition-opacity">
                 {depth < MAX_FOLDER_DEPTH - 1 && (
                   <button type="button" onClick={e => { e.stopPropagation(); onAddSub(folder.id, depth + 1); }} title="Přidat podsložku"
@@ -591,29 +609,115 @@ function KbFolderTree({ folders, pages, selectedFolderId, selectedPageId, expand
                 )}
               </div>
             </div>
-            {/* Pages in this folder */}
-            {isExp && fPages.map(p => (
-              <div key={p.id}
-                className="flex items-center gap-1.5 py-1 rounded-lg cursor-pointer group/page transition-colors"
-                style={{ paddingLeft: `${depth * 14 + 22}px`, background: selectedPageId === p.id ? 'var(--bg-active)' : 'transparent' }}
-                onClick={() => onSelectPage(p.id)}>
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
-                </svg>
-                <span className="flex-1 text-xs truncate" style={{ color: selectedPageId === p.id ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: selectedPageId === p.id ? 500 : 400 }}>{p.title}</span>
-                <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 ml-1 mr-2" style={{ background: STATUS_CONFIG[p.status].color, opacity: p.status === 'active' ? 0 : 1 }} />
-              </div>
-            ))}
-            {/* Subfolders */}
+            {/* Subfolders only */}
             {isExp && (
-              <KbFolderTree folders={folders} pages={pages} selectedFolderId={selectedFolderId} selectedPageId={selectedPageId}
-                expanded={expanded} onSelectFolder={onSelectFolder} onSelectPage={onSelectPage} onToggle={onToggle}
+              <KbFolderTree folders={folders} pages={pages} selectedFolderId={selectedFolderId}
+                expanded={expanded} onSelectFolder={onSelectFolder} onToggle={onToggle}
                 onAddSub={onAddSub} onEditFolder={onEditFolder} onDeleteFolder={onDeleteFolder}
                 userId={userId} depth={depth + 1} parentId={folder.id} />
             )}
           </div>
         );
       })}
+    </div>
+  );
+}
+
+// ── Page List View ────────────────────────────────────────────────────────────
+
+function PageListView({ pages, folders, members, favorites, filterLabel, filterIcon, onSelectPage, onNewPage, STATUS_CONFIG: sc }: {
+  pages: KbPage[]; folders: KbFolder[]; members: KbMember[];
+  favorites: Set<string>; filterLabel: string; filterIcon: React.ReactNode;
+  onSelectPage: (id: string) => void; onNewPage: () => void;
+  STATUS_CONFIG: Record<KbPageStatus, { label: string; color: string }>;
+}) {
+  return (
+    <div className="flex-1 flex flex-col overflow-y-auto">
+      <div className="p-4 lg:p-6 flex-1">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'var(--bg-hover)' }}>
+              {filterIcon}
+            </div>
+            <div>
+              <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>{filterLabel}</h2>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{pages.length} {pages.length === 1 ? 'stránka' : pages.length < 5 ? 'stránky' : 'stránek'}</p>
+            </div>
+          </div>
+          <button type="button" onClick={onNewPage}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium"
+            style={{ background: 'var(--primary)', color: '#fff' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span className="hidden sm:inline">Nová stránka</span>
+            <span className="sm:hidden">Nová</span>
+          </button>
+        </div>
+
+        {/* Page list */}
+        {pages.length === 0 ? (
+          <div className="rounded-xl border px-6 py-14 text-center" style={{ borderColor: 'var(--border)', background: 'var(--bg-card)' }}>
+            <svg className="mx-auto mb-3" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ color: 'var(--text-muted)' }}>
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+            </svg>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Žádné stránky</p>
+          </div>
+        ) : (
+          <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--border)', background: 'var(--bg-card)' }}>
+            {pages.map((p, i) => {
+              const path = getFolderPath(p.folder_id, folders);
+              const author = members.find(m => m.user_id === (p.updated_by ?? p.created_by));
+              return (
+                <div key={p.id}
+                  className="flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors"
+                  style={{ borderBottom: i < pages.length - 1 ? '1px solid var(--border)' : 'none' }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  onClick={() => onSelectPage(p.id)}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                  </svg>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{p.title}</span>
+                      {favorites.has(p.id) && (
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="#f59e0b" stroke="#f59e0b" strokeWidth="1" style={{ flexShrink: 0 }}>
+                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                        </svg>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      {path && (
+                        <span className="text-[11px] truncate flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
+                          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                          {path}
+                        </span>
+                      )}
+                      {p.tags.length > 0 && p.tags.slice(0, 2).map(tag => (
+                        <span key={tag} className="text-[11px] px-1.5 py-0 rounded-full" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>#{tag}</span>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-1.5 h-1.5 rounded-full" style={{ background: sc[p.status].color }} />
+                      <span className="text-[11px] hidden sm:block" style={{ color: 'var(--text-muted)' }}>{sc[p.status].label}</span>
+                    </div>
+                    {author && (
+                      <div className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center text-[10px] font-bold text-white hidden md:flex" style={{ background: author.avatar_color }}>
+                        {getInitials(author.display_name)}
+                      </div>
+                    )}
+                    <span className="text-[11px] whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>
+                      {new Date(p.updated_at).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'short' })}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -660,11 +764,8 @@ function KnowledgeBaseContent() {
   const [savingComment, setSavingComment] = useState(false);
 
   const [leftOpen, setLeftOpen] = useState(false);
-  const [recentExpanded, setRecentExpanded] = useState(true);
+  const [listFilter, setListFilter] = useState<ListFilter | null>(null);
   const [statusSectionExpanded, setStatusSectionExpanded] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<KbPageStatus | null>(null);
-  const [showUnfiled, setShowUnfiled] = useState(false);
-  const [mentionFilter, setMentionFilter] = useState<string | null>(null);
   const [mentionSectionExpanded, setMentionSectionExpanded] = useState(false);
 
   // Folder modal
@@ -738,6 +839,12 @@ function KnowledgeBaseContent() {
     fetchPageDetail(id);
   };
 
+  const backToList = () => {
+    setSelectedPage(null);
+    setEditing(false);
+    setComments([]); setVersions([]); setReviews([]); setAccess([]);
+  };
+
   // ── Can edit check ─────────────────────────────────────────────────────────
 
   const canEditPage = (page: KbPage) => {
@@ -806,8 +913,9 @@ function KnowledgeBaseContent() {
 
   // ── New page ───────────────────────────────────────────────────────────────
 
-  const openNewPage = (folderId: string | null) => {
-    setTemplateModal({ folderId });
+  const openNewPage = (folderId?: string | null) => {
+    const fid = folderId !== undefined ? folderId : (listFilter?.type === 'folder' ? listFilter.folderId : null);
+    setTemplateModal({ folderId: fid });
   };
 
   const createPageFromTemplate = (template: typeof TEMPLATES[0], folderId: string | null) => {
@@ -997,24 +1105,63 @@ function KnowledgeBaseContent() {
     setTagInput('');
   };
 
-  // ── Filtered pages (search + folder) ─────────────────────────────────────
+  // ── Filtered pages (search + listFilter) ──────────────────────────────────
 
   const filteredPages = (() => {
-    let p = pages;
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      p = p.filter(pg => pg.title.toLowerCase().includes(q) || pg.content.toLowerCase().includes(q) || pg.tags.some(t => t.toLowerCase().includes(q)));
-    } else if (showUnfiled) {
-      p = p.filter(pg => !pg.folder_id);
-    } else if (mentionFilter) {
-      p = p.filter(pg => pg.content.includes(`data-user-id="${mentionFilter}"`));
-    } else if (statusFilter) {
-      p = p.filter(pg => pg.status === statusFilter);
-    } else if (selectedFolderId) {
-      p = p.filter(pg => pg.folder_id === selectedFolderId);
+    const q = search.trim().toLowerCase();
+    if (q) {
+      return pages.filter(pg =>
+        pg.title.toLowerCase().includes(q) ||
+        pg.content.toLowerCase().includes(q) ||
+        pg.tags.some(t => t.toLowerCase().includes(q))
+      );
     }
-    return p;
+    if (!listFilter) return pages;
+    switch (listFilter.type) {
+      case 'all': return pages;
+      case 'favorites': return pages.filter(p => favorites.has(p.id));
+      case 'recent': return [...pages].sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()).slice(0, 30);
+      case 'unfiled': return pages.filter(p => !p.folder_id);
+      case 'status': return pages.filter(p => p.status === listFilter.value);
+      case 'mention': return pages.filter(p => p.content.includes(`data-user-id="${listFilter.userId}"`));
+      case 'folder': return pages.filter(p => p.folder_id === listFilter.folderId);
+      default: return pages;
+    }
   })();
+
+  const filterLabel = (() => {
+    const q = search.trim();
+    if (q) return `Hledání: „${q}"`;
+    if (!listFilter) return '';
+    switch (listFilter.type) {
+      case 'all': return 'Všechny stránky';
+      case 'favorites': return 'Oblíbené stránky';
+      case 'recent': return 'Naposledy upravené';
+      case 'unfiled': return 'Nezařazené stránky';
+      case 'status': return STATUS_CONFIG[listFilter.value].label;
+      case 'mention': return `Zmínky: ${members.find(m => m.user_id === listFilter.userId)?.display_name ?? ''}`;
+      case 'folder': return folders.find(f => f.id === listFilter.folderId)?.name ?? 'Složka';
+    }
+  })();
+
+  const filterIcon = (() => {
+    const q = search.trim();
+    if (q) return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)' }}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
+    if (!listFilter) return null;
+    switch (listFilter.type) {
+      case 'all': return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)' }}><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></svg>;
+      case 'favorites': return <svg width="18" height="18" viewBox="0 0 24 24" fill="#f59e0b" stroke="#f59e0b" strokeWidth="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>;
+      case 'recent': return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)' }}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
+      case 'unfiled': return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)' }}><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>;
+      case 'status': return <div className="w-3 h-3 rounded-full" style={{ background: STATUS_CONFIG[listFilter.value].color }} />;
+      case 'mention': return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)' }}><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94"/></svg>;
+      case 'folder': return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--primary)' }}><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>;
+      default: return null;
+    }
+  })();
+
+  const showList = (search.trim() || listFilter !== null) && !selectedPage;
+  const showWelcome = !search.trim() && listFilter === null && !selectedPage;
 
   const memberName = (userId: string) => members.find(m => m.user_id === userId)?.display_name ?? userId.slice(0, 8);
 
@@ -1032,6 +1179,7 @@ function KnowledgeBaseContent() {
         {/* LEFT PANEL */}
         <aside className={`fixed lg:relative top-0 left-0 bottom-0 z-40 lg:z-auto flex flex-col border-r flex-shrink-0 transition-transform duration-200 ${leftOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
           style={{ width: 260, background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+
           {/* Header */}
           <div className="flex items-center gap-2 p-3 border-b" style={{ borderColor: 'var(--border)' }}>
             <h2 className="text-sm font-semibold flex-1" style={{ color: 'var(--text-primary)' }}>Znalostní báze</h2>
@@ -1044,213 +1192,170 @@ function KnowledgeBaseContent() {
           <div className="p-3 border-b" style={{ borderColor: 'var(--border)' }}>
             <div className="relative">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-muted)' }}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Hledat..." className="w-full pl-8 pr-3 py-1.5 rounded-lg border text-base sm:text-sm" style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)' }} />
+              <input value={search} onChange={e => { setSearch(e.target.value); if (e.target.value.trim()) { setListFilter(null); setSelectedPage(null); } }} placeholder="Hledat stránky…" className="w-full pl-8 pr-7 py-1.5 rounded-lg border text-base sm:text-sm" style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)' }} />
+              {search && (
+                <button type="button" onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 flex items-center justify-center rounded" style={{ color: 'var(--text-muted)' }}>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              )}
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex gap-1.5 p-3 border-b" style={{ borderColor: 'var(--border)' }}>
-            <button type="button" onClick={() => openNewPage(selectedFolderId)}
-              className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium" style={{ background: 'var(--primary)', color: '#fff' }}>
+          {/* Scrollable content */}
+          <div className="flex-1 overflow-y-auto">
+
+            {/* Nav shortcuts */}
+            <div className="p-2 border-b" style={{ borderColor: 'var(--border)' }}>
+              {/* Všechny stránky */}
+              {(() => {
+                const isActive = listFilter?.type === 'all' && !search;
+                return (
+                  <button type="button" className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-colors"
+                    style={{ background: isActive ? 'var(--bg-active)' : 'transparent', color: isActive ? 'var(--primary)' : 'var(--text-secondary)', fontWeight: isActive ? 600 : 400 }}
+                    onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                    onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                    onClick={() => { setListFilter({ type: 'all' }); setSearch(''); setSelectedPage(null); setLeftOpen(false); }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></svg>
+                    <span className="flex-1 text-left">Všechny stránky</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>{pages.length}</span>
+                  </button>
+                );
+              })()}
+              {/* Oblíbené */}
+              {favorites.size > 0 && (() => {
+                const isActive = listFilter?.type === 'favorites' && !search;
+                return (
+                  <button type="button" className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-colors"
+                    style={{ background: isActive ? 'var(--bg-active)' : 'transparent', color: isActive ? 'var(--primary)' : 'var(--text-secondary)', fontWeight: isActive ? 600 : 400 }}
+                    onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                    onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                    onClick={() => { setListFilter({ type: 'favorites' }); setSearch(''); setSelectedPage(null); setLeftOpen(false); }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill={isActive ? '#f59e0b' : 'none'} stroke="#f59e0b" strokeWidth="2" style={{ flexShrink: 0 }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                    <span className="flex-1 text-left">Oblíbené</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>{favorites.size}</span>
+                  </button>
+                );
+              })()}
+              {/* Naposledy upravené */}
+              {(() => {
+                const isActive = listFilter?.type === 'recent' && !search;
+                return (
+                  <button type="button" className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-colors"
+                    style={{ background: isActive ? 'var(--bg-active)' : 'transparent', color: isActive ? 'var(--primary)' : 'var(--text-secondary)', fontWeight: isActive ? 600 : 400 }}
+                    onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                    onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                    onClick={() => { setListFilter({ type: 'recent' }); setSearch(''); setSelectedPage(null); setLeftOpen(false); }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span className="flex-1 text-left">Naposledy upravené</span>
+                  </button>
+                );
+              })()}
+              {/* Nezařazené */}
+              {(() => {
+                const count = pages.filter(p => !p.folder_id).length;
+                const isActive = listFilter?.type === 'unfiled' && !search;
+                if (count === 0) return null;
+                return (
+                  <button type="button" className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-colors"
+                    style={{ background: isActive ? 'var(--bg-active)' : 'transparent', color: isActive ? 'var(--primary)' : 'var(--text-secondary)', fontWeight: isActive ? 600 : 400 }}
+                    onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                    onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                    onClick={() => { setListFilter({ type: 'unfiled' }); setSearch(''); setSelectedPage(null); setLeftOpen(false); }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>
+                    <span className="flex-1 text-left">Nezařazené</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>{count}</span>
+                  </button>
+                );
+              })()}
+            </div>
+
+            {/* Filtry */}
+            <div className="p-2 border-b" style={{ borderColor: 'var(--border)' }}>
+              {/* Podle stavu */}
+              <button type="button" className="flex items-center gap-2 w-full px-2 py-1 rounded hover:bg-[var(--bg-hover)] transition-colors mb-0.5"
+                onClick={() => setStatusSectionExpanded(v => !v)}>
+                <svg width="8" height="8" viewBox="0 0 10 10" fill="currentColor" style={{ color: 'var(--text-muted)', transition: 'transform 0.15s', transform: statusSectionExpanded ? 'rotate(90deg)' : 'rotate(0deg)', flexShrink: 0 }}><path d="M3 2l4 3-4 3V2z"/></svg>
+                <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Podle stavu</span>
+              </button>
+              {statusSectionExpanded && (Object.keys(STATUS_CONFIG) as KbPageStatus[]).map(s => {
+                const count = pages.filter(p => p.status === s).length;
+                const isActive = listFilter?.type === 'status' && listFilter.value === s && !search;
+                return (
+                  <button key={s} type="button" className="w-full flex items-center gap-2 px-2 py-1 rounded-lg text-xs transition-colors"
+                    style={{ paddingLeft: 20, background: isActive ? 'var(--bg-active)' : 'transparent', color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: isActive ? 600 : 400 }}
+                    onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                    onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                    onClick={() => { setListFilter({ type: 'status', value: s }); setSearch(''); setSelectedPage(null); setLeftOpen(false); }}>
+                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: STATUS_CONFIG[s].color }} />
+                    <span className="flex-1 text-left">{STATUS_CONFIG[s].label}</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>{count}</span>
+                  </button>
+                );
+              })}
+
+              {/* Podle zmínky */}
+              {members.some(m => pages.some(p => p.content.includes(`data-user-id="${m.user_id}"`))) && (
+                <>
+                  <button type="button" className="flex items-center gap-2 w-full px-2 py-1 rounded hover:bg-[var(--bg-hover)] transition-colors mt-1 mb-0.5"
+                    onClick={() => setMentionSectionExpanded(v => !v)}>
+                    <svg width="8" height="8" viewBox="0 0 10 10" fill="currentColor" style={{ color: 'var(--text-muted)', transition: 'transform 0.15s', transform: mentionSectionExpanded ? 'rotate(90deg)' : 'rotate(0deg)', flexShrink: 0 }}><path d="M3 2l4 3-4 3V2z"/></svg>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Podle zmínky</span>
+                  </button>
+                  {mentionSectionExpanded && members.map(m => {
+                    const count = pages.filter(p => p.content.includes(`data-user-id="${m.user_id}"`)).length;
+                    if (count === 0) return null;
+                    const isActive = listFilter?.type === 'mention' && listFilter.userId === m.user_id && !search;
+                    return (
+                      <button key={m.user_id} type="button" className="w-full flex items-center gap-2 px-2 py-1 rounded-lg text-xs transition-colors"
+                        style={{ paddingLeft: 20, background: isActive ? 'var(--bg-active)' : 'transparent', color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)' }}
+                        onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                        onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                        onClick={() => { setListFilter({ type: 'mention', userId: m.user_id }); setSearch(''); setSelectedPage(null); setLeftOpen(false); }}>
+                        <div className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-[9px] font-bold text-white" style={{ background: m.avatar_color }}>{getInitials(m.display_name)}</div>
+                        <span className="flex-1 text-left truncate">{m.display_name}</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>{count}</span>
+                      </button>
+                    );
+                  })}
+                </>
+              )}
+            </div>
+
+            {/* Folder tree */}
+            <div className="p-2">
+              <div className="flex items-center gap-1 px-2 py-1 mb-1">
+                <span className="text-[10px] font-semibold uppercase tracking-wider flex-1" style={{ color: 'var(--text-muted)' }}>Složky</span>
+                <button type="button" onClick={() => setFolderModal({ mode: 'add', parentId: null, depth: 0, target: null, name: '' })} title="Nová složka"
+                  className="w-5 h-5 flex items-center justify-center rounded hover:bg-[var(--bg-hover)]" style={{ color: 'var(--text-muted)' }}>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </button>
+              </div>
+              {folders.filter(f => !f.parent_id).length === 0 ? (
+                <p className="px-2 py-2 text-xs" style={{ color: 'var(--text-muted)' }}>Zatím žádné složky</p>
+              ) : (
+                <KbFolderTree folders={folders} pages={pages} selectedFolderId={listFilter?.type === 'folder' ? listFilter.folderId : null}
+                  expanded={expanded}
+                  onSelectFolder={id => {
+                    const newFilter: ListFilter = { type: 'folder', folderId: id };
+                    setListFilter(prev => prev?.type === 'folder' && prev.folderId === id ? null : newFilter);
+                    setSearch(''); setSelectedPage(null); setLeftOpen(false);
+                  }}
+                  onToggle={id => setExpanded(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; })}
+                  onAddSub={(pid, d) => setFolderModal({ mode: 'add', parentId: pid, depth: d, target: null, name: '' })}
+                  onEditFolder={f => setFolderModal({ mode: 'edit', parentId: f.parent_id, depth: getDepth(f, folders), target: f, name: f.name })}
+                  onDeleteFolder={deleteFolder}
+                  userId={user?.id ?? ''} />
+              )}
+            </div>
+          </div>
+
+          {/* Bottom action */}
+          <div className="p-3 border-t" style={{ borderColor: 'var(--border)' }}>
+            <button type="button" onClick={() => { openNewPage(); setLeftOpen(false); }}
+              className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium" style={{ background: 'var(--primary)', color: '#fff' }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Nová stránka
             </button>
-            <button type="button" onClick={() => setFolderModal({ mode: 'add', parentId: null, depth: 0, target: null, name: '' })}
-              className="flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-xs border" style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)', background: 'var(--bg-hover)' }}
-              title="Nová složka">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
-            </button>
-          </div>
-
-          {/* Folder + page tree */}
-          <div className="flex-1 overflow-y-auto p-2">
-            {/* Favorites shortcut */}
-            {favorites.size > 0 && (
-              <div className="mb-1">
-                <div className="flex items-center gap-1.5 px-2 py-1">
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="#f59e0b" stroke="#f59e0b" strokeWidth="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Oblíbené</p>
-                </div>
-                {pages.filter(p => favorites.has(p.id)).map(p => (
-                  <div key={p.id} className="flex items-center gap-1.5 py-1 rounded-lg cursor-pointer transition-colors"
-                    style={{ paddingLeft: 8, background: selectedPage?.id === p.id ? 'var(--bg-active)' : 'transparent' }}
-                    onClick={() => selectPage(p.id)}>
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: '#f59e0b', flexShrink: 0 }}>
-                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                    </svg>
-                    <span className="flex-1 text-xs truncate" style={{ color: selectedPage?.id === p.id ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{p.title}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Naposledy upravené */}
-            {!search && pages.length > 0 && (
-              <div className="mb-1">
-                <button type="button" className="flex items-center gap-1.5 w-full px-2 py-1 rounded hover:bg-[var(--bg-hover)] transition-colors"
-                  onClick={() => setRecentExpanded(v => !v)}>
-                  <svg width="8" height="8" viewBox="0 0 10 10" fill="currentColor" style={{ color: 'var(--text-muted)', transition: 'transform 0.15s', transform: recentExpanded ? 'rotate(90deg)' : 'rotate(0deg)', flexShrink: 0 }}>
-                    <path d="M3 2l4 3-4 3V2z"/>
-                  </svg>
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)', flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider flex-1 text-left" style={{ color: 'var(--text-muted)' }}>Naposledy upravené</p>
-                </button>
-                {recentExpanded && pages.slice(0, 10).map(p => {
-                  const path = getFolderPath(p.folder_id, folders);
-                  return (
-                    <div key={p.id} className="flex items-center gap-1.5 py-1 rounded-lg cursor-pointer transition-colors"
-                      style={{ paddingLeft: 8, background: selectedPage?.id === p.id ? 'var(--bg-active)' : 'transparent' }}
-                      onClick={() => selectPage(p.id)}>
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
-                      </svg>
-                      <div className="flex-1 min-w-0">
-                        <span className="block text-xs truncate" style={{ color: selectedPage?.id === p.id ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: selectedPage?.id === p.id ? 500 : 400 }}>{p.title}</span>
-                        {path && <span className="block text-[10px] truncate" style={{ color: 'var(--text-muted)' }}>{path}</span>}
-                      </div>
-                      <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 ml-1 mr-2" style={{ background: STATUS_CONFIG[p.status].color, opacity: p.status === 'active' ? 0 : 1 }} />
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Všechny stránky */}
-            {!search && (
-              <div
-                className="flex items-center gap-1.5 py-1 px-2 rounded-lg cursor-pointer transition-colors mb-1"
-                style={{ background: selectedFolderId === null && !showUnfiled && !statusFilter && !mentionFilter && !search ? 'var(--bg-hover)' : 'transparent' }}
-                onClick={() => { setSelectedFolderId(null); setShowUnfiled(false); setStatusFilter(null); setMentionFilter(null); }}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)' }}><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></svg>
-                <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Všechny stránky</span>
-                <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>{pages.length}</span>
-              </div>
-            )}
-
-            {/* Nezařazené */}
-            {!search && (() => { const count = pages.filter(p => !p.folder_id).length; return count > 0 ? (
-              <div
-                className="flex items-center gap-1.5 py-1 px-2 rounded-lg cursor-pointer transition-colors mb-1"
-                style={{ background: showUnfiled ? 'var(--bg-hover)' : 'transparent' }}
-                onClick={() => { setShowUnfiled(v => !v); setSelectedFolderId(null); setStatusFilter(null); setMentionFilter(null); }}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)' }}><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>
-                <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Nezařazené</span>
-                <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>{count}</span>
-              </div>
-            ) : null; })()}
-
-            {/* Podle stavu */}
-            {!search && (
-              <div className="mb-1">
-                <button type="button" className="flex items-center gap-1.5 w-full px-2 py-1 rounded hover:bg-[var(--bg-hover)] transition-colors"
-                  onClick={() => setStatusSectionExpanded(v => !v)}>
-                  <svg width="8" height="8" viewBox="0 0 10 10" fill="currentColor" style={{ color: 'var(--text-muted)', transition: 'transform 0.15s', transform: statusSectionExpanded ? 'rotate(90deg)' : 'rotate(0deg)', flexShrink: 0 }}>
-                    <path d="M3 2l4 3-4 3V2z"/>
-                  </svg>
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)', flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider flex-1 text-left" style={{ color: 'var(--text-muted)' }}>Podle stavu</p>
-                </button>
-                {statusSectionExpanded && (Object.keys(STATUS_CONFIG) as KbPageStatus[]).map(s => {
-                  const count = pages.filter(p => p.status === s).length;
-                  return (
-                    <div key={s}
-                      className="flex items-center gap-1.5 py-1 rounded-lg cursor-pointer transition-colors"
-                      style={{ paddingLeft: 16, background: statusFilter === s ? 'var(--bg-hover)' : 'transparent' }}
-                      onClick={() => { setStatusFilter(prev => prev === s ? null : s); setSelectedFolderId(null); setShowUnfiled(false); setMentionFilter(null); }}>
-                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: STATUS_CONFIG[s].color }} />
-                      <span className="flex-1 text-xs" style={{ color: 'var(--text-secondary)' }}>{STATUS_CONFIG[s].label}</span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full mr-1" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>{count}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Podle zmínky */}
-            {!search && members.some(m => pages.some(p => p.content.includes(`data-user-id="${m.user_id}"`))) && (
-              <div className="mb-1">
-                <button type="button" className="flex items-center gap-1.5 w-full px-2 py-1 rounded hover:bg-[var(--bg-hover)] transition-colors"
-                  onClick={() => setMentionSectionExpanded(v => !v)}>
-                  <svg width="8" height="8" viewBox="0 0 10 10" fill="currentColor" style={{ color: 'var(--text-muted)', transition: 'transform 0.15s', transform: mentionSectionExpanded ? 'rotate(90deg)' : 'rotate(0deg)', flexShrink: 0 }}>
-                    <path d="M3 2l4 3-4 3V2z"/>
-                  </svg>
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)', flexShrink: 0 }}><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94"/></svg>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider flex-1 text-left" style={{ color: 'var(--text-muted)' }}>Podle zmínky</p>
-                </button>
-                {mentionSectionExpanded && members.map(m => {
-                  const count = pages.filter(p => p.content.includes(`data-user-id="${m.user_id}"`)).length;
-                  if (count === 0) return null;
-                  return (
-                    <div key={m.user_id}
-                      className="flex items-center gap-1.5 py-1 rounded-lg cursor-pointer transition-colors"
-                      style={{ paddingLeft: 16, background: mentionFilter === m.user_id ? 'var(--bg-hover)' : 'transparent' }}
-                      onClick={() => { setMentionFilter(prev => prev === m.user_id ? null : m.user_id); setSelectedFolderId(null); setShowUnfiled(false); setStatusFilter(null); }}>
-                      <div className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-[9px] font-bold text-white" style={{ background: m.avatar_color }}>{getInitials(m.display_name)}</div>
-                      <span className="flex-1 text-xs truncate" style={{ color: 'var(--text-secondary)' }}>{m.display_name}</span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full mr-1" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>{count}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Folder tree */}
-            {!search && (
-              <KbFolderTree folders={folders} pages={pages} selectedFolderId={selectedFolderId} selectedPageId={selectedPage?.id ?? null}
-                expanded={expanded}
-                onSelectFolder={id => { setSelectedFolderId(prev => prev === id ? null : id); setShowUnfiled(false); setStatusFilter(null); setMentionFilter(null); }}
-                onSelectPage={selectPage}
-                onToggle={id => setExpanded(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; })}
-                onAddSub={(pid, d) => setFolderModal({ mode: 'add', parentId: pid, depth: d, target: null, name: '' })}
-                onEditFolder={f => setFolderModal({ mode: 'edit', parentId: f.parent_id, depth: getDepth(f, folders), target: f, name: f.name })}
-                onDeleteFolder={deleteFolder}
-                userId={user?.id ?? ''} />
-            )}
-
-            {/* Search results / Filtered pages list */}
-            {(search || !selectedFolderId || showUnfiled || statusFilter !== null || mentionFilter !== null) && (
-              <div className="mt-1">
-                {search && <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Výsledky ({filteredPages.length})</p>}
-                {!search && showUnfiled && <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Nezařazené ({filteredPages.length})</p>}
-                {!search && mentionFilter && <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Zmínky: {members.find(m => m.user_id === mentionFilter)?.display_name} ({filteredPages.length})</p>}
-                {!search && statusFilter && <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>{STATUS_CONFIG[statusFilter].label} ({filteredPages.length})</p>}
-                {filteredPages.map(p => (
-                  <div key={p.id} className="group/page flex items-center gap-1.5 py-1 rounded-lg cursor-pointer transition-colors relative"
-                    style={{ paddingLeft: 8, background: selectedPage?.id === p.id ? 'var(--bg-active)' : 'transparent' }}
-                    onClick={() => selectPage(p.id)}>
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
-                    </svg>
-                    <span className="flex-1 text-xs truncate" style={{ color: selectedPage?.id === p.id ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{p.title}</span>
-                    <div className="opacity-0 group-hover/page:opacity-100 flex items-center transition-opacity">
-                      <button type="button" title="Přesunout do složky" onClick={e => { e.stopPropagation(); setMovingPageId(movingPageId === p.id ? null : p.id); }}
-                        className="w-5 h-5 flex items-center justify-center rounded hover:bg-[var(--bg-active)]" style={{ color: 'var(--text-muted)' }}>
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                      </button>
-                    </div>
-                    {movingPageId === p.id && (
-                      <div className="absolute left-0 top-full mt-1 z-50 rounded-lg border shadow-lg min-w-[180px]" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}
-                        onClick={e => e.stopPropagation()}>
-                        <button type="button" onClick={() => movePageToFolder(p.id, null)}
-                          className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-[var(--bg-hover)]" style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                          Bez složky
-                        </button>
-                        {folders.map(f => (
-                          <button key={f.id} type="button" onClick={() => movePageToFolder(p.id, f.id)}
-                            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-[var(--bg-hover)]" style={{ color: 'var(--text-primary)' }}>
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                            {f.name}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-                {filteredPages.length === 0 && search && (
-                  <p className="px-3 py-4 text-xs text-center" style={{ color: 'var(--text-muted)' }}>Žádné výsledky</p>
-                )}
-              </div>
-            )}
           </div>
         </aside>
 
@@ -1264,8 +1369,8 @@ function KnowledgeBaseContent() {
             </button>
           </div>
 
-          {/* No page selected – welcome */}
-          {!selectedPage && (
+          {/* Welcome screen – no filter active */}
+          {showWelcome && (
             <div className="flex-1 flex flex-col items-center justify-center p-8">
               <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5" style={{ background: 'var(--bg-hover)' }}>
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)' }}>
@@ -1274,7 +1379,7 @@ function KnowledgeBaseContent() {
               </div>
               <h2 className="text-base font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>Znalostní báze</h2>
               <p className="text-sm text-center max-w-xs mb-6" style={{ color: 'var(--text-muted)' }}>
-                Vyberte stránku z levého panelu nebo vytvořte novou
+                Vyberte filtr nebo složku vlevo, nebo vytvořte novou stránku
               </p>
               <button type="button" onClick={() => openNewPage(null)}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium" style={{ background: 'var(--primary)', color: '#fff' }}>
@@ -1341,6 +1446,21 @@ function KnowledgeBaseContent() {
             </div>
           )}
 
+          {/* List view – filter/search active, no page selected */}
+          {showList && (
+            <PageListView
+              pages={filteredPages}
+              folders={folders}
+              members={members}
+              favorites={favorites}
+              filterLabel={filterLabel ?? ''}
+              filterIcon={filterIcon}
+              onSelectPage={selectPage}
+              onNewPage={openNewPage}
+              STATUS_CONFIG={STATUS_CONFIG}
+            />
+          )}
+
           {/* Page selected */}
           {selectedPage && (
             <div className="flex-1 flex flex-col overflow-y-auto">
@@ -1360,6 +1480,15 @@ function KnowledgeBaseContent() {
                   </div>
                   {/* Actions */}
                   <div className="flex items-center gap-1.5 flex-shrink-0">
+                    {/* Back to list */}
+                    {(listFilter !== null || search.trim()) && !selectedPage.id.startsWith('__new__') && (
+                      <button type="button" onClick={backToList} title="Zpět na seznam"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border transition-colors"
+                        style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)', background: 'var(--bg-hover)' }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                        <span className="hidden sm:inline">Zpět</span>
+                      </button>
+                    )}
                     {/* Copy content */}
                     {!selectedPage.id.startsWith('__new__') && !editing && (
                       <button type="button" onClick={copyPageContent} title="Kopírovat obsah stránky"
