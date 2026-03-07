@@ -149,6 +149,28 @@ body {
   background: var(--text-secondary);
 }
 
+/* Sidebar scrollbar – skrytý, zobrazí se až při hoveru */
+.sidebar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.sidebar-scroll:hover {
+  scrollbar-color: var(--border-hover) transparent;
+}
+.sidebar-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 4px;
+}
+.sidebar-scroll:hover::-webkit-scrollbar-thumb {
+  background-color: var(--border-hover);
+}
+
 /* ===== Toast notifikace ===== */
 .toast {
   position: fixed;

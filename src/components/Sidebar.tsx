@@ -566,7 +566,7 @@ export default function Sidebar({ open, onClose, collapsed = false, onCollapseDe
         </div>
 
         {/* Navigace se skupinami */}
-        <nav className="flex-1 overflow-y-auto py-2 px-3">
+        <nav className="flex-1 overflow-y-auto py-2 px-3 sidebar-scroll">
 
           {/* ── Sekce OBLÍBENÉ (jen Pro+, jen pokud existují oblíbené) ── */}
           {canUseFavorites && favoriteItems.length > 0 && (

@@ -108,6 +108,47 @@ function CategoryReportContent() {
   const [rawEntries, setRawEntries] = useState<Array<{ category_id: string | null; duration: number | null }>>([]);
   const [loadingData, setLoadingData] = useState(true);
 
+  // Filtr uživatele (jen pro admin/manager)
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [members, setMembers] = useState<Array<{ userId: string; name: string }>>([]);
+
+  // ─── Fetch members for user picker ─────────────────────────────────────────
+
+  useEffect(() => {
+    if (!currentWorkspace || !user || (!canAdmin && !isManager)) {
+      setMembers([]);
+      return;
+    }
+    const run = async () => {
+      // Manažer vidí jen podřízené + sebe, admin vidí všechny
+      let filterUserIds: string[] | null = null;
+      if (!canAdmin && isManager) {
+        const subordinateIds = managerAssignments.map(a => a.member_user_id);
+        filterUserIds = Array.from(new Set([user.id, ...subordinateIds]));
+      }
+
+      let q = supabase
+        .from('trackino_workspace_members')
+        .select('user_id')
+        .eq('workspace_id', currentWorkspace.id)
+        .eq('approved', true);
+      if (filterUserIds) q = q.in('user_id', filterUserIds);
+
+      const { data: mems } = await q;
+      if (!mems || mems.length === 0) { setMembers([]); return; }
+
+      const uids = (mems as { user_id: string }[]).map(m => m.user_id);
+      const { data: profiles } = await supabase
+        .from('trackino_profiles')
+        .select('id, display_name')
+        .in('id', uids)
+        .order('display_name');
+
+      setMembers((profiles ?? []).map(p => ({ userId: p.id, name: p.display_name })));
+    };
+    run();
+  }, [currentWorkspace?.id, user?.id, canAdmin, isManager, managerAssignments]);
+
   // ─── Preset date ranges ────────────────────────────────────────────────────
 
   const applyPreset = useCallback((p: Preset) => {
@@ -141,13 +182,23 @@ function CategoryReportContent() {
     setCategories((cats ?? []) as Category[]);
 
     // Determine visible user IDs
-    let visibleUserIds: string[] | null = null; // null = all
+    let visibleUserIds: string[] | null = null; // null = all (admin)
     if (!canAdmin) {
       if (isManager) {
         const subordinateIds = managerAssignments.map(a => a.member_user_id);
         visibleUserIds = Array.from(new Set([user.id, ...subordinateIds]));
       } else {
         visibleUserIds = [user.id];
+      }
+    }
+
+    // Aplikuj filtr konkrétního uživatele (jen pokud je v rámci viditelných)
+    if (selectedUserId) {
+      if (visibleUserIds === null) {
+        // Admin – narrowni na vybraného uživatele
+        visibleUserIds = [selectedUserId];
+      } else if (visibleUserIds.includes(selectedUserId)) {
+        visibleUserIds = [selectedUserId];
       }
     }
 
@@ -167,7 +218,7 @@ function CategoryReportContent() {
     const { data: entries } = await query;
     setRawEntries((entries ?? []) as Array<{ category_id: string | null; duration: number | null }>);
     setLoadingData(false);
-  }, [currentWorkspace, user, from, to, canAdmin, isManager, managerAssignments]);
+  }, [currentWorkspace, user, from, to, canAdmin, isManager, managerAssignments, selectedUserId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -228,7 +279,7 @@ function CategoryReportContent() {
           <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Analýza kategorií</h1>
         </div>
 
-        {/* Preset tabs + custom date */}
+        {/* Preset tabs + user filter + custom date */}
         <div className="flex items-center gap-2 mb-4 flex-wrap">
           {presets.map(p => (
             <button
@@ -264,6 +315,30 @@ function CategoryReportContent() {
                 className={inputCls}
                 style={inputStyle}
               />
+            </div>
+          )}
+          {/* Filtr uživatele – jen pro admin/manager s přístupem k více uživatelům */}
+          {(canAdmin || isManager) && members.length > 1 && (
+            <div className="relative ml-auto sm:ml-2">
+              <select
+                value={selectedUserId ?? ''}
+                onChange={e => setSelectedUserId(e.target.value || null)}
+                className="px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] appearance-none pr-8"
+                style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
+              >
+                <option value="">Všichni uživatelé</option>
+                {members.map(m => (
+                  <option key={m.userId} value={m.userId}>{m.name}</option>
+                ))}
+              </select>
+              <svg
+                className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2"
+                width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
             </div>
           )}
         </div>
