@@ -110,8 +110,23 @@ function RichEditor({ value, onChange, members, pages }: {
   };
 
   const insertPageLink = (p: KbPage) => {
-    ins(`<a class="kb-page-link" data-page-id="${p.id}" href="#" style="color:var(--primary);text-decoration:underline">📄 ${p.title}</a>`);
+    ins(`<a class="kb-page-link" data-page-id="${p.id}" href="#" style="color:var(--primary);text-decoration:underline">${p.title}</a>`);
     setShowPagePicker(false); setPickerSearch('');
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter') {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0) {
+        const node = sel.getRangeAt(0).startContainer;
+        const pre = (node.nodeType === Node.TEXT_NODE ? node.parentElement : node as Element)?.closest('pre');
+        if (pre) {
+          e.preventDefault();
+          document.execCommand('insertText', false, '\n');
+          if (ref.current) onChange(ref.current.innerHTML);
+        }
+      }
+    }
   };
 
   const filteredMembers = members.filter(m => m.display_name.toLowerCase().includes(pickerSearch.toLowerCase()));
@@ -119,7 +134,7 @@ function RichEditor({ value, onChange, members, pages }: {
 
   const TBtn = ({ children, onClick, title, active }: { children: React.ReactNode; onClick: () => void; title: string; active?: boolean }) => (
     <button type="button" title={title} onClick={onClick}
-      className="px-2 py-1 rounded text-xs font-medium transition-colors hover:bg-[var(--bg-active)]"
+      className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors hover:bg-[var(--bg-active)]"
       style={{ color: active ? 'var(--primary)' : 'var(--text-secondary)', background: active ? 'color-mix(in srgb,var(--primary) 10%,transparent)' : 'transparent' }}>
       {children}
     </button>
@@ -130,89 +145,122 @@ function RichEditor({ value, onChange, members, pages }: {
   return (
     <div className="border rounded-xl overflow-hidden" style={{ borderColor: 'var(--border)' }}>
       {/* Toolbar */}
-      <div className="flex flex-wrap gap-0.5 px-2 py-1.5 border-b" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
-        <TBtn onClick={() => cmd('formatBlock', 'h1')} title="Nadpis 1">H1</TBtn>
-        <TBtn onClick={() => cmd('formatBlock', 'h2')} title="Nadpis 2">H2</TBtn>
-        <TBtn onClick={() => cmd('formatBlock', 'h3')} title="Nadpis 3">H3</TBtn>
-        <Sep />
-        <TBtn onClick={() => cmd('bold')} title="Tučné"><strong>B</strong></TBtn>
-        <TBtn onClick={() => cmd('italic')} title="Kurzíva"><em>I</em></TBtn>
-        <TBtn onClick={() => cmd('underline')} title="Podtržení"><u>U</u></TBtn>
-        <Sep />
-        <TBtn onClick={() => cmd('insertUnorderedList')} title="Odrážkový seznam">• Seznam</TBtn>
-        <TBtn onClick={() => cmd('insertOrderedList')} title="Číslovaný seznam">1. Seznam</TBtn>
-        <Sep />
-        <TBtn onClick={() => ins('<hr style="border:none;border-top:1px solid var(--border);margin:16px 0"><p><br></p>')} title="Oddělovač">─</TBtn>
-        <TBtn onClick={() => ins('<ul class="kb-checklist"><li class="kb-check-unchecked">Položka</li></ul><p><br></p>')} title="Checklist">☐ Check</TBtn>
-        <TBtn onClick={() => ins('<div class="kb-callout" style="background:var(--bg-hover);border-left:4px solid var(--primary);padding:12px 16px;border-radius:8px;margin:8px 0">ℹ Poznámka...</div><p><br></p>')} title="Callout / info box">ℹ Callout</TBtn>
-        <TBtn onClick={() => ins('<details class="kb-toggle" style="border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin:8px 0"><summary style="cursor:pointer;font-weight:600;user-select:none">Klikněte pro zobrazení</summary><p>Obsah...</p></details><p><br></p>')} title="Toggle blok">▶ Toggle</TBtn>
-        <Sep />
-        <TBtn onClick={() => {
-          const sel = window.getSelection();
-          const selected = sel && sel.rangeCount > 0 ? sel.getRangeAt(0).toString() : '';
-          ins(`<pre style="position:relative;background:var(--bg-hover);padding:12px 40px 12px 12px;border-radius:8px;font-family:monospace;font-size:13px;overflow-x:auto;margin:8px 0;border:1px solid var(--border)"><code>${selected || ''}</code></pre><p><br></p>`);
-        }} title="Blok kódu">&lt;/&gt; Kód</TBtn>
-        {/* Odkaz */}
-        <div className="relative">
-          <TBtn onClick={() => { setShowLinkModal(v => !v); setShowMentionPicker(false); setShowPagePicker(false); }} title="Vložit odkaz" active={showLinkModal}>🔗 Odkaz</TBtn>
-          {showLinkModal && (
-            <div className="absolute left-0 top-full mt-1 z-50 rounded-lg border shadow-lg p-3 min-w-[260px]" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
-              <input value={linkText} onChange={e => setLinkText(e.target.value)} placeholder="Text odkazu (volitelné)"
-                className="w-full px-3 py-1.5 rounded border text-sm mb-2 text-base sm:text-sm" style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)' }} />
-              <input value={linkUrl} onChange={e => setLinkUrl(e.target.value)} placeholder="URL (https://...)"
-                className="w-full px-3 py-1.5 rounded border text-sm mb-2 text-base sm:text-sm" style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)' }} />
-              <div className="flex gap-2">
-                <button type="button" onClick={insertLink} className="flex-1 py-1.5 rounded text-xs font-medium" style={{ background: 'var(--primary)', color: '#fff' }}>Vložit</button>
-                <button type="button" onClick={() => setShowLinkModal(false)} className="flex-1 py-1.5 rounded text-xs" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>Zrušit</button>
-              </div>
-            </div>
-          )}
+      <div className="flex flex-col border-b" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
+        {/* Řádek 1: formátování textu */}
+        <div className="flex flex-wrap gap-0.5 px-2 py-1.5">
+          <TBtn onClick={() => cmd('formatBlock', 'h1')} title="Nadpis 1">H1</TBtn>
+          <TBtn onClick={() => cmd('formatBlock', 'h2')} title="Nadpis 2">H2</TBtn>
+          <TBtn onClick={() => cmd('formatBlock', 'h3')} title="Nadpis 3">H3</TBtn>
+          <Sep />
+          <TBtn onClick={() => cmd('bold')} title="Tučné"><strong>B</strong></TBtn>
+          <TBtn onClick={() => cmd('italic')} title="Kurzíva"><em>I</em></TBtn>
+          <TBtn onClick={() => cmd('underline')} title="Podtržení"><u>U</u></TBtn>
+          <Sep />
+          <TBtn onClick={() => cmd('insertUnorderedList')} title="Odrážkový seznam">• Seznam</TBtn>
+          <TBtn onClick={() => cmd('insertOrderedList')} title="Číslovaný seznam">1. Seznam</TBtn>
+          <Sep />
+          <TBtn onClick={() => ins('<hr style="border:none;border-top:1px solid var(--border);margin:16px 0"><p><br></p>')} title="Oddělovač">─</TBtn>
         </div>
-        <Sep />
-        {/* @mention */}
-        <div className="relative">
-          <TBtn onClick={() => { setShowMentionPicker(v => !v); setShowPagePicker(false); setShowLinkModal(false); setPickerSearch(''); }} title="Zmínit uživatele" active={showMentionPicker}>@</TBtn>
-          {showMentionPicker && (
-            <div className="absolute left-0 top-full mt-1 z-50 rounded-lg border shadow-lg min-w-[200px] max-h-[220px] overflow-y-auto" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
-              <div className="p-2 border-b" style={{ borderColor: 'var(--border)' }}>
-                <input value={pickerSearch} onChange={e => setPickerSearch(e.target.value)} placeholder="Hledat..." autoFocus
-                  className="w-full px-2 py-1 rounded text-sm text-base sm:text-sm" style={{ background: 'var(--bg-hover)', color: 'var(--text-primary)' }} />
+        {/* Oddělovač mezi řádky */}
+        <div className="border-t" style={{ borderColor: 'var(--border)' }} />
+        {/* Řádek 2: bloky a vložení */}
+        <div className="flex flex-wrap gap-0.5 px-2 py-1.5">
+          {/* Kód */}
+          <TBtn onClick={() => {
+            const sel = window.getSelection();
+            const selected = sel && sel.rangeCount > 0 ? sel.getRangeAt(0).toString() : '';
+            ins(`<pre style="position:relative;background:var(--bg-hover);padding:12px 40px 12px 12px;border-radius:8px;font-family:monospace;font-size:13px;overflow-x:auto;margin:8px 0;border:1px solid var(--border);white-space:pre-wrap"><code style="display:block;min-height:3em;outline:none">${selected || ''}</code></pre><p><br></p>`);
+          }} title="Blok kódu">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            Kód
+          </TBtn>
+          {/* Odkaz */}
+          <div className="relative">
+            <TBtn onClick={() => { setShowLinkModal(v => !v); setShowMentionPicker(false); setShowPagePicker(false); }} title="Vložit odkaz" active={showLinkModal}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              Odkaz
+            </TBtn>
+            {showLinkModal && (
+              <div className="absolute left-0 top-full mt-1 z-50 rounded-lg border shadow-lg p-3 min-w-[260px]" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+                <input value={linkText} onChange={e => setLinkText(e.target.value)} placeholder="Text odkazu (volitelné)"
+                  className="w-full px-3 py-1.5 rounded border text-sm mb-2 text-base sm:text-sm" style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)' }} />
+                <input value={linkUrl} onChange={e => setLinkUrl(e.target.value)} placeholder="URL (https://...)"
+                  className="w-full px-3 py-1.5 rounded border text-sm mb-2 text-base sm:text-sm" style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)' }} />
+                <div className="flex gap-2">
+                  <button type="button" onClick={insertLink} className="flex-1 py-1.5 rounded text-xs font-medium" style={{ background: 'var(--primary)', color: '#fff' }}>Vložit</button>
+                  <button type="button" onClick={() => setShowLinkModal(false)} className="flex-1 py-1.5 rounded text-xs" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>Zrušit</button>
+                </div>
               </div>
-              {filteredMembers.map(m => (
-                <button key={m.user_id} type="button" onClick={() => insertMention(m)}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-[var(--bg-hover)]" style={{ color: 'var(--text-primary)' }}>
-                  <div className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center text-[10px] font-bold text-white" style={{ background: m.avatar_color }}>{getInitials(m.display_name)}</div>
-                  {m.display_name}
-                </button>
-              ))}
-              {filteredMembers.length === 0 && <p className="px-3 py-4 text-xs text-center" style={{ color: 'var(--text-muted)' }}>Žádní uživatelé</p>}
-            </div>
-          )}
-        </div>
-        {/* /page link */}
-        <div className="relative">
-          <TBtn onClick={() => { setShowPagePicker(v => !v); setShowMentionPicker(false); setShowLinkModal(false); setPickerSearch(''); }} title="Odkaz na stránku" active={showPagePicker}>📄 Stránka</TBtn>
-          {showPagePicker && (
-            <div className="absolute left-0 top-full mt-1 z-50 rounded-lg border shadow-lg min-w-[220px] max-h-[220px] overflow-y-auto" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
-              <div className="p-2 border-b" style={{ borderColor: 'var(--border)' }}>
-                <input value={pickerSearch} onChange={e => setPickerSearch(e.target.value)} placeholder="Hledat stránku..." autoFocus
-                  className="w-full px-2 py-1 rounded text-sm text-base sm:text-sm" style={{ background: 'var(--bg-hover)', color: 'var(--text-primary)' }} />
+            )}
+          </div>
+          {/* Zmínky */}
+          <div className="relative">
+            <TBtn onClick={() => { setShowMentionPicker(v => !v); setShowPagePicker(false); setShowLinkModal(false); setPickerSearch(''); }} title="Zmínit uživatele" active={showMentionPicker}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94"/></svg>
+              Zmínky
+            </TBtn>
+            {showMentionPicker && (
+              <div className="absolute left-0 top-full mt-1 z-50 rounded-lg border shadow-lg min-w-[200px] max-h-[220px] overflow-y-auto" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+                <div className="p-2 border-b" style={{ borderColor: 'var(--border)' }}>
+                  <input value={pickerSearch} onChange={e => setPickerSearch(e.target.value)} placeholder="Hledat..." autoFocus
+                    className="w-full px-2 py-1 rounded text-sm text-base sm:text-sm" style={{ background: 'var(--bg-hover)', color: 'var(--text-primary)' }} />
+                </div>
+                {filteredMembers.map(m => (
+                  <button key={m.user_id} type="button" onClick={() => insertMention(m)}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-[var(--bg-hover)]" style={{ color: 'var(--text-primary)' }}>
+                    <div className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center text-[10px] font-bold text-white" style={{ background: m.avatar_color }}>{getInitials(m.display_name)}</div>
+                    {m.display_name}
+                  </button>
+                ))}
+                {filteredMembers.length === 0 && <p className="px-3 py-4 text-xs text-center" style={{ color: 'var(--text-muted)' }}>Žádní uživatelé</p>}
               </div>
-              {filteredPages.map(p => (
-                <button key={p.id} type="button" onClick={() => insertPageLink(p)}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-[var(--bg-hover)]" style={{ color: 'var(--text-primary)' }}>
-                  <span className="text-base">📄</span>
-                  <span className="truncate">{p.title}</span>
-                </button>
-              ))}
-              {filteredPages.length === 0 && <p className="px-3 py-4 text-xs text-center" style={{ color: 'var(--text-muted)' }}>Žádné stránky</p>}
-            </div>
-          )}
+            )}
+          </div>
+          {/* Stránka */}
+          <div className="relative">
+            <TBtn onClick={() => { setShowPagePicker(v => !v); setShowMentionPicker(false); setShowLinkModal(false); setPickerSearch(''); }} title="Odkaz na stránku" active={showPagePicker}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              Stránka
+            </TBtn>
+            {showPagePicker && (
+              <div className="absolute left-0 top-full mt-1 z-50 rounded-lg border shadow-lg min-w-[220px] max-h-[220px] overflow-y-auto" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+                <div className="p-2 border-b" style={{ borderColor: 'var(--border)' }}>
+                  <input value={pickerSearch} onChange={e => setPickerSearch(e.target.value)} placeholder="Hledat stránku..." autoFocus
+                    className="w-full px-2 py-1 rounded text-sm text-base sm:text-sm" style={{ background: 'var(--bg-hover)', color: 'var(--text-primary)' }} />
+                </div>
+                {filteredPages.map(p => (
+                  <button key={p.id} type="button" onClick={() => insertPageLink(p)}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-[var(--bg-hover)]" style={{ color: 'var(--text-primary)' }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    <span className="truncate">{p.title}</span>
+                  </button>
+                ))}
+                {filteredPages.length === 0 && <p className="px-3 py-4 text-xs text-center" style={{ color: 'var(--text-muted)' }}>Žádné stránky</p>}
+              </div>
+            )}
+          </div>
+          <Sep />
+          {/* Úkol */}
+          <TBtn onClick={() => ins('<ul class="kb-checklist"><li class="kb-check-unchecked">Položka</li></ul><p><br></p>')} title="Checklist / úkoly">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 12l2 2 4-4"/></svg>
+            Úkol
+          </TBtn>
+          {/* Infobox */}
+          <TBtn onClick={() => ins('<div class="kb-callout" style="background:var(--bg-hover);border-left:4px solid var(--primary);padding:12px 16px;border-radius:8px;margin:8px 0">Poznámka...</div><p><br></p>')} title="Infobox / callout">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+            Infobox
+          </TBtn>
+          {/* Toggle */}
+          <TBtn onClick={() => ins('<details class="kb-toggle" style="border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin:8px 0"><summary style="cursor:pointer;font-weight:600;user-select:none">Klikněte pro zobrazení</summary><p>Obsah...</p></details><p><br></p>')} title="Toggle blok">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            Toggle
+          </TBtn>
         </div>
       </div>
       {/* Editable area */}
       <div ref={ref} contentEditable suppressContentEditableWarning
         onInput={() => { if (ref.current) onChange(ref.current.innerHTML); }}
+        onKeyDown={handleKeyDown}
         onClick={e => {
           const preEl = (e.target as Element).closest('pre');
           if (preEl) {
@@ -232,7 +280,8 @@ function RichEditor({ value, onChange, members, pages }: {
         .prose-kb ul{list-style:disc;padding-left:20px;margin:4px 0}
         .prose-kb ol{list-style:decimal;padding-left:20px;margin:4px 0}
         .prose-kb p{margin:4px 0;line-height:1.6}
-        .prose-kb pre{position:relative;background:var(--bg-hover);padding:12px 40px 12px 12px;border-radius:8px;font-family:monospace;font-size:13px;overflow-x:auto;margin:8px 0;border:1px solid var(--border)}
+        .prose-kb pre{position:relative;background:var(--bg-hover);padding:12px 40px 12px 12px;border-radius:8px;font-family:monospace;font-size:13px;overflow-x:auto;margin:8px 0;border:1px solid var(--border);white-space:pre-wrap}
+        .prose-kb pre code{display:block;min-height:3em;white-space:pre-wrap;word-break:break-all;outline:none}
         .prose-kb pre::after{content:"";position:absolute;top:8px;right:8px;width:20px;height:20px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='13' height='13' rx='2' ry='2'/%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:center;cursor:pointer;opacity:0.5;transition:opacity 0.15s}
         .prose-kb pre:hover::after{opacity:1}
         .prose-kb .kb-checklist{list-style:none;padding-left:2px}
@@ -363,7 +412,7 @@ function KbFolderTree({ folders, pages, selectedFolderId, selectedPageId, expand
                     </button>
                     <button type="button" onClick={e => { e.stopPropagation(); onDeleteFolder(folder); }} title="Smazat složku"
                       className="w-5 h-5 flex items-center justify-center rounded" style={{ color: '#ef4444' }}>
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                     </button>
                   </>
                 )}
@@ -417,8 +466,11 @@ function KnowledgeBaseContent() {
   const [editStatus, setEditStatus] = useState<KbPageStatus>('active');
   const [editTags, setEditTags] = useState<string[]>([]);
   const [editRestricted, setEditRestricted] = useState(false);
+  const [editFolderId, setEditFolderId] = useState<string | null>(null);
   const [tagInput, setTagInput] = useState('');
   const [saving, setSaving] = useState(false);
+  const [movingPageId, setMovingPageId] = useState<string | null>(null);
+  const [copiedPage, setCopiedPage] = useState(false);
 
   const [search, setSearch] = useState('');
   const [members, setMembers] = useState<KbMember[]>([]);
@@ -524,6 +576,7 @@ function KnowledgeBaseContent() {
     setEditStatus(page.status);
     setEditTags([...page.tags]);
     setEditRestricted(page.is_restricted);
+    setEditFolderId(page.folder_id);
     setEditing(true);
   };
 
@@ -531,11 +584,11 @@ function KnowledgeBaseContent() {
     if (!user || !currentWorkspace || !selectedPage) return;
     setSaving(true);
     const now = new Date().toISOString();
-    const payload = { title: editTitle.trim() || 'Bez názvu', content: editContent, status: editStatus, tags: editTags, is_restricted: editRestricted, updated_by: user.id, updated_at: now };
+    const payload = { title: editTitle.trim() || 'Bez názvu', content: editContent, status: editStatus, tags: editTags, is_restricted: editRestricted, folder_id: editFolderId, updated_by: user.id, updated_at: now };
 
     if (selectedPage.id.startsWith('__new__')) {
       const { data: np } = await supabase.from('trackino_kb_pages').insert({
-        workspace_id: currentWorkspace.id, folder_id: selectedPage.folder_id,
+        workspace_id: currentWorkspace.id,
         ...payload, created_by: user.id,
       }).select().single();
       if (np) {
@@ -730,6 +783,27 @@ function KnowledgeBaseContent() {
     if (selectedFolderId === folder.id) setSelectedFolderId(null);
   };
 
+  // ── Move page to folder ───────────────────────────────────────────────────
+
+  const movePageToFolder = async (pageId: string, folderId: string | null) => {
+    await supabase.from('trackino_kb_pages').update({ folder_id: folderId }).eq('id', pageId);
+    setPages(prev => prev.map(p => p.id === pageId ? { ...p, folder_id: folderId } : p));
+    if (selectedPage?.id === pageId) setSelectedPage(prev => prev ? { ...prev, folder_id: folderId } : prev);
+    setMovingPageId(null);
+  };
+
+  // ── Copy page content ─────────────────────────────────────────────────────
+
+  const copyPageContent = () => {
+    if (!selectedPage?.content) return;
+    const div = document.createElement('div');
+    div.innerHTML = selectedPage.content;
+    const text = div.textContent ?? div.innerText ?? '';
+    navigator.clipboard.writeText(text).catch(() => {});
+    setCopiedPage(true);
+    setTimeout(() => setCopiedPage(false), 2000);
+  };
+
   // ── Tags ──────────────────────────────────────────────────────────────────
 
   const addTag = (val: string) => {
@@ -804,7 +878,10 @@ function KnowledgeBaseContent() {
             {/* Favorites shortcut */}
             {favorites.size > 0 && (
               <div className="mb-1">
-                <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>⭐ Oblíbené</p>
+                <div className="flex items-center gap-1.5 px-2 py-1">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="#f59e0b" stroke="#f59e0b" strokeWidth="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Oblíbené</p>
+                </div>
                 {pages.filter(p => favorites.has(p.id)).map(p => (
                   <div key={p.id} className="flex items-center gap-1.5 py-1 rounded-lg cursor-pointer transition-colors"
                     style={{ paddingLeft: 8, background: selectedPage?.id === p.id ? 'var(--bg-active)' : 'transparent' }}
@@ -847,15 +924,35 @@ function KnowledgeBaseContent() {
               <div className="mt-1">
                 {search && <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Výsledky ({filteredPages.length})</p>}
                 {filteredPages.map(p => (
-                  <div key={p.id}
-                    className="flex items-center gap-1.5 py-1 rounded-lg cursor-pointer transition-colors"
+                  <div key={p.id} className="group/page flex items-center gap-1.5 py-1 rounded-lg cursor-pointer transition-colors relative"
                     style={{ paddingLeft: 8, background: selectedPage?.id === p.id ? 'var(--bg-active)' : 'transparent' }}
                     onClick={() => selectPage(p.id)}>
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
                       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
                     </svg>
                     <span className="flex-1 text-xs truncate" style={{ color: selectedPage?.id === p.id ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{p.title}</span>
-                    <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 mr-1" style={{ background: STATUS_CONFIG[p.status].color, opacity: p.status === 'active' ? 0 : 1 }} />
+                    <div className="opacity-0 group-hover/page:opacity-100 flex items-center transition-opacity">
+                      <button type="button" title="Přesunout do složky" onClick={e => { e.stopPropagation(); setMovingPageId(movingPageId === p.id ? null : p.id); }}
+                        className="w-5 h-5 flex items-center justify-center rounded hover:bg-[var(--bg-active)]" style={{ color: 'var(--text-muted)' }}>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                      </button>
+                    </div>
+                    {movingPageId === p.id && (
+                      <div className="absolute left-0 top-full mt-1 z-50 rounded-lg border shadow-lg min-w-[180px]" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}
+                        onClick={e => e.stopPropagation()}>
+                        <button type="button" onClick={() => movePageToFolder(p.id, null)}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-[var(--bg-hover)]" style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                          Bez složky
+                        </button>
+                        {folders.map(f => (
+                          <button key={f.id} type="button" onClick={() => movePageToFolder(p.id, f.id)}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-[var(--bg-hover)]" style={{ color: 'var(--text-primary)' }}>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                            {f.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
                 {filteredPages.length === 0 && search && (
@@ -939,6 +1036,17 @@ function KnowledgeBaseContent() {
                   </div>
                   {/* Actions */}
                   <div className="flex items-center gap-1.5 flex-shrink-0">
+                    {/* Copy content */}
+                    {!selectedPage.id.startsWith('__new__') && !editing && (
+                      <button type="button" onClick={copyPageContent} title="Kopírovat obsah stránky"
+                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[var(--bg-hover)] transition-colors" style={{ color: copiedPage ? '#22c55e' : 'var(--text-muted)' }}>
+                        {copiedPage ? (
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        ) : (
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        )}
+                      </button>
+                    )}
                     {/* Star */}
                     {!selectedPage.id.startsWith('__new__') && (
                       <button type="button" onClick={() => toggleFavorite(selectedPage.id)} title="Oblíbené" className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[var(--bg-hover)] transition-colors">
@@ -969,7 +1077,7 @@ function KnowledgeBaseContent() {
                     {canAdmin && !selectedPage.id.startsWith('__new__') && (
                       <button type="button" onClick={() => deletePage(selectedPage.id)} title="Smazat stránku"
                         className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 transition-colors" style={{ color: '#ef4444' }}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                       </button>
                     )}
                   </div>
@@ -1014,6 +1122,25 @@ function KnowledgeBaseContent() {
                     )}
                   </div>
 
+                  {/* Folder picker (edit mode) */}
+                  {editing && (
+                    <div className="relative">
+                      <select value={editFolderId ?? ''} onChange={e => setEditFolderId(e.target.value || null)}
+                        className="appearance-none pl-2 pr-7 py-1 rounded-full border text-xs text-base sm:text-sm"
+                        style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-secondary)' }}>
+                        <option value="">Bez složky</option>
+                        {folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                      </select>
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
+                  )}
+                  {/* Current folder (view mode) */}
+                  {!editing && selectedPage.folder_id && (
+                    <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                      {folders.find(f => f.id === selectedPage.folder_id)?.name ?? ''}
+                    </span>
+                  )}
                   {/* Last modified */}
                   {!selectedPage.id.startsWith('__new__') && (
                     <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
@@ -1098,7 +1225,7 @@ function KnowledgeBaseContent() {
                                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                                 </button>
                                 <button type="button" onClick={() => deleteComment(c.id)} className="w-6 h-6 flex items-center justify-center rounded hover:bg-red-50" style={{ color: '#ef4444' }}>
-                                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+                                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                                 </button>
                               </div>
                             )}
@@ -1173,7 +1300,7 @@ function KnowledgeBaseContent() {
                             </div>
                             {canAdmin && (
                               <button type="button" onClick={() => deleteReview(r.id)} className="w-7 h-7 flex items-center justify-center rounded hover:bg-red-50 flex-shrink-0" style={{ color: '#ef4444' }}>
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                               </button>
                             )}
                           </div>
