@@ -11,6 +11,20 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.43.0 – 8. 3. 2026</h3>
+<ul>
+  <li><strong>Znalostní báze – panel s úkoly</strong> – každá KB stránka může mít samostatný seznam úkolů (checklist) s checkboxy. V editoru je panel „Úkoly" umístěn pod rich text editorem; Enter přidá nový úkol, Backspace na prázdném odstraní; splněné úkoly jsou přeškrtnuté. V zobrazení stránky jsou úkoly pouze pro čtení.</li>
+  <li><strong>Znalostní báze – sdílení složek</strong> – správci mohou sdílet KB složky s celým workspacem nebo s vybranými uživateli. Sdílení se nastavuje přes hovermenu v levém panelu (ikonka sdílení). Sdílená složka je zvýrazněna modravou barvou ikony. Výběr uživatelů zahrnuje avatary a e-maily. SQL migrace: <code>CREATE TABLE trackino_kb_folder_shares (...)</code> + <code>ALTER TABLE trackino_kb_folders ADD COLUMN is_shared BOOLEAN DEFAULT FALSE;</code></li>
+  <li><strong>Znalostní báze – úvodní stránka</strong> – v sekci „Naposledy upravené" i „Nově vytvořené" se nyní zobrazuje plné datum (den, měsíc, rok). V sekci „Nově vytvořené" přibyla barevná tečka stavu stránky.</li>
+  <li><strong>Znalostní báze – sjednocení ikony Nezařazené</strong> – ikona sekce „Nezařazené" v levém panelu sjednocena na info-circle (stejná jako v Záložkách a Promptech).</li>
+  <li><strong>Poznámky – název modulu v levém panelu</strong> – v záhlaví levého panelu je nyní zobrazen nadpis „Poznámky".</li>
+  <li><strong>Poznámky – Všechny poznámky</strong> – nová navigační položka „Všechny poznámky" umístěna přímo pod Inbox; zobrazuje všechny aktivní (nearchivované) poznámky bez ohledu na složku.</li>
+  <li><strong>Poznámky – pořadí navigace</strong> – sekce Poznámky k událostem je nyní uvedena před sekcí Archiv pro přirozenější pořadí.</li>
+  <li><strong>Poznámky – URL klikatelné</strong> – v editoru poznámky (NoteEditor i CalEventNoteEditor) jsou URL adresy automaticky klikatelné. Kliknutím na odkaz se otevře nový tab; při odchodu z editoru se URL automaticky zlinkují.</li>
+  <li><strong>Poznámky – sdílení ve stylu karet</strong> – dialog sdílení složky nyní zobrazuje tři volby jako ohraničené karty s popisky (Nesdílet / Celý workspace / Konkrétní uživatelé), shodně s Záložkami a Prompty.</li>
+  <li><strong>SQL migrace:</strong> <code>ALTER TABLE trackino_kb_pages ADD COLUMN IF NOT EXISTS tasks JSONB DEFAULT '[]'::jsonb;</code></li>
+</ul>
+
 <h3>v2.40.0 – 7. 3. 2026</h3>
 <ul>
   <li><strong>Znalostní báze – redesign navigace (PageListView)</strong> – levý panel je nyní čistě navigační (složky, filtry), bez inline stránek. Kliknutím na filtr nebo složku se v hlavní oblasti zobrazí mezivrstva – seznam stránek s názvem, cestou složky, štítky, stavem, autorem a datem. Teprve kliknutím na konkrétní stránku v seznamu se stránka otevře.</li>

@@ -228,6 +228,18 @@ const DEFAULT_HELP_CONTENT = `
   <li><strong>URL prefix</strong> – při zadání URL bez protokolu se automaticky doplní https://</li>
 </ul>
 
+<h3>Poznámky</h3>
+<p>Modul <strong>Poznámky</strong> (sekce <strong>ANALÝZA</strong>, tarif Pro a Max) je osobní notes aplikace s úkoly, oblíbenými a sdílením složek.</p>
+<ul>
+  <li><strong>Navigace v levém panelu</strong> – v záhlaví je název „Poznámky"; pod ním jsou položky Inbox (doručené), Všechny poznámky (aktivní + nearchivované), Oblíbené, Důležité, Naposledy upravené, Poznámky k událostem, Archiv a stromová struktura složek</li>
+  <li><strong>Složky a sdílení</strong> – až 5 úrovní podsložek; sdílení s celým workspacem nebo konkrétními uživateli (výběr ze seznamu s avatary a e-maily, karta-style modal se třemi volbami: Nesdílet / Celý workspace / Konkrétní uživatelé)</li>
+  <li><strong>Rich text editor</strong> – formátování B/I/U, odrážkový a číselný seznam, inline code; URL jsou automaticky klikatelné (otevírají se v novém okně)</li>
+  <li><strong>Panel s úkoly</strong> – pod editorem je seznam úkolů s checkboxy; Enter přidá nový, Backspace na prázdném odstraní; úkoly jsou uloženy spolu s poznámkou</li>
+  <li><strong>Příznaky</strong> – Oblíbená (hvězdička), Důležitá (červená, zvýrazní rámeček); lze nastavit přes toolbar nebo klávesové ikonky v záhlaví poznámky</li>
+  <li><strong>Archiv</strong> – archivované poznámky jsou v samostatné sekci; archivovat/obnovit lze přes kebab menu (⋮)</li>
+  <li><strong>Poznámky k událostem</strong> – samostatná sekce pro poznámky přidané ke kalendářním událostem</li>
+</ul>
+
 <h3>Úpravy aplikace</h3>
 <p>Stránka <strong>Úpravy aplikace</strong> je dostupná pouze pro <strong>Master Admina</strong> (odkaz v levém menu pod „Nahlásit chybu"). Slouží jako soukromý úkolník k evidenci nápadů a požadavků na rozvoj aplikace.</p>
 <ul>
@@ -459,6 +471,8 @@ const DEFAULT_HELP_CONTENT = `
   <li><strong>Složky a stránky</strong> – stránky jsou uspořádány do hierarchických složek s neomezenou hloubkou; stránky lze vytvářet přímo v kořeni nebo ve složce; v levém panelu se zobrazuje stromová struktura složek s počtem stránek</li>
   <li><strong>Rich text editor</strong> – toolbar ve dvou řádcích: (1) nadpisy H1–H3, tučné/kurzíva/podtržení, odrážkový a číslovaný seznam, oddělovač; (2) Kód, Odkaz, Zmínky, Stránka, Úkol (zaškrtávací seznam – kurzor se po vložení správně umístí do prvku), Infobox (callout s barevným okrajem – kurzor se umístí dovnitř; Enter zalomí řádek v rámci infoboxu; ikonka palety v pravém rohu pro výběr barvy: výchozí, zelená, žlutá, červená, fialová, šedá), Toggle (skládací blok s animovanou šipkou); kurzor se po vložení kódu, úkolu i infoboxu vždy umístí dovnitř prvku pro okamžité psaní; @zmínky a /odkaz na stránku lze vložit kamkoliv do textu (pozice kurzoru je zachována); při označení textu se zobrazí plovoucí panel s Odkaz/@/Stránka</li>
   <li><strong>Přiřazení do složky</strong> – v editoru stránky lze zvolit složku přes select v metadatech; v levém panelu se při hoveru zobrazí ikonka složky pro rychlé přesunutí stránky</li>
+  <li><strong>Panel s úkoly</strong> – každá stránka může mít seznam úkolů (checklist) s checkboxy; úkoly jsou oddělené od obsahu stránky; v editoru je panel „Úkoly" pod rich text editorem; klávesa Enter přidá další úkol, Backspace na prázdném úkolu ho odstraní; v zobrazení stránky jsou úkoly pouze pro čtení</li>
+  <li><strong>Sdílení složek</strong> – správci mohou sdílet složky se všemi členy workspace nebo s vybranými uživateli; u sdílené složky se zobrazuje ikonka sdílení (modravá barva); sdílení se nastavuje přes ikonku složky v levém panelu (hovermenu); volby: Nesdílet / Celý workspace / Konkrétní uživatelé (výběr ze seznamu s avatary a e-maily)</li>
   <li><strong>Kopírování obsahu</strong> – tlačítko kopírování v pravém horním rohu zkopíruje celý obsah stránky jako prostý text do schránky</li>
   <li><strong>Šablony</strong> – při vytvoření nové stránky si vyberte z 5 přednastavených šablon: Prázdná, Zápis z meetingu, Popis procesu, Onboarding průvodce, Dokumentace projektu</li>
   <li><strong>Fulltextové vyhledávání</strong> – hledá v názvech, obsahu i štítcích stránek; při hledání se v hlavní oblasti zobrazí seznam odpovídajících stránek; vyhledávání funguje i přes obsah stránek (fulltextové)</li>
@@ -473,7 +487,7 @@ const DEFAULT_HELP_CONTENT = `
   <li><strong>Filtry v levém panelu</strong> – kliknutím na filtr se v hlavní oblasti zobrazí seznam odpovídajících stránek: Všechny stránky, Oblíbené, Naposledy upravené, Nezařazené (jen pokud existují); sekce „Podle stavu" (collapsible) filtruje dle stavu s počty; „Podle zmínky" (collapsible) zobrazí členy s @zmínkami – kliknutím zobrazíte stránky s danou zmínkou</li>
   <li><strong>Kopírování kódu s animací</strong> – v bloku kódu (editor i viewer) se při kliknutí na ikonu kopírování zobrazí zelená fajfka na 1,5 sekundy pro potvrzení úspěšného zkopírování</li>
   <li><strong>Odkazující stránky</strong> – záložka „Odkazující" v dolní části stránky zobrazí seznam všech stránek, které na tuto stránku odkazují (backlinky), včetně cesty složky a stavu</li>
-  <li><strong>Úvodní stránka</strong> – pokud není aktivní žádný filtr, zobrazí se dvousloupcový přehled: Naposledy upravené (10 položek) a Nově vytvořené (10 položek), obojí s cestou složky</li>
+  <li><strong>Úvodní stránka</strong> – pokud není aktivní žádný filtr, zobrazí se dvousloupcový přehled: Naposledy upravené (10 položek) a Nově vytvořené (10 položek), obojí s cestou složky, plným datem (den, měsíc, rok) a v sekci Nově vytvořené i barevnou tečkou stavu stránky</li>
 </ul>
 
 <h3>Dokumenty – správa souborů a složek</h3>

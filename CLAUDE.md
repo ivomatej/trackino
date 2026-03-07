@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 7. 3. 2026 (v2.40.0)
+> Aktualizováno: 8. 3. 2026 (v2.43.0)
 
 ---
 
@@ -493,6 +493,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.43.0 | 8. 3. 2026 | KB: panel s úkoly (checklist, editTasks state, kbTaskRefs, addKbTask/toggleKbTask/updateKbTaskText/removeKbTask, SQL: ALTER trackino_kb_pages ADD tasks jsonb DEFAULT '[]'), sdílení složek (trackino_kb_folder_shares tabulka, is_shared na folder, openShare/saveShare funkce, KbFolderShare typ), datum s rokem na homepage, status dot v Nově vytvořené, info-circle ikona Nezařazené; Poznámky: nadpis Poznámky v levém panelu, Všechny poznámky nav položka, pořadí Události→Archiv, URL klikatelné v NoteEditor+CalEventNoteEditor (handleEditorClick+handleBlur+linkifyHtml), sdílení ve stylu karet (3 volby s popisky) |
 | v2.40.0 | 7. 3. 2026 | Znalostní báze: redesign navigace – levý panel čistě navigační (bez inline stránek), nový typ ListFilter (discriminated union), nová komponenta PageListView (mezivrstva seznam stránek při aktivním filtru), tlačítko ← Zpět v záhlaví stránky (backToList), computed showList/showWelcome; fulltextové hledání v názvech+obsahu+štítcích; animace kopírování kódu (CSS třída kb-code-copied, zelená fajfka 1,5s, editor+viewer) |
 | v2.39.3 | 7. 3. 2026 | Znalostní báze: kurzor uvnitř kód/checklist/infobox (insBlock+data-kbm), infobox color picker (6 barev, data-color, CSS variants, palette ::after, floating picker), Enter v infoboxu = br, Revize přesunuta z hlavičky → záložka reviews (ℹ→SVG), větší odsazení H1/H2/H3+bloky (16–28px), checklist vertical-align fix, filtr Podle zmínky v sidebaru (mentionFilter state) |
 | v2.39.2 | 7. 3. 2026 | Znalostní báze: Naposledy upravené v levém sidebaru (collapsible, top 10 s cestou složky), Nezařazené a Podle stavu filtry v sidebaru (s počty), dvousloupcová úvodní stránka (upravené+nové, 10 položek každý), tab Odkazující stránky (backlinks s cestou+stavem), oprava layoutu edit polí Status+Složka+Štítky, odsazení puntíku stavu v menu (ml-1 mr-2) |
@@ -1471,23 +1472,25 @@ POST https://api.firecrawl.dev/v2/agent    # pro budoucí use cases
 ### DB tabulky (7 nových)
 | Tabulka | Popis |
 |---------|-------|
-| `trackino_kb_folders` | Hierarchické složky (parent_id self-ref, owner_id) |
-| `trackino_kb_pages` | Stránky (folder_id, title, content HTML, status, tags[], is_restricted, created_by, updated_by) |
+| `trackino_kb_folders` | Hierarchické složky (parent_id self-ref, owner_id, is_shared bool) |
+| `trackino_kb_pages` | Stránky (folder_id, title, content HTML, tasks jsonb, status, tags[], is_restricted, created_by, updated_by) |
 | `trackino_kb_versions` | Verze stránek – každé uložení vytvoří verzi (page_id, content, title, edited_by) |
 | `trackino_kb_comments` | Komentáře k stránce (page_id, user_id, content) |
 | `trackino_kb_favorites` | Oblíbené stránky (PK: page_id + user_id) |
 | `trackino_kb_reviews` | Revizní připomínky (page_id, folder_id, assigned_to, review_date, is_done, note) |
 | `trackino_kb_access` | Přístupová práva k omezené stránce (page_id, user_id, can_edit) |
+| `trackino_kb_folder_shares` | Sdílení složek (folder_id, workspace_id, user_id nullable, shared_by) – user_id=null = celý workspace |
 
 ### Typy (database.ts)
 ```typescript
 export type KbPageStatus = 'draft' | 'active' | 'archived';
-export interface KbFolder { id, workspace_id, parent_id, name, owner_id, created_at, updated_at }
-export interface KbPage { id, workspace_id, folder_id, title, content, status: KbPageStatus, tags: string[], is_restricted, created_by, updated_by, created_at, updated_at }
+export interface KbFolder { id, workspace_id, parent_id, name, owner_id, is_shared?: boolean, created_at, updated_at }
+export interface KbPage { id, workspace_id, folder_id, title, content, tasks: { id: string; text: string; checked: boolean }[], status: KbPageStatus, tags: string[], is_restricted, created_by, updated_by, created_at, updated_at }
 export interface KbVersion { id, page_id, workspace_id, content, title, edited_by, created_at }
 export interface KbComment { id, page_id, workspace_id, user_id, content, created_at, updated_at }
 export interface KbReview { id, workspace_id, page_id, folder_id, assigned_to, review_date, note, is_done, created_by, created_at }
 export interface KbAccess { id, workspace_id, page_id, user_id, can_edit, created_at }
+export interface KbFolderShare { id, folder_id, workspace_id, user_id: string | null, shared_by, created_at }
 ```
 
 ### Lokální typy (knowledge-base/page.tsx)
