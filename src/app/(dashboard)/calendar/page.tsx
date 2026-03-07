@@ -1609,36 +1609,31 @@ function CalendarContent() {
       };
       let savedEventId: string;
       if (editingEvent) {
-        // Zjisti, zda se změnily klíčové pole a pokud ano, upozorni přijaté účastníky
-        const { data: oldEv } = await supabase
-          .from('trackino_calendar_events')
-          .select('start_date, end_date, start_time, end_time, location, description')
-          .eq('id', editingEvent.id)
-          .single();
-        if (oldEv) {
-          const changed =
-            (oldEv.start_date !== payload.start_date) ||
-            ((oldEv.end_date ?? oldEv.start_date) !== (payload.end_date || payload.start_date)) ||
-            ((oldEv.start_time ?? null) !== (payload.start_time ?? null)) ||
-            ((oldEv.end_time ?? null) !== (payload.end_time ?? null)) ||
-            ((oldEv.location ?? '') !== (payload.location ?? '')) ||
-            ((oldEv.description ?? '') !== (payload.description ?? ''));
-          if (changed) {
-            await supabase
-              .from('trackino_calendar_event_attendees')
-              .update({
-                status: 'updated',
-                prev_start_date: oldEv.start_date,
-                prev_end_date: oldEv.end_date ?? oldEv.start_date,
-                prev_start_time: oldEv.start_time ?? null,
-                prev_end_time: oldEv.end_time ?? null,
-                prev_location: oldEv.location ?? null,
-                prev_description: oldEv.description ?? null,
-              })
-              .eq('event_id', editingEvent.id)
-              .in('status', ['accepted', 'updated'])
-              .neq('user_id', user.id);
-          }
+        // Zjisti, zda se změnily klíčové pole – porovnej editingEvent (orig) vs payload (nové)
+        const origStartTime = editingEvent.start_time ?? null;
+        const origEndTime = editingEvent.end_time ?? null;
+        const changed =
+          (editingEvent.start_date !== payload.start_date) ||
+          (editingEvent.end_date !== (payload.end_date || payload.start_date)) ||
+          (origStartTime !== (payload.start_time ?? null)) ||
+          (origEndTime !== (payload.end_time ?? null)) ||
+          ((editingEvent.location ?? '') !== (payload.location ?? '')) ||
+          ((editingEvent.description ?? '') !== (payload.description ?? ''));
+        if (changed) {
+          await supabase
+            .from('trackino_calendar_event_attendees')
+            .update({
+              status: 'updated',
+              prev_start_date: editingEvent.start_date,
+              prev_end_date: editingEvent.end_date,
+              prev_start_time: origStartTime,
+              prev_end_time: origEndTime,
+              prev_location: editingEvent.location ?? null,
+              prev_description: editingEvent.description ?? null,
+            })
+            .eq('event_id', editingEvent.id)
+            .in('status', ['accepted', 'updated'])
+            .neq('user_id', user.id);
         }
         await supabase.from('trackino_calendar_events').update(payload).eq('id', editingEvent.id);
         savedEventId = editingEvent.id;
