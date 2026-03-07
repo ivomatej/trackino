@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 7. 3. 2026 (v2.34.0)
+> Aktualizováno: 7. 3. 2026 (v2.35.0)
 
 ---
 
@@ -493,6 +493,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.35.0 | 7. 3. 2026 | AI asistent: nový modul (Pro+Max) – chatovací okno napojené na OpenAI API; streaming; výběr modelu (GPT-4o/4o-mini/4-Turbo/o1-mini); temperature; system prompt; Markdown rendering; src/lib/ai-providers.ts (multi-provider infra); src/app/api/ai-chat/route.ts (serverová route); env: OPENAI_API_KEY |
 | v2.34.0 | 7. 3. 2026 | Znalostní báze: plná implementace – hierarchické složky+stránky, rich text editor (H1–H3/B/I/U/seznam/checklist/callout/toggle/kód/link/@mention//page-link), fulltextové hledání, štítky, 5 šablon, stavy (Koncept/Aktivní/Archiv), verze s revert, komentáře, revizní připomínky (→Přehled K vyřízení), přístupová práva (is_restricted+trackino_kb_access), oblíbené; 7 nových DB tabulek |
 | v2.33.0 | 7. 3. 2026 | Analýza kategorií: přidán filtr uživatele (select „Všichni uživatelé" pro admin/manager); sidebar scrollbar skrytý – zobrazí se až při hoveru (CSS třída sidebar-scroll) |
 | v2.32.2 | 7. 3. 2026 | iOS overflow definitívní fix: transform:translateZ(0) na overflow-x-hidden+rounded containery (vacation, important-days, calendar modal, invoices, ManualTimeEntry) → GPU compositing opraví iOS border-radius+overflow-hidden bug; globals.css: appearance:none !important + webkit-datetime-edit-fields-wrapper fix; ManualTimeEntry: overflow-x-hidden přidán |
@@ -1306,6 +1307,57 @@ className={`
 ```
 - `open` = mobilní overlay otevřen (přes hamburgera)
 - `collapsed` = desktop stav (z localStorage)
+
+---
+
+## 28. AI asistent – architektura (ai-assistant/page.tsx)
+
+### Soubory
+| Soubor | Popis |
+|--------|-------|
+| `src/lib/ai-providers.ts` | Konfigurace providerů (AiProvider, AiProviderConfig) + seznam modelů (AiModel, AI_MODELS) + helpery |
+| `src/app/api/ai-chat/route.ts` | Serverová POST route – drží API klíče bezpečně na serveru; streaming přes ReadableStream; non-streaming pro modely bez podpory (o1-mini) |
+| `src/app/(dashboard)/ai-assistant/page.tsx` | Chat UI – výběr modelu, temperature, system prompt, stream/stop, Markdown rendering |
+
+### AI providers (src/lib/ai-providers.ts)
+```typescript
+export type AiProvider = 'openai'; // Budoucí: | 'anthropic' | 'google' | 'mistral'
+export interface AiProviderConfig { id, name, envKey, baseUrl, available }
+export interface AiModel { id, name, provider, description, contextWindow, supportsStreaming }
+export const AI_PROVIDERS: AiProviderConfig[]
+export const AI_MODELS: AiModel[]
+export const DEFAULT_MODEL_ID = 'gpt-4o-mini'
+export function getProviderForModel(modelId): AiProviderConfig | undefined
+```
+
+### Přidání nového providera
+1. Přidat do `type AiProvider` v `ai-providers.ts`
+2. Odkomentovat/přidat objekt do `AI_PROVIDERS[]` s `envKey` (název env proměnné)
+3. Přidat modely do `AI_MODELS[]` se správným `provider`
+4. Přidat env proměnnou do `.env.local` a Vercel
+5. Serverová route (`/api/ai-chat/route.ts`) funguje automaticky – používá OpenAI-compatible formát
+
+### API route (/api/ai-chat)
+- `POST /api/ai-chat` – přijímá `{ messages, model, systemPrompt?, stream?, temperature?, maxTokens? }`
+- Validace modelu, lookup providera, check env klíče
+- Streaming: `ReadableStream` parses SSE chunks (`data: {...}` → delta content)
+- Non-streaming: vrací `{ content, usage }`
+- Chybové stavy: 400 neznámý model, 503 chybí API klíč, 500 interní chyba
+
+### Env proměnné (přidat do .env.local i Vercel)
+```
+OPENAI_API_KEY=sk-...
+# Budoucí:
+# ANTHROPIC_API_KEY=...
+# GOOGLE_AI_API_KEY=...
+# MISTRAL_API_KEY=...
+```
+
+### Modul v systému
+- ModuleId: `'ai_assistant'`
+- Tarif: Pro + Max
+- Skupina: `'Nástroje'`
+- Sidebar ikona: glühbirne/AI brain SVG
 
 ---
 

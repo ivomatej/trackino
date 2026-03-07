@@ -31,7 +31,8 @@ export type ModuleId =
   | 'company_rules'
   | 'office_rules'
   | 'prompts'
-  | 'bookmarks';
+  | 'bookmarks'
+  | 'ai_assistant';
 
 /** Per-uživatelský override modulu (nad rámec tarifu nebo zakázání) */
 export interface UserModuleOverride {

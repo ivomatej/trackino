@@ -154,6 +154,20 @@ const DEFAULT_HELP_CONTENT = `
 <p>V <strong>Nastavení → Fakturační údaje</strong> lze vytvořit více fakturačních profilů (např. pro různé právní subjekty). Každý profil obsahuje: název společnosti, jméno jednatele, adresu (ulice + číslo popisné), PSČ, město, stát, IČO, DIČ, příznak plátce DPH, e-mail, telefon a poznámku k fakturaci. Jeden profil lze označit jako výchozí.</p>
 <p>V <strong>Tým → editace člena → sekce Fakturace</strong> lze každému členovi přiřadit konkrétní fakturační profil. Pokud není přiřazen žádný, použije se výchozí profil workspace. Přiřazený profil se uživateli zobrazí při podání žádosti o fakturaci v pravém panelu formuláře.</p>
 
+<h3>AI asistent</h3>
+<p>Modul <strong>AI asistent</strong> (dostupný v tarifu <strong>Pro a Max</strong>, sekce <strong>NÁSTROJE</strong>) je chatovací okno napojené na AI modely přes API. Aktuálně podporuje <strong>OpenAI</strong> (GPT-4o, GPT-4o mini, GPT-4 Turbo, o1-mini).</p>
+<ul>
+  <li><strong>Výběr modelu</strong> – rozbalte panel Nastavení (tlačítko v pravém horním rohu) a zvolte AI model. Každý model má popis, velikost kontextového okna a informaci o podpoře streamingu.</li>
+  <li><strong>Kreativita (temperature)</strong> – posuvník 0–1 v nastavení; nízká hodnota = přesné/konzervativní odpovědi, vysoká = kreativnější a méně předvídatelné.</li>
+  <li><strong>System prompt</strong> – v nastavení lze rozbalit pole „System prompt" a zadat pokyny pro AI (např. „Odpovídej stručně a v češtině", „Jsi HR asistent"). Platí po celou dobu konverzace.</li>
+  <li><strong>Odesílání zpráv</strong> – napište zprávu do textového pole a stiskněte <kbd>Enter</kbd> (nový řádek = <kbd>Shift+Enter</kbd>) nebo klikněte Odeslat.</li>
+  <li><strong>Streamované odpovědi</strong> – u modelů s podporou streamingu se odpověď zobrazuje v reálném čase písmeno po písmenu. Generování lze přerušit červeným tlačítkem stop.</li>
+  <li><strong>Formátování odpovědí</strong> – AI odpovědi automaticky renderují Markdown: nadpisy, tučný text, kurzívu, kódové bloky se zvýrazněním syntaxe, odrážkové seznamy.</li>
+  <li><strong>Vymazání konverzace</strong> – tlačítko Vymazat konverzaci smaže historii zpráv v prohlížeči (nezaznamenává se do databáze).</li>
+  <li><strong>Rychlé návrhy</strong> – při prázdné konverzaci se zobrazí čtyři tlačítka s ukázkovými dotazy pro rychlé zahájení.</li>
+</ul>
+<p><strong>Nastavení API klíče</strong> – AI asistent vyžaduje platný API klíč od OpenAI. Klíč se přidá jako proměnná prostředí <code>OPENAI_API_KEY</code> do souboru <code>.env.local</code> pro lokální vývoj a do Vercel Environment Variables pro produkci. Pokud klíč chybí, zobrazí se červené upozornění přímo na stránce AI asistenta.</p>
+
 <h3>Převodník textu</h3>
 <p>Modul <strong>Převodník textu</strong> (dostupný v tarifu <strong>Pro a Max</strong>, sekce <strong>NÁSTROJE</strong>) podporuje dva směry konverze:</p>
 <p><strong>Mód 1: Formátovaný text → Text / Markdown</strong> – vložte naformátovaný text z Wordu nebo webu (Ctrl+V) do levého panelu. Výstupní záložky:</p>
@@ -256,7 +270,7 @@ const DEFAULT_HELP_CONTENT = `
 <p>Aplikace je rozdělena do <strong>modulů</strong>, které lze zapnout nebo vypnout. Výchozí sada modulů závisí na tarifu workspace:</p>
 <ul>
   <li><strong>Free</strong> – Měřič, Reporty, Projekty, Klienti, Štítky, Tým</li>
-  <li><strong>Pro</strong> – Free + Plánovač, Dovolená, Fakturace, Přehled hodin, Analýza kategorií, Podřízení, Poznámky manažera, Nastavení, Převodník textu, Důležité dny, Žádosti, <strong>Prompty</strong>, <strong>Záložky</strong>, sekce Společnost (Znalostní báze, Dokumenty, Firemní pravidla, Pravidla v kanceláři, Připomínky) + funkce <strong>Oblíbené</strong> v levém menu</li>
+  <li><strong>Pro</strong> – Free + Plánovač, Dovolená, Fakturace, Přehled hodin, Analýza kategorií, Podřízení, Poznámky manažera, Nastavení, Převodník textu, Důležité dny, Žádosti, <strong>Prompty</strong>, <strong>Záložky</strong>, <strong>AI asistent</strong>, sekce Společnost (Znalostní báze, Dokumenty, Firemní pravidla, Pravidla v kanceláři, Připomínky) + funkce <strong>Oblíbené</strong> v levém menu</li>
   <li><strong>Max</strong> – Pro + Audit log + Kalendář</li>
 </ul>
 <p>Admin může v <strong>Nastavení → Moduly</strong> nastavit výjimky pro jednotlivé uživatele – přidat modul, který není v tarifu, nebo zakázat modul, který v tarifu je. Výjimky mají vždy přednost před výchozím tarifem. Moduly, které uživatel nemá povoleny, se nezobrazují v levém menu.</p>
