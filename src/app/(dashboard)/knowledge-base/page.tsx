@@ -11,7 +11,7 @@ import type { KbFolder, KbPage, KbVersion, KbComment, KbReview, KbAccess, KbPage
 
 // ── Local types ──────────────────────────────────────────────────────────────
 
-type PageTab = 'comments' | 'history' | 'reviews' | 'access';
+type PageTab = 'comments' | 'history' | 'access';
 interface KbMember { user_id: string; display_name: string; avatar_color: string; }
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -33,7 +33,7 @@ const TEMPLATES = [
   },
   {
     id: 'process', title: 'Popis procesu', description: 'Interní postup / návod',
-    content: '<h2>Popis procesu</h2><p><strong>Zodpovědná osoba:</strong> </p><p><strong>Frekvence:</strong> </p><hr style="border:none;border-top:1px solid var(--border);margin:16px 0"><h3>Popis</h3><p>Stručný popis procesu...</p><h3>Kroky</h3><ol><li>Krok 1</li><li>Krok 2</li><li>Krok 3</li></ol><h3>Poznámky</h3><div class="kb-callout" style="background:var(--bg-hover);border-left:4px solid var(--primary);padding:12px 16px;border-radius:8px;margin:8px 0">ℹ Důležité informace k procesu</div>',
+    content: '<h2>Popis procesu</h2><p><strong>Zodpovědná osoba:</strong> </p><p><strong>Frekvence:</strong> </p><hr style="border:none;border-top:1px solid var(--border);margin:16px 0"><h3>Popis</h3><p>Stručný popis procesu...</p><h3>Kroky</h3><ol><li>Krok 1</li><li>Krok 2</li><li>Krok 3</li></ol><h3>Poznámky</h3><div class="kb-callout">ℹ Důležité informace k procesu</div>',
   },
   {
     id: 'onboarding', title: 'Onboarding průvodce', description: 'Checklist pro nové zaměstnance',
@@ -41,7 +41,7 @@ const TEMPLATES = [
   },
   {
     id: 'project', title: 'Dokumentace projektu', description: 'Cíle a architektura projektu',
-    content: '<h2>Dokumentace projektu</h2><p><strong>Vlastník projektu:</strong> </p><p><strong>Termín:</strong> </p><hr style="border:none;border-top:1px solid var(--border);margin:16px 0"><h3>Cíl projektu</h3><p>Popis cíle...</p><h3>Rozsah</h3><ul><li>V rozsahu: </li><li>Mimo rozsah: </li></ul><h3>Technické detaily</h3><pre style="position:relative;background:var(--bg-hover);padding:12px 40px 12px 12px;border-radius:8px;font-family:monospace;font-size:13px;margin:8px 0;border:1px solid var(--border)"><code>...</code></pre><h3>Rizika</h3><div class="kb-callout" style="background:var(--bg-hover);border-left:4px solid #f59e0b;padding:12px 16px;border-radius:8px;margin:8px 0">⚠ Identifikovaná rizika</div>',
+    content: '<h2>Dokumentace projektu</h2><p><strong>Vlastník projektu:</strong> </p><p><strong>Termín:</strong> </p><hr style="border:none;border-top:1px solid var(--border);margin:16px 0"><h3>Cíl projektu</h3><p>Popis cíle...</p><h3>Rozsah</h3><ul><li>V rozsahu: </li><li>Mimo rozsah: </li></ul><h3>Technické detaily</h3><pre style="position:relative;background:var(--bg-hover);padding:12px 40px 12px 12px;border-radius:8px;font-family:monospace;font-size:13px;margin:8px 0;border:1px solid var(--border)"><code>...</code></pre><h3>Rizika</h3><div class="kb-callout">⚠ Identifikovaná rizika</div>',
   },
 ];
 
@@ -73,6 +73,8 @@ function RichEditor({ value, onChange, members, pages }: {
   value: string; onChange: (v: string) => void; members: KbMember[]; pages: KbPage[];
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const savedRange = useRef<Range | null>(null);
+  const [selectionPopup, setSelectionPopup] = useState<{ x: number; y: number } | null>(null);
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
   const [linkText, setLinkText] = useState('');
@@ -91,8 +93,24 @@ function RichEditor({ value, onChange, members, pages }: {
     if (ref.current) onChange(ref.current.innerHTML);
   };
 
+  const saveRange = () => {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0 && ref.current?.contains(sel.anchorNode)) {
+      savedRange.current = sel.getRangeAt(0).cloneRange();
+    }
+  };
+
   const ins = (html: string) => {
-    ref.current?.focus();
+    setSelectionPopup(null);
+    if (savedRange.current) {
+      try {
+        const sel = window.getSelection();
+        if (sel) { sel.removeAllRanges(); sel.addRange(savedRange.current); }
+      } catch { /* ignore */ }
+      savedRange.current = null;
+    } else {
+      ref.current?.focus();
+    }
     document.execCommand('insertHTML', false, html);
     if (ref.current) onChange(ref.current.innerHTML);
   };
@@ -133,7 +151,9 @@ function RichEditor({ value, onChange, members, pages }: {
   const filteredPages = pages.filter(p => p.title.toLowerCase().includes(pickerSearch.toLowerCase())).slice(0, 15);
 
   const TBtn = ({ children, onClick, title, active }: { children: React.ReactNode; onClick: () => void; title: string; active?: boolean }) => (
-    <button type="button" title={title} onClick={onClick}
+    <button type="button" title={title}
+      onMouseDown={e => e.preventDefault()}
+      onClick={onClick}
       className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors hover:bg-[var(--bg-active)]"
       style={{ color: active ? 'var(--primary)' : 'var(--text-secondary)', background: active ? 'color-mix(in srgb,var(--primary) 10%,transparent)' : 'transparent' }}>
       {children}
@@ -143,6 +163,7 @@ function RichEditor({ value, onChange, members, pages }: {
   const Sep = () => <span className="w-px mx-0.5 self-stretch" style={{ background: 'var(--border)' }} />;
 
   return (
+    <>
     <div className="border rounded-xl overflow-hidden" style={{ borderColor: 'var(--border)' }}>
       {/* Toolbar */}
       <div className="flex flex-col border-b" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
@@ -176,7 +197,7 @@ function RichEditor({ value, onChange, members, pages }: {
           </TBtn>
           {/* Odkaz */}
           <div className="relative">
-            <TBtn onClick={() => { setShowLinkModal(v => !v); setShowMentionPicker(false); setShowPagePicker(false); }} title="Vložit odkaz" active={showLinkModal}>
+            <TBtn onClick={() => { saveRange(); setShowLinkModal(v => !v); setShowMentionPicker(false); setShowPagePicker(false); }} title="Vložit odkaz" active={showLinkModal}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
               Odkaz
             </TBtn>
@@ -195,7 +216,7 @@ function RichEditor({ value, onChange, members, pages }: {
           </div>
           {/* Zmínky */}
           <div className="relative">
-            <TBtn onClick={() => { setShowMentionPicker(v => !v); setShowPagePicker(false); setShowLinkModal(false); setPickerSearch(''); }} title="Zmínit uživatele" active={showMentionPicker}>
+            <TBtn onClick={() => { saveRange(); setShowMentionPicker(v => !v); setShowPagePicker(false); setShowLinkModal(false); setPickerSearch(''); }} title="Zmínit uživatele" active={showMentionPicker}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94"/></svg>
               Zmínky
             </TBtn>
@@ -218,7 +239,7 @@ function RichEditor({ value, onChange, members, pages }: {
           </div>
           {/* Stránka */}
           <div className="relative">
-            <TBtn onClick={() => { setShowPagePicker(v => !v); setShowMentionPicker(false); setShowLinkModal(false); setPickerSearch(''); }} title="Odkaz na stránku" active={showPagePicker}>
+            <TBtn onClick={() => { saveRange(); setShowPagePicker(v => !v); setShowMentionPicker(false); setShowLinkModal(false); setPickerSearch(''); }} title="Odkaz na stránku" active={showPagePicker}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
               Stránka
             </TBtn>
@@ -241,17 +262,17 @@ function RichEditor({ value, onChange, members, pages }: {
           </div>
           <Sep />
           {/* Úkol */}
-          <TBtn onClick={() => ins('<ul class="kb-checklist"><li class="kb-check-unchecked">Položka</li></ul><p><br></p>')} title="Checklist / úkoly">
+          <TBtn onClick={() => ins('<ul class="kb-checklist"><li class="kb-check-unchecked"><br></li></ul><p><br></p>')} title="Checklist / úkoly">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 12l2 2 4-4"/></svg>
             Úkol
           </TBtn>
           {/* Infobox */}
-          <TBtn onClick={() => ins('<div class="kb-callout" style="background:var(--bg-hover);border-left:4px solid var(--primary);padding:12px 16px;border-radius:8px;margin:8px 0">Poznámka...</div><p><br></p>')} title="Infobox / callout">
+          <TBtn onClick={() => ins('<div class="kb-callout"><br></div><p><br></p>')} title="Infobox / callout">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
             Infobox
           </TBtn>
           {/* Toggle */}
-          <TBtn onClick={() => ins('<details class="kb-toggle" style="border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin:8px 0"><summary style="cursor:pointer;font-weight:600;user-select:none">Klikněte pro zobrazení</summary><p>Obsah...</p></details><p><br></p>')} title="Toggle blok">
+          <TBtn onClick={() => ins('<details class="kb-toggle"><summary>Klikněte pro zobrazení</summary><p>Obsah...</p></details><p><br></p>')} title="Toggle blok">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             Toggle
           </TBtn>
@@ -261,6 +282,17 @@ function RichEditor({ value, onChange, members, pages }: {
       <div ref={ref} contentEditable suppressContentEditableWarning
         onInput={() => { if (ref.current) onChange(ref.current.innerHTML); }}
         onKeyDown={handleKeyDown}
+        onMouseUp={() => {
+          const sel = window.getSelection();
+          if (sel && !sel.isCollapsed && sel.rangeCount > 0) {
+            const range = sel.getRangeAt(0);
+            const rect = range.getBoundingClientRect();
+            savedRange.current = range.cloneRange();
+            setSelectionPopup({ x: rect.left + rect.width / 2, y: rect.top });
+          } else {
+            setSelectionPopup(null);
+          }
+        }}
         onClick={e => {
           const preEl = (e.target as Element).closest('pre');
           if (preEl) {
@@ -285,11 +317,44 @@ function RichEditor({ value, onChange, members, pages }: {
         .prose-kb pre::after{content:"";position:absolute;top:8px;right:8px;width:20px;height:20px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='13' height='13' rx='2' ry='2'/%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:center;cursor:pointer;opacity:0.5;transition:opacity 0.15s}
         .prose-kb pre:hover::after{opacity:1}
         .prose-kb .kb-checklist{list-style:none;padding-left:2px}
-        .prose-kb .kb-check-unchecked::before{content:"☐";margin-right:6px;font-size:1em}
-        .prose-kb .kb-check-checked::before{content:"☑";margin-right:6px;font-size:1em;color:var(--primary)}
-        .prose-kb .kb-check-checked{opacity:0.55;text-decoration:line-through}
+        .prose-kb .kb-check-unchecked::before{content:"";display:inline-block;width:14px;height:14px;border:1.5px solid var(--border);border-radius:3px;margin-right:7px;vertical-align:text-bottom;background:transparent}
+        .prose-kb .kb-check-checked::before{content:"✓";display:inline-block;width:14px;height:14px;border:1.5px solid var(--primary);border-radius:3px;margin-right:7px;vertical-align:text-bottom;background:var(--primary);color:white;font-size:9px;font-weight:700;line-height:14px;text-align:center}
+        .prose-kb .kb-check-checked{opacity:0.6;text-decoration:line-through}
+        .prose-kb .kb-callout{border-radius:10px;padding:12px 16px;margin:10px 0;border:1.5px solid color-mix(in srgb,var(--primary) 35%,transparent);background:color-mix(in srgb,var(--primary) 8%,var(--bg-card));line-height:1.6;min-height:1.6em}
+        .prose-kb details.kb-toggle{border:none;border-radius:10px;background:var(--bg-hover);padding:0;margin:10px 0;overflow:hidden}
+        .prose-kb details.kb-toggle>summary{padding:10px 14px;cursor:pointer;font-weight:600;list-style:none;display:flex;align-items:center;gap:8px}
+        .prose-kb details.kb-toggle>summary::-webkit-details-marker{display:none}
+        .prose-kb details.kb-toggle>summary::before{content:"▶";font-size:0.65em;opacity:0.5;transition:transform 0.2s;display:inline-block}
+        .prose-kb details.kb-toggle[open]>summary::before{transform:rotate(90deg)}
+        .prose-kb details.kb-toggle>:not(summary){padding:4px 14px 12px;border-top:1px solid var(--border)}
       `}</style>
     </div>
+    {/* Selection popup – fixed positioning escapes overflow:hidden */}
+    {selectionPopup && (
+      <div className="fixed z-[9999] flex items-center gap-0.5 px-1.5 py-1 rounded-lg border shadow-lg"
+        style={{ left: selectionPopup.x, top: selectionPopup.y - 46, transform: 'translateX(-50%)', background: 'var(--bg-card)', borderColor: 'var(--border)' }}
+        onMouseDown={e => e.preventDefault()}>
+        <button type="button" title="Odkaz"
+          onMouseDown={e => e.preventDefault()}
+          onClick={() => { setShowLinkModal(true); setShowMentionPicker(false); setShowPagePicker(false); setSelectionPopup(null); }}
+          className="w-7 h-7 flex items-center justify-center rounded hover:bg-[var(--bg-hover)]" style={{ color: 'var(--text-secondary)' }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        </button>
+        <button type="button" title="Zmínka (@uživatel)"
+          onMouseDown={e => e.preventDefault()}
+          onClick={() => { setShowMentionPicker(true); setShowPagePicker(false); setShowLinkModal(false); setPickerSearch(''); setSelectionPopup(null); }}
+          className="w-7 h-7 flex items-center justify-center rounded hover:bg-[var(--bg-hover)] text-xs font-bold" style={{ color: 'var(--text-secondary)' }}>
+          @
+        </button>
+        <button type="button" title="Odkaz na stránku"
+          onMouseDown={e => e.preventDefault()}
+          onClick={() => { setShowPagePicker(true); setShowMentionPicker(false); setShowLinkModal(false); setPickerSearch(''); setSelectionPopup(null); }}
+          className="w-7 h-7 flex items-center justify-center rounded hover:bg-[var(--bg-hover)]" style={{ color: 'var(--text-secondary)' }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </button>
+      </div>
+    )}
+    </>
   );
 }
 
@@ -351,14 +416,16 @@ function PageViewer({ page, onChecklistToggle, onPageLinkClick }: {
         .prose-view pre:hover::after{opacity:1}
         .prose-view .kb-checklist{list-style:none;padding-left:2px}
         .prose-view .kb-check-unchecked,.prose-view .kb-check-checked{cursor:pointer}
-        .prose-view .kb-check-unchecked::before{content:"☐";margin-right:6px;font-size:1em}
-        .prose-view .kb-check-checked::before{content:"☑";margin-right:6px;font-size:1em;color:var(--primary)}
-        .prose-view .kb-check-checked{opacity:0.55;text-decoration:line-through}
-        .prose-view details{border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin:8px 0}
-        .prose-view summary{cursor:pointer;font-weight:600;user-select:none}
-        .prose-view .kb-toggle>summary{list-style:none}
-        .prose-view .kb-toggle>summary::before{content:"▶ ";font-size:0.7em;opacity:0.6}
-        .prose-view details[open]>summary::before{content:"▼ "}
+        .prose-view .kb-check-unchecked::before{content:"";display:inline-block;width:14px;height:14px;border:1.5px solid var(--border);border-radius:3px;margin-right:7px;vertical-align:text-bottom;background:transparent}
+        .prose-view .kb-check-checked::before{content:"✓";display:inline-block;width:14px;height:14px;border:1.5px solid var(--primary);border-radius:3px;margin-right:7px;vertical-align:text-bottom;background:var(--primary);color:white;font-size:9px;font-weight:700;line-height:14px;text-align:center}
+        .prose-view .kb-check-checked{opacity:0.6;text-decoration:line-through}
+        .prose-view .kb-callout{border-radius:10px;padding:12px 16px;margin:10px 0;border:1.5px solid color-mix(in srgb,var(--primary) 35%,transparent);background:color-mix(in srgb,var(--primary) 8%,var(--bg-card));line-height:1.6}
+        .prose-view details.kb-toggle{border:none;border-radius:10px;background:var(--bg-hover);padding:0;margin:10px 0;overflow:hidden}
+        .prose-view details.kb-toggle>summary{padding:10px 14px;cursor:pointer;font-weight:600;list-style:none;display:flex;align-items:center;gap:8px;user-select:none}
+        .prose-view details.kb-toggle>summary::-webkit-details-marker{display:none}
+        .prose-view details.kb-toggle>summary::before{content:"▶";font-size:0.65em;opacity:0.5;transition:transform 0.2s;display:inline-block}
+        .prose-view details.kb-toggle[open]>summary::before{transform:rotate(90deg)}
+        .prose-view details.kb-toggle>:not(summary){padding:4px 14px 12px;border-top:1px solid var(--border)}
         .prose-view hr{border:none;border-top:1px solid var(--border);margin:16px 0}
       `}</style>
     </>
@@ -742,17 +809,23 @@ function KnowledgeBaseContent() {
     const existing = access.find(a => a.user_id === userId);
     if (existing) {
       if (canEdit) {
-        await supabase.from('trackino_kb_access').update({ can_edit: true }).eq('id', existing.id);
+        // Optimistický update
         setAccess(prev => prev.map(a => a.id === existing.id ? { ...a, can_edit: true } : a));
+        await supabase.from('trackino_kb_access').update({ can_edit: true }).eq('id', existing.id);
       } else {
-        await supabase.from('trackino_kb_access').delete().eq('id', existing.id);
+        // Optimistický update
         setAccess(prev => prev.filter(a => a.id !== existing.id));
+        await supabase.from('trackino_kb_access').delete().eq('id', existing.id);
       }
     } else if (canEdit) {
+      // Optimistický update s dočasným id
+      const tempId = `temp-${userId}`;
+      const tempAccess: KbAccess = { id: tempId, workspace_id: currentWorkspace.id, page_id: selectedPage.id, user_id: userId, can_edit: true, created_at: new Date().toISOString() };
+      setAccess(prev => [...prev, tempAccess]);
       const { data: na } = await supabase.from('trackino_kb_access').insert({
         workspace_id: currentWorkspace.id, page_id: selectedPage.id, user_id: userId, can_edit: true,
       }).select().single();
-      if (na) setAccess(prev => [...prev, na as KbAccess]);
+      if (na) setAccess(prev => prev.map(a => a.id === tempId ? na as KbAccess : a));
     }
   };
 
@@ -1149,13 +1222,61 @@ function KnowledgeBaseContent() {
                   )}
                 </div>
 
+                {/* Revize v hlavičce stránky */}
+                {!selectedPage.id.startsWith('__new__') && (reviews.length > 0 || canAdmin) && !editing && (
+                  <div className="flex flex-wrap items-center gap-2 mb-4 px-3 py-2.5 rounded-xl border" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)' }}>
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+                      </svg>
+                      <span className="text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>Revize</span>
+                      {reviews.filter(r => !r.is_done).length > 0 && (
+                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold text-white" style={{ background: '#ef4444' }}>
+                          {reviews.filter(r => !r.is_done).length}
+                        </span>
+                      )}
+                    </div>
+                    {reviews.map(r => {
+                      const overdue = !r.is_done && new Date(r.review_date + 'T23:59:59') < new Date();
+                      return (
+                        <div key={r.id} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs" style={{
+                          borderColor: overdue && !r.is_done ? '#ef4444' : 'var(--border)',
+                          color: r.is_done ? 'var(--text-muted)' : overdue ? '#ef4444' : 'var(--text-secondary)',
+                          opacity: r.is_done ? 0.55 : 1,
+                        }}>
+                          <button type="button" onClick={() => toggleReviewDone(r.id, !r.is_done)}
+                            className="w-3.5 h-3.5 rounded border flex-shrink-0 flex items-center justify-center transition-colors"
+                            style={{ borderColor: r.is_done ? 'var(--primary)' : 'currentColor', background: r.is_done ? 'var(--primary)' : 'transparent' }}>
+                            {r.is_done && <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
+                          </button>
+                          <span>{memberName(r.assigned_to)} · {new Date(r.review_date).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'short' })}</span>
+                          {r.note && <span title={r.note} className="opacity-70">ℹ</span>}
+                          {canAdmin && (
+                            <button type="button" onClick={() => deleteReview(r.id)} className="hover:opacity-70 flex items-center" style={{ color: 'inherit' }}>
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {canAdmin && (
+                      <button type="button" onClick={() => { setReviewModal(true); setReviewForm({ assigned_to: user?.id ?? '', review_date: '', note: '' }); }}
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-full border text-xs hover:bg-[var(--bg-active)] transition-colors"
+                        style={{ borderColor: 'var(--border)', color: 'var(--text-muted)', background: 'transparent' }}>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Přidat revizi
+                      </button>
+                    )}
+                  </div>
+                )}
+
                 {/* Restricted access toggle (admin only, edit mode) */}
                 {editing && canAdmin && (
                   <div className="flex items-center gap-3 mb-4 p-3 rounded-xl border" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
                     <button type="button" onClick={() => setEditRestricted(v => !v)}
                       className="relative w-9 h-5 rounded-full flex-shrink-0 transition-colors"
                       style={{ background: editRestricted ? 'var(--primary)' : 'var(--border)' }}>
-                      <span className="absolute w-3.5 h-3.5 bg-white rounded-full top-0.5 transition-transform" style={{ transform: editRestricted ? 'translateX(18px)' : 'translateX(2px)' }} />
+                      <span className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform" style={{ transform: editRestricted ? 'translateX(16px)' : 'translateX(0)' }} />
                     </button>
                     <div>
                       <p className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>Omezený přístup</p>
@@ -1184,7 +1305,6 @@ function KnowledgeBaseContent() {
                       {([
                         { id: 'comments', label: `Komentáře (${comments.length})` },
                         { id: 'history', label: `Historie (${versions.length})` },
-                        { id: 'reviews', label: `Recenze (${reviews.filter(r => !r.is_done).length})` },
                         canAdmin ? { id: 'access', label: 'Přístupy' } : null,
                       ].filter(Boolean) as { id: string; label: string }[]).map(tab => (
                         <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id as PageTab)}
@@ -1274,53 +1394,20 @@ function KnowledgeBaseContent() {
                       </div>
                     )}
 
-                    {/* Reviews */}
-                    {activeTab === 'reviews' && (
-                      <div>
-                        {canAdmin && (
-                          <button type="button" onClick={() => { setReviewModal(true); setReviewForm({ assigned_to: user?.id ?? '', review_date: '', note: '' }); }}
-                            className="flex items-center gap-2 mb-4 px-4 py-2 rounded-xl border text-xs font-medium" style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)', background: 'var(--bg-hover)' }}>
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                            Přidat připomínku revize
-                          </button>
-                        )}
-                        {reviews.length === 0 && <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Žádné revizní připomínky</p>}
-                        {reviews.map(r => (
-                          <div key={r.id} className="flex items-start gap-3 py-3 border-b" style={{ borderColor: 'var(--border)', opacity: r.is_done ? 0.55 : 1 }}>
-                            <button type="button" onClick={() => toggleReviewDone(r.id, !r.is_done)}
-                              className="w-5 h-5 rounded border-2 flex-shrink-0 flex items-center justify-center mt-0.5 transition-colors"
-                              style={{ borderColor: r.is_done ? 'var(--primary)' : 'var(--border)', background: r.is_done ? 'var(--primary)' : 'transparent' }}>
-                              {r.is_done && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
-                            </button>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                                Revidovat do {fmtDate(r.review_date)} · {memberName(r.assigned_to)}
-                              </p>
-                              {r.note && <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{r.note}</p>}
-                            </div>
-                            {canAdmin && (
-                              <button type="button" onClick={() => deleteReview(r.id)} className="w-7 h-7 flex items-center justify-center rounded hover:bg-red-50 flex-shrink-0" style={{ color: '#ef4444' }}>
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-                              </button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
                     {/* Access */}
                     {activeTab === 'access' && canAdmin && (
                       <div>
                         <div className="flex items-center gap-3 mb-4 p-3 rounded-xl border" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
-                          <button type="button" onClick={async () => {
+                          <button type="button" onClick={() => {
                             const newVal = !selectedPage.is_restricted;
-                            await supabase.from('trackino_kb_pages').update({ is_restricted: newVal }).eq('id', selectedPage.id);
+                            // Optimistický update
                             setSelectedPage(prev => prev ? { ...prev, is_restricted: newVal } : prev);
                             setPages(prev => prev.map(p => p.id === selectedPage.id ? { ...p, is_restricted: newVal } : p));
+                            supabase.from('trackino_kb_pages').update({ is_restricted: newVal }).eq('id', selectedPage.id).then(() => {});
                           }}
                             className="relative w-9 h-5 rounded-full flex-shrink-0 transition-colors"
                             style={{ background: selectedPage.is_restricted ? 'var(--primary)' : 'var(--border)' }}>
-                            <span className="absolute w-3.5 h-3.5 bg-white rounded-full top-0.5 transition-transform" style={{ transform: selectedPage.is_restricted ? 'translateX(18px)' : 'translateX(2px)' }} />
+                            <span className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform" style={{ transform: selectedPage.is_restricted ? 'translateX(16px)' : 'translateX(0)' }} />
                           </button>
                           <div>
                             <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Omezený přístup k úpravám</p>
@@ -1339,7 +1426,7 @@ function KnowledgeBaseContent() {
                                   <button type="button" onClick={() => toggleUserAccess(m.user_id, !hasAccess)}
                                     className="relative w-9 h-5 rounded-full flex-shrink-0 transition-colors"
                                     style={{ background: hasAccess ? 'var(--primary)' : 'var(--border)' }}>
-                                    <span className="absolute w-3.5 h-3.5 bg-white rounded-full top-0.5 transition-transform" style={{ transform: hasAccess ? 'translateX(18px)' : 'translateX(2px)' }} />
+                                    <span className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform" style={{ transform: hasAccess ? 'translateX(16px)' : 'translateX(0)' }} />
                                   </button>
                                 </div>
                               );
@@ -1403,7 +1490,7 @@ function KnowledgeBaseContent() {
       {reviewModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
           <div className="rounded-2xl border p-6 w-full max-w-sm shadow-xl" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
-            <h3 className="text-base font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Přidat revizní připomínku</h3>
+            <h3 className="text-base font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Přidat revizi</h3>
             <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Přiřadit uživateli</label>
             <div className="relative mb-3">
               <select value={reviewForm.assigned_to} onChange={e => setReviewForm(prev => ({ ...prev, assigned_to: e.target.value }))}

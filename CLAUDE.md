@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 7. 3. 2026 (v2.37.3)
+> Aktualizováno: 7. 3. 2026 (v2.38.0)
 
 ---
 
@@ -493,6 +493,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.38.0 | 7. 3. 2026 | Znalostní báze: vkládání kdekoliv (savedRange+onMouseDown), plovoucí selection popup (Odkaz/@/Stránka), nový vzhled Callout+Toggle (color-mix, animovaná šipka), checklist bez auto textu, Revize v hlavičce stránky (pill odznaky, červený badge, odebrán tab Recenze→záložky: Komentáře/Historie/Přístupy); AI asistent: měsíční statistiky tokenů per user, per-user token limity (denní/týdenní/měsíční) |
 | v2.37.3 | 7. 3. 2026 | Znalostní báze: 2řádkový toolbar (SVG ikony místo emoji), přiřazení stránky do složky (edit mód + hover v levém panelu), kopírování obsahu (clipboard), fix kódových bloků (min-height + Enter → nový řádek), standardní trash ikony |
 | v2.37.2 | 7. 3. 2026 | AI asistent – oblíbené konverzace (hvězdička, sekce OBLÍBENÉ v sidebaru, uloženo v DB is_favorite); šedé zvýraznění aktivní konverzace (var(--bg-hover)); standardní ikona koše; SQL: ALTER TABLE trackino_ai_conversations ADD COLUMN IF NOT EXISTS is_favorite boolean NOT NULL DEFAULT false |
 | v2.37.0 | 7. 3. 2026 | AI asistent redesign: konverzace ukládány v DB (trackino_ai_conversations + trackino_ai_messages); levý sidebar s vyhledáváním a mazáním; větší textarea (80–300px); token counter s progress barem; rychlý přepínač modelů (pill tlačítka); model info dialog s popisem + cenou v Kč; tarif změněn na Max only; oprávnění can_use_ai_assistant + ai_allowed_models per user; nastavení → záložka AI asistent (token limity, CZK kalkulačka, per-user modely); streaming usage via __USAGE__: suffix; trackino_ai_usage_limits tabulka |
@@ -1486,13 +1487,13 @@ export interface KbAccess { id, workspace_id, page_id, user_id, can_edit, create
 
 ### Lokální typy (knowledge-base/page.tsx)
 ```typescript
-type PageTab = 'comments' | 'history' | 'reviews' | 'access';
+type PageTab = 'comments' | 'history' | 'access';
 interface KbMember { user_id: string; display_name: string; avatar_color: string; }
 const STATUS_CONFIG: Record<KbPageStatus, { label: string; color: string }>
 ```
 
 ### Komponenty
-- **RichEditor** – contentEditable div, toolbar: H1/H2/H3, B/I/U, bullet/numbered list, divider, checklist, callout, toggle, kód, link modal, @mention picker (dropdown členů), /page picker (dropdown stránek)
+- **RichEditor** – contentEditable div, toolbar: H1/H2/H3, B/I/U, bullet/numbered list, divider, checklist (bez auto textu), callout (color-mix border+bg), toggle (animovaná šipka), kód, link modal, @mention picker (dropdown členů), /page picker (dropdown stránek); `savedRange` ref zachovává pozici kurzoru před otevřením pickerů; `onMouseDown={e => e.preventDefault()}` na TBtn zamezí ztrátě fokusu; selection popup (fixed, viewport coords) při označení textu
 - **PageViewer** – dangerouslySetInnerHTML + click handler: checklist toggle (DOM index matching → silent save), /page-link navigace, external link (window.open), kód kopírování; vložený `<style>` pro třídy `kb-check-unchecked/checked`, `kb-callout`, `kb-toggle`, `kb-mention`, `kb-page-link`
 - **KbFolderTree** – rekurzivní, max 5 úrovní hloubky, hover-reveal akce: + podsložka, přejmenovat, smazat; stránky zobrazeny inline
 
@@ -1511,6 +1512,13 @@ const STATUS_CONFIG: Record<KbPageStatus, { label: string; color: string }>
 - Dvoupanelový: záporný margin (`-m-4 lg:-m-6`) k eliminaci DashboardLayout paddingu, `flex flex-row`
 - Levý panel: 260px fixed width, na mobilu overlay (toggle tlačítkem), obsahuje hledání, stromovou strukturu, oblíbené
 - Pravý panel: flex-1, zobrazuje buď viewer nebo editor se záložkami (Komentáře / Historie / Recenze / Přístupy)
+
+### Revize v hlavičce stránky (v2.38.0)
+- Sekce Revize přesunuta z záložky „Recenze" do **hlavičky stránky** (za meta row, před content)
+- Zobrazuje se jako flex row s pill odznaky; červený badge s počtem nesplněných
+- Každá revize: checkbox + jméno + datum + volitelná poznámka (ℹ) + × mazání (admin)
+- Tab „Recenze" odstraněn; záložky nyní: `comments | history | access`
+- Modal title: „Přidat revizi" (dříve „Přidat revizní připomínku")
 
 ### Revize v Přehledu (page.tsx)
 - Přidán typ `'kb_review'` do NotificationItem

@@ -456,17 +456,17 @@ const DEFAULT_HELP_CONTENT = `
 <p>Modul <strong>Znalostní báze</strong> (sekce Společnost) je interní wiki pro tvorbu, organizaci a sdílení firemních znalostí a postupů.</p>
 <ul>
   <li><strong>Složky a stránky</strong> – stránky jsou uspořádány do hierarchických složek s neomezenou hloubkou; stránky lze vytvářet přímo v kořeni nebo ve složce; levý panel zobrazuje stromovou strukturu složek a stránek</li>
-  <li><strong>Rich text editor</strong> – toolbar ve dvou řádcích: (1) nadpisy H1–H3, tučné/kurzíva/podtržení, odrážkový a číslovaný seznam, oddělovač; (2) Kód, Odkaz, Zmínky, Stránka, Úkol (interaktivní zaškrtávací seznam), Infobox, Toggle; kódové bloky mají správnou výšku a Enter vytvoří nový řádek; v editoru lze vkládat @zmínky (členové workspace) a odkaz na jinou stránku KB</li>
+  <li><strong>Rich text editor</strong> – toolbar ve dvou řádcích: (1) nadpisy H1–H3, tučné/kurzíva/podtržení, odrážkový a číslovaný seznam, oddělovač; (2) Kód, Odkaz, Zmínky, Stránka, Úkol (zaškrtávací seznam bez auto textu – rovnou pište), Infobox (callout s barevným okrajem), Toggle (skládací blok s animovanou šipkou); @zmínky a /odkaz na stránku lze vložit kamkoliv do textu (pozice kurzoru je zachována); při označení textu se zobrazí plovoucí panel s Odkaz/@/Stránka</li>
   <li><strong>Přiřazení do složky</strong> – v editoru stránky lze zvolit složku přes select v metadatech; v levém panelu se při hoveru zobrazí ikonka složky pro rychlé přesunutí stránky</li>
   <li><strong>Kopírování obsahu</strong> – tlačítko kopírování v pravém horním rohu zkopíruje celý obsah stránky jako prostý text do schránky</li>
   <li><strong>Šablony</strong> – při vytvoření nové stránky si vyberte z 5 přednastavených šablon: Prázdná, Zápis z meetingu, Popis procesu, Onboarding průvodce, Dokumentace projektu</li>
   <li><strong>Fulltextové vyhledávání</strong> – hledá v názvech i obsahu stránek; výsledky se zobrazují v levém panelu</li>
   <li><strong>Štítky</strong> – každá stránka může mít libovolný počet štítků; slouží k filtrování a kategorizaci</li>
   <li><strong>Stav stránky</strong> – Koncept (žlutá), Aktivní (zelená), Archiv (šedá); stav lze měnit v editoru</li>
+  <li><strong>Revize</strong> – sekce v hlavičce každé stránky; lze přiřadit datum revize a zodpovědnou osobu; přidání tlačítkem „+ Přidat revizi"; badge s počtem nesplněných revizí; po splnění zaškrtnout; blížící se revize se zobrazí v panelu „K vyřízení" na Přehledu</li>
   <li><strong>Historie verzí</strong> – každé uložení automaticky vytvoří novou verzi; v záložce Historie lze zobrazit předchozí verze a vrátit se k libovolné z nich</li>
   <li><strong>Komentáře</strong> – v záložce Komentáře lze přidávat, upravovat a mazat komentáře k dané stránce</li>
-  <li><strong>Revizní připomínky</strong> – k stránce nebo složce lze přiřadit datum revize a zodpovědnou osobu; blížící se revize se zobrazí v panelu „K vyřízení" na Přehledu</li>
-  <li><strong>Přístupová práva</strong> – stránka může být označena jako omezená (příznak „Přístup omezen"); v záložce Přístupy (jen admin) se přidávají konkrétní uživatelé s oprávněním ke čtení nebo editaci</li>
+  <li><strong>Přístupová práva</strong> – stránka může být označena jako omezená (příznak „Přístup omezen"); v záložce Přístupy (jen admin) se přidávají konkrétní uživatelé s oprávněním ke čtení nebo editaci; toggle tlačítka reagují okamžitě (optimistický update)</li>
   <li><strong>Oblíbené</strong> – stránky lze přidávat k oblíbeným (hvězdička); oblíbené stránky se zobrazují v horní části levého panelu</li>
 </ul>
 

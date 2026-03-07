@@ -125,6 +125,13 @@ function SettingsContent() {
   const [aiLimits, setAiLimits] = useState<{ daily: string; weekly: string; monthly: string }>({ daily: '', weekly: '', monthly: '' });
   const [aiLoading, setAiLoading] = useState(false);
   const [savingAi, setSavingAi] = useState(false);
+  // AI statistiky – měsíční přehled per user
+  const now = new Date();
+  const [aiStatsMonth, setAiStatsMonth] = useState<{ year: number; month: number }>({ year: now.getFullYear(), month: now.getMonth() + 1 });
+  const [aiUsageStats, setAiUsageStats] = useState<Record<string, { tokens: number; costUsd: number }>>({});
+  // AI per-user limity
+  const [aiUserLimits, setAiUserLimits] = useState<Record<string, { daily: string; weekly: string; monthly: string }>>({});
+  const [savingAiUserLimits, setSavingAiUserLimits] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (currentWorkspace) {
@@ -417,6 +424,14 @@ function SettingsContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, fetchModuleData, currentWorkspace?.id]);
 
+  // Refetch AI statistik při změně měsíce
+  useEffect(() => {
+    if (activeTab === 'ai' && currentWorkspace) {
+      fetchAiStats(aiStatsMonth.year, aiStatsMonth.month);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aiStatsMonth]);
+
   async function addModuleOverride(userId: string) {
     if (!currentWorkspace || !addModuleId) return;
     const { error } = await supabase
@@ -486,8 +501,77 @@ function SettingsContent() {
         if (l.token_limit !== null) limitMap[l.limit_type] = String(l.token_limit);
       }
       setAiLimits({ daily: limitMap.daily, weekly: limitMap.weekly, monthly: limitMap.monthly });
+
+      // Načti per-user limity
+      const { data: userLimits } = await supabase
+        .from('trackino_ai_usage_limits')
+        .select('*')
+        .eq('workspace_id', currentWorkspace.id)
+        .not('user_id', 'is', null);
+      const ulMap: Record<string, { daily: string; weekly: string; monthly: string }> = {};
+      for (const l of (userLimits ?? []) as { user_id: string; limit_type: string; token_limit: number | null }[]) {
+        if (!ulMap[l.user_id]) ulMap[l.user_id] = { daily: '', weekly: '', monthly: '' };
+        if (l.token_limit !== null) ulMap[l.user_id][l.limit_type as 'daily' | 'weekly' | 'monthly'] = String(l.token_limit);
+      }
+      setAiUserLimits(ulMap);
     } catch { /* tabulky ještě neexistují */ }
     setAiLoading(false);
+    // Načti statistiky za aktuální měsíc
+    await fetchAiStats(aiStatsMonth.year, aiStatsMonth.month);
+  }
+
+  async function fetchAiStats(year: number, month: number) {
+    if (!currentWorkspace) return;
+    try {
+      const startOfMonth = new Date(year, month - 1, 1).toISOString();
+      const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999).toISOString();
+      // Načti conversations → mapa convId → userId
+      const { data: convs } = await supabase
+        .from('trackino_ai_conversations')
+        .select('id, user_id')
+        .eq('workspace_id', currentWorkspace.id);
+      const convMap: Record<string, string> = {};
+      for (const c of convs ?? []) convMap[(c as { id: string; user_id: string }).id] = (c as { id: string; user_id: string }).user_id;
+      // Načti messages za daný měsíc
+      const { data: msgs } = await supabase
+        .from('trackino_ai_messages')
+        .select('conversation_id, total_tokens, cost_usd')
+        .eq('workspace_id', currentWorkspace.id)
+        .gte('created_at', startOfMonth)
+        .lte('created_at', endOfMonth);
+      // Agreguj per userId
+      const stats: Record<string, { tokens: number; costUsd: number }> = {};
+      for (const m of msgs ?? []) {
+        const msg = m as { conversation_id: string; total_tokens: number | null; cost_usd: number | null };
+        const userId = convMap[msg.conversation_id];
+        if (!userId) continue;
+        if (!stats[userId]) stats[userId] = { tokens: 0, costUsd: 0 };
+        stats[userId].tokens += msg.total_tokens ?? 0;
+        stats[userId].costUsd += msg.cost_usd ?? 0;
+      }
+      setAiUsageStats(stats);
+    } catch { /* tabulky ještě neexistují */ }
+  }
+
+  async function saveAiUserLimits(userId: string) {
+    if (!currentWorkspace) return;
+    setSavingAiUserLimits(prev => ({ ...prev, [userId]: true }));
+    const types: AiLimitType[] = ['daily', 'weekly', 'monthly'];
+    const limits = aiUserLimits[userId] ?? { daily: '', weekly: '', monthly: '' };
+    for (const lt of types) {
+      const val = limits[lt];
+      if (val === '') {
+        await supabase.from('trackino_ai_usage_limits').delete()
+          .eq('workspace_id', currentWorkspace.id).eq('user_id', userId).eq('limit_type', lt);
+      } else {
+        await supabase.from('trackino_ai_usage_limits').upsert({
+          workspace_id: currentWorkspace.id, user_id: userId, limit_type: lt, token_limit: parseInt(val),
+        }, { onConflict: 'workspace_id,user_id,limit_type' });
+      }
+    }
+    setSavingAiUserLimits(prev => ({ ...prev, [userId]: false }));
+    setMessage('Limity uživatele uloženy.');
+    setTimeout(() => setMessage(''), 3000);
   }
 
   async function saveAiLimits() {
@@ -1678,15 +1762,42 @@ function SettingsContent() {
                   </button>
                 </div>
 
-                {/* Per-user přístup a modely */}
+                {/* Per-user přístup, statistiky a limity */}
                 <div className="p-5 rounded-xl border" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
-                  <h2 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>Přístup a modely per uživatel</h2>
-                  <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>Master admin, owner a admin mají přístup vždy. Ostatní role potřebují explicitní zapnutí. Pokud necháte modely prázdné, uživatel má přístup ke všem.</p>
+                  <div className="flex flex-wrap items-start justify-between gap-3 mb-1">
+                    <div>
+                      <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Přístup, statistiky a limity per uživatel</h2>
+                      <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Master admin, owner a admin mají přístup vždy. Statistiky zobrazují využití za vybraný měsíc.</p>
+                    </div>
+                    {/* Výběr měsíce pro statistiky */}
+                    <div className="relative flex-shrink-0">
+                      <select
+                        value={`${aiStatsMonth.year}-${aiStatsMonth.month}`}
+                        onChange={e => {
+                          const [y, m] = e.target.value.split('-').map(Number);
+                          setAiStatsMonth({ year: y, month: m });
+                        }}
+                        className="appearance-none pl-3 pr-8 py-1.5 rounded-lg border text-xs text-base sm:text-sm"
+                        style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+                      >
+                        {Array.from({ length: 7 }, (_, i) => {
+                          const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - i);
+                          const y = d.getFullYear(); const mo = d.getMonth() + 1;
+                          const label = d.toLocaleDateString('cs-CZ', { month: 'long', year: 'numeric' });
+                          return <option key={`${y}-${mo}`} value={`${y}-${mo}`}>{label}</option>;
+                        })}
+                      </select>
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
+                  </div>
 
-                  <div className="space-y-3">
+                  <div className="space-y-3 mt-4">
                     {aiMembers.map(member => {
                       const roleLabels: Record<string, string> = { owner: 'Vlastník', admin: 'Admin', manager: 'Manažer', member: 'Člen' };
                       const isAlwaysGranted = member.is_master_admin;
+                      const stats = aiUsageStats[member.user_id];
+                      const userLimits = aiUserLimits[member.user_id] ?? { daily: '', weekly: '', monthly: '' };
+                      const isSavingUserLimits = savingAiUserLimits[member.user_id] ?? false;
                       return (
                         <div key={member.user_id} className="p-3 rounded-lg border" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
                           <div className="flex items-center gap-3 mb-2">
@@ -1699,6 +1810,17 @@ function SettingsContent() {
                               <span className="text-sm font-medium truncate block" style={{ color: 'var(--text-primary)' }}>{member.display_name}</span>
                               <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{roleLabels[member.role] ?? member.role}</span>
                             </div>
+                            {/* Statistiky měsíce */}
+                            {stats && stats.tokens > 0 ? (
+                              <div className="text-right flex-shrink-0">
+                                <div className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{stats.tokens.toLocaleString('cs-CZ')} tok.</div>
+                                <div className="text-[10px]" style={{ color: 'var(--text-muted)' }}>≈ {(stats.costUsd * CZK_PER_USD).toFixed(2).replace('.', ',')} Kč</div>
+                              </div>
+                            ) : (
+                              <div className="text-right flex-shrink-0">
+                                <div className="text-xs" style={{ color: 'var(--text-muted)' }}>0 tok.</div>
+                              </div>
+                            )}
                             {/* Toggle přístupu */}
                             <label className="flex items-center gap-2 cursor-pointer flex-shrink-0">
                               <span className="text-xs" style={{ color: isAlwaysGranted ? 'var(--success)' : 'var(--text-muted)' }}>
@@ -1721,7 +1843,7 @@ function SettingsContent() {
 
                           {/* Modely – jen pokud má přístup */}
                           {(isAlwaysGranted || member.can_use_ai_assistant) && (
-                            <div>
+                            <div className="mb-3">
                               <p className="text-[10px] mb-1.5" style={{ color: 'var(--text-muted)' }}>
                                 Povolené modely: {!member.ai_allowed_models || member.ai_allowed_models.length === 0 ? 'všechny' : member.ai_allowed_models.join(', ')}
                               </p>
@@ -1755,6 +1877,41 @@ function SettingsContent() {
                               </div>
                             </div>
                           )}
+
+                          {/* Per-user token limity */}
+                          <div className="border-t pt-3" style={{ borderColor: 'var(--border)' }}>
+                            <p className="text-[10px] font-semibold mb-2 uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Limity tokenů (osobní)</p>
+                            <div className="grid grid-cols-3 gap-2 mb-2">
+                              {(['daily', 'weekly', 'monthly'] as const).map(lt => {
+                                const ltLabels: Record<string, string> = { daily: 'Denní', weekly: 'Týdenní', monthly: 'Měsíční' };
+                                return (
+                                  <div key={lt}>
+                                    <label className="block text-[10px] mb-0.5" style={{ color: 'var(--text-muted)' }}>{ltLabels[lt]}</label>
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      value={userLimits[lt]}
+                                      onChange={e => setAiUserLimits(prev => ({
+                                        ...prev,
+                                        [member.user_id]: { ...(prev[member.user_id] ?? { daily: '', weekly: '', monthly: '' }), [lt]: e.target.value },
+                                      }))}
+                                      placeholder="Neomezeno"
+                                      className="w-full px-2 py-1 rounded border text-xs text-base sm:text-sm"
+                                      style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+                                    />
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            <button
+                              onClick={() => saveAiUserLimits(member.user_id)}
+                              disabled={isSavingUserLimits}
+                              className="px-3 py-1 rounded-lg text-xs font-medium disabled:opacity-50"
+                              style={{ background: 'var(--primary)', color: '#fff' }}
+                            >
+                              {isSavingUserLimits ? 'Ukládám...' : 'Uložit limity'}
+                            </button>
+                          </div>
                         </div>
                       );
                     })}

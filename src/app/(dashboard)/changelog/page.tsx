@@ -11,6 +11,18 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.38.0 – 7. 3. 2026</h3>
+<ul>
+  <li><strong>Znalostní báze – vkládání kdekoliv v textu</strong> – @zmínky a /odkaz na stránku se nyní vloží na aktuální pozici kurzoru (ne na konec nebo do nadpisu). Implementace: <code>savedRange</code> ref zachytí selection před otevřením pickeru; <code>onMouseDown={e => e.preventDefault()}</code> na všech toolbar tlačítkách zamezí ztrátě fokusu; při insertu se selection obnoví ze <code>savedRange</code>.</li>
+  <li><strong>Znalostní báze – plovoucí panel nad označeným textem</strong> – při označení textu v editoru se zobrazí malý floating toolbar s tlačítky Odkaz / @ / Stránka; panel je pozicován fixed (viewport souřadnice z getBoundingClientRect), takže nevytéká z overflow:hidden kontejneru.</li>
+  <li><strong>Znalostní báze – nový vzhled Callout a Toggle bloků</strong> – Callout: zaoblený border s barevným okrajem (color-mix primary 35%), barevné pozadí (color-mix primary 8%), žádné inline styly. Toggle: details.kb-toggle s bg-hover pozadím, animovaná šipka ▶ (rotace 90° při otevření), bez border. Šablony aktualizovány.</li>
+  <li><strong>Znalostní báze – checklist bez auto textu</strong> – tlačítko „Úkol" v toolbaru vloží prázdnou položku checklist se samotným &lt;br&gt; místo textu „Položka"; uživatel začne psát ihned. CSS checkboxů: prázdný čtvereček s border, zaškrtnutý se ✓ symbolem, přeškrtnutý text.</li>
+  <li><strong>Znalostní báze – Revize v hlavičce stránky</strong> – sekce Revize přesunuta z záložky „Recenze" do hlavičky každé stránky (pod meta informacemi). Zobrazuje se jako flex řada pill odznaků; červený badge s počtem nesplněných revizí; položka obsahuje jméno odpovědné osoby, datum a volitelnou poznámku; zaškrtávací checkbox přímo v pillu; admin vidí „×" pro smazání a „+ Přidat revizi" tlačítko. Tab „Recenze" odebrán – zbývají: Komentáře, Historie, Přístupy. Modální dialog přejmenován na „Přidat revizi".</li>
+  <li><strong>Znalostní báze – opravy toggle tlačítek přístupů</strong> – thumb togglů ve všech switchích má nyní konzistentní pozici (top-0.5 left-0.5, translateX(0/16px)); optimistický update před voláním DB → okamžitá odezva UI.</li>
+  <li><strong>AI asistent – měsíční statistiky tokenů per uživatel</strong> – v Nastavení workspace → záložka AI asistent přibyl dropdown výběru měsíce (aktuální + posledních 6 = 7 voleb) a u každého uživatele se zobrazí spotřeba tokenů a orientační cena v Kč za vybraný měsíc.</li>
+  <li><strong>AI asistent – per-user token limity</strong> – pod přepínačem modelů u každého uživatele přibyla sekce s denním/týdenním/měsíčním limitem tokenů s inline tlačítkem Uložit.</li>
+</ul>
+
 <h3>v2.37.3 – 7. 3. 2026</h3>
 <ul>
   <li><strong>Znalostní báze – toolbar ve dvou řádcích</strong> – editor přeorganizován: řádek 1 obsahuje H1/H2/H3, B/I/U, odrážkový/číslovaný seznam a oddělovač; řádek 2 obsahuje Kód, Odkaz, Zmínky, Stránka, Úkol (dříve Check), Infobox (dříve Callout), Toggle. Všechna tlačítka mají SVG ikony místo emoji (📄, 🔗, ℹ, ▶, ☐ odstraněny).</li>
