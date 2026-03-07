@@ -35,8 +35,8 @@ export async function GET() {
 export async function PUT(request: NextRequest) {
   const body = await request.json();
 
-  // Zajistíme absolutní URL pro cron-job.org
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+  // Zajistíme absolutní URL pro cron-job.org (odstraníme trailing slash z appUrl)
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000').replace(/\/$/, '');
   const rawUrl: string = body.url ?? '';
   const fullUrl = rawUrl.startsWith('http') ? rawUrl : `${appUrl}${rawUrl}`;
 
