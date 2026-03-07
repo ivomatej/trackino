@@ -55,6 +55,12 @@ function escHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+// ─── Firecrawl kredity ─────────────────────────────────────────────────────
+const FIRECRAWL_CREDIT_LIMIT = 500;         // Free Plan – jednorázových 500 kreditů
+const CREDITS_PER_SCRAPE = 1;              // 1 kredit za scrapování 1 URL
+const CREDITS_PER_SEARCH = 7;             // 2 base + 5 výsledků × 1 = ~7 kreditů
+const FIRECRAWL_CREDITS_KEY = 'trackino_firecrawl_credits_used';
+
 // ─── Společné CSS styly pro AI zprávy ─────────────────────────────────────
 const AI_MSG_STYLES = `
   .ai-msg h1.ai-h1 { font-size: 1.1rem; font-weight: 700; margin: 0.5rem 0 0.25rem; }
@@ -95,10 +101,24 @@ function AiAssistantContent() {
   const [webSearchEnabled, setWebSearchEnabled] = useState(false);
   const [firecrawlStatus, setFirecrawlStatus] = useState<FirecrawlStatus>('idle');
   const [firecrawlAvailable, setFirecrawlAvailable] = useState<boolean | null>(null);
+  const [creditsUsed, setCreditsUsed] = useState<number>(() => {
+    if (typeof window === 'undefined') return 0;
+    return parseInt(localStorage.getItem(FIRECRAWL_CREDITS_KEY) ?? '0', 10) || 0;
+  });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+
+  function addCredits(n: number) {
+    setCreditsUsed(prev => {
+      const next = prev + n;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(FIRECRAWL_CREDITS_KEY, String(next));
+      }
+      return next;
+    });
+  }
 
   // Zkontroluj dostupnost OpenAI API
   useEffect(() => {
@@ -154,6 +174,7 @@ function AiAssistantContent() {
           const title = data.title ? `## ${data.title}` : `## ${url}`;
           const content = data.markdown.slice(0, 4000); // omez na 4k znaků
           contexts.push(`${title}\nZdroj: ${url}\n\n${content}`);
+          addCredits(CREDITS_PER_SCRAPE); // přičti kredit za úspěšný scrape
         }
       } catch { /* přeskoč chybnou URL */ }
     }
@@ -170,6 +191,7 @@ function AiAssistantContent() {
       if (!res.ok) return '';
       const data = (await res.json()) as SearchResponse;
       if (!data.results?.length) return '';
+      addCredits(CREDITS_PER_SEARCH); // přičti kredity za vyhledávání
       return data.results
         .map(r => {
           const content = r.markdown?.slice(0, 1500) || r.description || '';
@@ -351,6 +373,8 @@ function AiAssistantContent() {
   }
 
   const isFirecrawlBusy = firecrawlStatus !== 'idle';
+  const creditsRemaining = FIRECRAWL_CREDIT_LIMIT - creditsUsed;
+  const creditColor = creditsRemaining >= 200 ? '#10b981' : creditsRemaining >= 50 ? '#f59e0b' : '#ef4444';
 
   return (
     <DashboardLayout>
@@ -628,6 +652,14 @@ function AiAssistantContent() {
         {/* Input oblast */}
         <div className="mt-3 flex-shrink-0">
 
+          {/* Varování o nízkém stavu Firecrawl kreditů */}
+          {firecrawlAvailable && creditsRemaining < 50 && creditsRemaining >= 0 && (
+            <div className="mb-2 px-3 py-2 rounded-lg text-xs flex items-center gap-2" style={{ background: '#ef444410', border: '1px solid #ef444430', color: '#ef4444' }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              Zbývá jen <strong className="mx-0.5">{creditsRemaining}</strong> Firecrawl kreditů z {FIRECRAWL_CREDIT_LIMIT}. Zvažte přechod na vyšší tarif.
+            </div>
+          )}
+
           {/* Indikátory nad inputem */}
           {(detectedUrls.length > 0 || webSearchEnabled) && (
             <div className="mb-1.5 flex flex-wrap gap-2 px-1">
@@ -732,11 +764,22 @@ function AiAssistantContent() {
                 <span className="ml-2" style={{ color: '#10b981' }}>· Web search aktivní</span>
               )}
             </p>
-            {messages.length > 0 && (
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                {messages.length} {messages.length === 1 ? 'zpráva' : messages.length < 5 ? 'zprávy' : 'zpráv'}
-              </p>
-            )}
+            <div className="flex items-center gap-3">
+              {firecrawlAvailable && (
+                <span
+                  className="text-xs flex items-center gap-1"
+                  style={{ color: creditColor }}
+                  title={`Firecrawl kredity: ${creditsUsed} použito / ${FIRECRAWL_CREDIT_LIMIT} celkem (Free Plan)`}
+                >
+                  🔥 {creditsUsed} / {FIRECRAWL_CREDIT_LIMIT}
+                </span>
+              )}
+              {messages.length > 0 && (
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                  {messages.length} {messages.length === 1 ? 'zpráva' : messages.length < 5 ? 'zprávy' : 'zpráv'}
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </div>

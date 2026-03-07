@@ -11,6 +11,11 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.36.1 – 7. 3. 2026</h3>
+<ul>
+  <li><strong>AI asistent – počítadlo Firecrawl kreditů</strong> – přidáno počítadlo spotřebovaných Firecrawl kreditů ve footeru chatu (🔥 X / 500). Stav kreditů se ukládá do localStorage a přežívá refresh. Barevné kódování: zelená (≥200 zbývá), oranžová (50–199), červená (&lt;50). Při méně než 50 zbývajících kreditech se zobrazí varování nad vstupním polem. Ceny: 1 kredit za scrapování URL, ~7 kreditů za web search (2 base + 5 výsledků).</li>
+</ul>
+
 <h3>v2.36.0 – 7. 3. 2026</h3>
 <ul>
   <li><strong>AI asistent – Firecrawl integrace (web search + URL scraping)</strong> – AI asistent byl rozšířen o schopnost číst a prohledávat internet v reálném čase díky službě Firecrawl. Dvě nové funkce: <em>(a) Web search</em> – globus tlačítko (🌐) vedle vstupního pole; po aktivaci AI před každou odpovědí prohledá web a injektuje nalezené informace jako kontext do odpovědi. <em>(b) Auto URL scraping</em> – pokud zpráva obsahuje URL adresu, systém ji automaticky přečte a obsah stránky přidá jako kontext. AI tak může pracovat s aktuálními informacemi z internetu bez nutnosti kopírovat obsah stránek. Indikátory v UI: zelený štítek „Stránka bude přečtena" nebo „Web search aktivní" nad vstupním polem; animovaný zelený loading stav „🔍 Prohledávám web…" nebo „📄 Čtu stránku…" v průběhu načítání; zelená ikona 🌐 u odeslané zprávy, která obsahovala webový kontext. Dostupné pouze pokud je nastaven API klíč <code>FIRECRAWL_API_KEY</code>.</li>

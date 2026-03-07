@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 7. 3. 2026 (v2.36.0)
+> Aktualizováno: 7. 3. 2026 (v2.36.1)
 
 ---
 
@@ -493,6 +493,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.36.1 | 7. 3. 2026 | AI asistent: počítadlo Firecrawl kreditů (🔥 X/500) v footeru; localStorage persist; barevné kódování (zelená/oranžová/červená); varování při <50 zbývajících kreditech; CREDITS_PER_SCRAPE=1, CREDITS_PER_SEARCH=7, FIRECRAWL_CREDIT_LIMIT=500 |
 | v2.36.0 | 7. 3. 2026 | Firecrawl integrace: server-side API routes (/api/firecrawl/scrape + /api/firecrawl/search); AI asistent rozšířen o web search toggle (🌐) a auto-detekci URL → scraping obsahu; kontext z webu injektován do AI odpovědi; FIRECRAWL_API_KEY env var |
 | v2.35.0 | 7. 3. 2026 | AI asistent: nový modul (Pro+Max) – chatovací okno napojené na OpenAI API; streaming; výběr modelu (GPT-4o/4o-mini/4-Turbo/o1-mini); temperature; system prompt; Markdown rendering; src/lib/ai-providers.ts (multi-provider infra); src/app/api/ai-chat/route.ts (serverová route); env: OPENAI_API_KEY |
 | v2.34.0 | 7. 3. 2026 | Znalostní báze: plná implementace – hierarchické složky+stránky, rich text editor (H1–H3/B/I/U/seznam/checklist/callout/toggle/kód/link/@mention//page-link), fulltextové hledání, štítky, 5 šablon, stavy (Koncept/Aktivní/Archiv), verze s revert, komentáře, revizní připomínky (→Přehled K vyřízení), přístupová práva (is_restricted+trackino_kb_access), oblíbené; 7 nových DB tabulek |
@@ -1360,11 +1361,19 @@ OPENAI_API_KEY=sk-...
 - Skupina: `'Nástroje'`
 - Sidebar ikona: glühbirne/AI brain SVG
 
-### Firecrawl integrace v AI asistentovi (v2.36.0)
+### Firecrawl integrace v AI asistentovi (v2.36.0+)
 - **Web search toggle** – tlačítko 🌐 vedle vstupu; když je aktivní, před každým odesláním se zavolá `/api/firecrawl/search` a výsledky se injektují jako kontext
 - **URL auto-detection** – pokud zpráva obsahuje URL, automaticky se zavolá `/api/firecrawl/scrape` a obsah se přidá do kontextu
 - **Stav načítání** – `firecrawlStatus: 'idle' | 'searching' | 'scraping'` zobrazovaný v UI
 - **Context injection** – výsledky se přidají do `systemPrompt` jako blok „Kontext z webu" před odesláním do AI
+
+### Počítadlo kreditů (v2.36.1)
+- **Konstanty**: `FIRECRAWL_CREDIT_LIMIT = 500`, `CREDITS_PER_SCRAPE = 1`, `CREDITS_PER_SEARCH = 7`
+- **localStorage key**: `trackino_firecrawl_credits_used` – přežívá refresh, bez měsíčního resetu (Free Plan = jednorázové kredity)
+- **State**: `creditsUsed` inicializovaný lazy z localStorage
+- **addCredits(n)** – přičítá po úspěšném Firecrawl volání; voláno v `scrapeUrls()` (1/URL) a `searchWeb()` (7)
+- **Footer display**: `🔥 {creditsUsed} / 500` s barevným kódováním: zelená ≥200, oranžová 50–199, červená <50
+- **Varování**: červený banner nad vstupem když `creditsRemaining < 50`
 
 ---
 
