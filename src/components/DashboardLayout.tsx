@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, ReactNode } from 'react';
+import { useState, useEffect, useRef, ReactNode } from 'react';
 import Sidebar from './Sidebar';
 import TimerBar from './TimerBar';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
@@ -168,6 +168,61 @@ export default function DashboardLayout({ children, showTimer = false, onTimerEn
     return () => window.removeEventListener('resize', check);
   }, []);
 
+  // ── Auto-hide header při scrollu na mobilu ────────────────────────────────
+  // Skryje se při scrollu dolů, zobrazí při rychlém scrollu nahoru (> 300px/s nebo > 100px nahoru)
+  const [headerHidden, setHeaderHidden] = useState(false);
+  const headerHiddenRef = useRef(false);
+  const scrollStateRef = useRef({ lastY: 0, lastTime: 0, upDelta: 0 });
+
+  useEffect(() => {
+    if (!isMobile) {
+      // Na desktopu/tabletu vždy zobrazit header
+      if (headerHiddenRef.current) {
+        headerHiddenRef.current = false;
+        setHeaderHidden(false);
+      }
+      return;
+    }
+    const handleScroll = () => {
+      const now = Date.now();
+      const y = window.scrollY;
+      const { lastY, lastTime, upDelta } = scrollStateRef.current;
+      const deltaY = y - lastY;
+      const deltaTime = Math.max(1, now - lastTime);
+      const velocityPxPerSec = Math.abs(deltaY) / deltaTime * 1000;
+
+      let newHidden = headerHiddenRef.current;
+      let newUpDelta = upDelta;
+
+      if (y < 60) {
+        // Na vrcholu stránky: vždy zobrazit header
+        newHidden = false;
+        newUpDelta = 0;
+      } else if (deltaY > 4) {
+        // Scrolluje dolů → schovat
+        newHidden = true;
+        newUpDelta = 0;
+      } else if (deltaY < -4) {
+        // Scrolluje nahoru
+        newUpDelta += Math.abs(deltaY);
+        // Zobrazit při rychlém scrollu (> 300px/s) nebo pokud uživatel scrollnul > 100px nahoru
+        if (velocityPxPerSec > 300 || newUpDelta > 100) {
+          newHidden = false;
+        }
+      }
+
+      scrollStateRef.current = { lastY: y, lastTime: now, upDelta: newUpDelta };
+
+      if (newHidden !== headerHiddenRef.current) {
+        headerHiddenRef.current = newHidden;
+        setHeaderHidden(newHidden);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [isMobile]);
+
   const toggleDesktopSidebar = () => {
     setSidebarCollapsed(prev => {
       const next = !prev;
@@ -203,10 +258,14 @@ export default function DashboardLayout({ children, showTimer = false, onTimerEn
 
       {/* Main content – posouvá se doleva při collapse sidebaru na desktopu */}
       <div className={`${!sidebarCollapsed ? 'lg:ml-[var(--sidebar-width)]' : ''} min-h-screen flex flex-col transition-[margin] duration-200 ease-in-out`}>
-        {/* Topbar s timerem */}
+        {/* Topbar s timerem – na mobilu se schová při scrollu dolů */}
         <header
-          className="sticky top-0 z-30"
-          style={{ background: 'var(--bg-card)' }}
+          className="sticky top-0 z-30 transition-transform duration-200 ease-in-out"
+          style={{
+            background: 'var(--bg-card)',
+            // Pouze na mobilu aplikovat transform – na desktopu headerHidden = false vždy
+            transform: headerHidden ? 'translateY(-100%)' : 'translateY(0)',
+          }}
         >
           {/* Systémová oznámení – bannery nad timerem */}
           {activeNotifications.map(n => (
@@ -276,7 +335,10 @@ export default function DashboardLayout({ children, showTimer = false, onTimerEn
         </header>
 
         {/* Page content – pending screen nebo normální obsah */}
-        <main className={`flex-1 p-4 lg:p-6 flex flex-col${timerAtBottom && shouldShowTimer ? ' pb-24' : ''}`}>
+        <main
+          className="flex-1 p-4 lg:p-6 flex flex-col"
+          style={timerAtBottom && shouldShowTimer ? { paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 130px)' } : undefined}
+        >
           {showLockedScreen ? <LockedWorkspaceScreen /> : isPendingApproval ? <PendingApprovalScreen /> : children}
         </main>
 
@@ -293,10 +355,14 @@ export default function DashboardLayout({ children, showTimer = false, onTimerEn
       {/* Timer fixně u spodní hrany – jen na mobilu pokud je timer_bottom_mobile zapnutý */}
       {shouldShowTimer && timerAtBottom && (
         <div
-          className="fixed bottom-0 left-0 right-0 z-40 border-t px-4 py-2.5"
-          style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}
+          className="fixed bottom-0 left-0 right-0 z-40 border-t px-4 pt-3"
+          style={{
+            background: 'var(--bg-card)',
+            borderColor: 'var(--border)',
+            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)',
+          }}
         >
-          <TimerBar onEntryChanged={onTimerEntryChanged} playData={timerPlayData} />
+          <TimerBar onEntryChanged={onTimerEntryChanged} playData={timerPlayData} isBottomBar />
         </div>
       )}
     </div>

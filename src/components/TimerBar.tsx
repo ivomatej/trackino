@@ -20,9 +20,10 @@ interface PlayData {
 interface TimerBarProps {
   onEntryChanged?: () => void;
   playData?: PlayData | null;
+  isBottomBar?: boolean;
 }
 
-export default function TimerBar({ onEntryChanged, playData }: TimerBarProps) {
+export default function TimerBar({ onEntryChanged, playData, isBottomBar = false }: TimerBarProps) {
   const { user } = useAuth();
   const { currentWorkspace } = useWorkspace();
 
@@ -531,7 +532,7 @@ export default function TimerBar({ onEntryChanged, playData }: TimerBarProps) {
       />
 
       {/* Pickers + timer + tlačítka – druhý řádek na mobilu, pokračování řádku na desktopu */}
-      <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+      <div className={`flex items-center ${isBottomBar ? 'gap-3' : 'gap-2 sm:gap-3'} flex-shrink-0`}>
 
       {/* Projekt picker */}
       <div className="relative flex-shrink-0" ref={projectPickerRef}>
@@ -540,11 +541,11 @@ export default function TimerBar({ onEntryChanged, playData }: TimerBarProps) {
             if (showProjectPicker) { setShowProjectPicker(false); setProjectSearch(''); return; }
             const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
             const w = Math.min(320, window.innerWidth - 16);
-            setProjectPickerPos({ top: rect.bottom + 4, left: Math.max(8, Math.min(rect.left, window.innerWidth - w - 8)), width: w });
+            setProjectPickerPos({ top: isBottomBar ? Math.max(8, rect.top - 324) : rect.bottom + 4, left: Math.max(8, Math.min(rect.left, window.innerWidth - w - 8)), width: w });
             setShowTaskPicker(false); setTaskSearch(''); setProjectSearch('');
             setShowProjectPicker(true);
           }}
-          className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition-colors"
+          className={`flex items-center gap-1.5 ${isBottomBar ? 'px-2.5 py-2' : 'px-2 py-1.5'} rounded-lg transition-colors`}
           style={{
             color: selectedProject ? 'var(--text-primary)' : 'var(--text-muted)',
             background: selectedProject ? ((selectedProjectObj?.color ?? 'var(--primary)') + '18') : 'transparent',
@@ -565,7 +566,7 @@ export default function TimerBar({ onEntryChanged, playData }: TimerBarProps) {
               </span>
             </>
           ) : (
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg width={isBottomBar ? 18 : 16} height={isBottomBar ? 18 : 16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
             </svg>
           )}
@@ -648,11 +649,11 @@ export default function TimerBar({ onEntryChanged, playData }: TimerBarProps) {
             if (showTaskPicker) { setShowTaskPicker(false); setTaskSearch(''); return; }
             const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
             const w = Math.min(280, window.innerWidth - 16);
-            setTaskPickerPos({ top: rect.bottom + 4, left: Math.max(8, Math.min(rect.left, window.innerWidth - w - 8)), width: w });
+            setTaskPickerPos({ top: isBottomBar ? Math.max(8, rect.top - 324) : rect.bottom + 4, left: Math.max(8, Math.min(rect.left, window.innerWidth - w - 8)), width: w });
             setShowProjectPicker(false); setProjectSearch(''); setTaskSearch('');
             setShowTaskPicker(true);
           }}
-          className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition-colors"
+          className={`flex items-center gap-1.5 ${isBottomBar ? 'px-2.5 py-2' : 'px-2 py-1.5'} rounded-lg transition-colors`}
           style={{
             color: selectedTask || selectedCategory ? 'var(--primary)' : 'var(--text-muted)',
             background: (selectedTask || selectedCategory) ? 'var(--primary)18' : 'transparent',
@@ -675,7 +676,7 @@ export default function TimerBar({ onEntryChanged, playData }: TimerBarProps) {
               </span>
             </>
           ) : (
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width={isBottomBar ? 18 : 16} height={isBottomBar ? 18 : 16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="8" y1="6" x2="21" y2="6" />
               <line x1="8" y1="12" x2="21" y2="12" />
               <line x1="8" y1="18" x2="21" y2="18" />
@@ -863,13 +864,13 @@ export default function TimerBar({ onEntryChanged, playData }: TimerBarProps) {
       {!isRunning ? (
         <button
           onClick={startTimer}
-          className="w-9 h-9 rounded-full flex items-center justify-center text-white flex-shrink-0 transition-colors"
+          className={`${isBottomBar ? 'w-11 h-11' : 'w-9 h-9'} rounded-full flex items-center justify-center text-white flex-shrink-0 transition-colors`}
           style={{ background: 'var(--primary)' }}
           onMouseEnter={(e) => e.currentTarget.style.background = 'var(--primary-hover)'}
           onMouseLeave={(e) => e.currentTarget.style.background = 'var(--primary)'}
           title="Spustit"
         >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+          <svg width={isBottomBar ? 18 : 15} height={isBottomBar ? 18 : 15} viewBox="0 0 24 24" fill="currentColor">
             <polygon points="6 3 20 12 6 21 6 3" />
           </svg>
         </button>
@@ -877,25 +878,25 @@ export default function TimerBar({ onEntryChanged, playData }: TimerBarProps) {
         <div className="flex items-center gap-1 flex-shrink-0">
           <button
             onClick={stopTimer}
-            className="w-9 h-9 rounded-full flex items-center justify-center text-white flex-shrink-0 transition-opacity"
+            className={`${isBottomBar ? 'w-11 h-11' : 'w-9 h-9'} rounded-full flex items-center justify-center text-white flex-shrink-0 transition-opacity`}
             style={{ background: 'var(--danger)' }}
             onMouseEnter={(e) => e.currentTarget.style.opacity = '0.85'}
             onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
             title="Zastavit"
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+            <svg width={isBottomBar ? 16 : 13} height={isBottomBar ? 16 : 13} viewBox="0 0 24 24" fill="currentColor">
               <rect x="3" y="3" width="18" height="18" rx="2" />
             </svg>
           </button>
           <button
             onClick={discardTimer}
-            className="p-2 rounded-lg transition-colors"
+            className={`${isBottomBar ? 'p-2.5' : 'p-2'} rounded-lg transition-colors`}
             style={{ color: 'var(--text-muted)' }}
             onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
             onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
             title="Zahodit"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg width={isBottomBar ? 18 : 16} height={isBottomBar ? 18 : 16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <polyline points="3 6 5 6 21 6" />
               <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
             </svg>

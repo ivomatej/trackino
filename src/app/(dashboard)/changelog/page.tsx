@@ -11,6 +11,12 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.30.0 – 7. 3. 2026</h3>
+<ul>
+  <li><strong>Mobil – Automatické skrývání záhlaví při scrollu</strong> – na mobilních zařízeních se záhlaví (včetně Měřiče) automaticky skryje při scrollu dolů, aby uvolnilo místo obsahu. Při rychlém scrollu nahoru (rychlost &gt; 300 px/s) nebo po odscrollování alespoň 100 px zpět se záhlaví opět zobrazí. Pomalý scroll nahoru záhlaví nezobrazí. Na vrcholu stránky (méně než 60 px od vrchu) je záhlaví vždy viditelné. Na desktopu a tabletu se záhlaví neskrývá nikdy.</li>
+  <li><strong>Měřič – Lepší rozložení spodní lišty pro iPhone</strong> – spodní lišta Měřiče (volba „Měřič u spodní hrany") je nyní přizpůsobena pro iPhony se zaoblenými displeji a home indikátorem. Lišta respektuje <em>safe area</em> (výřez displeje, home indicator) a přidává dostatečné odsazení od spodního okraje, aby byla tlačítka pohodlně dostupná. Tlačítka Spustit / Zastavit jsou větší (44 × 44 px), ikony projektu a kategorie mají větší plochu pro kliknutí, tlačítko Zahodit má větší padding. Dropdowny pro výběr projektu a kategorie se nyní otevírají <em>nad</em> lištou (místo pod ní).</li>
+</ul>
+
 <h3>v2.29.0 – 7. 3. 2026</h3>
 <ul>
   <li><strong>Měřič – Připnutí ke spodní hraně obrazovky (mobilní)</strong> – nová volba v Profilu → Zobrazení aplikace: <em>Měřič u spodní hrany obrazovky</em>. Po zapnutí se na mobilním zařízení (telefon) panel Měřiče přesune ze záhlaví k dolnímu okraji obrazovky jako fixní lišta. Obsah stránky se automaticky odsadí, aby nic nezůstalo schováno za lištou. Na desktopu a tabletu volba nemá žádný efekt – tam zůstává Měřič v záhlaví. Nastavení nezasahuje do volby „Zobrazovat Měřič v záhlaví na všech stránkách".</li>

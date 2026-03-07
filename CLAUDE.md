@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 7. 3. 2026 (v2.29.0)
+> Aktualizováno: 7. 3. 2026 (v2.30.0)
 
 ---
 
@@ -493,6 +493,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.30.0 | 7. 3. 2026 | Mobil: auto-hide header při scrollu dolů (translateY(-100%)), zobrazí při velocity > 300px/s nebo upDelta > 100px; headerHiddenRef + scrollStateRef (stale closure safe); na desktopu vždy viditelné. TimerBar: prop `isBottomBar` – větší touch targety (w-11 h-11 start/stop), větší ikony, dropdowny nad lištou (rect.top - 324); DashboardLayout: safe-area-inset-bottom + 12px padding, calc(env(safe-area-inset-bottom)+130px) na content |
 | v2.29.0 | 7. 3. 2026 | Timer: nový sloupec `timer_bottom_mobile` v trackino_profiles – na mobilu (< 640px) přesune Měřič do fixního bottom baru; žádná kolize s timer_always_visible (shouldShowTimer řídí viditelnost, timerAtBottom řídí pozici); content pb-24 když aktivní. Kalendář: panel Pozvánky – tlačítko v headeru (všechny pohledy), badge s pending počtem, filtrace dle stavu (Vše/Čeká/Přijato/Nezávazně/Odmítnuto), textové hledání, RSVP tlačítka, stránkování po 20 |
 | v2.28.0 | 7. 3. 2026 | Kalendář: RSVP třetí stav 'maybe' (Nezávazně, žlutý, prefix ~); příjemce může kdykoliv změnit RSVP (3 tlačítka vždy viditelná); odmítnuté události zesvětlené (opacity ~45%, přeškrtnutý název) ve všech pohledech; kliknutí na slot v Týden/Den vyplní čas v novém event modalu |
 | v2.27.0 | 7. 3. 2026 | Kalendář: nový attendee status `'updated'` – organizátor mění přijatou událost (datum/čas/místo) → přijatí účastníci dostanou dashed border + diff blok v modalu (přeškrtnuté staré hodnoty → nové); `trackino_calendar_event_attendees` rozšířena o prev_* sloupce |
@@ -1041,18 +1042,39 @@ const timerAtBottom = (profile?.timer_bottom_mobile ?? false) && isMobile;
   <div className="flex-1" />
 )}
 
-// Fixed bottom bar – jen na mobilu s timer_bottom_mobile zapnutým
+// Fixed bottom bar – jen na mobilu s timer_bottom_mobile zapnutým (v2.30.0: safe area insets, isBottomBar prop)
 {shouldShowTimer && timerAtBottom && (
-  <div className="fixed bottom-0 left-0 right-0 z-40 border-t px-4 py-2.5"
-    style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
-    <TimerBar ... />
+  <div className="fixed bottom-0 left-0 right-0 z-40 border-t px-4 pt-3"
+    style={{
+      background: 'var(--bg-card)', borderColor: 'var(--border)',
+      paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)',
+    }}>
+    <TimerBar ... isBottomBar />
   </div>
 )}
 
-// main content dostane pb-24 když je timer dole
-<main className={`flex-1 p-4 lg:p-6 flex flex-col${timerAtBottom && shouldShowTimer ? ' pb-24' : ''}`}>
+// main content dostane safe-area padding když je timer dole (v2.30.0)
+<main
+  className="flex-1 p-4 lg:p-6 flex flex-col"
+  style={timerAtBottom && shouldShowTimer ? { paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 130px)' } : undefined}
+>
 ```
 `profile` je dostupný přes `useAuth()` přímo v `DashboardLayout` – není potřeba předávat prop.
+
+### DashboardLayout.tsx – auto-hide header (v2.30.0)
+- Funguje **jen na mobilu** (`isMobile = true`), na desktopu `headerHidden` je vždy `false`
+- Používá `headerHiddenRef` (stale-closure safe) + `scrollStateRef` (lastY, lastTime, upDelta) pro výpočet
+- **Logika**: scroll dolů > 4px → skrýt; scroll nahoru > 4px: přičti do upDelta; zobraz pokud `velocity > 300px/s || upDelta > 100px`; y < 60 → vždy zobrazit
+- `transform: headerHidden ? 'translateY(-100%)' : 'translateY(0)'` + `transition-transform duration-200`
+- `sticky top-0` zůstává – element je ve flow, layout se neposunuje
+
+### TimerBar.tsx – isBottomBar prop (v2.30.0)
+- `isBottomBar?: boolean` (default false) – předáváno z DashboardLayout když je timer fixně dole
+- **Větší touch targety**: start/stop `w-11 h-11` (vs `w-9 h-9`), ikony 18/16px (vs 15/13px)
+- **Větší picker buttony**: `px-2.5 py-2` (vs `px-2 py-1.5`), ikony 18px (vs 16px)
+- **Větší discard**: `p-2.5` (vs `p-2`), ikona 18px (vs 16px)
+- **Dropdowny nahoru**: `top: Math.max(8, rect.top - 324)` (vs `rect.bottom + 4`)
+- **Gap**: `gap-3` vždy (vs `gap-2 sm:gap-3`)
 
 ---
 

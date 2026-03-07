@@ -316,8 +316,17 @@ const DEFAULT_HELP_CONTENT = `
 <h3>Měřič v záhlaví na všech stránkách</h3>
 <p>Ve výchozím nastavení je Měřič (timer) viditelný pouze na stránce Měřič. Pokud chcete mít přístup k timeru i na ostatních stránkách (Přehled, Reporty, Tým apod.), zapněte v <strong>Detailní nastavení → Zobrazení aplikace</strong> přepínač <em>„Zobrazovat Měřič v záhlaví na všech stránkách"</em>. Toto nastavení je per-uživatel a nijak neovlivňuje ostatní členy workspace.</p>
 
+<h3>Automatické skrývání záhlaví na mobilu</h3>
+<p>Na mobilních zařízeních se záhlaví aplikace (včetně panelu Měřiče) automaticky skryje při scrollu dolů, aby uvolnilo více místa pro obsah. Záhlaví se opět zobrazí:</p>
+<ul>
+  <li>Při <strong>rychlém scrollu nahoru</strong> (rychlost &gt; 300 px/s)</li>
+  <li>Po odscrollování <strong>alespoň 100 px zpět</strong> nahoru (i pomalejším tempem)</li>
+  <li>Vždy, když jste <strong>na vrcholu stránky</strong> (méně než 60 px od vrchu)</li>
+</ul>
+<p>Pomalý scroll nahoru záhlaví záměrně nezobrazí. Na desktopu a tabletu se záhlaví neskrývá nikdy.</p>
+
 <h3>Měřič u spodní hrany obrazovky (mobilní)</h3>
-<p>Na mobilních zařízeních (telefon) lze panel Měřiče přesunout ze záhlaví ke <strong>spodní hraně obrazovky</strong> jako pevnou lištu. Zapněte v <strong>Detailní nastavení → Zobrazení aplikace</strong> přepínač <em>„Měřič u spodní hrany obrazovky (pouze mobil)"</em>. Na desktopu a tabletu tato volba nemá žádný efekt – Měřič tam zůstává v záhlaví. Při aktivní spodní liště se obsah stránky automaticky odsadí. Obě volby lze kombinovat: „záhlaví na všech stránkách" řídí <em>zda</em> se Měřič zobrazí, „spodní hrana" řídí <em>kde</em> se zobrazí na mobilu.</p>
+<p>Na mobilních zařízeních (telefon) lze panel Měřiče přesunout ze záhlaví ke <strong>spodní hraně obrazovky</strong> jako pevnou lištu. Zapněte v <strong>Detailní nastavení → Zobrazení aplikace</strong> přepínač <em>„Měřič u spodní hrany obrazovky (pouze mobil)"</em>. Na desktopu a tabletu tato volba nemá žádný efekt – Měřič tam zůstává v záhlaví. Při aktivní spodní liště se obsah stránky automaticky odsadí. Lišta respektuje bezpečnou oblast displeje (safe area) – na iPhonech se zaoblenými displeji jsou tlačítka dostatečně daleko od hrany. Obě volby lze kombinovat: „záhlaví na všech stránkách" řídí <em>zda</em> se Měřič zobrazí, „spodní hrana" řídí <em>kde</em> se zobrazí na mobilu.</p>
 
 <h3>Pozvánky v Kalendáři</h3>
 <p>Pokud vás někdo pozval na událost, najdete všechny pozvánky na jednom místě – tlačítkem <strong>Pozvánky</strong> (ikona obálky) v horním záhlaví Kalendáře, přístupné ze všech pohledů (Den / Týden / Měsíc / Seznam). Červený odznak na tlačítku ukazuje počet pozvánek čekajících na odpověď.</p>
