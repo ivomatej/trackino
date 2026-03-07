@@ -526,7 +526,8 @@ function PageViewer({ page, onChecklistToggle, onPageLinkClick }: {
         .prose-view ul{list-style:disc;padding-left:20px;margin:4px 0}
         .prose-view ol{list-style:decimal;padding-left:20px;margin:4px 0}
         .prose-view p{margin:4px 0;line-height:1.6}
-        .prose-view pre{position:relative;background:var(--bg-hover);padding:12px 40px 12px 12px;border-radius:8px;font-family:monospace;font-size:13px;overflow-x:auto;margin:16px 0;border:1px solid var(--border);cursor:default}
+        .prose-view pre{position:relative;background:var(--bg-hover);padding:12px 40px 12px 12px;border-radius:8px;font-family:monospace;font-size:13px;overflow-x:auto;margin:16px 0;border:1px solid var(--border);cursor:default;white-space:pre-wrap;word-break:break-all}
+        .prose-view pre code{white-space:pre-wrap;word-break:break-all;display:block}
         .prose-view pre::after{content:"";position:absolute;top:8px;right:8px;width:20px;height:20px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='13' height='13' rx='2' ry='2'/%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:center;cursor:pointer;opacity:0.5;transition:opacity 0.15s,background-image 0.1s}
         .prose-view pre:hover::after{opacity:1}
         .prose-view pre.kb-code-copied::after{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2322c55e' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");opacity:1!important}
@@ -625,9 +626,9 @@ function KbFolderTree({ folders, pages, selectedFolderId, expanded, onSelectFold
 
 // ── Page List View ────────────────────────────────────────────────────────────
 
-function PageListView({ pages, folders, members, favorites, filterLabel, filterIcon, onSelectPage, onNewPage, STATUS_CONFIG: sc }: {
+function PageListView({ pages, folders, members, favorites, allReviews, filterLabel, filterIcon, onSelectPage, onNewPage, STATUS_CONFIG: sc }: {
   pages: KbPage[]; folders: KbFolder[]; members: KbMember[];
-  favorites: Set<string>; filterLabel: string; filterIcon: React.ReactNode;
+  favorites: Set<string>; allReviews: Pick<KbReview, 'page_id' | 'review_date' | 'is_done'>[]; filterLabel: string; filterIcon: React.ReactNode;
   onSelectPage: (id: string) => void; onNewPage: () => void;
   STATUS_CONFIG: Record<KbPageStatus, { label: string; color: string }>;
 }) {
@@ -667,6 +668,8 @@ function PageListView({ pages, folders, members, favorites, filterLabel, filterI
             {pages.map((p, i) => {
               const path = getFolderPath(p.folder_id, folders);
               const author = members.find(m => m.user_id === (p.updated_by ?? p.created_by));
+              const pageReviews = allReviews.filter(r => r.page_id === p.id && r.is_done && r.review_date);
+              const lastReview = pageReviews.sort((a, b) => b.review_date!.localeCompare(a.review_date!))[0];
               return (
                 <div key={p.id}
                   className="flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors"
@@ -693,9 +696,6 @@ function PageListView({ pages, folders, members, favorites, filterLabel, filterI
                           {path}
                         </span>
                       )}
-                      {p.tags.length > 0 && p.tags.slice(0, 2).map(tag => (
-                        <span key={tag} className="text-[11px] px-1.5 py-0 rounded-full" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>#{tag}</span>
-                      ))}
                     </div>
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0">
@@ -708,9 +708,16 @@ function PageListView({ pages, folders, members, favorites, filterLabel, filterI
                         {getInitials(author.display_name)}
                       </div>
                     )}
-                    <span className="text-[11px] whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>
-                      {new Date(p.updated_at).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'short' })}
-                    </span>
+                    <div className="flex flex-col items-end gap-0.5">
+                      <span className="text-[11px] whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>
+                        {new Date(p.updated_at).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </span>
+                      {lastReview && (
+                        <span className="text-[10px] whitespace-nowrap" style={{ color: 'var(--text-muted)', opacity: 0.7 }} title="Datum poslední revize">
+                          revize {new Date(lastReview.review_date!).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
@@ -741,10 +748,8 @@ function KnowledgeBaseContent() {
   const [editTitle, setEditTitle] = useState('');
   const [editContent, setEditContent] = useState('');
   const [editStatus, setEditStatus] = useState<KbPageStatus>('active');
-  const [editTags, setEditTags] = useState<string[]>([]);
   const [editRestricted, setEditRestricted] = useState(false);
   const [editFolderId, setEditFolderId] = useState<string | null>(null);
-  const [tagInput, setTagInput] = useState('');
   const [saving, setSaving] = useState(false);
   const [movingPageId, setMovingPageId] = useState<string | null>(null);
   const [copiedPage, setCopiedPage] = useState(false);
@@ -755,6 +760,7 @@ function KnowledgeBaseContent() {
   const [comments, setComments] = useState<KbComment[]>([]);
   const [versions, setVersions] = useState<KbVersion[]>([]);
   const [reviews, setReviews] = useState<KbReview[]>([]);
+  const [allReviews, setAllReviews] = useState<Pick<KbReview, 'page_id' | 'review_date' | 'is_done'>[]>([]);
   const [access, setAccess] = useState<KbAccess[]>([]);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
@@ -792,16 +798,18 @@ function KnowledgeBaseContent() {
     if (!currentWorkspace || !user) return;
     const wid = currentWorkspace.id;
 
-    const [{ data: fData }, { data: pData }, { data: memData }, { data: favData }] = await Promise.all([
+    const [{ data: fData }, { data: pData }, { data: memData }, { data: favData }, { data: revData }] = await Promise.all([
       supabase.from('trackino_kb_folders').select('*').eq('workspace_id', wid).order('name'),
       supabase.from('trackino_kb_pages').select('*').eq('workspace_id', wid).order('updated_at', { ascending: false }),
       supabase.from('trackino_workspace_members').select('user_id').eq('workspace_id', wid).eq('approved', true),
       supabase.from('trackino_kb_favorites').select('page_id').eq('user_id', user.id),
+      supabase.from('trackino_kb_reviews').select('page_id,review_date,is_done').eq('workspace_id', wid),
     ]);
 
     setFolders((fData ?? []) as KbFolder[]);
     setPages((pData ?? []) as KbPage[]);
     setFavorites(new Set((favData ?? []).map((f: { page_id: string }) => f.page_id)));
+    setAllReviews((revData ?? []) as Pick<KbReview, 'page_id' | 'review_date' | 'is_done'>[]);
 
     // Fetch member profiles
     const uids = ((memData ?? []) as { user_id: string }[]).map(m => m.user_id);
@@ -860,7 +868,6 @@ function KnowledgeBaseContent() {
     setEditTitle(page.title);
     setEditContent(page.content);
     setEditStatus(page.status);
-    setEditTags([...page.tags]);
     setEditRestricted(page.is_restricted);
     setEditFolderId(page.folder_id);
     setEditing(true);
@@ -870,7 +877,7 @@ function KnowledgeBaseContent() {
     if (!user || !currentWorkspace || !selectedPage) return;
     setSaving(true);
     const now = new Date().toISOString();
-    const payload = { title: editTitle.trim() || 'Bez názvu', content: editContent, status: editStatus, tags: editTags, is_restricted: editRestricted, folder_id: editFolderId, updated_by: user.id, updated_at: now };
+    const payload = { title: editTitle.trim() || 'Bez názvu', content: editContent, status: editStatus, is_restricted: editRestricted, folder_id: editFolderId, updated_by: user.id, updated_at: now };
 
     if (selectedPage.id.startsWith('__new__')) {
       const { data: np } = await supabase.from('trackino_kb_pages').insert({
@@ -932,7 +939,6 @@ function KnowledgeBaseContent() {
     setEditTitle(fake.title);
     setEditContent(fake.content);
     setEditStatus('draft');
-    setEditTags([]);
     setEditRestricted(false);
     setComments([]); setVersions([]); setReviews([]); setAccess([]);
   };
@@ -1097,13 +1103,6 @@ function KnowledgeBaseContent() {
     setTimeout(() => setCopiedPage(false), 2000);
   };
 
-  // ── Tags ──────────────────────────────────────────────────────────────────
-
-  const addTag = (val: string) => {
-    const t = val.trim().replace(/,/g, '');
-    if (t && !editTags.includes(t)) setEditTags(prev => [...prev, t]);
-    setTagInput('');
-  };
 
   // ── Filtered pages (search + listFilter) ──────────────────────────────────
 
@@ -1112,8 +1111,7 @@ function KnowledgeBaseContent() {
     if (q) {
       return pages.filter(pg =>
         pg.title.toLowerCase().includes(q) ||
-        pg.content.toLowerCase().includes(q) ||
-        pg.tags.some(t => t.toLowerCase().includes(q))
+        pg.content.toLowerCase().includes(q)
       );
     }
     if (!listFilter) return pages;
@@ -1453,6 +1451,7 @@ function KnowledgeBaseContent() {
               folders={folders}
               members={members}
               favorites={favorites}
+              allReviews={allReviews}
               filterLabel={filterLabel ?? ''}
               filterIcon={filterIcon}
               onSelectPage={selectPage}
@@ -1561,23 +1560,6 @@ function KnowledgeBaseContent() {
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}><polyline points="6 9 12 15 18 9"/></svg>
                       </div>
                     </div>
-                    {/* Row 2 edit: Štítky */}
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="text-xs mr-1" style={{ color: 'var(--text-muted)' }}>Štítky:</span>
-                      {editTags.map(tag => (
-                        <span key={tag} className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs" style={{ background: 'var(--bg-hover)', color: 'var(--text-secondary)' }}>
-                          #{tag}
-                          <button type="button" onClick={() => setEditTags(prev => prev.filter(t => t !== tag))} className="hover:opacity-70">
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                          </button>
-                        </span>
-                      ))}
-                      <input value={tagInput} onChange={e => setTagInput(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTag(tagInput); } }}
-                        onBlur={() => { if (tagInput.trim()) addTag(tagInput); }}
-                        placeholder="+ štítek" className="text-xs px-2 py-0.5 rounded-full border text-base sm:text-sm"
-                        style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)', width: 90 }} />
-                    </div>
                   </div>
                 ) : (
                   <div className="flex flex-wrap items-center gap-3 mb-6">
@@ -1585,14 +1567,6 @@ function KnowledgeBaseContent() {
                     <span className="px-3 py-1 rounded-full text-xs font-semibold border" style={{ borderColor: STATUS_CONFIG[selectedPage.status].color, color: STATUS_CONFIG[selectedPage.status].color }}>
                       {STATUS_CONFIG[selectedPage.status].label}
                     </span>
-                    {/* Tags */}
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      {selectedPage.tags.map(tag => (
-                        <span key={tag} className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs" style={{ background: 'var(--bg-hover)', color: 'var(--text-secondary)' }}>
-                          #{tag}
-                        </span>
-                      ))}
-                    </div>
                     {/* Current folder */}
                     {selectedPage.folder_id && (
                       <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--text-muted)' }}>
