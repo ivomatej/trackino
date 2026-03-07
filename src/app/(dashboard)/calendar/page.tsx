@@ -3609,7 +3609,14 @@ function CalendarContent() {
                                         <div className="flex-1 min-w-0">
                                           <div className="flex items-center gap-2 flex-wrap">
                                             <span className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>{ev.title}</span>
-                                            {ev.source !== 'manual' && (
+                                            {ev.source === 'shared' ? (() => {
+                                              const info = sharedWithMe.find(s => s.calendar_id === ev.calendar_id);
+                                              return (
+                                                <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: ev.color + '22', color: ev.color }}>
+                                                  {info ? `${info.name} · ${info.owner_name}` : 'Sdílený kalendář'}
+                                                </span>
+                                              );
+                                            })() : ev.source !== 'manual' && (
                                               <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: ev.color + '22', color: ev.color }}>
                                                 {ev.source === 'subscription'
                                                   ? (subscriptions.find(s => s.id === ev.source_id)?.name ?? 'Ext. kalendář')
