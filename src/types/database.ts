@@ -32,6 +32,7 @@ export type ModuleId =
   | 'office_rules'
   | 'prompts'
   | 'bookmarks'
+  | 'notebook'
   | 'ai_assistant';
 
 /** Per-uživatelský override modulu (nad rámec tarifu nebo zakázání) */
@@ -833,4 +834,42 @@ export interface AiUsageLimit {
   token_limit: number | null; // null = bez limitu
   created_at: string;
   updated_at: string;
+}
+
+// === Poznámky (notebook) ===
+
+export interface Note {
+  id: string;
+  workspace_id: string;
+  user_id: string;
+  title: string;
+  content: string;
+  tasks: { id: string; text: string; checked: boolean }[];
+  folder_id: string | null;
+  is_favorite: boolean;
+  is_important: boolean;
+  is_archived: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NoteFolder {
+  id: string;
+  workspace_id: string;
+  name: string;
+  parent_id: string | null;
+  owner_id: string;
+  is_shared: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NoteFolderShare {
+  id: string;
+  folder_id: string;
+  workspace_id: string;
+  user_id: string | null; // null = celý workspace
+  shared_by: string;
+  created_at: string;
 }

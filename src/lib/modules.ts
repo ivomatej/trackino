@@ -19,6 +19,7 @@ export const ALL_MODULES: { id: ModuleId; label: string; description: string; gr
   { id: 'team',            label: 'Tým',                description: 'Správa členů týmu',                    group: 'Správa' },
   { id: 'settings',        label: 'Nastavení',          description: 'Nastavení workspace (jen admin)',       group: 'Správa' },
   { id: 'audit',           label: 'Audit log',          description: 'Protokol změn v systému',              group: 'Správa' },
+  { id: 'notebook',        label: 'Poznámky',            description: 'Osobní poznámky se složkami, checklisty a sdílením', group: 'Nástroje' },
   { id: 'text_converter',  label: 'Převodník textu',    description: 'Převod formátovaného textu na prostý text nebo Markdown', group: 'Nástroje' },
   { id: 'bookmarks',      label: 'Záložky',             description: 'Sdílené i soukromé záložky webových odkazů se složkami a hodnocením', group: 'Nástroje' },
   { id: 'ai_assistant',   label: 'AI asistent',         description: 'Chatovací okno napojené na AI modely (OpenAI GPT a další)', group: 'Nástroje' },
@@ -71,6 +72,7 @@ export const TARIFF_MODULES: Record<Tariff, ModuleId[]> = {
     'office_rules',
     'prompts',
     'bookmarks',
+    'notebook',
   ],
   max: [
     'time_tracker',
@@ -99,6 +101,7 @@ export const TARIFF_MODULES: Record<Tariff, ModuleId[]> = {
     'office_rules',
     'prompts',
     'bookmarks',
+    'notebook',
     'ai_assistant',
   ],
 };
