@@ -11,6 +11,11 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.26.0 – 7. 3. 2026</h3>
+<ul>
+  <li><strong>Kalendář – Pending události ve všech pohledech</strong> – události, kde jste pozvaní a zatím jste neodpověděli (čeká na potvrzení), nyní mají čárkovaný rámeček a otazník před názvem ve <em>všech</em> pohledech: Den, Týden i Seznam. Dosud bylo toto označení jen v pohledu Měsíc.</li>
+</ul>
+
 <h3>v2.25.2 – 7. 3. 2026</h3>
 <ul>
   <li><strong>Kalendář – Seznam: badge sdílených událostí</strong> – štítek u sdílených událostí v pohledu Seznam nyní zobrazuje název kalendáře a jméno vlastníka (např. „Pracovní · Jan Novák") místo obecného textu „Sdílený kalendář".</li>

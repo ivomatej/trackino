@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 7. 3. 2026 (v2.25.2)
+> Aktualizováno: 7. 3. 2026 (v2.26.0)
 
 ---
 
@@ -493,6 +493,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.26.0 | 7. 3. 2026 | Kalendář: čárkovaný rámeček + otazník u pending (čeká na potvrzení) událostí rozšířen do pohledů Den, Týden a Seznam (dosud jen Měsíc/EventPill) |
 | v2.25.2 | 7. 3. 2026 | Kalendář/Seznam: badge sdílených událostí zobrazuje název kalendáře + jméno vlastníka (přidán `shared_calendar_name` do DisplayEvent, naplněn v `fetchSharedEvents`) |
 | v2.25.1 | 7. 3. 2026 | Kalendář: sekce „SDÍLENÉ" přejmenována na „SDÍLENÉ KALENDÁŘE", color picker přesunut za label (hover, stejný vzor jako Automaticky/Další), sekce přesunuta nad Další kalendáře |
 | v2.25.0 | 7. 3. 2026 | Kalendář: color picker pro Státní svátky, Jmeniny, Narozeniny v sekci Další kalendáře (hover → barevná tečka → picker); sjednocení checkboxů (všechny custom button s bílou fajfkou); sekce Automaticky – odstraněn puntík vedle checkboxu, color picker přesunut za label (hover); Tým: Datum narození přesunuto nad Typ spolupráce |
