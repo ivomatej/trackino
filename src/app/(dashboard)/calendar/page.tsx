@@ -1973,14 +1973,17 @@ function CalendarContent() {
 
   const visibleRange = useMemo(() => {
     if (view === 'week') {
-      const start = getMonday(currentDate);
-      return { start, end: addDays(start, 6) };
+      const start = getMonday(currentDate); start.setHours(0, 0, 0, 0);
+      const end = addDays(start, 6); end.setHours(23, 59, 59, 999);
+      return { start, end };
     } else if (view === 'month') {
       const start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
       const end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
       return { start: addDays(getMonday(start), -7), end: addDays(end, 14) };
     } else if (view === 'today') {
-      return { start: currentDate, end: currentDate };
+      const todayStart = new Date(currentDate); todayStart.setHours(0, 0, 0, 0);
+      const todayEnd = new Date(currentDate); todayEnd.setHours(23, 59, 59, 999);
+      return { start: todayStart, end: todayEnd };
     } else if (view === 'year') {
       const year = currentDate.getFullYear();
       return { start: new Date(year, 0, 1), end: new Date(year, 11, 31) };
