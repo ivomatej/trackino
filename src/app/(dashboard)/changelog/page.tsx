@@ -11,6 +11,12 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.27.0 – 7. 3. 2026</h3>
+<ul>
+  <li><strong>Kalendář – Upozornění na změnu události</strong> – pokud organizátor po vašem přijetí změní datum, čas nebo místo konání, událost se znovu označí čárkovaným rámečkem a otazníkem „?" (jako nová pozvánka). V detailu události uvidíte žlutý blok „Událost byla upravena organizátorem" se starými hodnotami přeškrtnutými a novými hodnotami. Tlačítko „Beru na vědomí" (nebo „Odmítnout") potvrdí přijetí změny.</li>
+  <li><strong>Kalendář – Organizátor vidí stav</strong> – v přehledu účastníků u vlastní události nově vidíte ikonu <strong>!</strong> (žlutě) u těch, kteří ještě nepotvrdili upravenou verzi.</li>
+</ul>
+
 <h3>v2.26.0 – 7. 3. 2026</h3>
 <ul>
   <li><strong>Kalendář – Pending události ve všech pohledech</strong> – události, kde jste pozvaní a zatím jste neodpověděli (čeká na potvrzení), nyní mají čárkovaný rámeček a otazník před názvem ve <em>všech</em> pohledech: Den, Týden i Seznam. Dosud bylo toto označení jen v pohledu Měsíc.</li>

@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 7. 3. 2026 (v2.26.0)
+> Aktualizováno: 7. 3. 2026 (v2.27.0)
 
 ---
 
@@ -127,7 +127,7 @@ Výchozí policy: `CREATE POLICY "Auth full" ... FOR ALL TO authenticated USING 
 | `trackino_calendar_shares` | id, calendar_id, shared_with_user_id (uuid\|null), share_with_workspace (bool), show_details (bool), can_edit, created_at | Sdílení kalendáře: shared_with_user_id=null + share_with_workspace=true = sdílení celému workspace |
 | `trackino_calendar_share_prefs` | id, calendar_id, user_id, is_enabled (bool), color_override (text\|null), created_at | Preference příjemce sdíleného kalendáře (viditelnost, barva) |
 | `trackino_ics_event_cache` | id, subscription_id, workspace_id, uid, title, description, start_date, end_date, start_time, end_time, is_all_day, synced_at | Cache ICS událostí pro sdílení (bez URL exposure) – UNIQUE(subscription_id, uid) |
-| `trackino_calendar_event_attendees` | id, event_id, workspace_id, user_id, status ('pending'\|'accepted'\|'declined'), created_at | Účastníci událostí s RSVP statusem – UNIQUE(event_id, user_id) |
+| `trackino_calendar_event_attendees` | id, event_id, workspace_id, user_id, status ('pending'\|'accepted'\|'declined'\|'updated'), created_at, prev_start_date, prev_end_date, prev_start_time, prev_end_time, prev_location | Účastníci událostí s RSVP statusem – UNIQUE(event_id, user_id); status 'updated' = přijatá událost byla změněna organizátorem, prev_* uchovávají předchozí hodnoty |
 | `trackino_workspace_pages` | id, workspace_id, slug ('company-rules'\|'office-rules'), content (HTML), updated_at, updated_by | Per-workspace editovatelné textové stránky (UNIQUE workspace_id+slug) |
 | `trackino_document_folders` | id, workspace_id, name, color, sort_order, created_by, created_at, updated_at | Složky pro organizaci dokumentů |
 | `trackino_documents` | id, workspace_id, folder_id (uuid\|null), name, type ('file'\|'link'), file_path (text\|null), file_size (int\|null), file_mime (text\|null), url (text\|null), description, created_by, created_at, updated_at | Firemní dokumenty a odkazy; soubory uloženy v Supabase Storage bucket `trackino-documents` |
@@ -493,6 +493,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.27.0 | 7. 3. 2026 | Kalendář: nový attendee status `'updated'` – organizátor mění přijatou událost (datum/čas/místo) → přijatí účastníci dostanou dashed border + diff blok v modalu (přeškrtnuté staré hodnoty → nové); `trackino_calendar_event_attendees` rozšířena o prev_* sloupce |
 | v2.26.0 | 7. 3. 2026 | Kalendář: čárkovaný rámeček + otazník u pending (čeká na potvrzení) událostí rozšířen do pohledů Den, Týden a Seznam (dosud jen Měsíc/EventPill) |
 | v2.25.2 | 7. 3. 2026 | Kalendář/Seznam: badge sdílených událostí zobrazuje název kalendáře + jméno vlastníka (přidán `shared_calendar_name` do DisplayEvent, naplněn v `fetchSharedEvents`) |
 | v2.25.1 | 7. 3. 2026 | Kalendář: sekce „SDÍLENÉ" přejmenována na „SDÍLENÉ KALENDÁŘE", color picker přesunut za label (hover, stejný vzor jako Automaticky/Další), sekce přesunuta nad Další kalendáře |
