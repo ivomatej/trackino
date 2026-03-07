@@ -185,6 +185,9 @@ function AiAssistantContent() {
     return conversations.filter(c => c.title.toLowerCase().includes(q));
   }, [conversations, convSearch]);
 
+  const favConvs = useMemo(() => filteredConvs.filter(c => c.is_favorite), [filteredConvs]);
+  const regularConvs = useMemo(() => filteredConvs.filter(c => !c.is_favorite), [filteredConvs]);
+
   // Dostupné modely pro tohoto uživatele (dle ai_allowed_models v membershipa)
   // Pokud null → všechny modely dostupné
   // Budoucí: filtrace dle membership.ai_allowed_models
@@ -284,6 +287,15 @@ function AiAssistantContent() {
       setMessages([]);
     }
     await fetchConversations();
+  }
+
+  async function toggleFavorite(convId: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    const conv = conversations.find(c => c.id === convId);
+    if (!conv) return;
+    const newVal = !conv.is_favorite;
+    await supabase.from('trackino_ai_conversations').update({ is_favorite: newVal }).eq('id', convId);
+    setConversations(prev => prev.map(c => c.id === convId ? { ...c, is_favorite: newVal } : c));
   }
 
   // ── Firecrawl helpers ────────────────────────────────────────────────────
@@ -632,6 +644,56 @@ function AiAssistantContent() {
     setTimeout(() => setCopiedPromptId(null), 1500);
   }
 
+  // ── Helper: renderování jedné položky v seznamu konverzací ──────────────
+  const renderConvItem = (conv: AiConversation) => (
+    <button
+      key={conv.id}
+      onClick={() => loadConversation(conv.id)}
+      className="w-full text-left px-2.5 py-2 rounded-lg group relative transition-colors"
+      style={{
+        background: activeConvId === conv.id ? 'var(--bg-hover)' : 'transparent',
+        border: activeConvId === conv.id ? '1px solid var(--border)' : '1px solid transparent',
+      }}
+    >
+      <p className="text-xs font-medium truncate pr-14" style={{ color: 'var(--text-primary)' }}>
+        {conv.title}
+      </p>
+      <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+        {fmtDate(conv.updated_at)} · {AI_MODELS.find(m => m.id === conv.model_id)?.name ?? conv.model_id}
+      </p>
+      {/* Akční tlačítka */}
+      <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+        {/* Hvězdička */}
+        <button
+          onClick={e => toggleFavorite(conv.id, e)}
+          className={`p-1 rounded transition-all ${conv.is_favorite ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+          style={{ color: conv.is_favorite ? '#f59e0b' : 'var(--text-muted)' }}
+          title={conv.is_favorite ? 'Odebrat z oblíbených' : 'Přidat do oblíbených'}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill={conv.is_favorite ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+          </svg>
+        </button>
+        {/* Koš */}
+        <button
+          onClick={e => deleteConversation(conv.id, e)}
+          className="p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+          style={{ color: 'var(--text-muted)' }}
+          onMouseEnter={e => (e.currentTarget.style.color = '#ef4444')}
+          onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+          title="Smazat konverzaci"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+            <path d="M10 11v6M14 11v6"/>
+            <path d="M9 6V4h6v2"/>
+          </svg>
+        </button>
+      </div>
+    </button>
+  );
+
   // Přístup: tarif Max + canUseAiAssistant
   if (!hasModule('ai_assistant') || !canUseAiAssistant) {
     return (
@@ -710,36 +772,33 @@ function AiAssistantContent() {
               <p className="text-xs text-center py-4" style={{ color: 'var(--text-muted)' }}>
                 {convSearch ? 'Žádné výsledky' : 'Zatím žádné konverzace'}
               </p>
-            ) : filteredConvs.map(conv => (
-              <button
-                key={conv.id}
-                onClick={() => loadConversation(conv.id)}
-                className="w-full text-left px-2.5 py-2 rounded-lg group relative transition-colors"
-                style={{
-                  background: activeConvId === conv.id ? 'color-mix(in srgb, var(--primary) 12%, transparent)' : 'transparent',
-                  border: activeConvId === conv.id ? '1px solid color-mix(in srgb, var(--primary) 25%, transparent)' : '1px solid transparent',
-                }}
-              >
-                <p
-                  className="text-xs font-medium truncate pr-6"
-                  style={{ color: activeConvId === conv.id ? 'var(--primary)' : 'var(--text-primary)' }}
-                >
-                  {conv.title}
-                </p>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                  {fmtDate(conv.updated_at)} · {AI_MODELS.find(m => m.id === conv.model_id)?.name ?? conv.model_id}
-                </p>
-                {/* Mazací tlačítko */}
-                <button
-                  onClick={e => deleteConversation(conv.id, e)}
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                  style={{ color: '#ef4444' }}
-                  title="Smazat konverzaci"
-                >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
-                </button>
-              </button>
-            ))}
+            ) : (
+              <>
+                {/* Oblíbené sekce */}
+                {favConvs.length > 0 && (
+                  <>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide px-2 pt-1.5 pb-0.5" style={{ color: 'var(--text-muted)' }}>
+                      Oblíbené
+                    </p>
+                    {favConvs.map(conv => renderConvItem(conv))}
+                    {regularConvs.length > 0 && (
+                      <div className="my-1.5 mx-1 border-t" style={{ borderColor: 'var(--border)' }} />
+                    )}
+                  </>
+                )}
+                {/* Ostatní konverzace */}
+                {regularConvs.length > 0 && (
+                  <>
+                    {favConvs.length > 0 && (
+                      <p className="text-[10px] font-semibold uppercase tracking-wide px-2 pt-0.5 pb-0.5" style={{ color: 'var(--text-muted)' }}>
+                        Ostatní
+                      </p>
+                    )}
+                    {regularConvs.map(conv => renderConvItem(conv))}
+                  </>
+                )}
+              </>
+            )}
           </div>
 
           {/* Sidebar footer – Firecrawl kredity */}

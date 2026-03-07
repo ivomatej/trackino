@@ -803,6 +803,7 @@ export interface AiConversation {
   title: string;
   model_id: string;
   system_prompt: string;
+  is_favorite: boolean;
   created_at: string;
   updated_at: string;
 }
