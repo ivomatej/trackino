@@ -493,6 +493,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.39.1 | 7. 3. 2026 | Automatizace: editace rozvrhu (tužka → modal s hodinam/minutami/dny/timezone), fix dvojitého lomítka v URL (trailing slash strip); Timer: auto manager note "Práce 8+h v kuse. Ověřit." po 8h s vybraným projektem+kategorií+úkolem; AI asistent: výška stránky s paddingem u patičky, Firecrawl kredity přesunuty do pravého panelu (kompaktní progress bar) |
 | v2.39.0 | 7. 3. 2026 | Automatizace: nová záložka v Nastavení (cron-job.org integrace), 5 šablon (weekly-report AI, inactive-check, kb-reviews-digest, feedback-summary AI, vacation-report), proxy routes /api/cron-jobs/*, 5 cron action handlers /api/cron/*, CRON_SECRET server-side injekce, výsledky v trackino_cron_results |
 | v2.38.0 | 7. 3. 2026 | Znalostní báze: vkládání kdekoliv (savedRange+onMouseDown), plovoucí selection popup (Odkaz/@/Stránka), nový vzhled Callout+Toggle (color-mix, animovaná šipka), checklist bez auto textu, Revize v hlavičce stránky (pill odznaky, červený badge, odebrán tab Recenze→záložky: Komentáře/Historie/Přístupy); AI asistent: měsíční statistiky tokenů per user, per-user token limity (denní/týdenní/měsíční) |
 | v2.37.3 | 7. 3. 2026 | Znalostní báze: 2řádkový toolbar (SVG ikony místo emoji), přiřazení stránky do složky (edit mód + hover v levém panelu), kopírování obsahu (clipboard), fix kódových bloků (min-height + Enter → nový řádek), standardní trash ikony |
@@ -1560,11 +1561,26 @@ Modul pro správu naplánovaných cron jobů integrovaných s **cron-job.org RES
 - `SUPABASE_SERVICE_ROLE_KEY` – jen v cron handlerech (server-side), bypasuje RLS
 
 ### cron-job.org API
+- **Web konzole**: https://console.cron-job.org/
+- **API dokumentace**: https://docs.cron-job.org/
+- **Správa API klíčů**: https://console.cron-job.org/settings (sekce API Keys)
 - Base URL: `https://api.cron-job.org`
 - Auth: `Authorization: Bearer {CRON_JOB_API_KEY}`
 - Schedule format: `{ minutes: [0], hours: [8], wdays: [1], mdays: [-1], months: [-1], timezone: "Europe/Prague", expiresAt: 0 }` kde `[-1]` = každý
-- PUT /jobs → `{ job: { url, title, enabled, saveResponses, schedule, extendedData: { headers, method, body } } }`
-- PATCH /jobs/{id} → `{ job: { enabled: true/false } }`
+  - `wdays`: 0=Ne, 1=Po, 2=Út, 3=St, 4=Čt, 5=Pá, 6=So
+  - `mdays`: dny v měsíci 1–31, `[-1]` = každý den
+- `GET /jobs` → seznam všech jobů workspace
+- `PUT /jobs` → `{ job: { url, title, enabled, saveResponses, schedule, extendedData: { headers, method, body } } }` – vytvoření jobu
+- `PATCH /jobs/{id}` → `{ job: { enabled?: bool, schedule?: {...} } }` – aktualizace (enable/disable nebo celý rozvrh)
+- `DELETE /jobs/{id}` → smazání jobu (vrací HTTP 204)
+- `GET /jobs/{id}/history` → historie spuštění (date timestamp, httpStatus, duration ms)
+
+### Editace rozvrhu (v2.39.1+)
+- Tlačítko tužky u každého jobu v záložce Automatizace → otevře modal s formulářem
+- Formulář: výběr hodiny (0–23), minuty (po 5 minutách), dny v týdnu (toggle buttony), časové pásmo
+- `openEditJob(job)` – naplní form z aktuálního `job.schedule`
+- `saveJobEdit()` – PATCH `/api/cron-jobs/{jobId}` se `{ schedule: {...} }` → proxy route obalí do `{ job: { schedule } }`
+- Po úspěchu: aktualizuje `automationJobs` state lokálně (bez nutnosti re-fetch)
 
 ### DB tabulka trackino_cron_results
 ```sql

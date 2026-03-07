@@ -220,6 +220,14 @@ function SettingsContent() {
   const [autoResults, setAutoResults] = useState<{ id: string; title: string; content: string; status: string; created_at: string }[]>([]);
   const [autoResultsLoading, setAutoResultsLoading] = useState(false);
   const [expandedResult, setExpandedResult] = useState<string | null>(null);
+  // Edit modal pro automatizaci
+  const [editingJob, setEditingJob] = useState<CronJob | null>(null);
+  const [editHour, setEditHour] = useState('8');
+  const [editMinute, setEditMinute] = useState('0');
+  const [editWdays, setEditWdays] = useState<number[]>([-1]);
+  const [editMdays, setEditMdays] = useState<number[]>([-1]);
+  const [editTimezone, setEditTimezone] = useState('Europe/Prague');
+  const [editSaving, setEditSaving] = useState(false);
 
   useEffect(() => {
     if (currentWorkspace) {
@@ -814,6 +822,47 @@ function SettingsContent() {
       }
     } catch { /* ignore */ }
     setAutoHistoryLoading(false);
+  }
+
+  function openEditJob(job: CronJob) {
+    setEditingJob(job);
+    setEditHour(String(job.schedule.hours?.[0] ?? 8));
+    setEditMinute(String(job.schedule.minutes?.[0] ?? 0));
+    setEditWdays(job.schedule.wdays ?? [-1]);
+    setEditMdays(job.schedule.mdays ?? [-1]);
+    setEditTimezone(job.schedule.timezone ?? 'Europe/Prague');
+  }
+
+  async function saveJobEdit() {
+    if (!editingJob) return;
+    setEditSaving(true);
+    const schedule: CronSchedule = {
+      timezone: editTimezone,
+      hours: [parseInt(editHour)],
+      minutes: [parseInt(editMinute)],
+      wdays: editWdays,
+      mdays: editMdays,
+      months: editingJob.schedule.months ?? [-1],
+      expiresAt: 0,
+    };
+    const res = await fetch(`/api/cron-jobs/${editingJob.jobId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ schedule }),
+    });
+    if (res.ok) {
+      setAutomationJobs(prev => prev.map(j =>
+        j.jobId === editingJob.jobId ? { ...j, schedule } : j,
+      ));
+      setEditingJob(null);
+      setMessage('Automatizace aktualizována.');
+      setTimeout(() => setMessage(''), 3000);
+    } else {
+      const err = await res.json();
+      setMessage('Chyba při ukládání: ' + (err.error ?? JSON.stringify(err)));
+      setTimeout(() => setMessage(''), 5000);
+    }
+    setEditSaving(false);
   }
 
   async function saveGeneral() {
@@ -2186,6 +2235,15 @@ function SettingsContent() {
                             >
                               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                             </button>
+                            {/* Upravit */}
+                            <button
+                              onClick={() => openEditJob(job)}
+                              title="Upravit rozvrh"
+                              className="p-1.5 rounded-lg transition-colors hover:opacity-70"
+                              style={{ color: 'var(--text-muted)' }}
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            </button>
                             {/* Smazat */}
                             <button
                               onClick={() => deleteCronJob(job.jobId)}
@@ -2294,6 +2352,143 @@ function SettingsContent() {
                   })}
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* MODAL: Úprava rozvrhu automatizace */}
+        {editingJob && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.5)' }}>
+            <div className="w-full max-w-md rounded-2xl shadow-xl overflow-hidden" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
+                <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>Upravit rozvrh</h2>
+                <button onClick={() => setEditingJob(null)} className="p-1.5 rounded-lg" style={{ color: 'var(--text-muted)' }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+
+              {/* Formulář */}
+              <div className="px-6 py-5 space-y-5">
+                {/* Název (readonly) */}
+                <div>
+                  <p className="text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Automatizace</p>
+                  <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{editingJob.title}</p>
+                </div>
+
+                {/* Čas spuštění */}
+                <div>
+                  <label className="text-xs font-medium block mb-2" style={{ color: 'var(--text-secondary)' }}>Čas spuštění</label>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={editHour}
+                      onChange={e => setEditHour(e.target.value)}
+                      className="flex-1 rounded-lg px-3 py-2 text-sm border text-base sm:text-sm"
+                      style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+                    >
+                      {Array.from({ length: 24 }, (_, i) => (
+                        <option key={i} value={String(i)}>{String(i).padStart(2, '0')}:00</option>
+                      ))}
+                    </select>
+                    <span className="text-sm" style={{ color: 'var(--text-muted)' }}>:</span>
+                    <select
+                      value={editMinute}
+                      onChange={e => setEditMinute(e.target.value)}
+                      className="flex-1 rounded-lg px-3 py-2 text-sm border text-base sm:text-sm"
+                      style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+                    >
+                      {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map(m => (
+                        <option key={m} value={String(m)}>{String(m).padStart(2, '0')}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Den v týdnu */}
+                <div>
+                  <label className="text-xs font-medium block mb-2" style={{ color: 'var(--text-secondary)' }}>Den v týdnu (prázdné = každý den)</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { label: 'Po', val: 1 }, { label: 'Út', val: 2 }, { label: 'St', val: 3 },
+                      { label: 'Čt', val: 4 }, { label: 'Pá', val: 5 }, { label: 'So', val: 6 }, { label: 'Ne', val: 0 },
+                    ].map(day => {
+                      const isEvery = editWdays.includes(-1);
+                      const isSelected = isEvery ? false : editWdays.includes(day.val);
+                      return (
+                        <button
+                          key={day.val}
+                          type="button"
+                          onClick={() => {
+                            if (isEvery) {
+                              setEditWdays([day.val]);
+                            } else if (isSelected) {
+                              const next = editWdays.filter(w => w !== day.val);
+                              setEditWdays(next.length === 0 ? [-1] : next);
+                            } else {
+                              setEditWdays([...editWdays, day.val]);
+                            }
+                          }}
+                          className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors"
+                          style={{
+                            background: isSelected ? 'var(--primary)' : 'var(--bg-hover)',
+                            borderColor: isSelected ? 'var(--primary)' : 'var(--border)',
+                            color: isSelected ? 'white' : 'var(--text-secondary)',
+                          }}
+                        >
+                          {day.label}
+                        </button>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      onClick={() => setEditWdays([-1])}
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors"
+                      style={{
+                        background: editWdays.includes(-1) ? 'var(--primary)' : 'var(--bg-hover)',
+                        borderColor: editWdays.includes(-1) ? 'var(--primary)' : 'var(--border)',
+                        color: editWdays.includes(-1) ? 'white' : 'var(--text-secondary)',
+                      }}
+                    >
+                      Každý den
+                    </button>
+                  </div>
+                </div>
+
+                {/* Timezone */}
+                <div>
+                  <label className="text-xs font-medium block mb-2" style={{ color: 'var(--text-secondary)' }}>Časové pásmo</label>
+                  <select
+                    value={editTimezone}
+                    onChange={e => setEditTimezone(e.target.value)}
+                    className="w-full rounded-lg px-3 py-2 text-sm border text-base sm:text-sm"
+                    style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+                  >
+                    <option value="Europe/Prague">Europe/Prague (výchozí)</option>
+                    <option value="Europe/London">Europe/London</option>
+                    <option value="Europe/Berlin">Europe/Berlin</option>
+                    <option value="UTC">UTC</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-end gap-3 px-6 py-4 border-t" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
+                <button
+                  onClick={() => setEditingJob(null)}
+                  className="px-4 py-2 rounded-xl text-sm border"
+                  style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
+                >
+                  Zrušit
+                </button>
+                <button
+                  onClick={saveJobEdit}
+                  disabled={editSaving}
+                  className="px-4 py-2 rounded-xl text-sm font-medium text-white disabled:opacity-60"
+                  style={{ background: 'var(--primary)' }}
+                >
+                  {editSaving ? 'Ukládám...' : 'Uložit rozvrh'}
+                </button>
+              </div>
             </div>
           </div>
         )}

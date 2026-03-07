@@ -136,11 +136,39 @@ export default function TimerBar({ onEntryChanged, playData, isBottomBar = false
 
   // Background midnight check – každých 30s kontroluje přechod přes půlnoc
   const midnightCheckRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Sada ID záznamů, pro které bylo odesláno 8h varování manažerovi
+  const eightHourNoteRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (isRunning && activeEntry && currentWorkspace && user) {
       midnightCheckRef.current = setInterval(async () => {
         const entryStart = new Date(activeEntry.start_time);
+
+        // ── 8h poznámka pro manažera ─────────────────────────────────────
+        // Spustí se jednou za session pokud timer běží 8+ hodin a jsou vybrány
+        // projekt, kategorie i úkol zároveň.
+        const elapsedSeconds = Math.floor((Date.now() - entryStart.getTime()) / 1000);
+        if (
+          elapsedSeconds >= 8 * 3600 &&
+          selectedProject && selectedCategory && selectedTask &&
+          !eightHourNoteRef.current.has(activeEntry.id)
+        ) {
+          eightHourNoteRef.current.add(activeEntry.id);
+          // Přidáme poznámku jen pokud manažer ještě žádnou nenapsal
+          const { data: curr } = await supabase
+            .from('trackino_time_entries')
+            .select('manager_note')
+            .eq('id', activeEntry.id)
+            .maybeSingle();
+          if (!curr?.manager_note) {
+            await supabase
+              .from('trackino_time_entries')
+              .update({ manager_note: 'Práce 8+h v kuse. Ověřit.' })
+              .eq('id', activeEntry.id);
+            onEntryChanged?.();
+          }
+        }
+
         if (crossesMidnight(entryStart)) {
           // Automatický split: zastavit starý záznam na půlnoci a spustit nový
           const midnight = new Date();

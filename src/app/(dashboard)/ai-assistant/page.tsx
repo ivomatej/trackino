@@ -729,7 +729,7 @@ function AiAssistantContent() {
         />
       )}
 
-      <div className="flex h-full -m-4 lg:-m-6" style={{ height: 'calc(100vh - 64px)' }}>
+      <div className="flex -m-4 lg:-m-6" style={{ height: 'calc(100vh - var(--topbar-height, 56px) - 2rem)' }}>
 
         {/* ── Levý sidebar: seznam konverzací ─────────────────────────────── */}
         <aside
@@ -801,21 +801,6 @@ function AiAssistantContent() {
             )}
           </div>
 
-          {/* Sidebar footer – Firecrawl kredity */}
-          {firecrawlAvailable && (
-            <div className="p-3 border-t text-xs flex-shrink-0" style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
-              <div className="flex items-center justify-between mb-1">
-                <span>Firecrawl kredity</span>
-                <span style={{ color: creditColor }}>{creditsUsed} / {FIRECRAWL_CREDIT_LIMIT}</span>
-              </div>
-              <div className="w-full rounded-full h-1" style={{ background: 'var(--bg-hover)' }}>
-                <div
-                  className="h-1 rounded-full transition-all"
-                  style={{ width: `${Math.min(100, (creditsUsed / FIRECRAWL_CREDIT_LIMIT) * 100)}%`, background: creditColor }}
-                />
-              </div>
-            </div>
-          )}
         </aside>
 
         {/* ── Pravá část: chat ──────────────────────────────────────────────── */}
@@ -1174,7 +1159,7 @@ function AiAssistantContent() {
                 </p>
               </div>
 
-              {/* Pravá část: token counter */}
+              {/* Pravá část: token counter + Firecrawl */}
               <div className="flex flex-col items-end gap-1 flex-shrink-0">
                 <span className="text-xs" style={{ color: tokenBarColor }}
                   title={`Odhadovaný počet tokenů v konverzaci: ~${showTokens.toLocaleString('cs-CZ')} / ${(contextWindow / 1000).toFixed(0)}k kontext`}>
@@ -1190,6 +1175,19 @@ function AiAssistantContent() {
                   <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
                     {messages.length} {messages.length === 1 ? 'zpráva' : messages.length < 5 ? 'zprávy' : 'zpráv'}
                   </span>
+                )}
+                {/* Firecrawl kredity */}
+                {firecrawlAvailable && (
+                  <div className="flex items-center gap-1.5 mt-0.5" title={`Firecrawl kredity: ${creditsUsed} / ${FIRECRAWL_CREDIT_LIMIT}`}>
+                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>🔥</span>
+                    <div className="w-20 rounded-full h-1" style={{ background: 'var(--bg-hover)' }}>
+                      <div
+                        className="h-1 rounded-full transition-all"
+                        style={{ width: `${Math.min(100, (creditsUsed / FIRECRAWL_CREDIT_LIMIT) * 100)}%`, background: creditColor }}
+                      />
+                    </div>
+                    <span className="text-xs" style={{ color: creditColor }}>{creditsUsed}/{FIRECRAWL_CREDIT_LIMIT}</span>
+                  </div>
                 )}
               </div>
             </div>
