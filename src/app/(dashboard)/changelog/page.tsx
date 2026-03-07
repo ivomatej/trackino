@@ -11,6 +11,14 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.40.0 – 7. 3. 2026</h3>
+<ul>
+  <li><strong>Znalostní báze – redesign navigace (PageListView)</strong> – levý panel je nyní čistě navigační (složky, filtry), bez inline stránek. Kliknutím na filtr nebo složku se v hlavní oblasti zobrazí mezivrstva – seznam stránek s názvem, cestou složky, štítky, stavem, autorem a datem. Teprve kliknutím na konkrétní stránku v seznamu se stránka otevře.</li>
+  <li><strong>Znalostní báze – tlačítko Zpět</strong> – při otevřené stránce přes filtr nebo vyhledávání se v záhlaví stránky zobrazí tlačítko ← Zpět, které vrátí uživatele na seznam stránek.</li>
+  <li><strong>Znalostní báze – animace kopírování kódu</strong> – při kliknutí na ikonu kopírování v bloku kódu se ikona změní na zelenou fajfku na 1,5 sekundy (platí v editoru i view modu).</li>
+  <li><strong>Znalostní báze – fulltextové vyhledávání</strong> – hledá v názvech, obsahu i štítcích; výsledky se zobrazují jako seznam stránek v hlavní oblasti (nikoliv v levém panelu).</li>
+</ul>
+
 <h3>v2.39.3 – 7. 3. 2026</h3>
 <ul>
   <li><strong>Znalostní báze – kurzor uvnitř vložených prvků</strong> – po vložení kódového bloku, checklistu nebo infoboxu se kurzor nyní správně umístí dovnitř daného prvku (namísto skoku pod prvek). Implementace: nový helper <code>insBlock(html)</code> s atributem <code>data-kbm</code> jako markerem pro cílovou pozici kurzoru.</li>

@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 7. 3. 2026 (v2.39.3)
+> Aktualizováno: 7. 3. 2026 (v2.40.0)
 
 ---
 
@@ -493,6 +493,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.40.0 | 7. 3. 2026 | Znalostní báze: redesign navigace – levý panel čistě navigační (bez inline stránek), nový typ ListFilter (discriminated union), nová komponenta PageListView (mezivrstva seznam stránek při aktivním filtru), tlačítko ← Zpět v záhlaví stránky (backToList), computed showList/showWelcome; fulltextové hledání v názvech+obsahu+štítcích; animace kopírování kódu (CSS třída kb-code-copied, zelená fajfka 1,5s, editor+viewer) |
 | v2.39.3 | 7. 3. 2026 | Znalostní báze: kurzor uvnitř kód/checklist/infobox (insBlock+data-kbm), infobox color picker (6 barev, data-color, CSS variants, palette ::after, floating picker), Enter v infoboxu = br, Revize přesunuta z hlavičky → záložka reviews (ℹ→SVG), větší odsazení H1/H2/H3+bloky (16–28px), checklist vertical-align fix, filtr Podle zmínky v sidebaru (mentionFilter state) |
 | v2.39.2 | 7. 3. 2026 | Znalostní báze: Naposledy upravené v levém sidebaru (collapsible, top 10 s cestou složky), Nezařazené a Podle stavu filtry v sidebaru (s počty), dvousloupcová úvodní stránka (upravené+nové, 10 položek každý), tab Odkazující stránky (backlinks s cestou+stavem), oprava layoutu edit polí Status+Složka+Štítky, odsazení puntíku stavu v menu (ml-1 mr-2) |
 | v2.39.1 | 7. 3. 2026 | Automatizace: editace rozvrhu (tužka → modal s hodinam/minutami/dny/timezone), fix dvojitého lomítka v URL (trailing slash strip); Timer: auto manager note "Práce 8+h v kuse. Ověřit." po 8h s vybraným projektem+kategorií+úkolem; AI asistent: výška stránky s paddingem u patičky, Firecrawl kredity přesunuty do pravého panelu (kompaktní progress bar) |
@@ -1492,6 +1493,14 @@ export interface KbAccess { id, workspace_id, page_id, user_id, can_edit, create
 ### Lokální typy (knowledge-base/page.tsx)
 ```typescript
 type PageTab = 'comments' | 'history' | 'access' | 'backlinks' | 'reviews';
+type ListFilter =
+  | { type: 'all' }
+  | { type: 'favorites' }
+  | { type: 'recent' }
+  | { type: 'unfiled' }
+  | { type: 'status'; value: KbPageStatus }
+  | { type: 'mention'; userId: string }
+  | { type: 'folder'; folderId: string };
 interface KbMember { user_id: string; display_name: string; avatar_color: string; }
 const STATUS_CONFIG: Record<KbPageStatus, { label: string; color: string }>
 ```
@@ -1537,11 +1546,16 @@ const STATUS_CONFIG: Record<KbPageStatus, { label: string; color: string }>
 - Atribut `data-kbm` se v HTML odstraní po insertu; kurzor se umístí přes `range.setStart(target, 0)`
 - Používán pro: kód (`<code data-kbm>`), checklist (`<li data-kbm>`), infobox (`<div data-kbm class="kb-callout">`)
 
-### Filtr Podle zmínky (v2.39.3)
-- State: `mentionFilter: string | null`, `mentionSectionExpanded: boolean`
-- `filteredPages` branch: `p.content.includes('data-user-id="${mentionFilter}"')` při aktivním filtru
-- Sidebar sekce „Podle zmínky": collapsible, zobrazuje členy s počtem stránek kde jsou zmíněni (> 0); kliknutí → `setMentionFilter(userId)`
-- Kliknutí na Všechny stránky / Nezařazené / Podle stavu / KbFolderTree onSelectFolder → resetuje `mentionFilter` na null
+### Navigace – třístavová logika (v2.40.0)
+- **State**: `listFilter: ListFilter | null` – aktuálně aktivní filtr (nebo null = welcome screen)
+- **Computed**: `filteredPages` (podle search nebo listFilter), `filterLabel` (string), `filterIcon` (JSX), `showList` (bool), `showWelcome` (bool)
+- **showWelcome**: `!search && listFilter === null && !selectedPage` → zobrazí dvousloupcový přehled
+- **showList**: `(search.trim() || listFilter !== null) && !selectedPage` → zobrazí `PageListView`
+- **KbFolderTree**: nyní bez inline stránek – zobrazuje jen složky s počtem stránek (badge)
+- **PageListView** komponenta: zobrazí header s ikonou/labelm/počtem + tlačítko Nová stránka + seznam stránek s metadaty
+- **backToList()**: `setSelectedPage(null); setEditing(false); setComments([]); ...`
+- **Tlačítko Zpět**: zobrazí se v záhlaví stránky když `listFilter !== null || search.trim()` a stránka není nová
+- **Animace kopírování kódu**: CSS třída `.kb-code-copied::after` (zelená fajfka SVG, `opacity:1!important`) přidaná přes `classList.add/remove` s 1500ms timeoutem; platí v `.prose-kb` (editor) i `.prose-view` (viewer)
 
 ### Revize v Přehledu (page.tsx)
 - Přidán typ `'kb_review'` do NotificationItem

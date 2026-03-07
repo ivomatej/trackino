@@ -455,12 +455,13 @@ const DEFAULT_HELP_CONTENT = `
 <h3>Znalostní báze</h3>
 <p>Modul <strong>Znalostní báze</strong> (sekce Společnost) je interní wiki pro tvorbu, organizaci a sdílení firemních znalostí a postupů.</p>
 <ul>
-  <li><strong>Složky a stránky</strong> – stránky jsou uspořádány do hierarchických složek s neomezenou hloubkou; stránky lze vytvářet přímo v kořeni nebo ve složce; levý panel zobrazuje stromovou strukturu složek a stránek</li>
+  <li><strong>Navigace v levém panelu</strong> – levý panel je rozdělen do tří sekcí: (1) Rychlé filtry (Všechny stránky, Oblíbené, Naposledy upravené, Nezařazené), (2) Filtry podle stavu a zmínky (collapsible), (3) Stromová struktura složek; kliknutím na filtr nebo složku se v hlavní oblasti zobrazí seznam stránek – kliknutím na konkrétní stránku v seznamu se teprve otevře; tlačítko „← Zpět" v záhlaví stránky vrátí na přehled stránek</li>
+  <li><strong>Složky a stránky</strong> – stránky jsou uspořádány do hierarchických složek s neomezenou hloubkou; stránky lze vytvářet přímo v kořeni nebo ve složce; v levém panelu se zobrazuje stromová struktura složek s počtem stránek</li>
   <li><strong>Rich text editor</strong> – toolbar ve dvou řádcích: (1) nadpisy H1–H3, tučné/kurzíva/podtržení, odrážkový a číslovaný seznam, oddělovač; (2) Kód, Odkaz, Zmínky, Stránka, Úkol (zaškrtávací seznam – kurzor se po vložení správně umístí do prvku), Infobox (callout s barevným okrajem – kurzor se umístí dovnitř; Enter zalomí řádek v rámci infoboxu; ikonka palety v pravém rohu pro výběr barvy: výchozí, zelená, žlutá, červená, fialová, šedá), Toggle (skládací blok s animovanou šipkou); kurzor se po vložení kódu, úkolu i infoboxu vždy umístí dovnitř prvku pro okamžité psaní; @zmínky a /odkaz na stránku lze vložit kamkoliv do textu (pozice kurzoru je zachována); při označení textu se zobrazí plovoucí panel s Odkaz/@/Stránka</li>
   <li><strong>Přiřazení do složky</strong> – v editoru stránky lze zvolit složku přes select v metadatech; v levém panelu se při hoveru zobrazí ikonka složky pro rychlé přesunutí stránky</li>
   <li><strong>Kopírování obsahu</strong> – tlačítko kopírování v pravém horním rohu zkopíruje celý obsah stránky jako prostý text do schránky</li>
   <li><strong>Šablony</strong> – při vytvoření nové stránky si vyberte z 5 přednastavených šablon: Prázdná, Zápis z meetingu, Popis procesu, Onboarding průvodce, Dokumentace projektu</li>
-  <li><strong>Fulltextové vyhledávání</strong> – hledá v názvech i obsahu stránek; výsledky se zobrazují v levém panelu</li>
+  <li><strong>Fulltextové vyhledávání</strong> – hledá v názvech, obsahu i štítcích stránek; při hledání se v hlavní oblasti zobrazí seznam odpovídajících stránek; vyhledávání funguje i přes obsah stránek (fulltextové)</li>
   <li><strong>Štítky</strong> – každá stránka může mít libovolný počet štítků; slouží k filtrování a kategorizaci</li>
   <li><strong>Stav stránky</strong> – Koncept (žlutá), Aktivní (zelená), Archiv (šedá); stav lze měnit v editoru</li>
   <li><strong>Revize</strong> – záložka v dolní části stránky (vedle Komentáře, Historie, Přístupy); lze přiřadit datum revize a zodpovědnou osobu; přidání tlačítkem „+ Přidat revizi"; badge s počtem nesplněných revizí; po splnění zaškrtnout; blížící se revize se zobrazí v panelu „K vyřízení" na Přehledu</li>
@@ -469,9 +470,10 @@ const DEFAULT_HELP_CONTENT = `
   <li><strong>Přístupová práva</strong> – stránka může být označena jako omezená (příznak „Přístup omezen"); v záložce Přístupy (jen admin) se přidávají konkrétní uživatelé s oprávněním ke čtení nebo editaci; toggle tlačítka reagují okamžitě (optimistický update)</li>
   <li><strong>Oblíbené</strong> – stránky lze přidávat k oblíbeným (hvězdička); oblíbené stránky se zobrazují v horní části levého panelu</li>
   <li><strong>Naposledy upravené</strong> – v levém panelu je collapsible sekce „Naposledy upravené" se 10 posledně editovanými stránkami včetně cesty do složky</li>
-  <li><strong>Filtry v levém panelu</strong> – „Nezařazené" zobrazí stránky bez složky (s počtem); „Podle stavu" (collapsible) filtruje stránky dle stavu (Koncept / Aktivní / Archiv) s počty; „Podle zmínky" (collapsible) zobrazí seznam členů, kteří jsou @zmíněni v obsahu stránek – kliknutím na člena zobrazíte jen stránky, kde je daný uživatel zmíněn</li>
+  <li><strong>Filtry v levém panelu</strong> – kliknutím na filtr se v hlavní oblasti zobrazí seznam odpovídajících stránek: Všechny stránky, Oblíbené, Naposledy upravené, Nezařazené (jen pokud existují); sekce „Podle stavu" (collapsible) filtruje dle stavu s počty; „Podle zmínky" (collapsible) zobrazí členy s @zmínkami – kliknutím zobrazíte stránky s danou zmínkou</li>
+  <li><strong>Kopírování kódu s animací</strong> – v bloku kódu (editor i viewer) se při kliknutí na ikonu kopírování zobrazí zelená fajfka na 1,5 sekundy pro potvrzení úspěšného zkopírování</li>
   <li><strong>Odkazující stránky</strong> – záložka „Odkazující" v dolní části stránky zobrazí seznam všech stránek, které na tuto stránku odkazují (backlinky), včetně cesty složky a stavu</li>
-  <li><strong>Úvodní stránka</strong> – pokud není vybrána žádná stránka, zobrazí se dvousloupcový přehled: Naposledy upravené (10 položek) a Nově vytvořené (10 položek), obojí s cestou složky</li>
+  <li><strong>Úvodní stránka</strong> – pokud není aktivní žádný filtr, zobrazí se dvousloupcový přehled: Naposledy upravené (10 položek) a Nově vytvořené (10 položek), obojí s cestou složky</li>
 </ul>
 
 <h3>Dokumenty – správa souborů a složek</h3>
