@@ -11,6 +11,12 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.37.2 – 7. 3. 2026</h3>
+<ul>
+  <li><strong>AI asistent – oblíbené konverzace</strong> – v levém panelu přibyla hvězdička ☆ u každé konverzace (zobrazí se při najetí myší). Kliknutím označíte konverzaci jako oblíbenou – hvězdička svítí zlatě a konverzace se přesune do samostatné sekce <strong>OBLÍBENÉ</strong> v horní části seznamu. Ostatní konverzace zůstávají v sekci <strong>OSTATNÍ</strong>. Stav oblíbených je uložen v databázi a přežívá refresh i přihlášení z jiného zařízení. SQL migrace: <code>ALTER TABLE trackino_ai_conversations ADD COLUMN IF NOT EXISTS is_favorite boolean NOT NULL DEFAULT false;</code></li>
+  <li><strong>AI asistent – vizuální vylepšení levého panelu</strong> – aktivní konverzace je nyní zvýrazněna šedou barvou (<code>var(--bg-hover)</code>) místo modré – čistší a méně rušivý vzhled. Ikona koše nahrazena standardní čtyřcestnou SVG ikonkou shodnou s ostatními moduly aplikace.</li>
+</ul>
+
 <h3>v2.37.0 – 7. 3. 2026</h3>
 <ul>
   <li><strong>AI asistent – konverzace ukládány v databázi</strong> – každá konverzace se nyní ukládá per-user do DB (tabulky <code>trackino_ai_conversations</code> a <code>trackino_ai_messages</code>). V levém panelu vidíte historii konverzací s vyhledáváním a možností smazání. Auto-název se generuje z první zprávy.</li>

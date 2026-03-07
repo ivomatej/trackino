@@ -157,7 +157,7 @@ const DEFAULT_HELP_CONTENT = `
 <h3>AI asistent</h3>
 <p>Modul <strong>AI asistent</strong> (dostupný v tarifu <strong>Max</strong>, sekce <strong>NÁSTROJE</strong>) je chatovací okno napojené na AI modely přes API. Aktuálně podporuje <strong>OpenAI</strong> (GPT-4o, GPT-4o mini, GPT-4 Turbo, o1-mini).</p>
 <ul>
-  <li><strong>Konverzace</strong> – každá konverzace je uložena v databázi; v levém panelu vidíte historii svých konverzací. Konverzaci lze vyhledat, přejmenovat kliknutím nebo smazat.</li>
+  <li><strong>Konverzace</strong> – každá konverzace je uložena v databázi; v levém panelu vidíte historii svých konverzací. Konverzaci lze vyhledat nebo smazat ikonkou koše (zobrazí se při najetí myší). Kliknutím na hvězdičku ☆ vedle koše přidáte konverzaci do <strong>Oblíbených</strong> – oblíbené konverzace se zobrazí v horní sekci „OBLÍBENÉ" odděleně od ostatních a hvězdička svítí zlatě i bez najetí myší.</li>
   <li><strong>Přepínání modelu</strong> – pill tlačítka ve spodní části chatu umožňují rychlé přepnutí modelu. Tlačítko ℹ zobrazí podrobný popis každého modelu, jeho silné stránky a orientační cenu v Kč.</li>
   <li><strong>Počítadlo tokenů</strong> – pod vstupním polem se zobrazuje odhadovaný počet tokenů v konverzaci a barevný progress bar ukazující, jak blízko jste limitu kontextového okna (zelená → žlutá → oranžová → červená).</li>
   <li><strong>Kreativita (temperature)</strong> – posuvník 0–1 v nastavení; nízká hodnota = přesné/konzervativní odpovědi, vysoká = kreativnější a méně předvídatelné.</li>

@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 7. 3. 2026 (v2.37.0)
+> Aktualizováno: 7. 3. 2026 (v2.37.2)
 
 ---
 
@@ -493,6 +493,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.37.2 | 7. 3. 2026 | AI asistent – oblíbené konverzace (hvězdička, sekce OBLÍBENÉ v sidebaru, uloženo v DB is_favorite); šedé zvýraznění aktivní konverzace (var(--bg-hover)); standardní ikona koše; SQL: ALTER TABLE trackino_ai_conversations ADD COLUMN IF NOT EXISTS is_favorite boolean NOT NULL DEFAULT false |
 | v2.37.0 | 7. 3. 2026 | AI asistent redesign: konverzace ukládány v DB (trackino_ai_conversations + trackino_ai_messages); levý sidebar s vyhledáváním a mazáním; větší textarea (80–300px); token counter s progress barem; rychlý přepínač modelů (pill tlačítka); model info dialog s popisem + cenou v Kč; tarif změněn na Max only; oprávnění can_use_ai_assistant + ai_allowed_models per user; nastavení → záložka AI asistent (token limity, CZK kalkulačka, per-user modely); streaming usage via __USAGE__: suffix; trackino_ai_usage_limits tabulka |
 | v2.36.1 | 7. 3. 2026 | AI asistent: počítadlo Firecrawl kreditů (🔥 X/500) v footeru; localStorage persist; barevné kódování (zelená/oranžová/červená); varování při <50 zbývajících kreditech; CREDITS_PER_SCRAPE=1, CREDITS_PER_SEARCH=7, FIRECRAWL_CREDIT_LIMIT=500 |
 | v2.36.0 | 7. 3. 2026 | Firecrawl integrace: server-side API routes (/api/firecrawl/scrape + /api/firecrawl/search); AI asistent rozšířen o web search toggle (🌐) a auto-detekci URL → scraping obsahu; kontext z webu injektován do AI odpovědi; FIRECRAWL_API_KEY env var |
@@ -1370,12 +1371,15 @@ OPENAI_API_KEY=sk-...
 - Token limity: tabulka `trackino_ai_usage_limits` – workspace-wide (user_id IS NULL) nebo per-user
 
 ### Konverzace (v2.37.0+)
-- Tabulka `trackino_ai_conversations` – per-user konverzace s titulkem a nastavením
+- Tabulka `trackino_ai_conversations` – per-user konverzace s titulkem a nastavením; sloupec `is_favorite boolean DEFAULT false` (v2.37.2)
 - Tabulka `trackino_ai_messages` – jednotlivé zprávy s usage daty (tokeny, cena v USD)
 - Auto-title: první zpráva ořezaná na 55 znaků
-- Levý sidebar: seznam konverzací, vyhledávání, smazání
+- Levý sidebar: seznam konverzací, vyhledávání, smazání, hvězdička oblíbených
+- Sekce OBLÍBENÉ: v horní části sidebaru (jen pokud existují oblíbené), pod ní OSTATNÍ
+- Aktivní konverzace: šedé zvýraznění `var(--bg-hover)` + border (nikoli modré)
 - Token counter: `estimateTokens(text) = Math.ceil(text.length / 3.8)` – klientský odhad
 - Usage data ze serveru: `__USAGE__:{json}` suffix ve streaming response → parsuje klient
+- SQL migrace: `ALTER TABLE trackino_ai_conversations ADD COLUMN IF NOT EXISTS is_favorite boolean NOT NULL DEFAULT false;`
 
 ### Firecrawl integrace v AI asistentovi (v2.36.0+)
 - **Web search toggle** – tlačítko 🌐 vedle vstupu; když je aktivní, před každým odesláním se zavolá `/api/firecrawl/search` a výsledky se injektují jako kontext
