@@ -25,7 +25,7 @@ const DEFAULT_HELP_CONTENT = `
   <li><strong>Fakturace</strong> – fakturace odvedené práce: podání žádosti, schvalování manažerem, proplacení správcem fakturace</li>
   <li><strong>Tým</strong> – spravujte členy workspace, přidávejte je kódem, nastavujte manažery a oprávnění fakturace; e-mail a telefon každého člena lze rychle zkopírovat kliknutím na ikonku vedle kontaktu; seznam členů lze vyhledávat podle jména nebo e-mailu</li>
   <li><strong>Přehled hodin</strong> – týdenní mřížka odpracovaných hodin pro celý tým; navigace mezi týdny, řazení řádků šipkami, součet za den i za týden</li>
-  <li><strong>Analýza kategorií</strong> – přehled odpracovaného času rozdělený po kategoriích za vybrané období; koláčový graf, sloupcový graf a detailní tabulka s podíly</li>
+  <li><strong>Analýza kategorií</strong> – přehled odpracovaného času rozdělený po kategoriích za vybrané období; koláčový graf, sloupcový graf a detailní tabulka s podíly; administrátoři a manažeři mohou navíc filtrovat výsledky dle konkrétního uživatele (select „Všichni uživatelé" vpravo od přepínače období)</li>
   <li><strong>Detailní nastavení</strong> – osobní profil: jméno, e-mail, telefon, pozice (nastavuje admin) a barevný režim; dostupné přes rozbalovací panel uživatele v levém dolním rohu sidebaru</li>
 </ul>
 

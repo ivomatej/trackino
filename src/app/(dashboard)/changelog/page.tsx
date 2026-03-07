@@ -11,6 +11,12 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.33.0 – 7. 3. 2026</h3>
+<ul>
+  <li><strong>Analýza kategorií – filtr uživatele</strong> – administrátoři a manažeři nově mohou filtrovat analýzu kategorií dle konkrétního uživatele. Vpravo od tlačítek přepínače období (Dnes / Týden / Měsíc / Vlastní) se zobrazuje select „Všichni uživatelé". Admin vidí všechny členy workspace, manažer vidí pouze své podřízené a sebe. Výběrem konkrétního uživatele se aktualizují koláčový graf, sloupcový graf i tabulka kategorií.</li>
+  <li><strong>Sidebar – scrollbar skrytý</strong> – posuvník v levém navigačním panelu (sidebar) je nyní skrytý a zobrazí se až při najetí myší na sidebar. Sidebar tak vypadá čistěji a posuvník nepřekáží při práci.</li>
+</ul>
+
 <h3>v2.32.1 – 7. 3. 2026</h3>
 <ul>
   <li><strong>Definitivní oprava přetékání date/time polí na mobilech</strong> – přidáno globální CSS pravidlo <code>min-width: 0 !important</code> na všechny <code>input[type=date/time/datetime-local]</code>. Toto pravidlo přebíjí nativní minimální šířku prohlížeče (hlavně Chrome na Androidu), která způsobovala přetékání mimo modal. Doplněno <code>overflow-x-hidden</code> na kontejnerech formulářů (Dovolená, Důležité dny, Kalendář, Fakturace). ManualTimeEntry přepracován na <code>grid-cols-2 sm:grid-cols-3</code> – pole Datum zabírá na mobilu celou šířku, Od/Do jsou vedle sebe. Poznámky a Fakturace: vlastní rozsah dat přepracován na grid kontejner.</li>

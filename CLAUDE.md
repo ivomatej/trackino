@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 7. 3. 2026 (v2.32.2)
+> Aktualizováno: 7. 3. 2026 (v2.33.0)
 
 ---
 
@@ -493,6 +493,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.33.0 | 7. 3. 2026 | Analýza kategorií: přidán filtr uživatele (select „Všichni uživatelé" pro admin/manager); sidebar scrollbar skrytý – zobrazí se až při hoveru (CSS třída sidebar-scroll) |
 | v2.32.2 | 7. 3. 2026 | iOS overflow definitívní fix: transform:translateZ(0) na overflow-x-hidden+rounded containery (vacation, important-days, calendar modal, invoices, ManualTimeEntry) → GPU compositing opraví iOS border-radius+overflow-hidden bug; globals.css: appearance:none !important + webkit-datetime-edit-fields-wrapper fix; ManualTimeEntry: overflow-x-hidden přidán |
 | v2.32.1 | 7. 3. 2026 | Definitivní oprava přetékání date/time inputů: globální CSS min-width:0 !important na input[type=date/time/datetime-local]; overflow-x-hidden na formulářových kartách (vacation, important-days, calendar modal, invoices); ManualTimeEntry grid-cols-2 sm:grid-cols-3 s Datum col-span-2 sm:col-span-1; notes custom range → grid-cols-2; invoices → grid-cols-1 sm:grid-cols-2 |
 | v2.32.0 | 7. 3. 2026 | Overflow fix 2. kolo: min-w-0 + maxWidth:100% na date/time inputy (vacation/important-days/calendar/reports); reports filtr Od/Do → w-full grid grid-cols-2 s min-w-0 na buňkách; Reports položky → 3-řádkový layout (1=název, 2=projekt/kat/úkol/user, 3=čas+trvání+akce); 72× --bg-input→--bg-hover (24 souborů: 19 stránek + 5 komponent) |
