@@ -124,15 +124,20 @@ function RichEditor({ value, onChange }: { value: string; onChange: (v: string) 
   );
 }
 
+// ─── Filter type ─────────────────────────────────────────────────────────────
+type PromptFilter = null | { type: 'favorites' } | { type: 'shared' } | { type: 'recent' } | { type: 'unfiled' } | { type: 'author'; userId: string };
+
 // ─── Folder Tree ────────────────────────────────────────────────────────────
 function FolderTree({
-  folders, selectedId, expanded, onSelect, onToggle, onAddSub, onEdit, onDelete, onShare, userId, depth = 0, parentId = null,
+  folders, selectedId, expanded, onSelect, onToggle, onAddSub, onEdit, onDelete, onShare, userId, items, depth = 0, parentId = null,
 }: {
   folders: PromptFolder[]; selectedId: string | null; expanded: Set<string>;
   onSelect: (id: string | null) => void; onToggle: (id: string) => void;
   onAddSub: (parentId: string, depth: number) => void;
   onEdit: (f: PromptFolder) => void; onDelete: (f: PromptFolder) => void;
-  onShare: (f: PromptFolder) => void; userId: string; depth?: number; parentId?: string | null;
+  onShare: (f: PromptFolder) => void; userId: string;
+  items: { folder_id: string | null }[];
+  depth?: number; parentId?: string | null;
 }) {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
@@ -145,6 +150,7 @@ function FolderTree({
         const isExpanded = expanded.has(folder.id);
         const isSelected = selectedId === folder.id;
         const isOwner = folder.owner_id === userId;
+        const itemCount = items.filter(p => p.folder_id === folder.id).length;
         return (
           <div key={folder.id}>
             <div className="group/folder flex items-center gap-1 py-1 px-1 rounded-lg cursor-pointer transition-colors"
@@ -165,6 +171,9 @@ function FolderTree({
               <span className="flex-1 text-xs truncate" style={{ color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
                 {folder.name}
               </span>
+              {itemCount > 0 && (
+                <span className="text-[10px] px-1.5 py-0 rounded-full flex-shrink-0 mr-1" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>{itemCount}</span>
+              )}
               {/* Mobil: ⋮ dropdown (fixed position = neklipuje se kontejnerem) */}
               <div className="sm:hidden flex-shrink-0" onClick={e => e.stopPropagation()}>
                 <button type="button"
@@ -258,7 +267,7 @@ function FolderTree({
               <FolderTree folders={folders} selectedId={selectedId} expanded={expanded}
                 onSelect={onSelect} onToggle={onToggle} onAddSub={onAddSub}
                 onEdit={onEdit} onDelete={onDelete} onShare={onShare}
-                userId={userId} depth={depth + 1} parentId={folder.id} />
+                userId={userId} items={items} depth={depth + 1} parentId={folder.id} />
             )}
           </div>
         );
@@ -282,10 +291,10 @@ function PromptsContent() {
   const [members, setMembers] = useState<Member[]>([]);
 
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
-  const [showFavorites, setShowFavorites] = useState(false);
-  const [showShared, setShowShared] = useState(false);
+  const [listFilter, setListFilter] = useState<PromptFilter>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [showFolderPanel, setShowFolderPanel] = useState(false);
+  const [authorSectionExpanded, setAuthorSectionExpanded] = useState(false);
 
   const [sortBy, setSortBy] = useState<'date' | 'likes' | 'title'>('date');
   const [searchQ, setSearchQ] = useState('');
@@ -531,19 +540,30 @@ function PromptsContent() {
   };
 
   // ── Filtered prompts ──────────────────────────────────────────────────────
-  const filtered = prompts
-    .filter(p => {
-      if (showFavorites) return favorites.has(p.id);
-      if (showShared) return p.is_shared;
-      if (selectedFolder) return p.folder_id === selectedFolder;
-      return true;
-    })
-    .filter(p => !searchQ || p.title.toLowerCase().includes(searchQ.toLowerCase()) || stripHtml(p.content).toLowerCase().includes(searchQ.toLowerCase()))
-    .sort((a, b) => {
-      if (sortBy === 'likes') return (likes[b.id]?.length ?? 0) - (likes[a.id]?.length ?? 0);
-      if (sortBy === 'title') return a.title.localeCompare(b.title, 'cs');
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-    });
+  const qLow = searchQ.trim().toLowerCase();
+  const filtered = (() => {
+    if (listFilter?.type === 'recent') {
+      return [...prompts]
+        .filter(p => !qLow || p.title.toLowerCase().includes(qLow) || stripHtml(p.content).toLowerCase().includes(qLow))
+        .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+        .slice(0, 10);
+    }
+    return prompts
+      .filter(p => {
+        if (listFilter?.type === 'favorites') return favorites.has(p.id);
+        if (listFilter?.type === 'shared') return p.is_shared;
+        if (listFilter?.type === 'unfiled') return !p.folder_id;
+        if (listFilter?.type === 'author') return p.created_by === listFilter.userId;
+        if (selectedFolder) return p.folder_id === selectedFolder;
+        return true;
+      })
+      .filter(p => !qLow || p.title.toLowerCase().includes(qLow) || stripHtml(p.content).toLowerCase().includes(qLow))
+      .sort((a, b) => {
+        if (sortBy === 'likes') return (likes[b.id]?.length ?? 0) - (likes[a.id]?.length ?? 0);
+        if (sortBy === 'title') return a.title.localeCompare(b.title, 'cs');
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
+  })();
 
   const getMember = (uid: string) => members.find(m => m.user_id === uid);
 
@@ -561,93 +581,156 @@ function PromptsContent() {
       <div className="flex flex-col md:flex-row gap-5 flex-1 min-h-0">
 
         {/* ── Left Panel ── */}
-        <div className="md:w-72 flex-shrink-0 flex flex-col gap-3">
+        <div className="md:w-64 flex-shrink-0 flex flex-col gap-2">
           {/* Mobile toggle */}
           <button
             className="md:hidden flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium border"
             style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
             onClick={() => setShowFolderPanel(p => !p)}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-            Složky
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            Navigace
             <svg className="ml-auto" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ transform: showFolderPanel ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }}><polyline points="6 9 12 15 18 9"/></svg>
           </button>
-          <div className={`p-3 rounded-xl border md:flex md:flex-col overflow-y-auto flex-1${showFolderPanel ? ' flex flex-col' : ' hidden'}`} style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
-            {/* Všechny prompty */}
-            <button onClick={() => { setSelectedFolder(null); setShowFavorites(false); setShowShared(false); }}
-              className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors mb-1"
-              style={{ background: !selectedFolder && !showFavorites && !showShared ? 'var(--bg-active)' : 'transparent', color: 'var(--text-primary)' }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-              Všechny prompty
-            </button>
-            {/* Oblíbené */}
-            {favorites.size > 0 && (
-              <button onClick={() => { setShowFavorites(true); setSelectedFolder(null); setShowShared(false); }}
-                className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors mb-1"
-                style={{ background: showFavorites ? 'var(--bg-active)' : 'transparent', color: 'var(--warning, #f59e0b)' }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                Oblíbené ({favorites.size})
-              </button>
-            )}
-            {/* Sdílené prompty */}
-            {prompts.some(p => p.is_shared) && (
-              <button
-                onClick={() => { setSelectedFolder(null); setShowShared(true); setShowFavorites(false); }}
-                className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors mb-1"
-                style={{ background: showShared ? 'var(--bg-active)' : 'transparent', color: showShared ? 'var(--primary)' : 'var(--text-secondary)' }}
-                onMouseEnter={e => { if (!showShared) e.currentTarget.style.background = 'var(--bg-hover)'; }}
-                onMouseLeave={e => { if (!showShared) e.currentTarget.style.background = 'transparent'; }}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                  <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-                </svg>
-                Sdílené prompty
-              </button>
-            )}
-            <div className="border-b mb-2" style={{ borderColor: 'var(--border)' }} />
-            <div className="flex items-center justify-between mb-1 px-1">
-              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Složky</span>
-              <button onClick={() => openFolderModal()} title="Nová složka"
-                className="w-5 h-5 flex items-center justify-center rounded hover:bg-[var(--bg-hover)] transition-colors"
-                style={{ color: 'var(--primary)' }}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              </button>
+          <div className={`rounded-xl border md:flex md:flex-col overflow-y-auto flex-1${showFolderPanel ? ' flex flex-col' : ' hidden'}`} style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+            {/* Search */}
+            <div className="p-2 border-b" style={{ borderColor: 'var(--border)' }}>
+              <input value={searchQ} onChange={e => setSearchQ(e.target.value)} placeholder="Hledat prompty…"
+                className="w-full px-3 py-1.5 rounded-lg border text-base sm:text-sm focus:outline-none"
+                style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)' }} />
             </div>
-            <FolderTree folders={folders} selectedId={selectedFolder} expanded={expanded}
-              onSelect={id => { setSelectedFolder(id); setShowFavorites(false); setShowShared(false); }}
-              onToggle={toggle} onAddSub={(pid, d) => openFolderModal(pid)}
-              onEdit={f => openFolderModal(null, f)} onDelete={deleteFolder}
-              onShare={openShare} userId={userId} />
+            <div className="p-2 flex flex-col gap-0.5">
+              {/* Všechny prompty */}
+              {(() => { const active = !selectedFolder && !listFilter; return (
+                <button onClick={() => { setSelectedFolder(null); setListFilter(null); }}
+                  className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-medium"
+                  style={{ background: active ? 'var(--bg-active)' : 'transparent', color: 'var(--text-primary)' }}
+                  onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                  onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                  Všechny prompty
+                  <span className="ml-auto text-[10px]" style={{ color: 'var(--text-muted)' }}>{prompts.length}</span>
+                </button>
+              ); })()}
+              {/* Oblíbené */}
+              {favorites.size > 0 && (() => { const active = listFilter?.type === 'favorites'; return (
+                <button onClick={() => { setSelectedFolder(null); setListFilter({ type: 'favorites' }); }}
+                  className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-medium"
+                  style={{ background: active ? 'var(--bg-active)' : 'transparent', color: '#f59e0b' }}
+                  onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                  onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1" style={{ flexShrink: 0 }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                  Oblíbené
+                  <span className="ml-auto text-[10px]" style={{ color: 'var(--text-muted)' }}>{favorites.size}</span>
+                </button>
+              ); })()}
+              {/* Sdílené */}
+              {prompts.some(p => p.is_shared) && (() => { const active = listFilter?.type === 'shared'; return (
+                <button onClick={() => { setSelectedFolder(null); setListFilter({ type: 'shared' }); }}
+                  className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-medium"
+                  style={{ background: active ? 'var(--bg-active)' : 'transparent', color: active ? 'var(--primary)' : 'var(--text-secondary)' }}
+                  onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                  onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                  Sdílené prompty
+                </button>
+              ); })()}
+              {/* Naposledy přidané */}
+              {(() => { const active = listFilter?.type === 'recent'; return (
+                <button onClick={() => { setSelectedFolder(null); setListFilter({ type: 'recent' }); }}
+                  className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-medium"
+                  style={{ background: active ? 'var(--bg-active)' : 'transparent', color: 'var(--text-secondary)' }}
+                  onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                  onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  Naposledy přidané
+                </button>
+              ); })()}
+              {/* Nezařazené */}
+              {(() => { const unfiledCount = prompts.filter(p => !p.folder_id).length; const active = listFilter?.type === 'unfiled'; return unfiledCount > 0 ? (
+                <button onClick={() => { setSelectedFolder(null); setListFilter({ type: 'unfiled' }); }}
+                  className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-medium"
+                  style={{ background: active ? 'var(--bg-active)' : 'transparent', color: 'var(--text-secondary)' }}
+                  onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                  onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  Nezařazené
+                  <span className="ml-auto text-[10px]" style={{ color: 'var(--text-muted)' }}>{unfiledCount}</span>
+                </button>
+              ) : null; })()}
+
+              {/* Podle autora – collapsible */}
+              <div className="border-t mt-1 pt-1" style={{ borderColor: 'var(--border)' }} />
+              <button onClick={() => setAuthorSectionExpanded(v => !v)}
+                className="w-full text-left flex items-center gap-1 px-2 py-1 text-[11px] font-semibold uppercase tracking-wider"
+                style={{ color: 'var(--text-muted)' }}>
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" style={{ flexShrink: 0, transform: authorSectionExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }}>
+                  <path d="M3 2l4 3-4 3V2z"/>
+                </svg>
+                Podle autora
+              </button>
+              {authorSectionExpanded && members.map(m => {
+                const count = prompts.filter(p => p.created_by === m.user_id).length;
+                if (count === 0) return null;
+                const active = listFilter?.type === 'author' && listFilter.userId === m.user_id;
+                return (
+                  <button key={m.user_id} onClick={() => { setSelectedFolder(null); setListFilter({ type: 'author', userId: m.user_id }); }}
+                    className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs"
+                    style={{ background: active ? 'var(--bg-active)' : 'transparent', color: 'var(--text-secondary)' }}
+                    onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                    onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}>
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0" style={{ background: m.avatar_color }}>
+                      {getInitials(m.display_name)}
+                    </div>
+                    <span className="truncate">{m.display_name}</span>
+                    <span className="ml-auto text-[10px]" style={{ color: 'var(--text-muted)' }}>{count}</span>
+                  </button>
+                );
+              })}
+
+              {/* Složky */}
+              <div className="border-t mt-1 pt-1" style={{ borderColor: 'var(--border)' }} />
+              <div className="flex items-center justify-between px-2 py-1">
+                <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Složky</span>
+                <button onClick={() => openFolderModal()} title="Nová složka"
+                  className="w-5 h-5 flex items-center justify-center rounded hover:bg-[var(--bg-hover)] transition-colors"
+                  style={{ color: 'var(--primary)' }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </button>
+              </div>
+              <FolderTree folders={folders} selectedId={selectedFolder} expanded={expanded}
+                onSelect={id => { setSelectedFolder(id); setListFilter(null); }}
+                onToggle={toggle} onAddSub={(pid, d) => openFolderModal(pid)}
+                onEdit={f => openFolderModal(null, f)} onDelete={deleteFolder}
+                onShare={openShare} userId={userId} items={prompts} />
+            </div>
           </div>
         </div>
 
         {/* ── Right Panel ── */}
         <div className="flex-1 min-w-0 flex flex-col gap-3">
-          {/* Toolbar */}
           <div className="flex items-center gap-3 flex-wrap">
-            <input value={searchQ} onChange={e => setSearchQ(e.target.value)} placeholder="Hledat prompty…"
-              className="px-3 py-2 rounded-lg border text-base sm:text-sm flex-1 min-w-[160px] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-              style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }} />
-            <div className="relative flex-shrink-0">
-              <select
-                value={sortBy}
-                onChange={e => setSortBy(e.target.value as 'date' | 'likes' | 'title')}
-                className="text-base sm:text-sm border rounded-lg pl-3 pr-8 py-2 appearance-none cursor-pointer"
-                style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-secondary)', outline: 'none' }}
-              >
-                <option value="date">Nejnovější</option>
-                <option value="likes">Nejvíce liků</option>
-                <option value="title">Název A–Z</option>
-              </select>
-              <div className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="6 9 12 15 18 9"/>
-                </svg>
+            {listFilter?.type !== 'recent' && (
+              <div className="relative flex-shrink-0">
+                <select
+                  value={sortBy}
+                  onChange={e => setSortBy(e.target.value as 'date' | 'likes' | 'title')}
+                  className="text-base sm:text-sm border rounded-lg pl-3 pr-8 py-2 appearance-none cursor-pointer"
+                  style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-secondary)', outline: 'none' }}
+                >
+                  <option value="date">Nejnovější</option>
+                  <option value="likes">Nejvíce liků</option>
+                  <option value="title">Název A–Z</option>
+                </select>
+                <div className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
+                </div>
               </div>
-            </div>
+            )}
             <button onClick={() => openPromptModal()}
-              className="px-4 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-1.5"
+              className="ml-auto px-4 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-1.5"
               style={{ background: 'var(--primary)' }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Nový prompt
