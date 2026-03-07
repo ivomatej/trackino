@@ -734,8 +734,17 @@ export interface KbFolder {
   parent_id: string | null;
   name: string;
   owner_id: string;
+  is_shared?: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface KbFolderShare {
+  id: string;
+  folder_id: string;
+  workspace_id: string;
+  user_id: string | null;
+  shared_by: string;
 }
 
 export interface KbPage {
@@ -744,6 +753,7 @@ export interface KbPage {
   folder_id: string | null;
   title: string;
   content: string;
+  tasks: { id: string; text: string; checked: boolean }[];
   status: KbPageStatus;
   tags: string[];
   is_restricted: boolean;

@@ -7,12 +7,12 @@ import { WorkspaceProvider, useWorkspace } from '@/contexts/WorkspaceContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import DashboardLayout from '@/components/DashboardLayout';
 import { supabase } from '@/lib/supabase';
-import type { KbFolder, KbPage, KbVersion, KbComment, KbReview, KbAccess, KbPageStatus } from '@/types/database';
+import type { KbFolder, KbFolderShare, KbPage, KbVersion, KbComment, KbReview, KbAccess, KbPageStatus } from '@/types/database';
 
 // ── Local types ──────────────────────────────────────────────────────────────
 
 type PageTab = 'comments' | 'history' | 'access' | 'backlinks' | 'reviews';
-interface KbMember { user_id: string; display_name: string; avatar_color: string; }
+interface KbMember { user_id: string; display_name: string; avatar_color: string; email?: string; }
 
 type ListFilter =
   | { type: 'all' }
@@ -85,6 +85,10 @@ function getFolderPath(folderId: string | null, folders: KbFolder[]): string {
     current = current.parent_id ? folders.find(f => f.id === current!.parent_id) : undefined;
   }
   return parts.join(' / ');
+}
+
+function nanoid() {
+  return Math.random().toString(36).slice(2, 10);
 }
 
 // ── Rich Editor ───────────────────────────────────────────────────────────────
@@ -556,11 +560,12 @@ function PageViewer({ page, onChecklistToggle, onPageLinkClick }: {
 
 // ── Folder Tree ───────────────────────────────────────────────────────────────
 
-function KbFolderTree({ folders, pages, selectedFolderId, expanded, onSelectFolder, onToggle, onAddSub, onEditFolder, onDeleteFolder, userId, depth = 0, parentId = null }: {
+function KbFolderTree({ folders, pages, selectedFolderId, expanded, onSelectFolder, onToggle, onAddSub, onEditFolder, onDeleteFolder, onShareFolder, userId, depth = 0, parentId = null }: {
   folders: KbFolder[]; pages: KbPage[]; selectedFolderId: string | null;
   expanded: Set<string>; onSelectFolder: (id: string) => void;
   onToggle: (id: string) => void; onAddSub: (parentId: string, depth: number) => void;
   onEditFolder: (f: KbFolder) => void; onDeleteFolder: (f: KbFolder) => void;
+  onShareFolder: (f: KbFolder) => void;
   userId: string; depth?: number; parentId?: string | null;
 }) {
   const children = folders.filter(f => f.parent_id === parentId);
@@ -584,7 +589,7 @@ function KbFolderTree({ folders, pages, selectedFolderId, expanded, onSelectFold
                   <path d="M3 2l4 3-4 3V2z"/>
                 </svg>
               </button>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: isSel ? 'var(--primary)' : 'var(--text-muted)', flexShrink: 0 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: folder.is_shared ? 'var(--primary)' : (isSel ? 'var(--primary)' : 'var(--text-muted)'), flexShrink: 0 }}>
                 <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
               </svg>
               <span className="flex-1 text-xs truncate" style={{ color: isSel ? 'var(--primary)' : 'var(--text-secondary)', fontWeight: isSel ? 600 : 400 }}>{folder.name}</span>
@@ -598,6 +603,11 @@ function KbFolderTree({ folders, pages, selectedFolderId, expanded, onSelectFold
                 )}
                 {folder.owner_id === userId && (
                   <>
+                    <button type="button" onClick={e => { e.stopPropagation(); onShareFolder(folder); }} title="Sdílet složku"
+                      className="w-5 h-5 flex items-center justify-center rounded hover:bg-[var(--bg-active)]"
+                      style={{ color: folder.is_shared ? 'var(--primary)' : 'var(--text-muted)' }}>
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                    </button>
                     <button type="button" onClick={e => { e.stopPropagation(); onEditFolder(folder); }} title="Přejmenovat"
                       className="w-5 h-5 flex items-center justify-center rounded hover:bg-[var(--bg-active)]" style={{ color: 'var(--text-muted)' }}>
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -615,6 +625,7 @@ function KbFolderTree({ folders, pages, selectedFolderId, expanded, onSelectFold
               <KbFolderTree folders={folders} pages={pages} selectedFolderId={selectedFolderId}
                 expanded={expanded} onSelectFolder={onSelectFolder} onToggle={onToggle}
                 onAddSub={onAddSub} onEditFolder={onEditFolder} onDeleteFolder={onDeleteFolder}
+                onShareFolder={onShareFolder}
                 userId={userId} depth={depth + 1} parentId={folder.id} />
             )}
           </div>
@@ -747,6 +758,8 @@ function KnowledgeBaseContent() {
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState('');
   const [editContent, setEditContent] = useState('');
+  const [editTasks, setEditTasks] = useState<{ id: string; text: string; checked: boolean }[]>([]);
+  const kbTaskRefs = useRef<Map<string, HTMLInputElement>>(new Map());
   const [editStatus, setEditStatus] = useState<KbPageStatus>('active');
   const [editRestricted, setEditRestricted] = useState(false);
   const [editFolderId, setEditFolderId] = useState<string | null>(null);
@@ -777,6 +790,12 @@ function KnowledgeBaseContent() {
   // Folder modal
   const [folderModal, setFolderModal] = useState<{ mode: 'add' | 'edit'; parentId: string | null; depth: number; target: KbFolder | null; name: string } | null>(null);
 
+  // Share modal
+  const [folderShares, setFolderShares] = useState<KbFolderShare[]>([]);
+  const [shareModal, setShareModal] = useState<{ open: boolean; folder: KbFolder | null }>({ open: false, folder: null });
+  const [shareType, setShareType] = useState<'none' | 'workspace' | 'users'>('none');
+  const [shareUserIds, setShareUserIds] = useState<string[]>([]);
+
   // Template modal
   const [templateModal, setTemplateModal] = useState<{ folderId: string | null } | null>(null);
 
@@ -798,14 +817,16 @@ function KnowledgeBaseContent() {
     if (!currentWorkspace || !user) return;
     const wid = currentWorkspace.id;
 
-    const [{ data: fData }, { data: pData }, { data: memData }, { data: favData }, { data: revData }] = await Promise.all([
+    const [{ data: fData }, { data: pData }, { data: memData }, { data: favData }, { data: revData }, { data: sharesData }] = await Promise.all([
       supabase.from('trackino_kb_folders').select('*').eq('workspace_id', wid).order('name'),
       supabase.from('trackino_kb_pages').select('*').eq('workspace_id', wid).order('updated_at', { ascending: false }),
       supabase.from('trackino_workspace_members').select('user_id').eq('workspace_id', wid).eq('approved', true),
       supabase.from('trackino_kb_favorites').select('page_id').eq('user_id', user.id),
       supabase.from('trackino_kb_reviews').select('page_id,review_date,is_done').eq('workspace_id', wid),
+      supabase.from('trackino_kb_folder_shares').select('*').eq('workspace_id', wid),
     ]);
 
+    setFolderShares((sharesData ?? []) as KbFolderShare[]);
     setFolders((fData ?? []) as KbFolder[]);
     setPages((pData ?? []) as KbPage[]);
     setFavorites(new Set((favData ?? []).map((f: { page_id: string }) => f.page_id)));
@@ -814,8 +835,8 @@ function KnowledgeBaseContent() {
     // Fetch member profiles
     const uids = ((memData ?? []) as { user_id: string }[]).map(m => m.user_id);
     if (uids.length > 0) {
-      const { data: profiles } = await supabase.from('trackino_profiles').select('id,display_name,avatar_color').in('id', uids).order('display_name');
-      setMembers(((profiles ?? []) as { id: string; display_name: string; avatar_color: string }[]).map(p => ({ user_id: p.id, display_name: p.display_name, avatar_color: p.avatar_color })));
+      const { data: profiles } = await supabase.from('trackino_profiles').select('id,display_name,avatar_color,email').in('id', uids).order('display_name');
+      setMembers(((profiles ?? []) as { id: string; display_name: string; avatar_color: string; email?: string }[]).map(p => ({ user_id: p.id, display_name: p.display_name, avatar_color: p.avatar_color, email: p.email })));
     }
   }, [currentWorkspace?.id, user?.id]);
 
@@ -867,6 +888,7 @@ function KnowledgeBaseContent() {
   const startEdit = (page: KbPage) => {
     setEditTitle(page.title);
     setEditContent(page.content);
+    setEditTasks(Array.isArray(page.tasks) ? page.tasks : []);
     setEditStatus(page.status);
     setEditRestricted(page.is_restricted);
     setEditFolderId(page.folder_id);
@@ -877,7 +899,7 @@ function KnowledgeBaseContent() {
     if (!user || !currentWorkspace || !selectedPage) return;
     setSaving(true);
     const now = new Date().toISOString();
-    const payload = { title: editTitle.trim() || 'Bez názvu', content: editContent, status: editStatus, is_restricted: editRestricted, folder_id: editFolderId, updated_by: user.id, updated_at: now };
+    const payload = { title: editTitle.trim() || 'Bez názvu', content: editContent, tasks: editTasks, status: editStatus, is_restricted: editRestricted, folder_id: editFolderId, updated_by: user.id, updated_at: now };
 
     if (selectedPage.id.startsWith('__new__')) {
       const { data: np } = await supabase.from('trackino_kb_pages').insert({
@@ -930,7 +952,7 @@ function KnowledgeBaseContent() {
     const fake: KbPage = {
       id: '__new__', workspace_id: currentWorkspace?.id ?? '', folder_id: folderId,
       title: template.title === 'Prázdná stránka' ? 'Nová stránka' : template.title,
-      content: template.content, status: 'draft', tags: [], is_restricted: false,
+      content: template.content, tasks: [], status: 'draft', tags: [], is_restricted: false,
       created_by: user?.id ?? '', updated_by: null,
       created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
     };
@@ -938,6 +960,7 @@ function KnowledgeBaseContent() {
     setEditing(true);
     setEditTitle(fake.title);
     setEditContent(fake.content);
+    setEditTasks([]);
     setEditStatus('draft');
     setEditRestricted(false);
     setComments([]); setVersions([]); setReviews([]); setAccess([]);
@@ -951,6 +974,17 @@ function KnowledgeBaseContent() {
     setPages(prev => prev.map(p => p.id === selectedPage.id ? { ...p, content: html } : p));
     await supabase.from('trackino_kb_pages').update({ content: html, updated_by: user?.id, updated_at: new Date().toISOString() }).eq('id', selectedPage.id);
   };
+
+  // ── KB edit tasks helpers ─────────────────────────────────────────────────
+
+  const addKbTask = () => {
+    const t = { id: nanoid(), text: '', checked: false };
+    setEditTasks(prev => [...prev, t]);
+    setTimeout(() => kbTaskRefs.current.get(t.id)?.focus(), 50);
+  };
+  const removeKbTask = (id: string) => setEditTasks(prev => prev.filter(t => t.id !== id));
+  const toggleKbTask = (id: string) => setEditTasks(prev => prev.map(t => t.id === id ? { ...t, checked: !t.checked } : t));
+  const updateKbTaskText = (id: string, text: string) => setEditTasks(prev => prev.map(t => t.id === id ? { ...t, text } : t));
 
   // ── Favorite toggle ───────────────────────────────────────────────────────
 
@@ -1082,6 +1116,31 @@ function KnowledgeBaseContent() {
     if (selectedFolderId === folder.id) setSelectedFolderId(null);
   };
 
+  const openShare = (folder: KbFolder) => {
+    const existing = folderShares.filter(s => s.folder_id === folder.id);
+    const wsShare = existing.find(s => s.user_id === null);
+    if (wsShare) { setShareType('workspace'); setShareUserIds([]); }
+    else if (existing.length > 0) { setShareType('users'); setShareUserIds(existing.map(s => s.user_id!)); }
+    else { setShareType('none'); setShareUserIds([]); }
+    setShareModal({ open: true, folder });
+  };
+
+  const saveShare = async () => {
+    if (!currentWorkspace || !shareModal.folder || !user) return;
+    const fid = shareModal.folder.id;
+    await supabase.from('trackino_kb_folder_shares').delete().eq('folder_id', fid);
+    if (shareType === 'workspace') {
+      await supabase.from('trackino_kb_folder_shares').insert({ folder_id: fid, workspace_id: currentWorkspace.id, user_id: null, shared_by: user.id });
+    } else if (shareType === 'users' && shareUserIds.length > 0) {
+      await supabase.from('trackino_kb_folder_shares').insert(shareUserIds.map(uid => ({ folder_id: fid, workspace_id: currentWorkspace.id, user_id: uid, shared_by: user.id })));
+    }
+    const isNowShared = shareType !== 'none';
+    await supabase.from('trackino_kb_folders').update({ is_shared: isNowShared }).eq('id', fid);
+    setFolders(prev => prev.map(f => f.id === fid ? { ...f, is_shared: isNowShared } : f));
+    await fetchAll();
+    setShareModal({ open: false, folder: null });
+  };
+
   // ── Move page to folder ───────────────────────────────────────────────────
 
   const movePageToFolder = async (pageId: string, folderId: string | null) => {
@@ -1150,7 +1209,7 @@ function KnowledgeBaseContent() {
       case 'all': return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)' }}><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></svg>;
       case 'favorites': return <svg width="18" height="18" viewBox="0 0 24 24" fill="#f59e0b" stroke="#f59e0b" strokeWidth="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>;
       case 'recent': return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)' }}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
-      case 'unfiled': return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)' }}><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>;
+      case 'unfiled': return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)' }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>;
       case 'status': return <div className="w-3 h-3 rounded-full" style={{ background: STATUS_CONFIG[listFilter.value].color }} />;
       case 'mention': return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)' }}><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94"/></svg>;
       case 'folder': return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--primary)' }}><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>;
@@ -1259,7 +1318,7 @@ function KnowledgeBaseContent() {
                     onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--bg-hover)'; }}
                     onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
                     onClick={() => { setListFilter({ type: 'unfiled' }); setSearch(''); setSelectedPage(null); setLeftOpen(false); }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                     <span className="flex-1 text-left">Nezařazené</span>
                     <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>{count}</span>
                   </button>
@@ -1342,6 +1401,7 @@ function KnowledgeBaseContent() {
                   onAddSub={(pid, d) => setFolderModal({ mode: 'add', parentId: pid, depth: d, target: null, name: '' })}
                   onEditFolder={f => setFolderModal({ mode: 'edit', parentId: f.parent_id, depth: getDepth(f, folders), target: f, name: f.name })}
                   onDeleteFolder={deleteFolder}
+                  onShareFolder={openShare}
                   userId={user?.id ?? ''} />
               )}
             </div>
@@ -1408,7 +1468,7 @@ function KnowledgeBaseContent() {
                             </div>
                             <div className="flex items-center gap-1.5 flex-shrink-0">
                               <div className="w-1.5 h-1.5 rounded-full" style={{ background: STATUS_CONFIG[p.status].color }} />
-                              <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{new Date(p.updated_at).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'short' })}</span>
+                              <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{new Date(p.updated_at).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                             </div>
                           </div>
                         );
@@ -1433,7 +1493,10 @@ function KnowledgeBaseContent() {
                               <p className="text-sm truncate" style={{ color: 'var(--text-primary)' }}>{p.title}</p>
                               {path && <p className="text-[11px] truncate" style={{ color: 'var(--text-muted)' }}>{path}</p>}
                             </div>
-                            <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{new Date(p.created_at).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'short' })}</span>
+                            <div className="flex items-center gap-1.5 flex-shrink-0">
+                              <div className="w-1.5 h-1.5 rounded-full" style={{ background: STATUS_CONFIG[p.status].color }} />
+                              <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{new Date(p.created_at).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                            </div>
                           </div>
                         );
                       })}
@@ -1604,11 +1667,72 @@ function KnowledgeBaseContent() {
                 {/* Content */}
                 <div className="mb-8">
                   {editing ? (
-                    <RichEditor value={editContent} onChange={setEditContent} members={members} pages={pages} />
+                    <>
+                      <RichEditor value={editContent} onChange={setEditContent} members={members} pages={pages} />
+                      {/* Tasks checklist panel */}
+                      <div className="mx-6 my-3 border rounded-xl px-3 py-2.5" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
+                        <div className="text-[10px] font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>Úkoly</div>
+                        <div className="space-y-1">
+                          {editTasks.map(task => (
+                            <div key={task.id} className="flex items-center gap-2 group/task">
+                              <input type="checkbox" checked={task.checked} onChange={() => toggleKbTask(task.id)}
+                                className="w-3.5 h-3.5 flex-shrink-0 cursor-pointer rounded" style={{ accentColor: '#9ca3af' }} />
+                              <input
+                                ref={el => { if (el) kbTaskRefs.current.set(task.id, el); else kbTaskRefs.current.delete(task.id); }}
+                                type="text" value={task.text}
+                                onChange={e => updateKbTaskText(task.id, e.target.value)}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter') { e.preventDefault(); addKbTask(); }
+                                  if (e.key === 'Backspace' && task.text === '') { e.preventDefault(); removeKbTask(task.id); }
+                                }}
+                                className="flex-1 text-xs bg-transparent outline-none min-w-0 text-base sm:text-xs"
+                                style={{ color: task.checked ? 'var(--text-muted)' : 'var(--text-primary)', textDecoration: task.checked ? 'line-through' : 'none' }}
+                                placeholder="Úkol…" />
+                              <button onClick={() => removeKbTask(task.id)}
+                                className="opacity-0 group-hover/task:opacity-60 hover:!opacity-100 flex-shrink-0 transition-opacity"
+                                style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                                </svg>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                        <button onClick={addKbTask} className="flex items-center gap-1 text-[11px] mt-1.5 transition-colors"
+                          style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: '1px 0' }}
+                          onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
+                          onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}>
+                          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                          </svg>
+                          Přidat úkol
+                        </button>
+                      </div>
+                    </>
                   ) : (
-                    selectedPage.content
-                      ? <PageViewer page={selectedPage} onChecklistToggle={handleChecklistToggle} onPageLinkClick={selectPage} />
-                      : <p className="text-sm italic" style={{ color: 'var(--text-muted)' }}>Stránka je prázdná. Klikněte Upravit a začněte psát.</p>
+                    <>
+                      {selectedPage.content
+                        ? <PageViewer page={selectedPage} onChecklistToggle={handleChecklistToggle} onPageLinkClick={selectPage} />
+                        : <p className="text-sm italic" style={{ color: 'var(--text-muted)' }}>Stránka je prázdná. Klikněte Upravit a začněte psát.</p>
+                      }
+                      {/* Tasks read-only view */}
+                      {Array.isArray(selectedPage.tasks) && selectedPage.tasks.length > 0 && (
+                        <div className="mx-8 mt-4 border rounded-xl px-3 py-2.5" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
+                          <div className="text-[10px] font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>Úkoly</div>
+                          <div className="space-y-1">
+                            {selectedPage.tasks.map((task: { id: string; text: string; checked: boolean }) => (
+                              <div key={task.id} className="flex items-center gap-2">
+                                <input type="checkbox" checked={task.checked} readOnly
+                                  className="w-3.5 h-3.5 flex-shrink-0 cursor-default" style={{ accentColor: '#9ca3af' }} />
+                                <span className="text-xs" style={{ color: task.checked ? 'var(--text-muted)' : 'var(--text-primary)', textDecoration: task.checked ? 'line-through' : 'none' }}>
+                                  {task.text || <em style={{ color: 'var(--text-muted)' }}>prázdný úkol</em>}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
 
@@ -1855,6 +1979,58 @@ function KnowledgeBaseContent() {
             <div className="flex gap-3">
               <button type="button" onClick={saveFolder} className="flex-1 py-2 rounded-xl text-sm font-medium" style={{ background: 'var(--primary)', color: '#fff' }}>Uložit</button>
               <button type="button" onClick={() => setFolderModal(null)} className="flex-1 py-2 rounded-xl text-sm border" style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>Zrušit</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SHARE FOLDER MODAL */}
+      {shareModal.open && shareModal.folder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShareModal({ open: false, folder: null })}>
+          <div className="w-96 p-5 rounded-2xl border shadow-xl" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }} onClick={e => e.stopPropagation()}>
+            <h2 className="text-base font-semibold mb-0.5" style={{ color: 'var(--text-primary)' }}>Sdílet složku „{shareModal.folder.name}"</h2>
+            <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>Určete, kdo může složku a její stránky vidět</p>
+            <div className="space-y-2 mb-4">
+              {([
+                { id: 'none' as const, label: 'Nesdílet s nikým', desc: 'Složka zůstane soukromá' },
+                { id: 'workspace' as const, label: 'Celý workspace', desc: 'Vidí všichni členové' },
+                { id: 'users' as const, label: 'Konkrétní uživatelé', desc: 'Vybraní členové' },
+              ]).map(t => (
+                <label key={t.id} className="flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors"
+                  style={{ borderColor: shareType === t.id ? 'var(--primary)' : 'var(--border)', background: shareType === t.id ? 'var(--bg-active)' : 'transparent' }}>
+                  <input type="radio" checked={shareType === t.id} onChange={() => setShareType(t.id)} className="accent-[var(--primary)]" />
+                  <div>
+                    <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{t.label}</div>
+                    <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{t.desc}</div>
+                  </div>
+                </label>
+              ))}
+            </div>
+            {shareType === 'users' && (
+              <div className="mb-4 max-h-48 overflow-y-auto space-y-1 rounded-xl border p-2" style={{ borderColor: 'var(--border)' }}>
+                {members.filter(m => m.user_id !== user?.id).map(m => (
+                  <label key={m.user_id} className="flex items-center gap-3 px-2 py-2 rounded-lg cursor-pointer transition-colors"
+                    style={{ background: shareUserIds.includes(m.user_id) ? 'var(--bg-active)' : 'transparent' }}
+                    onMouseEnter={e => { if (!shareUserIds.includes(m.user_id)) (e.currentTarget as HTMLElement).style.background = 'var(--bg-hover)'; }}
+                    onMouseLeave={e => { if (!shareUserIds.includes(m.user_id)) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
+                    <input type="checkbox" checked={shareUserIds.includes(m.user_id)}
+                      onChange={() => setShareUserIds(prev => prev.includes(m.user_id) ? prev.filter(id => id !== m.user_id) : [...prev, m.user_id])}
+                      className="accent-[var(--primary)]" />
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0" style={{ background: m.avatar_color }}>
+                      {m.display_name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-sm truncate" style={{ color: 'var(--text-primary)' }}>{m.display_name}</div>
+                      {m.email && <div className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{m.email}</div>}
+                    </div>
+                  </label>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-2 justify-end">
+              <button type="button" onClick={() => setShareModal({ open: false, folder: null })} className="px-3 py-1.5 rounded-lg text-sm border"
+                style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}>Zrušit</button>
+              <button type="button" onClick={saveShare} className="px-3 py-1.5 rounded-lg text-sm font-medium text-white" style={{ background: 'var(--primary)' }}>Uložit</button>
             </div>
           </div>
         </div>

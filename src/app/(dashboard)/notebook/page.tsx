@@ -25,7 +25,7 @@ interface NoteFolder {
 
 interface FolderShare { id: string; folder_id: string; user_id: string | null; }
 
-interface Member { user_id: string; display_name: string; avatar_color: string; }
+interface Member { user_id: string; display_name: string; avatar_color: string; email?: string; }
 
 interface CalEventNote {
   event_ref: string; event_id: string; title: string; date: string;
@@ -34,6 +34,7 @@ interface CalEventNote {
 
 type NoteFilter =
   | { type: 'inbox' }
+  | { type: 'all' }
   | { type: 'favorites' }
   | { type: 'important' }
   | { type: 'recent' }
@@ -265,6 +266,15 @@ function NoteEditor({
     triggerSave(title, c, tasks, isFavorite, isImportant);
   }
 
+  function handleEditorClick(e: React.MouseEvent<HTMLDivElement>) {
+    const anchor = (e.target as HTMLElement).closest('a');
+    if (anchor) {
+      e.preventDefault();
+      const href = anchor.getAttribute('href');
+      if (href) window.open(href, '_blank', 'noopener,noreferrer');
+    }
+  }
+
   function handleTitleChange(v: string) {
     setTitle(v);
     triggerSave(v, content, tasks, isFavorite, isImportant);
@@ -405,6 +415,7 @@ function NoteEditor({
           suppressContentEditableWarning
           onInput={handleEditorInput}
           onBlur={handleEditorBlur}
+          onClick={handleEditorClick}
           className="px-6 py-2 min-h-[120px] outline-none text-sm leading-relaxed"
           style={{ color: 'var(--text-primary)' }}
           data-placeholder="Začni psát…"
@@ -495,6 +506,22 @@ function CalEventNoteEditor({
     triggerSave(c, tasks, isFavorite, isImportant);
   }
 
+  function handleBlur() {
+    const linked = linkifyHtml(editorRef.current?.innerHTML ?? '');
+    if (editorRef.current) editorRef.current.innerHTML = linked;
+    setContent(linked);
+    triggerSave(linked, tasks, isFavorite, isImportant);
+  }
+
+  function handleEditorClick(e: React.MouseEvent<HTMLDivElement>) {
+    const anchor = (e.target as HTMLElement).closest('a');
+    if (anchor) {
+      e.preventDefault();
+      const href = anchor.getAttribute('href');
+      if (href) window.open(href, '_blank', 'noopener,noreferrer');
+    }
+  }
+
   function addTask() {
     const newTask: TaskItem = { id: nanoid(), text: '', checked: false };
     const next = [...tasks, newTask];
@@ -579,6 +606,8 @@ function CalEventNoteEditor({
       <div className="flex-1 overflow-y-auto">
         <div ref={editorRef} contentEditable suppressContentEditableWarning
           onInput={handleInput}
+          onBlur={handleBlur}
+          onClick={handleEditorClick}
           className="px-6 py-2 min-h-[120px] outline-none text-sm leading-relaxed"
           style={{ color: 'var(--text-primary)' }} data-placeholder="Obsah poznámky…" />
         <div className="mx-6 my-3 border rounded-xl px-3 py-2.5" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
@@ -672,12 +701,13 @@ function NotebookContent() {
 
   const fetchMembers = useCallback(async () => {
     if (!wsId) return;
-    const { data } = await supabase.from('trackino_workspace_members').select('user_id, trackino_profiles(display_name, avatar_color)').eq('workspace_id', wsId);
+    const { data } = await supabase.from('trackino_workspace_members').select('user_id, trackino_profiles(display_name, avatar_color, email)').eq('workspace_id', wsId);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if (data) setMembers((data as any[]).map(m => ({
       user_id: m.user_id,
       display_name: Array.isArray(m.trackino_profiles) ? (m.trackino_profiles[0]?.display_name ?? 'Uživatel') : (m.trackino_profiles?.display_name ?? 'Uživatel'),
       avatar_color: Array.isArray(m.trackino_profiles) ? (m.trackino_profiles[0]?.avatar_color ?? '#6366f1') : (m.trackino_profiles?.avatar_color ?? '#6366f1'),
+      email: Array.isArray(m.trackino_profiles) ? (m.trackino_profiles[0]?.email ?? '') : (m.trackino_profiles?.email ?? ''),
     })));
   }, [wsId]);
 
@@ -841,6 +871,7 @@ function NotebookContent() {
     const qLow = searchQ.trim().toLowerCase();
     let base: Note[];
     if (!listFilter || listFilter.type === 'inbox') base = notes.filter(n => !n.folder_id && !n.is_archived);
+    else if (listFilter.type === 'all') base = notes.filter(n => !n.is_archived);
     else if (listFilter.type === 'favorites') base = notes.filter(n => n.is_favorite && !n.is_archived);
     else if (listFilter.type === 'important') base = notes.filter(n => n.is_important && !n.is_archived);
     else if (listFilter.type === 'archive') base = notes.filter(n => n.is_archived);
@@ -866,6 +897,7 @@ function NotebookContent() {
 
   // Counts for left panel
   const inboxCount = notes.filter(n => !n.folder_id && !n.is_archived).length;
+  const allCount = notes.filter(n => !n.is_archived).length;
   const favCount = notes.filter(n => n.is_favorite && !n.is_archived).length;
   const impCount = notes.filter(n => n.is_important && !n.is_archived).length;
   const archCount = notes.filter(n => n.is_archived).length;
@@ -911,6 +943,11 @@ function NotebookContent() {
         ${showLeftPanel ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
         style={{ width: 260, background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
 
+        {/* Header */}
+        <div className="px-4 pt-4 pb-2 flex-shrink-0">
+          <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Poznámky</h1>
+        </div>
+
         {/* Search */}
         <div className="p-3 border-b flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
           <div className="relative">
@@ -928,6 +965,9 @@ function NotebookContent() {
           <NavBtn active={listFilter?.type === 'inbox' || (!listFilter && true)} onClick={() => selectFilter({ type: 'inbox' })} count={inboxCount}
             label="Inbox"
             icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>} />
+          <NavBtn active={listFilter?.type === 'all'} onClick={() => selectFilter({ type: 'all' })} count={allCount}
+            label="Všechny poznámky"
+            icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>} />
           {favCount > 0 && (
             <NavBtn active={listFilter?.type === 'favorites'} onClick={() => selectFilter({ type: 'favorites' })} count={favCount} color="#f59e0b"
               label="Oblíbené"
@@ -942,12 +982,12 @@ function NotebookContent() {
             label="Naposledy upravené"
             icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>} />
           <div className="border-t my-1" style={{ borderColor: 'var(--border)' }} />
-          <NavBtn active={isArchive} onClick={() => selectFilter({ type: 'archive' })} count={archCount}
-            label="Archiv"
-            icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>} />
           <NavBtn active={showCalEventNotes} onClick={() => selectFilter({ type: 'calendar_events' })} count={calEventNotes.length}
             label="Poznámky k událostem"
             icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>} />
+          <NavBtn active={isArchive} onClick={() => selectFilter({ type: 'archive' })} count={archCount}
+            label="Archiv"
+            icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>} />
         </div>
 
         {/* Folders */}
@@ -1018,6 +1058,7 @@ function NotebookContent() {
           </button>
           <span className="text-sm font-medium flex-1 truncate" style={{ color: 'var(--text-primary)' }}>
             {listFilter?.type === 'inbox' ? 'Inbox'
+              : listFilter?.type === 'all' ? 'Všechny poznámky'
               : listFilter?.type === 'favorites' ? 'Oblíbené'
               : listFilter?.type === 'important' ? 'Důležité'
               : listFilter?.type === 'recent' ? 'Naposledy upravené'
@@ -1258,29 +1299,42 @@ function NotebookContent() {
       {/* ── Share Modal ── */}
       {shareModal.open && shareModal.folder && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShareModal({ open: false, folder: null })}>
-          <div className="rounded-xl border shadow-xl p-5 w-96" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }} onClick={e => e.stopPropagation()}>
-            <h3 className="text-base font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>Sdílet složku</h3>
-            <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>„{shareModal.folder.name}"</p>
+          <div className="w-96 p-5 rounded-2xl border shadow-xl" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }} onClick={e => e.stopPropagation()}>
+            <h2 className="text-base font-semibold mb-0.5" style={{ color: 'var(--text-primary)' }}>Sdílet složku „{shareModal.folder.name}"</h2>
+            <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>Určete, kdo může složku a její poznámky vidět</p>
             <div className="space-y-2 mb-4">
-              {(['none', 'workspace', 'users'] as const).map(opt => (
-                <label key={opt} className="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" checked={shareType === opt} onChange={() => setShareType(opt)} />
-                  <span className="text-sm" style={{ color: 'var(--text-primary)' }}>
-                    {opt === 'none' ? 'Nesdílet s nikým' : opt === 'workspace' ? 'Sdílet celému workspace' : 'Konkrétní uživatelé'}
-                  </span>
+              {([
+                { id: 'none' as const, label: 'Nesdílet s nikým', desc: 'Složka zůstane soukromá' },
+                { id: 'workspace' as const, label: 'Celý workspace', desc: 'Vidí všichni členové' },
+                { id: 'users' as const, label: 'Konkrétní uživatelé', desc: 'Vybraní členové' },
+              ]).map(t => (
+                <label key={t.id} className="flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors"
+                  style={{ borderColor: shareType === t.id ? 'var(--primary)' : 'var(--border)', background: shareType === t.id ? 'var(--bg-active)' : 'transparent' }}>
+                  <input type="radio" checked={shareType === t.id} onChange={() => setShareType(t.id)} className="accent-[var(--primary)]" />
+                  <div>
+                    <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{t.label}</div>
+                    <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{t.desc}</div>
+                  </div>
                 </label>
               ))}
             </div>
             {shareType === 'users' && (
-              <div className="border rounded-lg p-2 mb-4 space-y-1 max-h-40 overflow-y-auto" style={{ borderColor: 'var(--border)' }}>
+              <div className="mb-4 max-h-48 overflow-y-auto space-y-1 rounded-xl border p-2" style={{ borderColor: 'var(--border)' }}>
                 {members.filter(m => m.user_id !== userId).map(m => (
-                  <label key={m.user_id} className="flex items-center gap-2 cursor-pointer px-1 py-1 rounded hover:bg-[var(--bg-hover)]">
+                  <label key={m.user_id} className="flex items-center gap-3 px-2 py-2 rounded-lg cursor-pointer transition-colors"
+                    style={{ background: shareUserIds.includes(m.user_id) ? 'var(--bg-active)' : 'transparent' }}
+                    onMouseEnter={e => { if (!shareUserIds.includes(m.user_id)) (e.currentTarget as HTMLElement).style.background = 'var(--bg-hover)'; }}
+                    onMouseLeave={e => { if (!shareUserIds.includes(m.user_id)) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
                     <input type="checkbox" checked={shareUserIds.includes(m.user_id)}
-                      onChange={() => setShareUserIds(prev => prev.includes(m.user_id) ? prev.filter(id => id !== m.user_id) : [...prev, m.user_id])} />
-                    <div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white" style={{ background: m.avatar_color }}>
+                      onChange={() => setShareUserIds(prev => prev.includes(m.user_id) ? prev.filter(id => id !== m.user_id) : [...prev, m.user_id])}
+                      className="accent-[var(--primary)]" />
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0" style={{ background: m.avatar_color }}>
                       {getInitials(m.display_name)}
                     </div>
-                    <span className="text-sm" style={{ color: 'var(--text-primary)' }}>{m.display_name}</span>
+                    <div className="min-w-0">
+                      <div className="text-sm truncate" style={{ color: 'var(--text-primary)' }}>{m.display_name}</div>
+                      {m.email && <div className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{m.email}</div>}
+                    </div>
                   </label>
                 ))}
               </div>
