@@ -104,8 +104,8 @@ export default function ManualTimeEntry({ onSaved, onCancel }: ManualTimeEntryPr
 
   return (
     <div
-      className="rounded-xl border p-5 mb-6 animate-fade-in"
-      style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}
+      className="rounded-xl border p-5 mb-6 animate-fade-in overflow-x-hidden"
+      style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', transform: 'translateZ(0)' }}
     >
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>

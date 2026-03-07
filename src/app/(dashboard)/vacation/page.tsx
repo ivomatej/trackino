@@ -475,7 +475,7 @@ function VacationContent() {
 
             {/* Formulář přidání */}
             {showForm && (
-              <div className="rounded-xl border p-5 mb-4 overflow-x-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+              <div className="rounded-xl border p-5 mb-4 overflow-x-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', transform: 'translateZ(0)' }}>
                 <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Přidat dovolenou</h3>
 
                 {isWorkspaceAdmin && allProfiles.length > 0 && (

@@ -807,7 +807,7 @@ function InvoicesContent() {
 
         {/* Formulář pro podání faktury */}
         {showSubmitForm && canInvoice && (
-          <div className="mb-6 rounded-xl border p-6 overflow-x-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+          <div className="mb-6 rounded-xl border p-6 overflow-x-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', transform: 'translateZ(0)' }}>
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>

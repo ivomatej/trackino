@@ -198,15 +198,26 @@ body {
 }
 
 /* ===== Fix: date/time input overflow na mobilních prohlížečích ===== */
-/* Na Android Chrome a iOS Safari mají date/time inputy nativní min-width,
-   která přebíjí CSS width:100% a způsobuje přetečení z kontejneru.
-   Toto pravidlo to přebíjí globálně pro celou aplikaci. */
+/* Na iOS Safari/Chrome má border-radius + overflow:hidden bez GPU vrstvu bug –
+   neclipuje obsah. Fix: transform:translateZ(0) na containery (viz níže).
+   Navíc nativní date inputy mají interní webkit komponenty s vlastní min-width. */
 input[type="date"],
 input[type="time"],
 input[type="datetime-local"] {
   min-width: 0 !important;
-  max-width: 100%;
-  box-sizing: border-box;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  /* iOS: skryje overflow-causing calendar picker indicator */
+  -webkit-appearance: none !important;
+  appearance: none !important;
+}
+/* iOS WebKit: interní date/time editing wrapper – povolí zmenšení */
+input[type="date"]::-webkit-datetime-edit-fields-wrapper,
+input[type="time"]::-webkit-datetime-edit-fields-wrapper,
+input[type="datetime-local"]::-webkit-datetime-edit-fields-wrapper {
+  min-width: 0;
+  flex-shrink: 1;
+  overflow: hidden;
 }
 
 /* ===== iOS safe areas ===== */
