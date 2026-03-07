@@ -1680,14 +1680,19 @@ function CalendarContent() {
 
   // ── RSVP – přijetí/odmítnutí události jako účastník ──────────────────────
 
-  async function respondToAttendance(eventSourceId: string, status: 'accepted' | 'declined' | 'maybe') {
-    if (!user || !currentWorkspace) return;
-    await supabase
+  async function respondToAttendance(eventSourceId: string, status: 'accepted' | 'declined' | 'maybe'): Promise<boolean> {
+    if (!user || !currentWorkspace) return false;
+    const { error } = await supabase
       .from('trackino_calendar_event_attendees')
       .update({ status, prev_start_date: null, prev_end_date: null, prev_start_time: null, prev_end_time: null, prev_location: null, prev_description: null })
       .eq('event_id', eventSourceId)
       .eq('user_id', user.id);
+    if (error) {
+      console.error('respondToAttendance error:', error);
+      return false;
+    }
     await fetchAttendeeEvents();
+    return true;
   }
 
   async function deleteEvent(id: string) {
@@ -5057,21 +5062,21 @@ function CalendarContent() {
             {/* RSVP tlačítka – vždy 3 */}
             <div className="flex gap-2">
               <button
-                onClick={async () => { await respondToAttendance(rsvpModalEvent.source_id, 'accepted'); setRsvpModalEvent(null); }}
+                onClick={async () => { const ok = await respondToAttendance(rsvpModalEvent.source_id, 'accepted'); if (ok) setRsvpModalEvent(null); }}
                 className="flex-1 py-2.5 px-2 rounded-lg text-xs font-medium text-white transition-opacity hover:opacity-85"
                 style={{ background: rsvpModalEvent.attendee_status === 'accepted' ? '#15803d' : '#22c55e' }}
               >
                 ✓ {rsvpModalEvent.attendee_status === 'updated' ? 'Beru na vědomí' : 'Přijmout'}
               </button>
               <button
-                onClick={async () => { await respondToAttendance(rsvpModalEvent.source_id, 'maybe'); setRsvpModalEvent(null); }}
+                onClick={async () => { const ok = await respondToAttendance(rsvpModalEvent.source_id, 'maybe'); if (ok) setRsvpModalEvent(null); }}
                 className="flex-1 py-2.5 px-2 rounded-lg text-xs font-medium text-white transition-opacity hover:opacity-85"
                 style={{ background: rsvpModalEvent.attendee_status === 'maybe' ? '#b45309' : '#f59e0b' }}
               >
                 ~ Nezávazně
               </button>
               <button
-                onClick={async () => { await respondToAttendance(rsvpModalEvent.source_id, 'declined'); setRsvpModalEvent(null); }}
+                onClick={async () => { const ok = await respondToAttendance(rsvpModalEvent.source_id, 'declined'); if (ok) setRsvpModalEvent(null); }}
                 className="flex-1 py-2.5 px-2 rounded-lg text-xs font-medium text-white transition-opacity hover:opacity-85"
                 style={{ background: rsvpModalEvent.attendee_status === 'declined' ? '#b91c1c' : '#ef4444' }}
               >
@@ -5287,17 +5292,17 @@ function CalendarContent() {
                     {/* 3 tlačítka pro (změnu) odpovědi */}
                     <div className="flex gap-2">
                       <button
-                        onClick={async () => { await respondToAttendance(ev.source_id, 'accepted'); setDetailEvent(null); }}
+                        onClick={async () => { const ok = await respondToAttendance(ev.source_id, 'accepted'); if (ok) setDetailEvent(null); }}
                         className="flex-1 py-2 px-2 rounded-lg text-xs font-medium text-white transition-opacity hover:opacity-85"
                         style={{ background: ev.attendee_status === 'accepted' ? '#15803d' : '#22c55e' }}
                       >✓ {ev.attendee_status === 'updated' ? 'Beru na vědomí' : 'Přijmout'}</button>
                       <button
-                        onClick={async () => { await respondToAttendance(ev.source_id, 'maybe'); setDetailEvent(null); }}
+                        onClick={async () => { const ok = await respondToAttendance(ev.source_id, 'maybe'); if (ok) setDetailEvent(null); }}
                         className="flex-1 py-2 px-2 rounded-lg text-xs font-medium text-white transition-opacity hover:opacity-85"
                         style={{ background: ev.attendee_status === 'maybe' ? '#b45309' : '#f59e0b' }}
                       >~ Nezávazně</button>
                       <button
-                        onClick={async () => { await respondToAttendance(ev.source_id, 'declined'); setDetailEvent(null); }}
+                        onClick={async () => { const ok = await respondToAttendance(ev.source_id, 'declined'); if (ok) setDetailEvent(null); }}
                         className="flex-1 py-2 px-2 rounded-lg text-xs font-medium text-white transition-opacity hover:opacity-85"
                         style={{ background: ev.attendee_status === 'declined' ? '#b91c1c' : '#ef4444' }}
                       >✗ Odmítnout</button>
