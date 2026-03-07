@@ -11,6 +11,11 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.25.2 – 7. 3. 2026</h3>
+<ul>
+  <li><strong>Kalendář – Seznam: badge sdílených událostí</strong> – štítek u sdílených událostí v pohledu Seznam nyní zobrazuje název kalendáře a jméno vlastníka (např. „Pracovní · Jan Novák") místo obecného textu „Sdílený kalendář".</li>
+</ul>
+
 <h3>v2.25.1 – 7. 3. 2026</h3>
 <ul>
   <li><strong>Kalendář – Sdílené kalendáře: přejmenování sekce</strong> – sekce „SDÍLENÉ" v levém panelu byla přejmenována na <strong>SDÍLENÉ KALENDÁŘE</strong> pro konzistenci s ostatními sekcemi.</li>
