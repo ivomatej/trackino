@@ -835,16 +835,19 @@ function CalendarContent() {
   // ── (calendar_day_start/end z profilu se již nepoužívají – grid je vždy 0–24) ──
 
   // ── Výška calWeekWrapperRef = celá dostupná výška viewportu ─────────────
-  // ── Výška pro týdenní/denní pohled ────────────────────────────────────────
-  // Nastaví explicitní výšku wrapperu i gridu (flex-1 chain nefunguje s min-h-screen).
+  // ── Výška pro týdenní pohled ───────────────────────────────────────────────
+  // Jen pro 'week' – today view používá přirozené CSS výšky (flex-1 chain funguje).
+  // loading v deps: wrapper neexistuje při loading=true (spinner nahrazuje obsah),
+  // takže potřebujeme re-run až když loading=false a wrapper se poprvé připojí.
   useLayoutEffect(() => {
     const wrapper = calWeekWrapperRef.current;
     const grid = weekGridRef.current;
-    if (!wrapper || (view !== 'week' && view !== 'today')) return;
+    if (!wrapper || view !== 'week') return;
 
     const applyHeight = () => {
       const wRect = wrapper.getBoundingClientRect();
       const totalH = window.innerHeight - wRect.top;
+      if (totalH <= 60) return; // bezpečnostní guard: wrapper mimo viewport
       wrapper.style.height = `${totalH}px`;
       if (grid) {
         void wrapper.offsetHeight; // force reflow
@@ -856,18 +859,32 @@ function CalendarContent() {
     applyHeight();
     window.addEventListener('resize', applyHeight);
     return () => window.removeEventListener('resize', applyHeight);
-  }, [view, loading]); // loading zajistí přepočet výšky po načtení dat (stabilní DOM)
+  }, [view, loading]); // loading: wrapper se připojí až když loading=false
 
-  // ── Scroll na calViewStart – useLayoutEffect zajistí scroll PŘED prvním malováním ──
-  // useLayoutEffect běží synchronně po DOM mutacích; výška (effect výše) se nastaví
-  // dříve (definován dříve v kódu), takže scrollTop dostane správné maximum hned.
-  // Tím odpadá nutnost retry a záblesk od 0:00 na mobilu i desktopu.
+  // ── Scroll na calViewStart ─────────────────────────────────────────────────
+  // useLayoutEffect: synchronní scroll před prvním malováním (mobil – bez záblesku).
+  // useEffect s double-rAF: záložní scroll po stabilizaci layoutu (desktop – flex-1
+  // chain se může ustálit až po prvním paint, proto rAF zajistí správný scrollTop).
   useLayoutEffect(() => {
     if (view !== 'week' && view !== 'today') return;
     if (loading) return;
     const grid = weekGridRef.current;
     if (!grid) return;
     grid.scrollTop = calViewStart * ROW_H;
+  }, [loading, view, calViewStart]);
+
+  useEffect(() => {
+    if (view !== 'week' && view !== 'today') return;
+    if (loading) return;
+    const target = calViewStart * ROW_H;
+    // double-rAF: počká 2 paint cykly, než flex-1 ustálí výšky → funguje na desktopu
+    let r1: number, r2: number;
+    r1 = requestAnimationFrame(() => {
+      r2 = requestAnimationFrame(() => {
+        if (weekGridRef.current) weekGridRef.current.scrollTop = target;
+      });
+    });
+    return () => { cancelAnimationFrame(r1); cancelAnimationFrame(r2); };
   }, [loading, view, calViewStart]);
 
   // Aktualizace aktuálního času každou minutu
