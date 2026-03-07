@@ -1085,6 +1085,23 @@ function TeamContent() {
                 </div>
               </div>
 
+              {/* Datum narození */}
+              <div className="mb-3">
+                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
+                  Datum narození
+                </label>
+                <input
+                  type="date"
+                  value={editBirthDate}
+                  onChange={(e) => setEditBirthDate(e.target.value)}
+                  className={inputCls}
+                  style={inputStyle}
+                />
+                <p className="text-[11px] mt-1" style={{ color: 'var(--text-muted)' }}>
+                  Zobrazí se v kalendáři Narozeniny uživatelům s příslušným oprávněním.
+                </p>
+              </div>
+
               {/* Typ spolupráce */}
               {cooperationTypes.length > 0 && (
                 <div className="mb-3">
@@ -1257,23 +1274,6 @@ function TeamContent() {
                     <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Zobrazí se kalendář Narozeniny s datumy narozenin kolegů</span>
                   </div>
                 </label>
-
-                {/* Datum narození */}
-                <div className="mt-3">
-                  <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
-                    Datum narození
-                  </label>
-                  <input
-                    type="date"
-                    value={editBirthDate}
-                    onChange={(e) => setEditBirthDate(e.target.value)}
-                    className={inputCls}
-                    style={inputStyle}
-                  />
-                  <p className="text-[11px] mt-1" style={{ color: 'var(--text-muted)' }}>
-                    Zobrazí se v kalendáři Narozeniny uživatelům s příslušným oprávněním.
-                  </p>
-                </div>
 
                 {/* Fakturační profil */}
                 {billingProfiles.length > 0 && (

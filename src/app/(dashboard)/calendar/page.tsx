@@ -901,6 +901,24 @@ function CalendarContent() {
     return localStorage.getItem('trackino_cal_birthdays') !== '0';
   });
 
+  // Státní svátky – barva (localStorage)
+  const [holidayColor, setHolidayColor] = useState<string>(() => {
+    if (typeof window === 'undefined') return '#ef4444';
+    return localStorage.getItem('trackino_cal_holiday_color') ?? '#ef4444';
+  });
+
+  // Jmeniny – barva (localStorage)
+  const [namedayColor, setNamedayColor] = useState<string>(() => {
+    if (typeof window === 'undefined') return '#7c3aed';
+    return localStorage.getItem('trackino_cal_nameday_color') ?? '#7c3aed';
+  });
+
+  // Narozeniny – barva (localStorage)
+  const [birthdayColor, setBirthdayColor] = useState<string>(() => {
+    if (typeof window === 'undefined') return '#ec4899';
+    return localStorage.getItem('trackino_cal_birthday_color') ?? '#ec4899';
+  });
+
   // Narozeniny – členové workspace
   const [birthdayMembers, setBirthdayMembers] = useState<BirthdayMember[]>([]);
 
@@ -2098,7 +2116,7 @@ function CalendarContent() {
           title: h.name,
           start_date: dateStr,
           end_date: dateStr,
-          color: '#ef4444',
+          color: holidayColor,
           source: 'holiday',
           source_id: dateStr,
           is_all_day: true,
@@ -2106,7 +2124,7 @@ function CalendarContent() {
       }
     }
     return result;
-  }, [showHolidays, visibleRange]);
+  }, [showHolidays, visibleRange, holidayColor]);
 
   // ── České jmeniny ──────────────────────────────────────────────────────────
 
@@ -2125,7 +2143,7 @@ function CalendarContent() {
           title: name,
           start_date: dateStr,
           end_date: dateStr,
-          color: '#7c3aed',
+          color: namedayColor,
           source: 'nameday',
           source_id: dateStr,
           is_all_day: true,
@@ -2134,7 +2152,7 @@ function CalendarContent() {
       cur.setDate(cur.getDate() + 1);
     }
     return result;
-  }, [showNamedays, visibleRange]);
+  }, [showNamedays, visibleRange, namedayColor]);
 
   // ── Narozeniny kolegů ──────────────────────────────────────────────────────
 
@@ -2158,7 +2176,7 @@ function CalendarContent() {
             title: `🎂 ${member.display_name}`,
             start_date: dateStr,
             end_date: dateStr,
-            color: '#ec4899',
+            color: birthdayColor,
             source: 'birthday',
             source_id: member.user_id,
             is_all_day: true,
@@ -2167,7 +2185,7 @@ function CalendarContent() {
       }
     }
     return result;
-  }, [showBirthdays, canViewBirthdays, birthdayMembers, visibleRange]);
+  }, [showBirthdays, canViewBirthdays, birthdayMembers, visibleRange, birthdayColor]);
 
   // ── DisplayEvents ─────────────────────────────────────────────────────────
 
@@ -2793,24 +2811,28 @@ function CalendarContent() {
               {autoExpanded && (
                 <>
                   {/* Dovolená */}
-                  <div className="flex items-center gap-1.5 py-0.5">
-                    <input
-                      type="checkbox"
-                      checked={showVacation}
-                      onChange={e => {
-                        setShowVacation(e.target.checked);
-                        localStorage.setItem('trackino_cal_vacation', e.target.checked ? '1' : '0');
-                      }}
-                      className="w-3.5 h-3.5 rounded cursor-pointer flex-shrink-0"
-                      style={{ accentColor: vacationColor }}
-                    />
-                    <div className="relative group/vac flex-shrink-0">
+                  <div className="flex items-center gap-1.5 py-0.5 group/vacrow">
+                    <button
+                      role="checkbox"
+                      aria-checked={showVacation}
+                      onClick={() => { setShowVacation(p => { const v = !p; localStorage.setItem('trackino_cal_vacation', v ? '1' : '0'); return v; }); }}
+                      className="w-3.5 h-3.5 rounded flex-shrink-0 flex items-center justify-center border-[1.5px] transition-colors cursor-pointer"
+                      style={{ background: showVacation ? vacationColor : 'transparent', borderColor: vacationColor }}
+                    >
+                      {showVacation && (
+                        <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                      )}
+                    </button>
+                    <span className="text-xs flex-1" style={{ color: 'var(--text-secondary)' }}>Dovolená</span>
+                    <div className="relative opacity-0 group-hover/vacrow:opacity-100 transition-opacity flex-shrink-0 group/vacdot">
                       <button
                         className="w-3 h-3 rounded-full border border-transparent hover:border-white/30 transition-all"
                         style={{ background: vacationColor }}
                         title="Změnit barvu"
                       />
-                      <div className="absolute left-0 top-5 z-20 hidden group-hover/vac:flex flex-wrap gap-1 p-2 rounded-lg border shadow-xl" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', width: 112 }}>
+                      <div className="absolute right-0 top-5 z-20 hidden group-hover/vacdot:flex flex-wrap gap-1 p-2 rounded-lg border shadow-xl" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', width: 112 }}>
                         {DEFAULT_COLORS.map(c => (
                           <button
                             key={c}
@@ -2827,27 +2849,30 @@ function CalendarContent() {
                         >○</button>
                       </div>
                     </div>
-                    <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Dovolená</span>
                   </div>
                   {/* Důležité dny */}
-                  <div className="flex items-center gap-1.5 py-0.5">
-                    <input
-                      type="checkbox"
-                      checked={showImportantDays}
-                      onChange={e => {
-                        setShowImportantDays(e.target.checked);
-                        localStorage.setItem('trackino_cal_important_days', e.target.checked ? '1' : '0');
-                      }}
-                      className="w-3.5 h-3.5 rounded cursor-pointer flex-shrink-0"
-                      style={{ accentColor: importantDaysColor ?? '#f59e0b' }}
-                    />
-                    <div className="relative group/idays flex-shrink-0">
+                  <div className="flex items-center gap-1.5 py-0.5 group/idaysrow">
+                    <button
+                      role="checkbox"
+                      aria-checked={showImportantDays}
+                      onClick={() => { setShowImportantDays(p => { const v = !p; localStorage.setItem('trackino_cal_important_days', v ? '1' : '0'); return v; }); }}
+                      className="w-3.5 h-3.5 rounded flex-shrink-0 flex items-center justify-center border-[1.5px] transition-colors cursor-pointer"
+                      style={{ background: showImportantDays ? (importantDaysColor ?? '#f59e0b') : 'transparent', borderColor: importantDaysColor ?? '#f59e0b' }}
+                    >
+                      {showImportantDays && (
+                        <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                      )}
+                    </button>
+                    <span className="text-xs flex-1" style={{ color: 'var(--text-secondary)' }}>Důležité dny</span>
+                    <div className="relative opacity-0 group-hover/idaysrow:opacity-100 transition-opacity flex-shrink-0 group/idaysdot">
                       <button
-                        className="w-3 h-3 rounded-sm border border-transparent hover:border-white/30 transition-all"
+                        className="w-3 h-3 rounded-full border border-transparent hover:border-white/30 transition-all"
                         style={{ background: importantDaysColor ?? 'linear-gradient(135deg, #f59e0b, #8b5cf6)' }}
                         title="Změnit barvu (přebije individuální barvy)"
                       />
-                      <div className="absolute left-0 top-5 z-20 hidden group-hover/idays:flex flex-wrap gap-1 p-2 rounded-lg border shadow-xl" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', width: 112 }}>
+                      <div className="absolute right-0 top-5 z-20 hidden group-hover/idaysdot:flex flex-wrap gap-1 p-2 rounded-lg border shadow-xl" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', width: 112 }}>
                         {DEFAULT_COLORS.map(c => (
                           <button
                             key={c}
@@ -2864,7 +2889,6 @@ function CalendarContent() {
                         >○</button>
                       </div>
                     </div>
-                    <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Důležité dny</span>
                   </div>
                 </>
               )}
@@ -2886,45 +2910,126 @@ function CalendarContent() {
               </div>
               {otherExpanded && (
                 <>
-                  <div className="flex items-center gap-1.5 py-0.5">
-                    <input
-                      type="checkbox"
-                      checked={showHolidays}
-                      onChange={e => {
-                        setShowHolidays(e.target.checked);
-                        localStorage.setItem('trackino_cal_holidays', e.target.checked ? '1' : '0');
-                      }}
-                      className="w-3.5 h-3.5 rounded cursor-pointer flex-shrink-0"
-                      style={{ accentColor: '#ef4444' }}
-                    />
-                    <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Státní svátky</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 py-0.5">
-                    <input
-                      type="checkbox"
-                      checked={showNamedays}
-                      onChange={e => {
-                        setShowNamedays(e.target.checked);
-                        localStorage.setItem('trackino_cal_namedays', e.target.checked ? '1' : '0');
-                      }}
-                      className="w-3.5 h-3.5 rounded cursor-pointer flex-shrink-0"
-                      style={{ accentColor: '#7c3aed' }}
-                    />
-                    <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Jmeniny</span>
-                  </div>
-                  {canViewBirthdays && (
-                    <div className="flex items-center gap-1.5 py-0.5">
-                      <input
-                        type="checkbox"
-                        checked={showBirthdays}
-                        onChange={e => {
-                          setShowBirthdays(e.target.checked);
-                          localStorage.setItem('trackino_cal_birthdays', e.target.checked ? '1' : '0');
-                        }}
-                        className="w-3.5 h-3.5 rounded cursor-pointer flex-shrink-0"
-                        style={{ accentColor: '#ec4899' }}
+                  {/* Státní svátky */}
+                  <div className="flex items-center gap-1.5 py-0.5 group/holrow">
+                    <button
+                      role="checkbox"
+                      aria-checked={showHolidays}
+                      onClick={() => { setShowHolidays(p => { const v = !p; localStorage.setItem('trackino_cal_holidays', v ? '1' : '0'); return v; }); }}
+                      className="w-3.5 h-3.5 rounded flex-shrink-0 flex items-center justify-center border-[1.5px] transition-colors cursor-pointer"
+                      style={{ background: showHolidays ? holidayColor : 'transparent', borderColor: holidayColor }}
+                    >
+                      {showHolidays && (
+                        <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                      )}
+                    </button>
+                    <span className="text-xs flex-1" style={{ color: 'var(--text-secondary)' }}>Státní svátky</span>
+                    <div className="relative opacity-0 group-hover/holrow:opacity-100 transition-opacity flex-shrink-0 group/holdot">
+                      <button
+                        className="w-3 h-3 rounded-full border border-transparent hover:border-white/30 transition-all"
+                        style={{ background: holidayColor }}
+                        title="Změnit barvu"
                       />
-                      <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Narozeniny</span>
+                      <div className="absolute right-0 top-5 z-20 hidden group-hover/holdot:flex flex-wrap gap-1 p-2 rounded-lg border shadow-xl" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', width: 112 }}>
+                        {DEFAULT_COLORS.map(c => (
+                          <button
+                            key={c}
+                            onClick={() => { setHolidayColor(c); localStorage.setItem('trackino_cal_holiday_color', c); }}
+                            className="w-4 h-4 rounded-full transition-all"
+                            style={{ background: c, boxShadow: holidayColor === c ? `0 0 0 1.5px white, 0 0 0 3px ${c}` : 'none' }}
+                          />
+                        ))}
+                        <button
+                          onClick={() => { setHolidayColor('#ef4444'); localStorage.setItem('trackino_cal_holiday_color', '#ef4444'); }}
+                          className="w-4 h-4 rounded-full border flex items-center justify-center text-[8px]"
+                          style={{ borderColor: 'var(--border)', color: 'var(--text-muted)', background: 'var(--bg-hover)' }}
+                          title="Výchozí barva"
+                        >○</button>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Jmeniny */}
+                  <div className="flex items-center gap-1.5 py-0.5 group/ndrow">
+                    <button
+                      role="checkbox"
+                      aria-checked={showNamedays}
+                      onClick={() => { setShowNamedays(p => { const v = !p; localStorage.setItem('trackino_cal_namedays', v ? '1' : '0'); return v; }); }}
+                      className="w-3.5 h-3.5 rounded flex-shrink-0 flex items-center justify-center border-[1.5px] transition-colors cursor-pointer"
+                      style={{ background: showNamedays ? namedayColor : 'transparent', borderColor: namedayColor }}
+                    >
+                      {showNamedays && (
+                        <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                      )}
+                    </button>
+                    <span className="text-xs flex-1" style={{ color: 'var(--text-secondary)' }}>Jmeniny</span>
+                    <div className="relative opacity-0 group-hover/ndrow:opacity-100 transition-opacity flex-shrink-0 group/nddot">
+                      <button
+                        className="w-3 h-3 rounded-full border border-transparent hover:border-white/30 transition-all"
+                        style={{ background: namedayColor }}
+                        title="Změnit barvu"
+                      />
+                      <div className="absolute right-0 top-5 z-20 hidden group-hover/nddot:flex flex-wrap gap-1 p-2 rounded-lg border shadow-xl" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', width: 112 }}>
+                        {DEFAULT_COLORS.map(c => (
+                          <button
+                            key={c}
+                            onClick={() => { setNamedayColor(c); localStorage.setItem('trackino_cal_nameday_color', c); }}
+                            className="w-4 h-4 rounded-full transition-all"
+                            style={{ background: c, boxShadow: namedayColor === c ? `0 0 0 1.5px white, 0 0 0 3px ${c}` : 'none' }}
+                          />
+                        ))}
+                        <button
+                          onClick={() => { setNamedayColor('#7c3aed'); localStorage.setItem('trackino_cal_nameday_color', '#7c3aed'); }}
+                          className="w-4 h-4 rounded-full border flex items-center justify-center text-[8px]"
+                          style={{ borderColor: 'var(--border)', color: 'var(--text-muted)', background: 'var(--bg-hover)' }}
+                          title="Výchozí barva"
+                        >○</button>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Narozeniny */}
+                  {canViewBirthdays && (
+                    <div className="flex items-center gap-1.5 py-0.5 group/bdrow">
+                      <button
+                        role="checkbox"
+                        aria-checked={showBirthdays}
+                        onClick={() => { setShowBirthdays(p => { const v = !p; localStorage.setItem('trackino_cal_birthdays', v ? '1' : '0'); return v; }); }}
+                        className="w-3.5 h-3.5 rounded flex-shrink-0 flex items-center justify-center border-[1.5px] transition-colors cursor-pointer"
+                        style={{ background: showBirthdays ? birthdayColor : 'transparent', borderColor: birthdayColor }}
+                      >
+                        {showBirthdays && (
+                          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="20 6 9 17 4 12"/>
+                          </svg>
+                        )}
+                      </button>
+                      <span className="text-xs flex-1" style={{ color: 'var(--text-secondary)' }}>Narozeniny</span>
+                      <div className="relative opacity-0 group-hover/bdrow:opacity-100 transition-opacity flex-shrink-0 group/bddot">
+                        <button
+                          className="w-3 h-3 rounded-full border border-transparent hover:border-white/30 transition-all"
+                          style={{ background: birthdayColor }}
+                          title="Změnit barvu"
+                        />
+                        <div className="absolute right-0 top-5 z-20 hidden group-hover/bddot:flex flex-wrap gap-1 p-2 rounded-lg border shadow-xl" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', width: 112 }}>
+                          {DEFAULT_COLORS.map(c => (
+                            <button
+                              key={c}
+                              onClick={() => { setBirthdayColor(c); localStorage.setItem('trackino_cal_birthday_color', c); }}
+                              className="w-4 h-4 rounded-full transition-all"
+                              style={{ background: c, boxShadow: birthdayColor === c ? `0 0 0 1.5px white, 0 0 0 3px ${c}` : 'none' }}
+                            />
+                          ))}
+                          <button
+                            onClick={() => { setBirthdayColor('#ec4899'); localStorage.setItem('trackino_cal_birthday_color', '#ec4899'); }}
+                            className="w-4 h-4 rounded-full border flex items-center justify-center text-[8px]"
+                            style={{ borderColor: 'var(--border)', color: 'var(--text-muted)', background: 'var(--bg-hover)' }}
+                            title="Výchozí barva"
+                          >○</button>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </>
