@@ -2894,6 +2894,74 @@ function CalendarContent() {
               )}
             </div>
 
+            {/* SDÍLENÉ KALENDÁŘE – zobrazí se jen pokud existují sdílené */}
+            {sharedWithMe.length > 0 && (
+              <div className="mb-3">
+                <div className="mb-2">
+                  <button
+                    onClick={() => setSharedCalExpanded(p => !p)}
+                    className="flex items-center gap-1 text-[10px] font-semibold tracking-wider"
+                    style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                  >
+                    SDÍLENÉ KALENDÁŘE
+                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ transform: sharedCalExpanded ? 'none' : 'rotate(-90deg)', transition: 'transform 0.15s', flexShrink: 0 }}>
+                      <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                  </button>
+                </div>
+                {sharedCalExpanded && sharedWithMe.map(shared => (
+                  <div key={shared.share_id} className="flex items-center gap-1.5 py-0.5 group/shared">
+                    {/* Toggle viditelnosti */}
+                    <button
+                      role="checkbox"
+                      aria-checked={shared.is_enabled}
+                      onClick={() => updateSharePref(shared.calendar_id, { is_enabled: !shared.is_enabled })}
+                      className="w-3.5 h-3.5 rounded flex-shrink-0 flex items-center justify-center border-[1.5px] transition-colors cursor-pointer"
+                      style={{
+                        background: shared.is_enabled ? (shared.color_override ?? shared.base_color) : 'transparent',
+                        borderColor: shared.color_override ?? shared.base_color,
+                      }}
+                    >
+                      {shared.is_enabled && (
+                        <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                      )}
+                    </button>
+                    {/* Název + vlastník */}
+                    <div className="flex-1 min-w-0">
+                      <span className="text-xs block truncate" style={{ color: 'var(--text-primary)' }}>{shared.name}</span>
+                      <span className="text-[10px] block truncate" style={{ color: 'var(--text-muted)' }}>{shared.owner_name}</span>
+                    </div>
+                    {/* Barevná tečka s color pickerem – viditelná na hover */}
+                    <div className="relative opacity-0 group-hover/shared:opacity-100 transition-opacity flex-shrink-0 group/colorpick">
+                      <button
+                        className="w-3 h-3 rounded-full border border-transparent hover:border-white/30 transition-all"
+                        style={{ background: shared.color_override ?? shared.base_color }}
+                        title="Změnit barvu"
+                      />
+                      <div className="absolute right-0 top-5 z-20 hidden group-hover/colorpick:flex flex-wrap gap-1 p-2 rounded-lg border shadow-xl" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', width: 112 }}>
+                        {DEFAULT_COLORS.map(c => (
+                          <button
+                            key={c}
+                            onClick={() => updateSharePref(shared.calendar_id, { color_override: c })}
+                            className="w-4 h-4 rounded-full transition-all"
+                            style={{ background: c, boxShadow: (shared.color_override ?? shared.base_color) === c ? `0 0 0 1.5px white, 0 0 0 3px ${c}` : 'none' }}
+                          />
+                        ))}
+                        <button
+                          onClick={() => updateSharePref(shared.calendar_id, { color_override: null })}
+                          className="w-4 h-4 rounded-full border flex items-center justify-center text-[8px]"
+                          style={{ borderColor: 'var(--border)', color: 'var(--text-muted)', background: 'var(--bg-hover)' }}
+                          title="Výchozí barva"
+                        >○</button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* Další kalendáře – Státní svátky */}
             <div className="mb-3">
               <div className="mb-2">
@@ -3035,73 +3103,6 @@ function CalendarContent() {
                 </>
               )}
             </div>
-
-            {/* SDÍLENÉ KALENDÁŘE – zobrazí se jen pokud existují sdílené */}
-            {sharedWithMe.length > 0 && (
-              <div className="mb-3">
-                <div className="mb-2">
-                  <button
-                    onClick={() => setSharedCalExpanded(p => !p)}
-                    className="flex items-center gap-1 text-[10px] font-semibold tracking-wider"
-                    style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-                  >
-                    SDÍLENÉ
-                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ transform: sharedCalExpanded ? 'none' : 'rotate(-90deg)', transition: 'transform 0.15s', flexShrink: 0 }}>
-                      <polyline points="6 9 12 15 18 9"/>
-                    </svg>
-                  </button>
-                </div>
-                {sharedCalExpanded && sharedWithMe.map(shared => (
-                  <div key={shared.share_id} className="flex items-center gap-1.5 py-0.5 group/shared">
-                    {/* Toggle viditelnosti */}
-                    <button
-                      role="checkbox"
-                      aria-checked={shared.is_enabled}
-                      onClick={() => updateSharePref(shared.calendar_id, { is_enabled: !shared.is_enabled })}
-                      className="w-3.5 h-3.5 rounded flex-shrink-0 flex items-center justify-center border-[1.5px] transition-colors cursor-pointer"
-                      style={{
-                        background: shared.is_enabled ? (shared.color_override ?? shared.base_color) : 'transparent',
-                        borderColor: shared.color_override ?? shared.base_color,
-                      }}
-                    >
-                      {shared.is_enabled && (
-                        <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="20 6 9 17 4 12"/>
-                        </svg>
-                      )}
-                    </button>
-                    {/* Barevná tečka s color picker */}
-                    <div className="relative group/colorpick flex-shrink-0">
-                      <button
-                        className="w-3 h-3 rounded-full border border-transparent hover:border-white/30 transition-all"
-                        style={{ background: shared.color_override ?? shared.base_color }}
-                        title="Změnit barvu"
-                      />
-                      <div className="absolute left-0 top-5 z-20 hidden group-hover/colorpick:flex flex-wrap gap-1 p-2 rounded-lg border shadow-xl" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', width: 112 }}>
-                        {DEFAULT_COLORS.map(c => (
-                          <button
-                            key={c}
-                            onClick={() => updateSharePref(shared.calendar_id, { color_override: c })}
-                            className="w-4 h-4 rounded-full transition-all"
-                            style={{ background: c, boxShadow: (shared.color_override ?? shared.base_color) === c ? `0 0 0 1.5px white, 0 0 0 3px ${c}` : 'none' }}
-                          />
-                        ))}
-                        <button
-                          onClick={() => updateSharePref(shared.calendar_id, { color_override: null })}
-                          className="w-4 h-4 rounded-full border flex items-center justify-center text-[8px]"
-                          style={{ borderColor: 'var(--border)', color: 'var(--text-muted)', background: 'var(--bg-hover)' }}
-                          title="Výchozí barva"
-                        >○</button>
-                      </div>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-xs block truncate" style={{ color: 'var(--text-primary)' }}>{shared.name}</span>
-                      <span className="text-[10px] block truncate" style={{ color: 'var(--text-muted)' }}>{shared.owner_name}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
 
             {/* Nastavení kalendáře */}
             <div className="border-t pt-3 pb-4" style={{ borderColor: 'var(--border)' }}>
