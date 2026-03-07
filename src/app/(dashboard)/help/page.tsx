@@ -456,7 +456,9 @@ const DEFAULT_HELP_CONTENT = `
 <p>Modul <strong>Znalostní báze</strong> (sekce Společnost) je interní wiki pro tvorbu, organizaci a sdílení firemních znalostí a postupů.</p>
 <ul>
   <li><strong>Složky a stránky</strong> – stránky jsou uspořádány do hierarchických složek s neomezenou hloubkou; stránky lze vytvářet přímo v kořeni nebo ve složce; levý panel zobrazuje stromovou strukturu složek a stránek</li>
-  <li><strong>Rich text editor</strong> – nadpisy H1–H3, tučné/kurzíva/podtržení, odrážkový a číslovaný seznam, oddělovač, kontrolní seznam (interaktivní zaškrtávání v náhledu), callout (informační rámeček), přepínací blok (toggle/accordion), kód s kopírováním, hypertextový odkaz; v editoru lze vkládat @zmínky (členové workspace) a /odkaz na jinou stránku KB</li>
+  <li><strong>Rich text editor</strong> – toolbar ve dvou řádcích: (1) nadpisy H1–H3, tučné/kurzíva/podtržení, odrážkový a číslovaný seznam, oddělovač; (2) Kód, Odkaz, Zmínky, Stránka, Úkol (interaktivní zaškrtávací seznam), Infobox, Toggle; kódové bloky mají správnou výšku a Enter vytvoří nový řádek; v editoru lze vkládat @zmínky (členové workspace) a odkaz na jinou stránku KB</li>
+  <li><strong>Přiřazení do složky</strong> – v editoru stránky lze zvolit složku přes select v metadatech; v levém panelu se při hoveru zobrazí ikonka složky pro rychlé přesunutí stránky</li>
+  <li><strong>Kopírování obsahu</strong> – tlačítko kopírování v pravém horním rohu zkopíruje celý obsah stránky jako prostý text do schránky</li>
   <li><strong>Šablony</strong> – při vytvoření nové stránky si vyberte z 5 přednastavených šablon: Prázdná, Zápis z meetingu, Popis procesu, Onboarding průvodce, Dokumentace projektu</li>
   <li><strong>Fulltextové vyhledávání</strong> – hledá v názvech i obsahu stránek; výsledky se zobrazují v levém panelu</li>
   <li><strong>Štítky</strong> – každá stránka může mít libovolný počet štítků; slouží k filtrování a kategorizaci</li>

@@ -11,6 +11,15 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.37.3 – 7. 3. 2026</h3>
+<ul>
+  <li><strong>Znalostní báze – toolbar ve dvou řádcích</strong> – editor přeorganizován: řádek 1 obsahuje H1/H2/H3, B/I/U, odrážkový/číslovaný seznam a oddělovač; řádek 2 obsahuje Kód, Odkaz, Zmínky, Stránka, Úkol (dříve Check), Infobox (dříve Callout), Toggle. Všechna tlačítka mají SVG ikony místo emoji (📄, 🔗, ℹ, ▶, ☐ odstraněny).</li>
+  <li><strong>Znalostní báze – přiřazení stránky do složky</strong> – v editoru stránky přibyl select složky v metadatech; v levém panelu se při hoveru na stránku zobrazí ikonka složky pro rychlé přesunutí do jiné složky bez otevření editoru.</li>
+  <li><strong>Znalostní báze – kopírování obsahu stránky</strong> – nová ikona kopírování v pravém horním rohu detailu stránky zkopíruje celý obsah jako prostý text do schránky (potvrzení zelenou fajfkou).</li>
+  <li><strong>Znalostní báze – kódové bloky</strong> – kód má nyní správnou minimální výšku (3em) a Enter uvnitř kódového bloku vytvoří nový řádek (místo ukončení bloku).</li>
+  <li><strong>Znalostní báze – standardní SVG ikony</strong> – všechny trash ikony (smazání stránky, komentáře, recenze, složky) nahrazeny standardní 4-path SVG ikonou shodnou s ostatními moduly. Emoji ⭐ v sekci Oblíbené nahrazeno SVG hvězdou.</li>
+</ul>
+
 <h3>v2.37.2 – 7. 3. 2026</h3>
 <ul>
   <li><strong>AI asistent – oblíbené konverzace</strong> – v levém panelu přibyla hvězdička ☆ u každé konverzace (zobrazí se při najetí myší). Kliknutím označíte konverzaci jako oblíbenou – hvězdička svítí zlatě a konverzace se přesune do samostatné sekce <strong>OBLÍBENÉ</strong> v horní části seznamu. Ostatní konverzace zůstávají v sekci <strong>OSTATNÍ</strong>. Stav oblíbených je uložen v databázi a přežívá refresh i přihlášení z jiného zařízení. SQL migrace: <code>ALTER TABLE trackino_ai_conversations ADD COLUMN IF NOT EXISTS is_favorite boolean NOT NULL DEFAULT false;</code></li>

@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 7. 3. 2026 (v2.37.2)
+> Aktualizováno: 7. 3. 2026 (v2.37.3)
 
 ---
 
@@ -493,6 +493,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.37.3 | 7. 3. 2026 | Znalostní báze: 2řádkový toolbar (SVG ikony místo emoji), přiřazení stránky do složky (edit mód + hover v levém panelu), kopírování obsahu (clipboard), fix kódových bloků (min-height + Enter → nový řádek), standardní trash ikony |
 | v2.37.2 | 7. 3. 2026 | AI asistent – oblíbené konverzace (hvězdička, sekce OBLÍBENÉ v sidebaru, uloženo v DB is_favorite); šedé zvýraznění aktivní konverzace (var(--bg-hover)); standardní ikona koše; SQL: ALTER TABLE trackino_ai_conversations ADD COLUMN IF NOT EXISTS is_favorite boolean NOT NULL DEFAULT false |
 | v2.37.0 | 7. 3. 2026 | AI asistent redesign: konverzace ukládány v DB (trackino_ai_conversations + trackino_ai_messages); levý sidebar s vyhledáváním a mazáním; větší textarea (80–300px); token counter s progress barem; rychlý přepínač modelů (pill tlačítka); model info dialog s popisem + cenou v Kč; tarif změněn na Max only; oprávnění can_use_ai_assistant + ai_allowed_models per user; nastavení → záložka AI asistent (token limity, CZK kalkulačka, per-user modely); streaming usage via __USAGE__: suffix; trackino_ai_usage_limits tabulka |
 | v2.36.1 | 7. 3. 2026 | AI asistent: počítadlo Firecrawl kreditů (🔥 X/500) v footeru; localStorage persist; barevné kódování (zelená/oranžová/červená); varování při <50 zbývajících kreditech; CREDITS_PER_SCRAPE=1, CREDITS_PER_SEARCH=7, FIRECRAWL_CREDIT_LIMIT=500 |
