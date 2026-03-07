@@ -11,6 +11,12 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.36.0 – 7. 3. 2026</h3>
+<ul>
+  <li><strong>AI asistent – Firecrawl integrace (web search + URL scraping)</strong> – AI asistent byl rozšířen o schopnost číst a prohledávat internet v reálném čase díky službě Firecrawl. Dvě nové funkce: <em>(a) Web search</em> – globus tlačítko (🌐) vedle vstupního pole; po aktivaci AI před každou odpovědí prohledá web a injektuje nalezené informace jako kontext do odpovědi. <em>(b) Auto URL scraping</em> – pokud zpráva obsahuje URL adresu, systém ji automaticky přečte a obsah stránky přidá jako kontext. AI tak může pracovat s aktuálními informacemi z internetu bez nutnosti kopírovat obsah stránek. Indikátory v UI: zelený štítek „Stránka bude přečtena" nebo „Web search aktivní" nad vstupním polem; animovaný zelený loading stav „🔍 Prohledávám web…" nebo „📄 Čtu stránku…" v průběhu načítání; zelená ikona 🌐 u odeslané zprávy, která obsahovala webový kontext. Dostupné pouze pokud je nastaven API klíč <code>FIRECRAWL_API_KEY</code>.</li>
+  <li><strong>Server-side API routes</strong> – přidány dvě nové serverové routes: <code>POST /api/firecrawl/scrape</code> (převede URL na Markdown) a <code>POST /api/firecrawl/search</code> (webové vyhledávání s obsahem výsledků). API klíč Firecrawl je bezpečně pouze na serveru.</li>
+</ul>
+
 <h3>v2.35.0 – 7. 3. 2026</h3>
 <ul>
   <li><strong>AI asistent – nový modul (Pro+Max)</strong> – chatovací okno napojené na OpenAI API (GPT-4o, GPT-4o mini, GPT-4 Turbo, o1-mini). Funkce: výběr modelu, nastavitelná kreativita (temperature 0–1), volitelný system prompt, streamované odpovědi v reálném čase, vymazání konverzace, rychlé návrhy dotazů. Odpovědi renderují Markdown (nadpisy, tučné, kód, seznamy).</li>

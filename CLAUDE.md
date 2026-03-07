@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 7. 3. 2026 (v2.35.0)
+> Aktualizováno: 7. 3. 2026 (v2.36.0)
 
 ---
 
@@ -493,6 +493,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.36.0 | 7. 3. 2026 | Firecrawl integrace: server-side API routes (/api/firecrawl/scrape + /api/firecrawl/search); AI asistent rozšířen o web search toggle (🌐) a auto-detekci URL → scraping obsahu; kontext z webu injektován do AI odpovědi; FIRECRAWL_API_KEY env var |
 | v2.35.0 | 7. 3. 2026 | AI asistent: nový modul (Pro+Max) – chatovací okno napojené na OpenAI API; streaming; výběr modelu (GPT-4o/4o-mini/4-Turbo/o1-mini); temperature; system prompt; Markdown rendering; src/lib/ai-providers.ts (multi-provider infra); src/app/api/ai-chat/route.ts (serverová route); env: OPENAI_API_KEY |
 | v2.34.0 | 7. 3. 2026 | Znalostní báze: plná implementace – hierarchické složky+stránky, rich text editor (H1–H3/B/I/U/seznam/checklist/callout/toggle/kód/link/@mention//page-link), fulltextové hledání, štítky, 5 šablon, stavy (Koncept/Aktivní/Archiv), verze s revert, komentáře, revizní připomínky (→Přehled K vyřízení), přístupová práva (is_restricted+trackino_kb_access), oblíbené; 7 nových DB tabulek |
 | v2.33.0 | 7. 3. 2026 | Analýza kategorií: přidán filtr uživatele (select „Všichni uživatelé" pro admin/manager); sidebar scrollbar skrytý – zobrazí se až při hoveru (CSS třída sidebar-scroll) |
@@ -1358,6 +1359,74 @@ OPENAI_API_KEY=sk-...
 - Tarif: Pro + Max
 - Skupina: `'Nástroje'`
 - Sidebar ikona: glühbirne/AI brain SVG
+
+### Firecrawl integrace v AI asistentovi (v2.36.0)
+- **Web search toggle** – tlačítko 🌐 vedle vstupu; když je aktivní, před každým odesláním se zavolá `/api/firecrawl/search` a výsledky se injektují jako kontext
+- **URL auto-detection** – pokud zpráva obsahuje URL, automaticky se zavolá `/api/firecrawl/scrape` a obsah se přidá do kontextu
+- **Stav načítání** – `firecrawlStatus: 'idle' | 'searching' | 'scraping'` zobrazovaný v UI
+- **Context injection** – výsledky se přidají do `systemPrompt` jako blok „Kontext z webu" před odesláním do AI
+
+---
+
+## 29. Firecrawl – architektura webového scrapingu
+
+### Co je Firecrawl
+Firecrawl (firecrawl.dev) je API služba pro převod webových stránek na LLM-ready data (Markdown, JSON, screenshot). Trackino ho využívá pro rozšíření AI asistenta o schopnost číst web.
+
+### API klíč
+```
+FIRECRAWL_API_KEY=fc-...   # přidat do .env.local + Vercel env vars
+```
+
+### Soubory
+| Soubor | Popis |
+|--------|-------|
+| `src/app/api/firecrawl/scrape/route.ts` | Serverová POST route – scrape URL → Markdown |
+| `src/app/api/firecrawl/search/route.ts` | Serverová POST route – webové vyhledávání → seznam výsledků s obsahem |
+
+### Endpointy (REST API)
+```
+POST https://api.firecrawl.dev/v2/scrape
+  { url, formats: ['markdown'] }
+  → { success, data: { markdown, metadata: { title, description } } }
+
+POST https://api.firecrawl.dev/v2/search
+  { query, limit: 5, scrapeOptions: { formats: ['markdown'] } }
+  → { success, data: [{ url, title, description, markdown }] }
+
+POST https://api.firecrawl.dev/v2/crawl    # pro budoucí použití (KB import)
+  { url, limit: 10 }
+
+POST https://api.firecrawl.dev/v2/agent    # pro budoucí use cases
+  { prompt, model: 'spark-1-mini' }
+```
+- Autentizace: `Authorization: Bearer $FIRECRAWL_API_KEY`
+- API klíč pouze na serveru (`process.env.FIRECRAWL_API_KEY`) – nikdy v klientském kódu
+
+### Naše API routes (wrapper)
+```typescript
+// POST /api/firecrawl/scrape
+// Body: { url: string }
+// Response: { markdown: string; title?: string; description?: string } | { error: string }
+
+// POST /api/firecrawl/search
+// Body: { query: string; limit?: number }
+// Response: { results: Array<{ url, title, description, markdown }> } | { error: string }
+```
+
+### Cenové jednotky (kredity)
+| Operace | Cena |
+|---------|------|
+| Scrape (markdown) | 1 kredit |
+| Search (10 výsledků) | 2 kredity |
+| Search + scrape výsledků | 2 + 1/stránka |
+| Crawl | 1 kredit/stránka |
+| Agent | ~stovky kreditů |
+
+### Plánované rozšíření
+- **Záložky**: při přidání záložky auto-scrape → titulek, popis (zatím manuální)
+- **Znalostní báze**: tlačítko „Importovat z URL" → Firecrawl scrape → MD obsah jako KB stránka
+- **Web Research modul**: fulltextové vyhledávání + AI shrnutí výsledků
 
 ---
 

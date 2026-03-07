@@ -164,9 +164,12 @@ const DEFAULT_HELP_CONTENT = `
   <li><strong>Streamované odpovědi</strong> – u modelů s podporou streamingu se odpověď zobrazuje v reálném čase písmeno po písmenu. Generování lze přerušit červeným tlačítkem stop.</li>
   <li><strong>Formátování odpovědí</strong> – AI odpovědi automaticky renderují Markdown: nadpisy, tučný text, kurzívu, kódové bloky se zvýrazněním syntaxe, odrážkové seznamy.</li>
   <li><strong>Vymazání konverzace</strong> – tlačítko Vymazat konverzaci smaže historii zpráv v prohlížeči (nezaznamenává se do databáze).</li>
-  <li><strong>Rychlé návrhy</strong> – při prázdné konverzaci se zobrazí čtyři tlačítka s ukázkovými dotazy pro rychlé zahájení.</li>
+  <li><strong>Rychlé návrhy</strong> – při prázdné konverzaci se zobrazí tlačítka s ukázkovými dotazy pro rychlé zahájení; pokud je Firecrawl dostupný, nabídnou se i návrhy s prohledáváním webu.</li>
+  <li><strong>Web search (🌐)</strong> – globus tlačítko vlevo od vstupního pole. Kliknutím aktivujete webové vyhledávání: AI před každou odpovědí automaticky prohledá internet a výsledky zahrne do kontextu. Aktivní stav je indikován zeleným zvýrazněním tlačítka a štítkem „Web search aktivní". Dostupné pouze pokud je nastaven Firecrawl API klíč.</li>
+  <li><strong>Automatické čtení URL</strong> – pokud vaše zpráva obsahuje URL adresu (začínající https://), AI ji automaticky přečte a obsah stránky použije jako kontext pro odpověď. Nad vstupním polem se zobrazí zelený štítek „Stránka bude přečtena". Lze vložit až 2 URL najednou.</li>
+  <li><strong>Indikátor webového kontextu</strong> – u odeslaných zpráv, ke kterým byl přiložen webový kontext (vyhledávání nebo scraping), se zobrazí zelená ikonka 🌐 a text „web" pod bublinou.</li>
 </ul>
-<p><strong>Nastavení API klíče</strong> – AI asistent vyžaduje platný API klíč od OpenAI. Klíč se přidá jako proměnná prostředí <code>OPENAI_API_KEY</code> do souboru <code>.env.local</code> pro lokální vývoj a do Vercel Environment Variables pro produkci. Pokud klíč chybí, zobrazí se červené upozornění přímo na stránce AI asistenta.</p>
+<p><strong>Nastavení API klíčů</strong> – AI asistent vyžaduje platný API klíč od OpenAI (<code>OPENAI_API_KEY</code>). Pro funkce web search a URL čtení je navíc potřeba Firecrawl klíč (<code>FIRECRAWL_API_KEY</code>). Oba klíče se přidávají do <code>.env.local</code> pro lokální vývoj a do Vercel Environment Variables pro produkci. Pokud OpenAI klíč chybí, zobrazí se červené upozornění přímo na stránce AI asistenta.</p>
 
 <h3>Převodník textu</h3>
 <p>Modul <strong>Převodník textu</strong> (dostupný v tarifu <strong>Pro a Max</strong>, sekce <strong>NÁSTROJE</strong>) podporuje dva směry konverze:</p>
