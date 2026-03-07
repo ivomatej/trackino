@@ -159,6 +159,14 @@ export default function DashboardLayout({ children, showTimer = false, onTimerEn
     if (typeof window === 'undefined') return false;
     return localStorage.getItem('trackino_sidebar_collapsed') === '1';
   });
+  // Detekce mobilního zobrazení (< 640px = breakpoint sm)
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 640);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   const toggleDesktopSidebar = () => {
     setSidebarCollapsed(prev => {
@@ -175,6 +183,12 @@ export default function DashboardLayout({ children, showTimer = false, onTimerEn
   // Master admin vidí zamčený workspace i tak (aby mohl odemknout)
   const isMasterAdmin = profile?.is_master_admin === true;
   const showLockedScreen = isWorkspaceLocked && !isMasterAdmin;
+
+  // Timer logika
+  // shouldShowTimer: zda je timer vůbec viditelný (stránka Měřič nebo timer_always_visible)
+  // timerAtBottom: jen na mobilu a pokud user zapnul timer_bottom_mobile
+  const shouldShowTimer = (showTimer || (profile?.timer_always_visible ?? false)) && !isPendingApproval && !showLockedScreen;
+  const timerAtBottom = (profile?.timer_bottom_mobile ?? false) && isMobile;
 
   const { visible: activeNotifications, dismiss: dismissNotification } = useSystemNotifications();
 
@@ -249,9 +263,8 @@ export default function DashboardLayout({ children, showTimer = false, onTimerEn
               </svg>
             </button>
 
-            {/* Timer v hlavičce - jen pro schválené a nečekající uživatele */}
-            {/* showTimer = předáno stránkou Měřič; timer_always_visible = per-user nastavení */}
-            {(showTimer || (profile?.timer_always_visible ?? false)) && !isPendingApproval && !showLockedScreen ? (
+            {/* Timer v hlavičce – jen pokud není přesunutý ke spodní hraně na mobilu */}
+            {shouldShowTimer && !timerAtBottom ? (
               <div className="flex-1 min-w-0">
                 <TimerBar onEntryChanged={onTimerEntryChanged} playData={timerPlayData} />
               </div>
@@ -263,7 +276,7 @@ export default function DashboardLayout({ children, showTimer = false, onTimerEn
         </header>
 
         {/* Page content – pending screen nebo normální obsah */}
-        <main className="flex-1 p-4 lg:p-6 flex flex-col">
+        <main className={`flex-1 p-4 lg:p-6 flex flex-col${timerAtBottom && shouldShowTimer ? ' pb-24' : ''}`}>
           {showLockedScreen ? <LockedWorkspaceScreen /> : isPendingApproval ? <PendingApprovalScreen /> : children}
         </main>
 
@@ -276,6 +289,16 @@ export default function DashboardLayout({ children, showTimer = false, onTimerEn
           })()}
         </footer>
       </div>
+
+      {/* Timer fixně u spodní hrany – jen na mobilu pokud je timer_bottom_mobile zapnutý */}
+      {shouldShowTimer && timerAtBottom && (
+        <div
+          className="fixed bottom-0 left-0 right-0 z-40 border-t px-4 py-2.5"
+          style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}
+        >
+          <TimerBar onEntryChanged={onTimerEntryChanged} playData={timerPlayData} />
+        </div>
+      )}
     </div>
   );
 }

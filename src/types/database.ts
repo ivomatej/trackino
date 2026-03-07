@@ -146,7 +146,8 @@ export interface Profile {
   is_master_admin: boolean;
   phone: string;      // telefonní číslo
   position: string;   // pracovní pozice (nastavuje admin)
-  timer_always_visible: boolean; // zobrazit Měřič ve všech stránkách
+  timer_always_visible: boolean;  // zobrazit Měřič ve všech stránkách
+  timer_bottom_mobile: boolean;   // na mobilu připnout Měřič ke spodní hraně (default false)
   calendar_day_start: number;    // začátek pracovního dne (0–23)
   calendar_day_end: number;      // konec pracovního dne (1–24)
   birth_date: string | null;     // datum narození (YYYY-MM-DD), pro Narozeniny v kalendáři

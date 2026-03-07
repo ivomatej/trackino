@@ -28,6 +28,7 @@ function ProfileContent() {
   const [position, setPosition] = useState('');
   const [avatarColor, setAvatarColor] = useState(AVATAR_COLORS[0]);
   const [timerAlwaysVisible, setTimerAlwaysVisible] = useState(false);
+  const [timerBottomMobile, setTimerBottomMobile] = useState(false);
   const [birthDate, setBirthDate] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -43,6 +44,7 @@ function ProfileContent() {
       setPosition(profile.position ?? '');
       setAvatarColor(profile.avatar_color ?? AVATAR_COLORS[0]);
       setTimerAlwaysVisible(profile.timer_always_visible ?? false);
+      setTimerBottomMobile(profile.timer_bottom_mobile ?? false);
       setBirthDate(profile.birth_date ?? '');
     }
   }, [profile]);
@@ -59,6 +61,7 @@ function ProfileContent() {
       phone: normalizePhone(phone),
       avatar_color: avatarColor,
       timer_always_visible: timerAlwaysVisible,
+      timer_bottom_mobile: timerBottomMobile,
       birth_date: birthDate || null,
     };
     if (canEditPosition) {
@@ -244,25 +247,52 @@ function ProfileContent() {
           {/* ── Zobrazení aplikace ── */}
           <div className="rounded-xl border p-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
             <h2 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Zobrazení aplikace</h2>
-            <label
-              className="flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-colors"
-              style={{ background: timerAlwaysVisible ? 'var(--bg-active)' : 'var(--bg-hover)', border: `1px solid ${timerAlwaysVisible ? 'var(--primary)' : 'var(--border)'}` }}
-            >
-              <input
-                type="checkbox"
-                checked={timerAlwaysVisible}
-                onChange={(e) => setTimerAlwaysVisible(e.target.checked)}
-                className="mt-0.5 flex-shrink-0 w-4 h-4 accent-[var(--primary)]"
-              />
-              <div>
-                <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                  Zobrazovat Měřič v záhlaví na všech stránkách
-                </span>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                  Ve výchozím nastavení je Měřič viditelný pouze na stránce Měřič. Zapnutím se zobrazí trvale v horním záhlaví.
-                </p>
-              </div>
-            </label>
+            <div className="space-y-3">
+              <label
+                className="flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-colors"
+                style={{ background: timerAlwaysVisible ? 'var(--bg-active)' : 'var(--bg-hover)', border: `1px solid ${timerAlwaysVisible ? 'var(--primary)' : 'var(--border)'}` }}
+              >
+                <input
+                  type="checkbox"
+                  checked={timerAlwaysVisible}
+                  onChange={(e) => setTimerAlwaysVisible(e.target.checked)}
+                  className="mt-0.5 flex-shrink-0 w-4 h-4 accent-[var(--primary)]"
+                />
+                <div>
+                  <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                    Zobrazovat Měřič v záhlaví na všech stránkách
+                  </span>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                    Ve výchozím nastavení je Měřič viditelný pouze na stránce Měřič. Zapnutím se zobrazí trvale v horním záhlaví.
+                  </p>
+                </div>
+              </label>
+
+              <label
+                className="flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-colors"
+                style={{ background: timerBottomMobile ? 'var(--bg-active)' : 'var(--bg-hover)', border: `1px solid ${timerBottomMobile ? 'var(--primary)' : 'var(--border)'}` }}
+              >
+                <input
+                  type="checkbox"
+                  checked={timerBottomMobile}
+                  onChange={(e) => setTimerBottomMobile(e.target.checked)}
+                  className="mt-0.5 flex-shrink-0 w-4 h-4 accent-[var(--primary)]"
+                />
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                      Měřič u spodní hrany obrazovky
+                    </span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded font-medium" style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+                      pouze mobil
+                    </span>
+                  </div>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                    Na mobilních zařízeních se Měřič přesune ze záhlaví ke spodní hraně obrazovky pro pohodlnější ovládání.
+                  </p>
+                </div>
+              </label>
+            </div>
           </div>
 
           {/* ── Info o účtu ── */}
