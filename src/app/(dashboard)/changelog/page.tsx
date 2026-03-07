@@ -11,6 +11,12 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.20.11 – 7. 3. 2026</h3>
+<ul>
+  <li><strong>Kalendář – Dnes (mobil): oprava zobrazení mřížky</strong> – pohled „Dnes" přestal zobrazovat časovou mřížku po opravě v2.20.10. Příčina: výpočet výšky při načítání dat způsoboval chybné hodnoty pro pohled Dnes. Pohled Dnes nyní správně používá přirozené CSS výšky (flex-1), které fungují spolehlivě na mobilech.</li>
+  <li><strong>Kalendář – Týden (desktop): scroll na počáteční hodinu</strong> – na desktopu se mřížka načítala od 0:00 i po předchozích opravách. Příčina: CSS flex-1 layout se na desktopu stabilizuje až po prvním vymalování prohlížeče. Přidán záložní scroll pomocí dvojitého <code>requestAnimationFrame</code>, který proběhne po stabilizaci layoutu. Na desktopu se nyní mřížka správně zobrazuje od nakonfigurované hodiny.</li>
+</ul>
+
 <h3>v2.20.10 – 7. 3. 2026</h3>
 <ul>
   <li><strong>Kalendář – Smazání kalendáře (mobil)</strong> – kliknutím/tapnutím na název vlastního kalendáře v sekci „Mé kalendáře" se nyní otevře editační modal. V modálu je tlačítko <strong>Odstranit</strong> (vlevo dole), které celý kalendář i jeho události smaže. Na dotek dostupné na iOS i Androidu – není potřeba hledání hover-ikony.</li>

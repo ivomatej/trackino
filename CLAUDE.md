@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 7. 3. 2026 (v2.20.10)
+> Aktualizováno: 7. 3. 2026 (v2.20.11)
 
 ---
 
@@ -486,6 +486,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.20.11 | 7. 3. 2026 | Kalendář: today view opraven (přirozené CSS výšky, ne explicitní výpočet); desktop week scroll: double-rAF fallback po useLayoutEffect – flex-1 se stabilizuje po prvním paint |
 | v2.20.10 | 7. 3. 2026 | Kalendář: název kal. v levém panelu klikatelný (otevře edit modal, přístupné na mobilu); tlačítko Smazat→Odstranit v modálu; výška scrollGrid přepočtena po načtení dat ([view,loading] deps) – scroll na calViewStart funkční na mobilu i desktopu |
 | v2.20.9 | 7. 3. 2026 | Kalendář/Týden: scroll na calViewStart přes useLayoutEffect (synchronní, bez záblesku 0:00 při prvním načtení na mobilu i desktopu); odstraněn retry mechanismus 30×/50ms |
 | v2.20.8 | 7. 3. 2026 | Žádosti/Archiv: badge Zamítnuto přesunut pod hlavní obsah (před Důvod zamítnutí), Schváleno zůstává vpravo nahoře; Kalendář/Levý panel: ikona koše (červená, hover) přidána vedle tužky pro ne-výchozí kalendáře |
