@@ -28,6 +28,7 @@ function ProfileContent() {
   const [position, setPosition] = useState('');
   const [avatarColor, setAvatarColor] = useState(AVATAR_COLORS[0]);
   const [timerAlwaysVisible, setTimerAlwaysVisible] = useState(false);
+  const [birthDate, setBirthDate] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -42,6 +43,7 @@ function ProfileContent() {
       setPosition(profile.position ?? '');
       setAvatarColor(profile.avatar_color ?? AVATAR_COLORS[0]);
       setTimerAlwaysVisible(profile.timer_always_visible ?? false);
+      setBirthDate(profile.birth_date ?? '');
     }
   }, [profile]);
 
@@ -57,6 +59,7 @@ function ProfileContent() {
       phone: normalizePhone(phone),
       avatar_color: avatarColor,
       timer_always_visible: timerAlwaysVisible,
+      birth_date: birthDate || null,
     };
     if (canEditPosition) {
       updates.position = position.trim();
@@ -196,6 +199,21 @@ function ProfileContent() {
                     ...inputStyle,
                     background: !canEditPosition ? 'var(--bg-hover)' : 'var(--bg-input)',
                   }}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                  Datum narození
+                  <span className="ml-1.5 font-normal text-[10px]" style={{ color: 'var(--text-muted)' }}>
+                    (zobrazuje se v Narozeninách v kalendáři)
+                  </span>
+                </label>
+                <input
+                  type="date"
+                  value={birthDate}
+                  onChange={(e) => setBirthDate(e.target.value)}
+                  className={inputCls}
+                  style={inputStyle}
                 />
               </div>
             </div>

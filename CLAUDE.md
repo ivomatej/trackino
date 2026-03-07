@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 7. 3. 2026 (v2.21.0)
+> Aktualizováno: 7. 3. 2026 (v2.23.0)
 
 ---
 
@@ -132,6 +132,10 @@ Výchozí policy: `CREATE POLICY "Auth full" ... FOR ALL TO authenticated USING 
 | `trackino_document_folders` | id, workspace_id, name, color, sort_order, created_by, created_at, updated_at | Složky pro organizaci dokumentů |
 | `trackino_documents` | id, workspace_id, folder_id (uuid\|null), name, type ('file'\|'link'), file_path (text\|null), file_size (int\|null), file_mime (text\|null), url (text\|null), description, created_by, created_at, updated_at | Firemní dokumenty a odkazy; soubory uloženy v Supabase Storage bucket `trackino-documents` |
 | `trackino_calendar_event_notes` | id, workspace_id, user_id, event_ref (text – ID události), content (HTML), tasks (jsonb – TaskItem[]), is_important (bool), is_done (bool), is_favorite (bool), created_at, updated_at | Poznámky k událostem v kalendáři – per-user, UNIQUE (workspace_id, user_id, event_ref) |
+
+### Nové sloupce (v2.23.0)
+- `trackino_profiles.birth_date text DEFAULT NULL` – datum narození uživatele (YYYY-MM-DD), zobrazuje se v Narozeninách v kalendáři
+- `trackino_workspace_members.can_view_birthdays boolean NOT NULL DEFAULT false` – oprávnění vidět narozeniny kolegů v kalendáři
 
 ### Poznámky k DB
 - `trackino_member_rates.valid_to IS NULL` = aktuálně platná sazba (aktivní rate)
@@ -489,6 +493,9 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.23.0 | 7. 3. 2026 | Kalendář: Jmeniny (fialová, všichni) + Narozeniny kolegů (růžová, admin/can_view_birthdays) v sekci Další kalendáře; `birth_date` v Profilu + Týmu; `can_view_birthdays` toggle v Týmu; `src/lib/czech-namedays.ts` (366 jmen) |
+| v2.22.1 | 7. 3. 2026 | Kalendář/Seznam: badge u sdílených událostí zobrazuje název kalendáře + jméno vlastníka |
+| v2.22.0 | 7. 3. 2026 | Kalendář: kliknutím na jakoukoliv událost se otevře detail modal (vlastní = Edit tlačítko, sdílené/ICS = preview, účastník = RSVP tlačítka) |
 | v2.21.0 | 7. 3. 2026 | Kalendář: Sdílení kalendářů (share modal, workspace/per-user, show_details toggle, ICS cache); SDÍLENÉ KALENDÁŘE sekce v levém panelu (toggle, color override); Rozšířený formulář události (Místo, Účastníci, URL, Upozornění, Popis→Poznámka); RSVP systém (attendees tabulka, pending dashed border, RSVP modal) |
 | v2.20.11 | 7. 3. 2026 | Kalendář: today view opraven (přirozené CSS výšky, ne explicitní výpočet); desktop week scroll: double-rAF fallback po useLayoutEffect – flex-1 se stabilizuje po prvním paint |
 | v2.20.10 | 7. 3. 2026 | Kalendář: název kal. v levém panelu klikatelný (otevře edit modal, přístupné na mobilu); tlačítko Smazat→Odstranit v modálu; výška scrollGrid přepočtena po načtení dat ([view,loading] deps) – scroll na calViewStart funkční na mobilu i desktopu |
@@ -624,7 +631,7 @@ AppChangeStatus = 'open' | 'in_progress' | 'solved' | 'archived'
 1. **MÉ KALENDÁŘE** – checkbox (accentColor dle barvy kal.), bez barevné tečky
 2. **EXTERNÍ KALENDÁŘE** – přesunuto pod Mé kalendáře; checkbox (accentColor), bez tečky; + refresh + přidat
 3. **AUTOMATICKY** – Dovolená, Důležité dny (barevný čtvereček, bez checkboxu)
-4. **DALŠÍ KALENDÁŘE** – Státní svátky; checkbox (accentColor: '#ef4444'), bez tečky
+4. **DALŠÍ KALENDÁŘE** – Státní svátky (červená #ef4444), Jmeniny (fialová #7c3aed, pro všechny), Narozeniny (růžová #ec4899, jen canViewBirthdays); checkbox (accentColor dle barvy), bez tečky
 - Každá sekce má **collapse šipku** vedle nadpisu – rozbalí/sbalí podřazené položky
 - Stav collaspe: lokální React state (`myCalExpanded`, `extCalExpanded`, `autoExpanded`, `otherExpanded`)
 - Barevné tečky odstraněny ze všech položek s checkboxem (barva je pouze přes `accentColor` na checkboxu)
@@ -636,7 +643,7 @@ interface DisplayEvent {
   id: string; title: string;
   start_date: string; end_date: string;
   color: string;
-  source: 'manual' | 'vacation' | 'important_day' | 'shared';
+  source: 'manual' | 'vacation' | 'important_day' | 'subscription' | 'holiday' | 'shared' | 'birthday' | 'nameday';
   source_id: string;
   calendar_id?: string;
   description?: string;

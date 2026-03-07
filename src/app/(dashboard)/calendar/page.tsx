@@ -8,6 +8,7 @@ import { useWorkspace, WorkspaceProvider } from '@/contexts/WorkspaceContext';
 import DashboardLayout from '@/components/DashboardLayout';
 import type { Calendar, CalendarEvent, CalendarShare, CalendarSharePref, CalendarEventAttendee, VacationEntry, ImportantDay, CalendarSubscription } from '@/types/database';
 import { getCzechHolidays } from '@/lib/czech-calendar';
+import { getCzechNamedayForDate } from '@/lib/czech-namedays';
 
 // ─── Local Types ─────────────────────────────────────────────────────────────
 
@@ -17,7 +18,7 @@ interface DisplayEvent {
   start_date: string;
   end_date: string;
   color: string;
-  source: 'manual' | 'vacation' | 'important_day' | 'subscription' | 'holiday' | 'shared';
+  source: 'manual' | 'vacation' | 'important_day' | 'subscription' | 'holiday' | 'shared' | 'birthday' | 'nameday';
   source_id: string;
   calendar_id?: string;
   description?: string;
@@ -55,6 +56,13 @@ interface MemberWithProfile {
   user_id: string;
   display_name: string;
   avatar_color: string;
+}
+
+/** Člen workspace s narozeninami (pro Narozeniny v kalendáři) */
+interface BirthdayMember {
+  user_id: string;
+  display_name: string;
+  birth_date: string; // YYYY-MM-DD
 }
 
 type ViewType = 'list' | 'week' | 'month' | 'today' | 'year';
@@ -312,6 +320,8 @@ function sourceBadgeLabel(source: DisplayEvent['source']): string {
   if (source === 'important_day') return 'Důležitý den';
   if (source === 'subscription') return 'Ext. kalendář';
   if (source === 'holiday') return 'Státní svátek';
+  if (source === 'nameday') return 'Jmeniny';
+  if (source === 'birthday') return 'Narozeniny';
   return '';
 }
 
@@ -748,8 +758,13 @@ function NotePanel({
 
 function CalendarContent() {
   const { user, profile, updateProfile } = useAuth();
-  const { currentWorkspace } = useWorkspace();
+  const { currentWorkspace, currentMembership } = useWorkspace();
   const today = useMemo(() => new Date(), []);
+
+  // Oprávnění: může vidět narozeniny kolegů
+  const canViewBirthdays = (profile?.is_master_admin ?? false)
+    || (currentMembership?.role === 'owner' || currentMembership?.role === 'admin')
+    || (currentMembership?.can_view_birthdays ?? false);
 
   const [view, setView] = useState<ViewType>(() => {
     if (typeof window === 'undefined') return 'week';
@@ -873,6 +888,21 @@ function CalendarContent() {
     if (typeof window === 'undefined') return true;
     return localStorage.getItem('trackino_cal_holidays') !== '0';
   });
+
+  // Jmeniny – toggle (localStorage, default zapnuto)
+  const [showNamedays, setShowNamedays] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    return localStorage.getItem('trackino_cal_namedays') !== '0';
+  });
+
+  // Narozeniny – toggle (localStorage, default zapnuto)
+  const [showBirthdays, setShowBirthdays] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    return localStorage.getItem('trackino_cal_birthdays') !== '0';
+  });
+
+  // Narozeniny – členové workspace
+  const [birthdayMembers, setBirthdayMembers] = useState<BirthdayMember[]>([]);
 
   // Collapse stav sekcí v levém panelu
   const [myCalExpanded, setMyCalExpanded] = useState(true);
@@ -1069,6 +1099,32 @@ function CalendarContent() {
     }));
     setWorkspaceMembers(members);
   }, [user, currentWorkspace]);
+
+  // ── Načtení narozenin členů workspace ─────────────────────────────────────
+
+  const fetchBirthdayMembers = useCallback(async () => {
+    if (!user || !currentWorkspace || !canViewBirthdays) { setBirthdayMembers([]); return; }
+    const { data: membersData } = await supabase
+      .from('trackino_workspace_members')
+      .select('user_id')
+      .eq('workspace_id', currentWorkspace.id);
+    if (!membersData || membersData.length === 0) { setBirthdayMembers([]); return; }
+    const userIds = membersData.map((m: Record<string, unknown>) => m.user_id as string);
+    const { data: profilesData } = await supabase
+      .from('trackino_profiles')
+      .select('id, display_name, birth_date')
+      .in('id', userIds)
+      .not('birth_date', 'is', null);
+    setBirthdayMembers(
+      (profilesData ?? [])
+        .filter((p: Record<string, unknown>) => p.birth_date)
+        .map((p: Record<string, unknown>) => ({
+          user_id: p.id as string,
+          display_name: (p.display_name as string) ?? 'Uživatel',
+          birth_date: p.birth_date as string,
+        }))
+    );
+  }, [user, currentWorkspace, canViewBirthdays]);
 
   // ── Načtení sdílení (vlastní kalendáře → co sdílím) ───────────────────────
 
@@ -1397,7 +1453,8 @@ function CalendarContent() {
     fetchSubscriptions();
     fetchWorkspaceMembers();
     fetchAttendeeEvents();
-  }, [fetchData, fetchSubscriptions, fetchWorkspaceMembers, fetchAttendeeEvents]);
+    fetchBirthdayMembers();
+  }, [fetchData, fetchSubscriptions, fetchWorkspaceMembers, fetchAttendeeEvents, fetchBirthdayMembers]);
 
   // Načtení sdílení po načtení kalendářů a subscriptions
   useEffect(() => {
@@ -2021,6 +2078,67 @@ function CalendarContent() {
     return result;
   }, [showHolidays, visibleRange]);
 
+  // ── České jmeniny ──────────────────────────────────────────────────────────
+
+  const namedayEvents = useMemo<DisplayEvent[]>(() => {
+    if (!showNamedays) return [];
+    const result: DisplayEvent[] = [];
+    const { start, end } = visibleRange;
+    const cur = new Date(start);
+    cur.setHours(0, 0, 0, 0);
+    while (cur <= end) {
+      const name = getCzechNamedayForDate(cur);
+      if (name) {
+        const dateStr = toDateStr(cur);
+        result.push({
+          id: `nameday-${dateStr}`,
+          title: name,
+          start_date: dateStr,
+          end_date: dateStr,
+          color: '#7c3aed',
+          source: 'nameday',
+          source_id: dateStr,
+          is_all_day: true,
+        });
+      }
+      cur.setDate(cur.getDate() + 1);
+    }
+    return result;
+  }, [showNamedays, visibleRange]);
+
+  // ── Narozeniny kolegů ──────────────────────────────────────────────────────
+
+  const birthdayEvents = useMemo<DisplayEvent[]>(() => {
+    if (!showBirthdays || !canViewBirthdays || birthdayMembers.length === 0) return [];
+    const result: DisplayEvent[] = [];
+    const startYear = visibleRange.start.getFullYear();
+    const endYear = visibleRange.end.getFullYear();
+    for (const member of birthdayMembers) {
+      const parts = member.birth_date.split('-');
+      if (parts.length < 3) continue;
+      const mm = parts[1];
+      const dd = parts[2];
+      for (let year = startYear; year <= endYear; year++) {
+        const dateStr = `${year}-${mm}-${dd}`;
+        const d = parseDate(dateStr);
+        d.setHours(0, 0, 0, 0);
+        if (d >= visibleRange.start && d <= visibleRange.end) {
+          result.push({
+            id: `birthday-${member.user_id}-${year}`,
+            title: `🎂 ${member.display_name}`,
+            start_date: dateStr,
+            end_date: dateStr,
+            color: '#ec4899',
+            source: 'birthday',
+            source_id: member.user_id,
+            is_all_day: true,
+          });
+        }
+      }
+    }
+    return result;
+  }, [showBirthdays, canViewBirthdays, birthdayMembers, visibleRange]);
+
   // ── DisplayEvents ─────────────────────────────────────────────────────────
 
   const displayEvents = useMemo<DisplayEvent[]>(() => {
@@ -2108,8 +2226,18 @@ function CalendarContent() {
       result.push(ev);
     }
 
+    // Jmeniny
+    for (const ev of namedayEvents) {
+      result.push(ev);
+    }
+
+    // Narozeniny kolegů
+    for (const ev of birthdayEvents) {
+      result.push(ev);
+    }
+
     return result.sort((a, b) => a.start_date.localeCompare(b.start_date) || a.title.localeCompare(b.title));
-  }, [events, vacationEntries, importantDays, calendars, selectedCalendarIds, visibleRange, subscriptionEvents, sharedEvents, attendeeEvents, czechHolidayEvents]);
+  }, [events, vacationEntries, importantDays, calendars, selectedCalendarIds, visibleRange, subscriptionEvents, sharedEvents, attendeeEvents, czechHolidayEvents, namedayEvents, birthdayEvents]);
 
   // Načtení poznámek pro viditelné události (seznam pohled) – vždy při seznam pohledu
   // Umístěno ZDE aby se mohlo odkazovat na displayEvents
@@ -2657,19 +2785,49 @@ function CalendarContent() {
                 </button>
               </div>
               {otherExpanded && (
-                <div className="flex items-center gap-1.5 py-0.5">
-                  <input
-                    type="checkbox"
-                    checked={showHolidays}
-                    onChange={e => {
-                      setShowHolidays(e.target.checked);
-                      localStorage.setItem('trackino_cal_holidays', e.target.checked ? '1' : '0');
-                    }}
-                    className="w-3.5 h-3.5 rounded cursor-pointer flex-shrink-0"
-                    style={{ accentColor: '#ef4444' }}
-                  />
-                  <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Státní svátky</span>
-                </div>
+                <>
+                  <div className="flex items-center gap-1.5 py-0.5">
+                    <input
+                      type="checkbox"
+                      checked={showHolidays}
+                      onChange={e => {
+                        setShowHolidays(e.target.checked);
+                        localStorage.setItem('trackino_cal_holidays', e.target.checked ? '1' : '0');
+                      }}
+                      className="w-3.5 h-3.5 rounded cursor-pointer flex-shrink-0"
+                      style={{ accentColor: '#ef4444' }}
+                    />
+                    <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Státní svátky</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 py-0.5">
+                    <input
+                      type="checkbox"
+                      checked={showNamedays}
+                      onChange={e => {
+                        setShowNamedays(e.target.checked);
+                        localStorage.setItem('trackino_cal_namedays', e.target.checked ? '1' : '0');
+                      }}
+                      className="w-3.5 h-3.5 rounded cursor-pointer flex-shrink-0"
+                      style={{ accentColor: '#7c3aed' }}
+                    />
+                    <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Jmeniny</span>
+                  </div>
+                  {canViewBirthdays && (
+                    <div className="flex items-center gap-1.5 py-0.5">
+                      <input
+                        type="checkbox"
+                        checked={showBirthdays}
+                        onChange={e => {
+                          setShowBirthdays(e.target.checked);
+                          localStorage.setItem('trackino_cal_birthdays', e.target.checked ? '1' : '0');
+                        }}
+                        className="w-3.5 h-3.5 rounded cursor-pointer flex-shrink-0"
+                        style={{ accentColor: '#ec4899' }}
+                      />
+                      <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Narozeniny</span>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
@@ -3635,13 +3793,14 @@ function CalendarContent() {
                                             <div className="text-xs mt-1 truncate" style={{ color: 'var(--text-muted)' }}>{ev.description}</div>
                                           )}
                                         </div>
-                                        {/* Tlačítko pro toggle inline poznámky */}
+                                        {/* Tlačítko pro toggle inline poznámky (skryto pro jmeniny/narozeniny) */}
                                         <button
                                           onClick={e => {
                                             e.stopPropagation();
+                                            if (ev.source === 'nameday' || ev.source === 'birthday') return;
                                             setOpenNoteEventIds(prev => { const n = new Set(prev); if (n.has(ev.id)) n.delete(ev.id); else n.add(ev.id); return n; });
                                           }}
-                                          className={`flex-shrink-0 p-1 rounded transition-all ${isSelected || noteHasContent ? 'opacity-70' : 'opacity-30 md:opacity-0'} md:group-hover/ev:opacity-100`}
+                                          className={`flex-shrink-0 p-1 rounded transition-all ${ev.source === 'nameday' || ev.source === 'birthday' ? 'opacity-0 pointer-events-none' : isSelected || noteHasContent ? 'opacity-70' : 'opacity-30 md:opacity-0'} md:group-hover/ev:opacity-100`}
                                           style={{
                                             color: isSelected || noteHasContent ? 'var(--primary)' : 'var(--text-muted)',
                                             background: 'none',
@@ -4620,6 +4779,8 @@ function CalendarContent() {
         const isOwnManual = ev.source === 'manual' && !ev.is_shared && !ev.attendee_status;
         const isShared = ev.is_shared || ev.source === 'shared';
         const isAttendee = !!ev.attendee_status;
+        const isNameday = ev.source === 'nameday';
+        const isBirthday = ev.source === 'birthday';
         const isEditable = isOwnManual;
 
         // Kalendář / zdroj
@@ -4629,7 +4790,7 @@ function CalendarContent() {
         const subName = ev.source === 'subscription'
           ? subscriptions.find(s => s.id === ev.source_id)?.name
           : null;
-        const sourceName = calName ?? subName ?? null;
+        const sourceName = isNameday ? 'Jmeniny' : isBirthday ? 'Narozeniny' : (calName ?? subName ?? null);
 
         // Datum
         const multiDay = ev.start_date !== ev.end_date;

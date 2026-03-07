@@ -11,6 +11,14 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.23.0 – 7. 3. 2026</h3>
+<ul>
+  <li><strong>Kalendář – Jmeniny</strong> – nový automatický kalendář v sekci Další kalendáře (fialová barva). Zobrazuje jméno dle českého jméninového kalendáře pro každý den v roce. Dostupné pro všechny uživatele workspace, zapíná/vypíná se zaškrtnutím v levém panelu.</li>
+  <li><strong>Kalendář – Narozeniny</strong> – nový automatický kalendář (růžová barva) zobrazující narozeniny kolegů ve workspace. Dostupné pouze pro adminy, master adminy a uživatele s oprávněním <em>Vidí narozeniny kolegů</em> (nastavení v Týmu). Každý uživatel zadává datum narození v Profilu (nebo admin v editaci člena v Týmu).</li>
+  <li><strong>Profil – Datum narození</strong> – nové pole v Nastavení profilu; zobrazuje se v Narozeninách v kalendáři.</li>
+  <li><strong>Tým – oprávnění Narozeniny</strong> – nový toggle <em>Vidí narozeniny kolegů</em> v editaci člena; admin může nastavit datum narození za uživatele.</li>
+</ul>
+
 <h3>v2.21.0 – 7. 3. 2026</h3>
 <ul>
   <li><strong>Kalendář – Sdílení kalendářů</strong> – Mé i Externí kalendáře lze nyní nasdílet ostatním uživatelům workspace. Ikona sdílení se zobrazí najetím myší na kalendář v levém panelu. V dialogu sdílení lze zapnout sdílení pro celý workspace nebo vybrat konkrétní uživatele. Přepínač <em>Detaily</em> (per příjemce) určuje, zda příjemce vidí plné informace o událostech, nebo jen obsazenost (Nemá čas). Sdílené ICS odběry se přenášejí přes DB cache – příjemci nevidí ICS URL.</li>

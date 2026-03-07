@@ -90,6 +90,8 @@ function TeamContent() {
   const [editCanProcessRequests, setEditCanProcessRequests] = useState(false);
   const [editCanReceiveFeedback, setEditCanReceiveFeedback] = useState(false);
   const [editCanManageDocuments, setEditCanManageDocuments] = useState(false);
+  const [editCanViewBirthdays, setEditCanViewBirthdays] = useState(false);
+  const [editBirthDate, setEditBirthDate] = useState('');
   const [editCooperationTypeId, setEditCooperationTypeId] = useState<string>('');
   const [editBillingProfileId, setEditBillingProfileId] = useState<string>('');
   const [editSaving, setEditSaving] = useState(false);
@@ -309,6 +311,8 @@ function TeamContent() {
     setEditCanProcessRequests(member.can_process_requests ?? false);
     setEditCanReceiveFeedback(member.can_receive_feedback ?? false);
     setEditCanManageDocuments(member.can_manage_documents ?? false);
+    setEditCanViewBirthdays(member.can_view_birthdays ?? false);
+    setEditBirthDate(member.profile?.birth_date ?? '');
     setEditCooperationTypeId(member.cooperation_type_id ?? '');
     setEditBillingProfileId(member.billing_profile_id ?? '');
     setMemberRates([]);
@@ -337,6 +341,7 @@ function TeamContent() {
         phone: normalizePhone(editPhone),
         position: editPosition.trim(),
         avatar_color: editColor,
+        birth_date: editBirthDate || null,
       }).eq('id', editingMember.user_id),
       supabase.from('trackino_workspace_members').update({
         can_use_vacation: editCanUseVacation,
@@ -346,6 +351,7 @@ function TeamContent() {
         can_process_requests: editCanProcessRequests,
         can_receive_feedback: editCanReceiveFeedback,
         can_manage_documents: editCanManageDocuments,
+        can_view_birthdays: editCanViewBirthdays,
         cooperation_type_id: editCooperationTypeId || null,
         billing_profile_id: editBillingProfileId || null,
       }).eq('id', editingMember.id),
@@ -1233,6 +1239,41 @@ function TeamContent() {
                     <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Může nahrávat, mazat a spravovat složky v Dokumentech</span>
                   </div>
                 </label>
+                <label
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors"
+                  style={{ background: editCanViewBirthdays ? 'var(--bg-active)' : 'var(--bg-hover)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = editCanViewBirthdays ? 'var(--bg-active)' : 'var(--bg-hover)'}
+                >
+                  <input
+                    type="checkbox"
+                    checked={editCanViewBirthdays}
+                    onChange={(e) => setEditCanViewBirthdays(e.target.checked)}
+                    className="w-4 h-4 rounded flex-shrink-0"
+                    style={{ accentColor: 'var(--primary)' }}
+                  />
+                  <div>
+                    <span className="text-sm block" style={{ color: 'var(--text-primary)' }}>Vidí narozeniny kolegů</span>
+                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Zobrazí se kalendář Narozeniny s datumy narozenin kolegů</span>
+                  </div>
+                </label>
+
+                {/* Datum narození */}
+                <div className="mt-3">
+                  <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
+                    Datum narození
+                  </label>
+                  <input
+                    type="date"
+                    value={editBirthDate}
+                    onChange={(e) => setEditBirthDate(e.target.value)}
+                    className={inputCls}
+                    style={inputStyle}
+                  />
+                  <p className="text-[11px] mt-1" style={{ color: 'var(--text-muted)' }}>
+                    Zobrazí se v kalendáři Narozeniny uživatelům s příslušným oprávněním.
+                  </p>
+                </div>
 
                 {/* Fakturační profil */}
                 {billingProfiles.length > 0 && (

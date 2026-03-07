@@ -149,6 +149,7 @@ export interface Profile {
   timer_always_visible: boolean; // zobrazit Měřič ve všech stránkách
   calendar_day_start: number;    // začátek pracovního dne (0–23)
   calendar_day_end: number;      // konec pracovního dne (1–24)
+  birth_date: string | null;     // datum narození (YYYY-MM-DD), pro Narozeniny v kalendáři
   created_at: string;
 }
 
@@ -172,6 +173,7 @@ export interface WorkspaceMember {
   can_process_requests: boolean; // zpracovává žádosti (schvaluje/zamítá)
   can_receive_feedback: boolean; // přijímá anonymní připomínky
   can_manage_documents: boolean; // může spravovat dokumenty (nahrávat, mazat, editovat složky)
+  can_view_birthdays: boolean;   // vidí narozeniny kolegů v kalendáři
 }
 
 export interface ManagerAssignment {
