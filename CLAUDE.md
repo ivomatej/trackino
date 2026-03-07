@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 7. 3. 2026 (v2.20.11)
+> Aktualizováno: 7. 3. 2026 (v2.21.0)
 
 ---
 
@@ -124,7 +124,10 @@ Výchozí policy: `CREATE POLICY "Auth full" ... FOR ALL TO authenticated USING 
 | `trackino_calendar_events` | id, calendar_id, workspace_id, user_id, title, description, start_date (text YYYY-MM-DD), end_date (text), is_all_day, start_time (text\|null), end_time (text\|null), color (text\|null), source ('manual'\|'vacation'\|'important_day'), source_id (uuid\|null), created_at, updated_at | Ruční události v kalendáři; dovolená a důležité dny se čtou přímo z jejich tabulek |
 | `trackino_requests` | id, workspace_id, user_id, type ('hardware'\|'software'\|'access'\|'office'\|'financial'\|'hr'\|'education'\|'travel'\|'benefits'\|'recruitment'\|'security'\|'it_support'\|'legal'), title, note, status ('pending'\|'approved'\|'rejected'), reviewed_by (uuid\|null), reviewed_at (timestamptz\|null), reviewer_note, vacation_start_date (text\|null), vacation_end_date (text\|null), vacation_days (int\|null), vacation_entry_id (uuid\|null), created_at, updated_at | Žádosti zaměstnanců ke schválení – 13 kategorií |
 | `trackino_feedback` | id, workspace_id, message, is_resolved (bool), created_at | Anonymní připomínky – bez user_id záměrně (plná anonymita) |
-| `trackino_calendar_shares` | id, calendar_id, shared_with_user_id, can_edit, created_at | Sdílení kalendáře mezi uživateli workspace (UNIQUE calendar_id+shared_with_user_id) |
+| `trackino_calendar_shares` | id, calendar_id, shared_with_user_id (uuid\|null), share_with_workspace (bool), show_details (bool), can_edit, created_at | Sdílení kalendáře: shared_with_user_id=null + share_with_workspace=true = sdílení celému workspace |
+| `trackino_calendar_share_prefs` | id, calendar_id, user_id, is_enabled (bool), color_override (text\|null), created_at | Preference příjemce sdíleného kalendáře (viditelnost, barva) |
+| `trackino_ics_event_cache` | id, subscription_id, workspace_id, uid, title, description, start_date, end_date, start_time, end_time, is_all_day, synced_at | Cache ICS událostí pro sdílení (bez URL exposure) – UNIQUE(subscription_id, uid) |
+| `trackino_calendar_event_attendees` | id, event_id, workspace_id, user_id, status ('pending'\|'accepted'\|'declined'), created_at | Účastníci událostí s RSVP statusem – UNIQUE(event_id, user_id) |
 | `trackino_workspace_pages` | id, workspace_id, slug ('company-rules'\|'office-rules'), content (HTML), updated_at, updated_by | Per-workspace editovatelné textové stránky (UNIQUE workspace_id+slug) |
 | `trackino_document_folders` | id, workspace_id, name, color, sort_order, created_by, created_at, updated_at | Složky pro organizaci dokumentů |
 | `trackino_documents` | id, workspace_id, folder_id (uuid\|null), name, type ('file'\|'link'), file_path (text\|null), file_size (int\|null), file_mime (text\|null), url (text\|null), description, created_by, created_at, updated_at | Firemní dokumenty a odkazy; soubory uloženy v Supabase Storage bucket `trackino-documents` |
@@ -486,6 +489,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.21.0 | 7. 3. 2026 | Kalendář: Sdílení kalendářů (share modal, workspace/per-user, show_details toggle, ICS cache); SDÍLENÉ KALENDÁŘE sekce v levém panelu (toggle, color override); Rozšířený formulář události (Místo, Účastníci, URL, Upozornění, Popis→Poznámka); RSVP systém (attendees tabulka, pending dashed border, RSVP modal) |
 | v2.20.11 | 7. 3. 2026 | Kalendář: today view opraven (přirozené CSS výšky, ne explicitní výpočet); desktop week scroll: double-rAF fallback po useLayoutEffect – flex-1 se stabilizuje po prvním paint |
 | v2.20.10 | 7. 3. 2026 | Kalendář: název kal. v levém panelu klikatelný (otevře edit modal, přístupné na mobilu); tlačítko Smazat→Odstranit v modálu; výška scrollGrid přepočtena po načtení dat ([view,loading] deps) – scroll na calViewStart funkční na mobilu i desktopu |
 | v2.20.9 | 7. 3. 2026 | Kalendář/Týden: scroll na calViewStart přes useLayoutEffect (synchronní, bez záblesku 0:00 při prvním načtení na mobilu i desktopu); odstraněn retry mechanismus 30×/50ms |
@@ -599,8 +603,11 @@ AppChangeStatus = 'open' | 'in_progress' | 'solved' | 'archived'
 
 ### Tabulky
 - `trackino_calendars` – vlastní kalendáře uživatele (auto-vytvoří se výchozí „Můj kalendář")
-- `trackino_calendar_events` – ruční události; pole `source='manual'`, `source_id=null`
-- `trackino_calendar_shares` – sdílení (databáze připravena, UI zatím nezaimplementováno)
+- `trackino_calendar_events` – ruční události; pole `source='manual'`, `source_id=null`; rozšířeno o `location`, `url`, `reminder_minutes`
+- `trackino_calendar_shares` – sdílení: `shared_with_user_id` nullable, `share_with_workspace` bool, `show_details` bool
+- `trackino_calendar_share_prefs` – preference příjemce (is_enabled, color_override)
+- `trackino_ics_event_cache` – cache ICS událostí pro sdílení (subscription_id, uid, title, start_date, …)
+- `trackino_calendar_event_attendees` – RSVP systém; status: pending/accepted/declined
 
 ### Pohledy
 - `'list'` – chronologický výpis po měsících, 6 měsíců dopředu od začátku aktuálního měsíce
@@ -629,13 +636,37 @@ interface DisplayEvent {
   id: string; title: string;
   start_date: string; end_date: string;
   color: string;
-  source: 'manual' | 'vacation' | 'important_day';
+  source: 'manual' | 'vacation' | 'important_day' | 'shared';
   source_id: string;
   calendar_id?: string;
   description?: string;
   is_all_day: boolean;
   start_time?: string | null;
   end_time?: string | null;
+  // nová pole (v2.21.0)
+  location?: string;
+  url?: string;
+  reminder_minutes?: number | null;
+  is_shared?: boolean;
+  show_details?: boolean;
+  shared_owner_name?: string;
+  attendee_status?: 'pending' | 'accepted' | 'declined';
+  event_owner_id?: string;
+}
+```
+
+### SharedCalendarInfo (lokální typ, v2.21.0)
+```typescript
+interface SharedCalendarInfo {
+  share_id: string;
+  calendar_id: string;
+  type: 'calendar' | 'subscription';
+  name: string;
+  owner_name: string;
+  color: string;
+  show_details: boolean;
+  is_enabled: boolean;
+  color_override: string | null;
 }
 ```
 
@@ -645,15 +676,25 @@ interface DisplayEvent {
 - **Důležité dny** – `trackino_important_days`; opakující se záznamy rozvinout přes `visibleRange` pomocí funkce `getImportantDayOccurrences()`
 
 ### Klíčové funkce
-- `fetchData()` – načte calendars, events, vacation, important days; auto-vytvoří výchozí kalendář pokud žádný neexistuje
+- `fetchData()` – načte calendars, events, vacation, important days; auto-vytvoří výchozí kalendář pokud žádný neexistuje; volá fetchWorkspaceMembers, fetchCalendarShares, fetchSharedWithMe, fetchAttendeeEvents
 - `getImportantDayOccurrences(day, rangeStart, rangeEnd)` – vrátí seznam výskytů v daném rozsahu (zpracovává weekly/monthly/yearly recurrence)
 - `eventsOnDay(day)` – filtruje displayEvents pro konkrétní den (multiday overlap)
 - `openNewEvent(date?)` – otevře formulář s předvyplněným datem
-- `saveEvent()` – INSERT nebo UPDATE do trackino_calendar_events
+- `openEditEvent(event)` – otevře formulář pro editaci (včetně načtení attendees pro daný event)
+- `saveEvent()` – INSERT nebo UPDATE do trackino_calendar_events + uložení attendees do trackino_calendar_event_attendees
 - `saveCalendar()` – INSERT nebo UPDATE do trackino_calendars
 - `fetchNotesBatch(refs)` – dávkové načtení poznámek (včetně is_important/is_done/is_favorite)
 - `handleNoteSave(eventRef, content, tasks, meta)` – uloží/aktualizuje poznámku s meta flagy
 - `handleNoteDelete(eventRef)` – smaže poznámku z DB a skryje panel
+- `fetchWorkspaceMembers()` – načte členy workspace pro picker účastníků
+- `fetchCalendarShares()` – načte sdílení, která owner nastavil pro své kalendáře
+- `fetchSharedWithMe()` – načte sdílení, kde je přihlášený user příjemcem (nebo workspace-wide)
+- `fetchSharePrefs()` – načte preference příjemce (color_override, is_enabled)
+- `fetchAttendeeEvents()` – načte události, kde je user attendee; zobrazí se v displayEvents s attendee_status
+- `respondToAttendance(eventId, status)` – UPDATE stavu RSVP (accepted/declined)
+- `openShareModal(cal?, sub?)` – otevře share modal pro daný kalendář nebo ICS subscripci
+- `saveShare()` – DELETE + INSERT do trackino_calendar_shares dle shareModalState
+- `updateSharePref(calendarId, field, value)` – UPDATE v trackino_calendar_share_prefs
 
 ### ICS odběry – formát ID událostí (v2.17.3)
 ```

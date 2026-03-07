@@ -11,6 +11,14 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.21.0 – 7. 3. 2026</h3>
+<ul>
+  <li><strong>Kalendář – Sdílení kalendářů</strong> – Mé i Externí kalendáře lze nyní nasdílet ostatním uživatelům workspace. Ikona sdílení se zobrazí najetím myší na kalendář v levém panelu. V dialogu sdílení lze zapnout sdílení pro celý workspace nebo vybrat konkrétní uživatele. Přepínač <em>Detaily</em> (per příjemce) určuje, zda příjemce vidí plné informace o událostech, nebo jen obsazenost (Nemá čas). Sdílené ICS odběry se přenášejí přes DB cache – příjemci nevidí ICS URL.</li>
+  <li><strong>Kalendář – Sekce „Sdílené kalendáře"</strong> – příjemci sdíleného kalendáře jej nyní vidí v levém panelu v nové sekci. Lze přepínat viditelnost zaškrtávátkem a kliknutím na barevnou tečku nastavit vlastní zobrazovací barvu (bez vlivu na originál). Jméno vlastníka je zobrazeno pod názvem kalendáře.</li>
+  <li><strong>Kalendář – Rozšířený formulář události</strong> – formulář pro přidání/editaci události obsahuje nová pole: <strong>Místo</strong> (adresa/popis), <strong>Účastníci</strong> (výběr členů workspace, tag-style s vyhledáváním), <strong>URL</strong> (odkaz na videohovor nebo web) a <strong>Upozornění</strong> (bez / 5 / 15 / 30 min / 1 hod / 1 den). Pole „Popis" bylo přejmenováno na <strong>Poznámka</strong>.</li>
+  <li><strong>Kalendář – RSVP systém</strong> – účastníci přidaní k události obdrží pozvánku ve svém kalendáři. Neodsouhlasená událost je vyznačena přerušovaným okrajem a symbolem „?". Kliknutím se otevře dialog, kde lze zvolit <em>Přijmout</em> nebo <em>Odmítnout</em>. Organizátor vidí stav RSVP (✓/✗/?) pro každého účastníka v detailu události.</li>
+</ul>
+
 <h3>v2.20.11 – 7. 3. 2026</h3>
 <ul>
   <li><strong>Kalendář – Dnes (mobil): oprava zobrazení mřížky</strong> – pohled „Dnes" přestal zobrazovat časovou mřížku po opravě v2.20.10. Příčina: výpočet výšky při načítání dat způsoboval chybné hodnoty pro pohled Dnes. Pohled Dnes nyní správně používá přirozené CSS výšky (flex-1), které fungují spolehlivě na mobilech.</li>

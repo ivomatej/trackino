@@ -89,14 +89,29 @@ const DEFAULT_HELP_CONTENT = `
 </ul>
 <p><strong>Levý panel</strong> obsahuje čtyři sekce (každou lze sbalit/rozbalit šipkou vedle nadpisu):</p>
 <ul>
-  <li><strong>MÉ KALENDÁŘE</strong> – ruční události. Při prvním přístupu se vytvoří výchozí „Můj kalendář"; další přidáte tlačítkem +. Barva je viditelná přes zaškrtávátko, které zároveň slouží jako přepínač viditelnosti. Najetím myší na kalendář se zobrazí ikona tužky (upravit) a červená ikona koše (smazat). Výchozí kalendář nelze smazat (ikona koše se u něj nezobrazuje). Smazáním kalendáře se odstraní i všechny jeho události.</li>
-  <li><strong>EXTERNÍ KALENDÁŘE</strong> – ICS/iCal odběry; přidáte je tlačítkem + a zobrazíte/skryjete zaškrtnutím. Tlačítko ↻ obnoví data.</li>
+  <li><strong>MÉ KALENDÁŘE</strong> – ruční události. Při prvním přístupu se vytvoří výchozí „Můj kalendář"; další přidáte tlačítkem +. Barva je viditelná přes zaškrtávátko, které zároveň slouží jako přepínač viditelnosti. Najetím myší na kalendář se zobrazí ikona tužky (upravit), červená ikona koše (smazat) a ikona sdílení (nasdílet kalendář). Výchozí kalendář nelze smazat (ikona koše se u něj nezobrazuje). Smazáním kalendáře se odstraní i všechny jeho události.</li>
+  <li><strong>EXTERNÍ KALENDÁŘE</strong> – ICS/iCal odběry; přidáte je tlačítkem + a zobrazíte/skryjete zaškrtnutím. Tlačítko ↻ obnoví data. Najetím myší se zobrazí ikona sdílení pro nasdílení odběru ostatním.</li>
   <li><strong>AUTOMATICKY</strong> – Dovolená a Důležité dny; zobrazují se vždy automaticky bez nutnosti nastavovat.</li>
   <li><strong>DALŠÍ KALENDÁŘE</strong> – Státní svátky ČR; zapněte/vypněte zaškrtnutím.</li>
+  <li><strong>SDÍLENÉ KALENDÁŘE</strong> – sekce se zobrazí automaticky, pokud vám někdo nasdílel svůj kalendář. U každého sdíleného kalendáře lze přepínat viditelnost zaškrtávátkem a kliknutím na barevnou tečku změnit zobrazovací barvu. Název kalendáře je doplněn o jméno vlastníka.</li>
 </ul>
 <p><strong>Nastavení kalendáře:</strong> Tlačítko ⚙ v levém panelu otevře nastavení <em>Viditelné oblasti</em>. Selekty <strong>Od</strong> a <strong>Do</strong> určují, která část dne se zobrazí v okně bez scrollování – zároveň nastavují výšku okna i počáteční scroll pozici. Například 9:00–17:00 zobrazí přesně 8 hodinových řádků. Mimo tuto oblast lze pohybovat scrollem (celá 24h mřížka je vždy dostupná). Nastavení se ukládá do localStorage prohlížeče.</p>
 <p><strong>Checkboxy v levém panelu:</strong> Každý kalendář a odběr má barevné zaškrtávátko vlevo. Fajfka je vždy bílá, takže je dobře čitelná i u světlých barev (žlutá, oranžová apod.). Kliknutím zaškrtávátko přepnete viditelnost daného kalendáře.</p>
-<p><strong>Přidání události:</strong> Klikněte na tlačítko <em>+ Přidat událost</em> nebo klikněte přímo na den v měsíčním pohledu či na časový slot v týdenním pohledu. Ve formuláři vyplňte název, datum od–do, zda jde o celý den (nebo zadejte čas), volitelný popis a barvu. Událost lze kdykoli editovat kliknutím na ni, nebo smazat z formuláře.</p>
+<p><strong>Přidání události:</strong> Klikněte na tlačítko <em>+ Přidat událost</em> nebo klikněte přímo na den v měsíčním pohledu či na časový slot v týdenním pohledu. Formulář události nabízí rozšířená pole:</p>
+<ul>
+  <li><strong>Název</strong> – povinné pole</li>
+  <li><strong>Kalendář</strong> – vyberte, do kterého vašeho kalendáře se událost uloží</li>
+  <li><strong>Od / Do</strong> + přepínač <em>Celý den</em> (nebo zadejte čas)</li>
+  <li><strong>Místo</strong> – volitelná adresa nebo popis místa konání</li>
+  <li><strong>Účastníci</strong> – vyberte členy workspace; vybraní uživatelé uvidí událost ve svém kalendáři a obdrží pozvánku k potvrzení (RSVP). Tag-style výběr s vyhledáváním jmen.</li>
+  <li><strong>URL</strong> – volitelný odkaz (webová stránka, videohovor apod.)</li>
+  <li><strong>Upozornění</strong> – připomenutí: bez upozornění / 5 / 15 / 30 minut / 1 hodinu / 1 den předem</li>
+  <li><strong>Poznámka</strong> – volitelný textový popis události</li>
+  <li><strong>Barva</strong> – přepíše výchozí barvu kalendáře jen pro tuto událost</li>
+</ul>
+<p>Událost lze kdykoli editovat kliknutím na ni, nebo smazat z formuláře. Při editaci vlastní události s účastníky vidí organizátor jejich RSVP stav (✓ přijato, ✗ odmítnuto, ? čeká).</p>
+<p><strong>Sdílení kalendáře:</strong> Kliknutím na ikonu sdílení (zobrazí se při najetí na kalendář v levém panelu) otevřete dialog sdílení. Lze nasdílet celý workspace najednou nebo jen vybraným uživatelům. Pro každého příjemce lze přepínačem <em>Detaily</em> nastavit, zda vidí plné informace o událostech, nebo jen obsazenost (Nemá čas) bez názvů a popisů.</p>
+<p><strong>RSVP – přijetí pozvánky:</strong> Pokud vás někdo přidal jako účastníka události, zobrazí se tato událost ve vašem kalendáři s přerušovaným okrajem a symbolem „?". Kliknutím na ni otevřete RSVP dialog, kde zvolíte <em>Přijmout</em> nebo <em>Odmítnout</em>. Po potvrzení se okraj změní na plný (přijato) nebo událost zůstane označena jako odmítnutá.</p>
 <p><strong>Poznámky k událostem</strong> (Pohled Seznam): u každé události se po najetí myší zobrazí ikonka 📄. Kliknutím rozbalíte inline editor poznámek přímo pod kartičkou (max. 220 px výšky). Poznámky jsou soukromé (pouze váš pohled). Editor nabízí:</p>
 <ul>
   <li><strong>Formátování textu</strong> – B / I / U, odrážkový a číselný seznam</li>

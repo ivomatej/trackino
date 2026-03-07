@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWorkspace, WorkspaceProvider } from '@/contexts/WorkspaceContext';
 import DashboardLayout from '@/components/DashboardLayout';
-import type { Calendar, CalendarEvent, VacationEntry, ImportantDay, CalendarSubscription } from '@/types/database';
+import type { Calendar, CalendarEvent, CalendarShare, CalendarSharePref, CalendarEventAttendee, VacationEntry, ImportantDay, CalendarSubscription } from '@/types/database';
 import { getCzechHolidays } from '@/lib/czech-calendar';
 
 // ─── Local Types ─────────────────────────────────────────────────────────────
@@ -17,13 +17,44 @@ interface DisplayEvent {
   start_date: string;
   end_date: string;
   color: string;
-  source: 'manual' | 'vacation' | 'important_day' | 'subscription' | 'holiday';
+  source: 'manual' | 'vacation' | 'important_day' | 'subscription' | 'holiday' | 'shared';
   source_id: string;
   calendar_id?: string;
   description?: string;
+  location?: string;
+  url?: string;
+  reminder_minutes?: number | null;
   is_all_day: boolean;
   start_time?: string | null;
   end_time?: string | null;
+  // Sdílené události
+  is_shared?: boolean;
+  show_details?: boolean;
+  shared_owner_name?: string;
+  // Účastnické události (kde user je účastník, ne vlastník)
+  attendee_status?: 'pending' | 'accepted' | 'declined';
+  event_owner_id?: string;
+}
+
+/** Sdílený kalendář (přijatý od jiného uživatele) */
+interface SharedCalendarInfo {
+  share_id: string;
+  calendar_id: string;         // ID kalendáře vlastníka (nebo subscription ID)
+  type: 'calendar' | 'subscription';
+  name: string;
+  owner_name: string;
+  owner_user_id: string;
+  base_color: string;          // barva z DB
+  show_details: boolean;
+  is_enabled: boolean;         // preference příjemce
+  color_override: string | null;
+}
+
+/** Člen workspace s profilem */
+interface MemberWithProfile {
+  user_id: string;
+  display_name: string;
+  avatar_color: string;
 }
 
 type ViewType = 'list' | 'week' | 'month' | 'today' | 'year';
@@ -746,6 +777,10 @@ function CalendarContent() {
   const [eventForm, setEventForm] = useState({
     title: '',
     description: '',
+    location: '',
+    url: '',
+    attendee_ids: [] as string[],
+    reminder_minutes: null as number | null,
     start_date: '',
     end_date: '',
     is_all_day: true,
@@ -754,8 +789,31 @@ function CalendarContent() {
     color: '',
     calendar_id: '',
   });
+  const [attendeeSearch, setAttendeeSearch] = useState('');
+  const [showAttendeeDropdown, setShowAttendeeDropdown] = useState(false);
   const [savingEvent, setSavingEvent] = useState(false);
   const [deletingEventId, setDeletingEventId] = useState<string | null>(null);
+  // Načtené attendees (event_id → list)
+  const [eventAttendees, setEventAttendees] = useState<Record<string, CalendarEventAttendee[]>>({});
+  // Sdílení kalendářů
+  const [calendarShares, setCalendarShares] = useState<CalendarShare[]>([]);
+  const [sharedWithMe, setSharedWithMe] = useState<SharedCalendarInfo[]>([]);
+  const [sharePrefs, setSharePrefs] = useState<Record<string, CalendarSharePref>>({});
+  const [sharedEvents, setSharedEvents] = useState<DisplayEvent[]>([]);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [sharingCalendar, setSharingCalendar] = useState<Calendar | null>(null);
+  const [sharingSubscription, setSharingSubscription] = useState<CalendarSubscription | null>(null);
+  const [shareModalState, setShareModalState] = useState<{
+    shareWithWorkspace: boolean;
+    workspaceShowDetails: boolean;
+    userShares: { user_id: string; enabled: boolean; show_details: boolean }[];
+  }>({ shareWithWorkspace: false, workspaceShowDetails: true, userShares: [] });
+  const [savingShare, setSavingShare] = useState(false);
+  const [sharedCalExpanded, setSharedCalExpanded] = useState(true);
+  // Workspace členové (pro attendee picker + share modal)
+  const [workspaceMembers, setWorkspaceMembers] = useState<MemberWithProfile[]>([]);
+  // RSVP modal – zobrazí se při kliknutí na událost kde jsem účastník
+  const [rsvpModalEvent, setRsvpModalEvent] = useState<DisplayEvent | null>(null);
 
   // Formulář kalendáře
   const [showCalendarForm, setShowCalendarForm] = useState(false);
@@ -929,7 +987,28 @@ function CalendarContent() {
             const res = await fetch(`/api/ics-proxy?url=${encodeURIComponent(sub.url)}${cacheBust}`);
             if (!res.ok) return;
             const text = await res.text();
-            if (!cancelled) allEvents.push(...parseICS(text, sub.id, sub.color));
+            const parsed = parseICS(text, sub.id, sub.color);
+            if (!cancelled) allEvents.push(...parsed);
+            // Ulož do ICS cache pokud je tato subscription sdílená
+            const isShared = calendarShares.some(sh => sh.calendar_id === sub.id);
+            if (isShared && currentWorkspace && parsed.length > 0) {
+              const cacheRows = parsed.map(ev => ({
+                subscription_id: sub.id,
+                workspace_id: currentWorkspace.id,
+                uid: ev.id, // unikátní ID z parseICS
+                title: ev.title,
+                description: ev.description ?? '',
+                start_date: ev.start_date,
+                end_date: ev.end_date,
+                start_time: ev.start_time ?? null,
+                end_time: ev.end_time ?? null,
+                is_all_day: ev.is_all_day,
+                synced_at: new Date().toISOString(),
+              }));
+              // Upsert do cache
+              await supabase.from('trackino_ics_event_cache')
+                .upsert(cacheRows, { onConflict: 'subscription_id,uid' });
+            }
           } catch { /* ignoruj chyby jednotlivých odběrů */ }
         })
       );
@@ -960,6 +1039,276 @@ function CalendarContent() {
       .eq('user_id', user.id)
       .order('created_at');
     setSubscriptions((data ?? []) as CalendarSubscription[]);
+  }, [user, currentWorkspace]);
+
+  // ── Načtení členů workspace ────────────────────────────────────────────────
+
+  const fetchWorkspaceMembers = useCallback(async () => {
+    if (!user || !currentWorkspace) return;
+    const { data } = await supabase
+      .from('trackino_workspace_members')
+      .select('user_id, trackino_profiles(display_name, display_nickname, avatar_color)')
+      .eq('workspace_id', currentWorkspace.id)
+      .eq('approved', true);
+    if (!data) return;
+    const members: MemberWithProfile[] = data
+      .filter((m: Record<string, unknown>) => m.user_id !== user.id) // vyfiltruj sebe
+      .map((m: Record<string, unknown>) => {
+        const p = m.trackino_profiles as Record<string, string> | null;
+        return {
+          user_id: m.user_id as string,
+          display_name: p?.display_nickname?.trim() ? p.display_nickname : (p?.display_name ?? 'Uživatel'),
+          avatar_color: p?.avatar_color ?? '#6b7280',
+        };
+      });
+    setWorkspaceMembers(members);
+  }, [user, currentWorkspace]);
+
+  // ── Načtení sdílení (vlastní kalendáře → co sdílím) ───────────────────────
+
+  const fetchCalendarShares = useCallback(async (calIds: string[], subIds: string[]) => {
+    if (!user) return;
+    const allIds = [...calIds, ...subIds];
+    if (allIds.length === 0) { setCalendarShares([]); return; }
+    const { data } = await supabase
+      .from('trackino_calendar_shares')
+      .select('*')
+      .in('calendar_id', allIds);
+    setCalendarShares((data ?? []) as CalendarShare[]);
+  }, [user]);
+
+  // ── Načtení kalendářů sdílených se mnou ───────────────────────────────────
+
+  const fetchSharedWithMe = useCallback(async () => {
+    if (!user || !currentWorkspace) return;
+    // Najdi shares kde jsem příjemcem (user_id = já) nebo workspace-wide
+    const { data: shares } = await supabase
+      .from('trackino_calendar_shares')
+      .select('*')
+      .or(`shared_with_user_id.eq.${user.id},share_with_workspace.eq.true`);
+    if (!shares || shares.length === 0) { setSharedWithMe([]); return; }
+
+    // Načti preference příjemce
+    const { data: prefs } = await supabase
+      .from('trackino_calendar_share_prefs')
+      .select('*')
+      .eq('user_id', user.id);
+    const prefsMap: Record<string, CalendarSharePref> = {};
+    for (const p of (prefs ?? [])) prefsMap[p.calendar_id] = p as CalendarSharePref;
+    setSharePrefs(prefsMap);
+
+    // Unikátní calendar IDs ze shares
+    const calIds = [...new Set(shares.map((s: Record<string, unknown>) => s.calendar_id as string))];
+
+    // Načti data kalendářů (vlastní calendars)
+    const { data: cals } = await supabase
+      .from('trackino_calendars')
+      .select('id, name, color, owner_user_id')
+      .in('id', calIds);
+
+    // Načti data ICS subscriptions
+    const { data: subs } = await supabase
+      .from('trackino_calendar_subscriptions')
+      .select('id, name, color, user_id')
+      .in('id', calIds);
+
+    // Načti jména vlastníků
+    const ownerIds = [
+      ...new Set([
+        ...(cals ?? []).map((c: Record<string, unknown>) => c.owner_user_id as string),
+        ...(subs ?? []).map((s: Record<string, unknown>) => s.user_id as string),
+      ])
+    ].filter(id => id !== user.id);
+
+    const ownerNames: Record<string, string> = {};
+    if (ownerIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('trackino_profiles')
+        .select('id, display_name, display_nickname')
+        .in('id', ownerIds);
+      for (const p of (profiles ?? [])) {
+        ownerNames[p.id] = (p.display_nickname?.trim() ? p.display_nickname : p.display_name) ?? 'Uživatel';
+      }
+    }
+
+    // Sestav SharedCalendarInfo – filtruj kalendáře které nejsou moje
+    const result: SharedCalendarInfo[] = [];
+    const seenCalIds = new Set<string>();
+
+    for (const share of shares as CalendarShare[]) {
+      if (seenCalIds.has(share.calendar_id)) continue; // deduplicate
+
+      const cal = (cals ?? []).find((c: Record<string, unknown>) => c.id === share.calendar_id);
+      const sub = (subs ?? []).find((s: Record<string, unknown>) => s.id === share.calendar_id);
+
+      if (!cal && !sub) continue;
+
+      const ownerUserId = cal
+        ? (cal as Record<string, unknown>).owner_user_id as string
+        : (sub as Record<string, unknown>).user_id as string;
+
+      // Přeskoč vlastní kalendáře (sdílel bys sám sobě)
+      if (ownerUserId === user.id) continue;
+
+      seenCalIds.add(share.calendar_id);
+      const pref = prefsMap[share.calendar_id];
+
+      result.push({
+        share_id: share.id,
+        calendar_id: share.calendar_id,
+        type: cal ? 'calendar' : 'subscription',
+        name: cal
+          ? (cal as Record<string, unknown>).name as string
+          : (sub as Record<string, unknown>).name as string,
+        owner_name: ownerNames[ownerUserId] ?? 'Uživatel',
+        owner_user_id: ownerUserId,
+        base_color: cal
+          ? (cal as Record<string, unknown>).color as string
+          : (sub as Record<string, unknown>).color as string,
+        show_details: share.show_details,
+        is_enabled: pref?.is_enabled ?? true,
+        color_override: pref?.color_override ?? null,
+      });
+    }
+
+    setSharedWithMe(result);
+  }, [user, currentWorkspace]);
+
+  // ── Načtení událostí ze sdílených kalendářů ────────────────────────────────
+
+  const fetchSharedEvents = useCallback(async (shared: SharedCalendarInfo[]) => {
+    if (!user || !currentWorkspace) return;
+    const result: DisplayEvent[] = [];
+    const enabledShared = shared.filter(s => s.is_enabled);
+    if (enabledShared.length === 0) { setSharedEvents([]); return; }
+
+    // Ruční kalendáře – načti events
+    const calShared = enabledShared.filter(s => s.type === 'calendar');
+    if (calShared.length > 0) {
+      const calIds = calShared.map(s => s.calendar_id);
+      const { data: evs } = await supabase
+        .from('trackino_calendar_events')
+        .select('*')
+        .in('calendar_id', calIds)
+        .order('start_date');
+      for (const ev of (evs ?? []) as CalendarEvent[]) {
+        const info = calShared.find(s => s.calendar_id === ev.calendar_id);
+        if (!info) continue;
+        const color = info.color_override ?? info.base_color;
+        result.push({
+          id: `shared-${ev.id}`,
+          title: info.show_details ? ev.title : 'Nemá čas',
+          start_date: ev.start_date,
+          end_date: ev.end_date,
+          color,
+          source: 'shared',
+          source_id: ev.id,
+          calendar_id: ev.calendar_id,
+          description: info.show_details ? ev.description : '',
+          location: info.show_details ? ev.location : '',
+          url: info.show_details ? ev.url : '',
+          is_all_day: ev.is_all_day,
+          start_time: ev.start_time,
+          end_time: ev.end_time,
+          is_shared: true,
+          show_details: info.show_details,
+          shared_owner_name: info.owner_name,
+        });
+      }
+    }
+
+    // ICS subscriptions – načti z cache
+    const subShared = enabledShared.filter(s => s.type === 'subscription');
+    if (subShared.length > 0) {
+      const subIds = subShared.map(s => s.calendar_id);
+      const { data: cached } = await supabase
+        .from('trackino_ics_event_cache')
+        .select('*')
+        .in('subscription_id', subIds);
+      for (const ev of (cached ?? [])) {
+        const info = subShared.find(s => s.calendar_id === ev.subscription_id);
+        if (!info) continue;
+        const color = info.color_override ?? info.base_color;
+        result.push({
+          id: `shared-ics-${ev.id}`,
+          title: info.show_details ? ev.title : 'Nemá čas',
+          start_date: ev.start_date,
+          end_date: ev.end_date,
+          color,
+          source: 'shared',
+          source_id: ev.id,
+          description: info.show_details ? ev.description : '',
+          is_all_day: ev.is_all_day,
+          start_time: ev.start_time,
+          end_time: ev.end_time,
+          is_shared: true,
+          show_details: info.show_details,
+          shared_owner_name: info.owner_name,
+        });
+      }
+    }
+
+    setSharedEvents(result);
+  }, [user, currentWorkspace]);
+
+  // ── Načtení účastníků událostí ─────────────────────────────────────────────
+
+  const fetchAttendees = useCallback(async (eventIds: string[]) => {
+    if (!user || !currentWorkspace || eventIds.length === 0) return;
+    const { data } = await supabase
+      .from('trackino_calendar_event_attendees')
+      .select('*')
+      .in('event_id', eventIds);
+    const map: Record<string, CalendarEventAttendee[]> = {};
+    for (const a of (data ?? []) as CalendarEventAttendee[]) {
+      if (!map[a.event_id]) map[a.event_id] = [];
+      map[a.event_id].push(a);
+    }
+    setEventAttendees(map);
+  }, [user, currentWorkspace]);
+
+  // ── Načtení událostí kde jsem účastník ────────────────────────────────────
+
+  const [attendeeEvents, setAttendeeEvents] = useState<DisplayEvent[]>([]);
+
+  const fetchAttendeeEvents = useCallback(async () => {
+    if (!user || !currentWorkspace) return;
+    // Najdi záznamy kde jsem účastník
+    const { data: myAttendances } = await supabase
+      .from('trackino_calendar_event_attendees')
+      .select('event_id, status')
+      .eq('user_id', user.id)
+      .eq('workspace_id', currentWorkspace.id);
+    if (!myAttendances || myAttendances.length === 0) { setAttendeeEvents([]); return; }
+
+    const eventIds = myAttendances.map((a: Record<string, unknown>) => a.event_id as string);
+    const { data: evs } = await supabase
+      .from('trackino_calendar_events')
+      .select('*')
+      .in('id', eventIds);
+
+    const result: DisplayEvent[] = [];
+    for (const ev of (evs ?? []) as CalendarEvent[]) {
+      const att = myAttendances.find((a: Record<string, unknown>) => a.event_id === ev.id);
+      result.push({
+        id: `attendee-${ev.id}`,
+        title: ev.title,
+        start_date: ev.start_date,
+        end_date: ev.end_date,
+        color: ev.color ?? '#f59e0b',
+        source: 'manual',
+        source_id: ev.id,
+        description: ev.description,
+        location: ev.location,
+        url: ev.url,
+        is_all_day: ev.is_all_day,
+        start_time: ev.start_time,
+        end_time: ev.end_time,
+        attendee_status: att?.status as 'pending' | 'accepted' | 'declined',
+        event_owner_id: ev.user_id,
+      });
+    }
+    setAttendeeEvents(result);
   }, [user, currentWorkspace]);
 
   const fetchData = useCallback(async () => {
@@ -1011,6 +1360,8 @@ function CalendarContent() {
           .in('calendar_id', calIds)
           .order('start_date');
         setEvents((evs ?? []) as CalendarEvent[]);
+        // Načti attendees pro vlastní události
+        await fetchAttendees(calIds.length > 0 ? (evs ?? []).map((e: Record<string, unknown>) => e.id as string) : []);
       } else {
         setEvents([]);
       }
@@ -1033,12 +1384,35 @@ function CalendarContent() {
     } finally {
       setLoading(false);
     }
-  }, [user, currentWorkspace]);
+  }, [user, currentWorkspace, fetchAttendees]);
 
   useEffect(() => {
     fetchData();
     fetchSubscriptions();
-  }, [fetchData, fetchSubscriptions]);
+    fetchWorkspaceMembers();
+    fetchAttendeeEvents();
+  }, [fetchData, fetchSubscriptions, fetchWorkspaceMembers, fetchAttendeeEvents]);
+
+  // Načtení sdílení po načtení kalendářů a subscriptions
+  useEffect(() => {
+    if (calendars.length > 0 || subscriptions.length > 0) {
+      const calIds = calendars.map(c => c.id);
+      const subIds = subscriptions.map(s => s.id);
+      fetchCalendarShares(calIds, subIds);
+    }
+  }, [calendars, subscriptions, fetchCalendarShares]);
+
+  // Načtení sdílených kalendářů (kde jsem příjemce) + jejich událostí
+  useEffect(() => {
+    fetchSharedWithMe().then(async () => {
+      // sharedWithMe se nastaví v fetchSharedWithMe, useEffect níže ho zpracuje
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchSharedWithMe]);
+
+  useEffect(() => {
+    fetchSharedEvents(sharedWithMe);
+  }, [sharedWithMe, fetchSharedEvents]);
 
   // ── CRUD – Události ───────────────────────────────────────────────────────
 
@@ -1049,6 +1423,10 @@ function CalendarContent() {
     setEventForm({
       title: '',
       description: '',
+      location: '',
+      url: '',
+      attendee_ids: [],
+      reminder_minutes: null,
       start_date: d,
       end_date: d,
       is_all_day: true,
@@ -1057,14 +1435,22 @@ function CalendarContent() {
       color: '',
       calendar_id: defaultCalId,
     });
+    setAttendeeSearch('');
+    setShowAttendeeDropdown(false);
     setShowEventForm(true);
   }
 
   function openEditEvent(ev: CalendarEvent) {
     setEditingEvent(ev);
+    // Načti existující attendees pro tento event
+    const existingAttendees = eventAttendees[ev.id]?.map(a => a.user_id) ?? [];
     setEventForm({
       title: ev.title,
       description: ev.description,
+      location: ev.location ?? '',
+      url: ev.url ?? '',
+      attendee_ids: existingAttendees,
+      reminder_minutes: ev.reminder_minutes ?? null,
       start_date: ev.start_date,
       end_date: ev.end_date,
       is_all_day: ev.is_all_day,
@@ -1073,6 +1459,8 @@ function CalendarContent() {
       color: ev.color ?? '',
       calendar_id: ev.calendar_id,
     });
+    setAttendeeSearch('');
+    setShowAttendeeDropdown(false);
     setShowEventForm(true);
   }
 
@@ -1086,6 +1474,9 @@ function CalendarContent() {
         user_id: user.id,
         title: eventForm.title.trim(),
         description: eventForm.description,
+        location: eventForm.location,
+        url: eventForm.url,
+        reminder_minutes: eventForm.reminder_minutes,
         start_date: eventForm.start_date,
         end_date: eventForm.end_date || eventForm.start_date,
         is_all_day: eventForm.is_all_day,
@@ -1095,16 +1486,59 @@ function CalendarContent() {
         source: 'manual' as const,
         source_id: null,
       };
+      let savedEventId: string;
       if (editingEvent) {
         await supabase.from('trackino_calendar_events').update(payload).eq('id', editingEvent.id);
+        savedEventId = editingEvent.id;
       } else {
-        await supabase.from('trackino_calendar_events').insert(payload);
+        const { data: inserted } = await supabase
+          .from('trackino_calendar_events')
+          .insert(payload)
+          .select('id')
+          .single();
+        savedEventId = inserted?.id ?? '';
+      }
+      // Uložit attendees
+      if (savedEventId) {
+        // Zachovaj stávající accepted/declined, odstraň ty co byli odebrání, přidej nové
+        const existing = eventAttendees[savedEventId] ?? [];
+        const toKeep = existing.filter(a => eventForm.attendee_ids.includes(a.user_id));
+        const toAdd = eventForm.attendee_ids.filter(uid => !existing.find(a => a.user_id === uid));
+        const toRemove = existing.filter(a => !eventForm.attendee_ids.includes(a.user_id));
+
+        if (toRemove.length > 0) {
+          await supabase.from('trackino_calendar_event_attendees')
+            .delete()
+            .in('id', toRemove.map(a => a.id));
+        }
+        if (toAdd.length > 0) {
+          await supabase.from('trackino_calendar_event_attendees')
+            .insert(toAdd.map(uid => ({
+              event_id: savedEventId,
+              workspace_id: currentWorkspace.id,
+              user_id: uid,
+              status: 'pending',
+            })));
+        }
+        void toKeep; // zachovány v DB
       }
       setShowEventForm(false);
-      await fetchData();
+      await Promise.all([fetchData(), fetchAttendeeEvents()]);
     } finally {
       setSavingEvent(false);
     }
+  }
+
+  // ── RSVP – přijetí/odmítnutí události jako účastník ──────────────────────
+
+  async function respondToAttendance(eventSourceId: string, status: 'accepted' | 'declined') {
+    if (!user || !currentWorkspace) return;
+    await supabase
+      .from('trackino_calendar_event_attendees')
+      .update({ status })
+      .eq('event_id', eventSourceId)
+      .eq('user_id', user.id);
+    await fetchAttendeeEvents();
   }
 
   async function deleteEvent(id: string) {
@@ -1113,6 +1547,91 @@ function CalendarContent() {
     setDeletingEventId(null);
     setShowEventForm(false);
     await fetchData();
+  }
+
+  // ── Sdílení kalendáře ─────────────────────────────────────────────────────
+
+  function openShareModal(cal?: Calendar, sub?: CalendarSubscription) {
+    setSharingCalendar(cal ?? null);
+    setSharingSubscription(sub ?? null);
+    const calId = cal?.id ?? sub?.id ?? '';
+    // Načti aktuální shares pro tento kalendář
+    const existing = calendarShares.filter(s => s.calendar_id === calId);
+    const wsShare = existing.find(s => s.share_with_workspace);
+    const userShares = existing
+      .filter(s => !s.share_with_workspace && s.shared_with_user_id)
+      .map(s => ({
+        user_id: s.shared_with_user_id!,
+        enabled: true,
+        show_details: s.show_details,
+      }));
+    setShareModalState({
+      shareWithWorkspace: !!wsShare,
+      workspaceShowDetails: wsShare?.show_details ?? true,
+      userShares,
+    });
+    setShowShareModal(true);
+  }
+
+  async function saveShare() {
+    if (!currentWorkspace) return;
+    const calId = sharingCalendar?.id ?? sharingSubscription?.id ?? '';
+    if (!calId) return;
+    setSavingShare(true);
+    try {
+      // Smaž všechny stávající shares pro tento kalendář
+      await supabase.from('trackino_calendar_shares').delete().eq('calendar_id', calId);
+      // Vlož nové
+      const toInsert: Partial<CalendarShare>[] = [];
+      if (shareModalState.shareWithWorkspace) {
+        toInsert.push({
+          calendar_id: calId,
+          shared_with_user_id: null,
+          share_with_workspace: true,
+          show_details: shareModalState.workspaceShowDetails,
+          can_edit: false,
+        });
+      }
+      for (const us of shareModalState.userShares) {
+        if (!us.enabled) continue;
+        toInsert.push({
+          calendar_id: calId,
+          shared_with_user_id: us.user_id,
+          share_with_workspace: false,
+          show_details: us.show_details,
+          can_edit: false,
+        });
+      }
+      if (toInsert.length > 0) {
+        await supabase.from('trackino_calendar_shares').insert(toInsert);
+      }
+      setShowShareModal(false);
+      // Refresh shares
+      const calIds = calendars.map(c => c.id);
+      const subIds = subscriptions.map(s => s.id);
+      await fetchCalendarShares(calIds, subIds);
+    } finally {
+      setSavingShare(false);
+    }
+  }
+
+  async function updateSharePref(calendarId: string, update: Partial<CalendarSharePref>) {
+    if (!user) return;
+    await supabase.from('trackino_calendar_share_prefs')
+      .upsert({ calendar_id: calendarId, user_id: user.id, ...update },
+               { onConflict: 'calendar_id,user_id' });
+    setSharePrefs(prev => ({
+      ...prev,
+      [calendarId]: { ...prev[calendarId], ...update } as CalendarSharePref,
+    }));
+    // Refresh sdílených událostí
+    const updated = sharedWithMe.map(s =>
+      s.calendar_id === calendarId
+        ? { ...s, ...update, is_enabled: update.is_enabled ?? s.is_enabled, color_override: update.color_override ?? s.color_override }
+        : s
+    );
+    setSharedWithMe(updated);
+    await fetchSharedEvents(updated);
   }
 
   // ── Poznámky k událostem ───────────────────────────────────────────────────
@@ -1557,13 +2076,31 @@ function CalendarContent() {
       }
     }
 
+    // Sdílené kalendáře (od ostatních uživatelů)
+    for (const ev of sharedEvents) {
+      const evStart = parseDate(ev.start_date);
+      const evEnd = parseDate(ev.end_date);
+      if (evStart <= visibleRange.end && evEnd >= visibleRange.start) {
+        result.push(ev);
+      }
+    }
+
+    // Účastnické události (kde jsem pozván)
+    for (const ev of attendeeEvents) {
+      const evStart = parseDate(ev.start_date);
+      const evEnd = parseDate(ev.end_date);
+      if (evStart <= visibleRange.end && evEnd >= visibleRange.start) {
+        result.push(ev);
+      }
+    }
+
     // České státní svátky
     for (const ev of czechHolidayEvents) {
       result.push(ev);
     }
 
     return result.sort((a, b) => a.start_date.localeCompare(b.start_date) || a.title.localeCompare(b.title));
-  }, [events, vacationEntries, importantDays, calendars, selectedCalendarIds, visibleRange, subscriptionEvents, czechHolidayEvents]);
+  }, [events, vacationEntries, importantDays, calendars, selectedCalendarIds, visibleRange, subscriptionEvents, sharedEvents, attendeeEvents, czechHolidayEvents]);
 
   // Načtení poznámek pro viditelné události (seznam pohled) – vždy při seznam pohledu
   // Umístěno ZDE aby se mohlo odkazovat na displayEvents
@@ -1700,12 +2237,14 @@ function CalendarContent() {
   // ── Event pill ────────────────────────────────────────────────────────────
 
   function EventPill({ ev, compact = false, wrap = false }: { ev: DisplayEvent; compact?: boolean; wrap?: boolean }) {
-    const isClickable = ev.source === 'manual';
+    const isClickable = ev.source === 'manual' || !!ev.attendee_status;
     return (
       <div
         onClick={e => {
           e.stopPropagation();
-          if (isClickable) {
+          if (ev.attendee_status) {
+            setRsvpModalEvent(ev);
+          } else if (ev.source === 'manual') {
             const original = events.find(x => x.id === ev.source_id);
             if (original) openEditEvent(original);
           }
@@ -1714,11 +2253,12 @@ function CalendarContent() {
         style={{
           background: ev.color + '22',
           color: ev.color,
-          border: `1px solid ${ev.color}44`,
+          border: ev.attendee_status === 'pending' ? `2px dashed ${ev.color}` : `1px solid ${ev.color}44`,
           cursor: isClickable ? 'pointer' : 'default',
         }}
-        title={ev.title}
+        title={ev.attendee_status === 'pending' ? `${ev.title} – čeká na potvrzení` : ev.title}
       >
+        {ev.attendee_status === 'pending' ? '? ' : ''}
         {!ev.is_all_day && ev.start_time ? `${ev.start_time.slice(0, 5)} ` : ''}
         {ev.title}
       </div>
@@ -1922,6 +2462,18 @@ function CalendarContent() {
                       <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                     </svg>
                   </button>
+                  {/* Sdílet */}
+                  <button
+                    onClick={() => openShareModal(cal)}
+                    className="opacity-0 group-hover/cal:opacity-60 hover:!opacity-100 transition-opacity p-0.5 rounded flex-shrink-0"
+                    style={{ color: calendarShares.some(s => s.calendar_id === cal.id) ? 'var(--primary)' : 'var(--text-muted)' }}
+                    title="Sdílet kalendář"
+                  >
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                    </svg>
+                  </button>
                   {!cal.is_default && (
                     <button
                       onClick={async () => {
@@ -2044,6 +2596,18 @@ function CalendarContent() {
                           <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                         </svg>
                       </button>
+                      {/* Sdílet */}
+                      <button
+                        onClick={() => openShareModal(undefined, sub)}
+                        className="opacity-0 group-hover/sub:opacity-60 hover:!opacity-100 transition-opacity p-0.5 rounded flex-shrink-0"
+                        style={{ color: calendarShares.some(s => s.calendar_id === sub.id) ? 'var(--primary)' : 'var(--text-muted)' }}
+                        title="Sdílet kalendář"
+                      >
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                          <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                        </svg>
+                      </button>
                     </div>
                   ))
                 )
@@ -2108,6 +2672,73 @@ function CalendarContent() {
                 </div>
               )}
             </div>
+
+            {/* SDÍLENÉ KALENDÁŘE – zobrazí se jen pokud existují sdílené */}
+            {sharedWithMe.length > 0 && (
+              <div className="mb-3">
+                <div className="mb-2">
+                  <button
+                    onClick={() => setSharedCalExpanded(p => !p)}
+                    className="flex items-center gap-1 text-[10px] font-semibold tracking-wider"
+                    style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                  >
+                    SDÍLENÉ
+                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ transform: sharedCalExpanded ? 'none' : 'rotate(-90deg)', transition: 'transform 0.15s', flexShrink: 0 }}>
+                      <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                  </button>
+                </div>
+                {sharedCalExpanded && sharedWithMe.map(shared => (
+                  <div key={shared.share_id} className="flex items-center gap-1.5 py-0.5 group/shared">
+                    {/* Toggle viditelnosti */}
+                    <button
+                      role="checkbox"
+                      aria-checked={shared.is_enabled}
+                      onClick={() => updateSharePref(shared.calendar_id, { is_enabled: !shared.is_enabled })}
+                      className="w-3.5 h-3.5 rounded flex-shrink-0 flex items-center justify-center border-[1.5px] transition-colors cursor-pointer"
+                      style={{
+                        background: shared.is_enabled ? (shared.color_override ?? shared.base_color) : 'transparent',
+                        borderColor: shared.color_override ?? shared.base_color,
+                      }}
+                    >
+                      {shared.is_enabled && (
+                        <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                      )}
+                    </button>
+                    {/* Barevná tečka s color picker */}
+                    <div className="relative group/colorpick flex-shrink-0">
+                      <button
+                        className="w-3 h-3 rounded-full border border-transparent hover:border-white/30 transition-all"
+                        style={{ background: shared.color_override ?? shared.base_color }}
+                        title="Změnit barvu"
+                      />
+                      <div className="absolute left-0 top-5 z-20 hidden group-hover/colorpick:flex flex-wrap gap-1 p-2 rounded-lg border shadow-xl" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', width: 112 }}>
+                        {DEFAULT_COLORS.map(c => (
+                          <button
+                            key={c}
+                            onClick={() => updateSharePref(shared.calendar_id, { color_override: c })}
+                            className="w-4 h-4 rounded-full transition-all"
+                            style={{ background: c, boxShadow: (shared.color_override ?? shared.base_color) === c ? `0 0 0 1.5px white, 0 0 0 3px ${c}` : 'none' }}
+                          />
+                        ))}
+                        <button
+                          onClick={() => updateSharePref(shared.calendar_id, { color_override: null })}
+                          className="w-4 h-4 rounded-full border flex items-center justify-center text-[8px]"
+                          style={{ borderColor: 'var(--border)', color: 'var(--text-muted)', background: 'var(--bg-hover)' }}
+                          title="Výchozí barva"
+                        >○</button>
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-xs block truncate" style={{ color: 'var(--text-primary)' }}>{shared.name}</span>
+                      <span className="text-[10px] block truncate" style={{ color: 'var(--text-muted)' }}>{shared.owner_name}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Nastavení kalendáře */}
             <div className="border-t pt-3 pb-4" style={{ borderColor: 'var(--border)' }}>
@@ -3173,180 +3804,337 @@ function CalendarContent() {
       {/* ══ MODAL – Nová / Upravit událost ════════════════════════════════════ */}
       {showEventForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="w-full max-w-md rounded-xl shadow-xl border p-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
-                {editingEvent ? 'Upravit událost' : 'Nová událost'}
-              </h2>
-              <button onClick={() => setShowEventForm(false)} className="p-1 rounded" style={{ color: 'var(--text-muted)' }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Název *</label>
-                <input
-                  type="text"
-                  value={eventForm.title}
-                  onChange={e => setEventForm(f => ({ ...f, title: e.target.value }))}
-                  placeholder="Název události"
-                  className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm"
-                  style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
-                  autoFocus
-                />
+          <div className="w-full max-w-md rounded-xl shadow-xl border overflow-y-auto" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', maxHeight: '90vh' }}>
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
+                  {editingEvent ? 'Upravit událost' : 'Nová událost'}
+                </h2>
+                <button onClick={() => setShowEventForm(false)} className="p-1 rounded" style={{ color: 'var(--text-muted)' }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
               </div>
 
-              {calendars.length > 1 && (
+              <div className="space-y-4">
+                {/* Název */}
                 <div>
-                  <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Kalendář</label>
+                  <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Název *</label>
+                  <input
+                    type="text"
+                    value={eventForm.title}
+                    onChange={e => setEventForm(f => ({ ...f, title: e.target.value }))}
+                    placeholder="Název události"
+                    className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm"
+                    style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
+                    autoFocus
+                  />
+                </div>
+
+                {/* Kalendář */}
+                {calendars.length > 1 && (
+                  <div>
+                    <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Kalendář</label>
+                    <div className="relative">
+                      <select
+                        value={eventForm.calendar_id}
+                        onChange={e => setEventForm(f => ({ ...f, calendar_id: e.target.value }))}
+                        className="w-full appearance-none px-3 py-2 pr-8 rounded-lg border text-base sm:text-sm"
+                        style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
+                      >
+                        {calendars.map(c => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                      <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: 'var(--text-muted)' }}>
+                        <polyline points="6 9 12 15 18 9" />
+                      </svg>
+                    </div>
+                  </div>
+                )}
+
+                {/* Datum Od / Do */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Od *</label>
+                    <input
+                      type="date"
+                      value={eventForm.start_date}
+                      onChange={e => setEventForm(f => ({ ...f, start_date: e.target.value, end_date: f.end_date < e.target.value ? e.target.value : f.end_date }))}
+                      className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm"
+                      style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Do</label>
+                    <input
+                      type="date"
+                      value={eventForm.end_date}
+                      min={eventForm.start_date}
+                      onChange={e => setEventForm(f => ({ ...f, end_date: e.target.value }))}
+                      className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm"
+                      style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
+                    />
+                  </div>
+                </div>
+
+                {/* Celý den */}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="cal_is_all_day"
+                    checked={eventForm.is_all_day}
+                    onChange={e => setEventForm(f => ({ ...f, is_all_day: e.target.checked }))}
+                    className="w-4 h-4 rounded cursor-pointer"
+                    style={{ accentColor: 'var(--primary)' }}
+                  />
+                  <label htmlFor="cal_is_all_day" className="text-sm cursor-pointer" style={{ color: 'var(--text-secondary)' }}>
+                    Celý den
+                  </label>
+                </div>
+
+                {/* Časy */}
+                {!eventForm.is_all_day && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Čas začátku</label>
+                      <input
+                        type="time"
+                        value={eventForm.start_time}
+                        onChange={e => setEventForm(f => ({ ...f, start_time: e.target.value }))}
+                        className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm"
+                        style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Čas konce</label>
+                      <input
+                        type="time"
+                        value={eventForm.end_time}
+                        onChange={e => setEventForm(f => ({ ...f, end_time: e.target.value }))}
+                        className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm"
+                        style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Místo */}
+                <div>
+                  <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Místo</label>
+                  <input
+                    type="text"
+                    value={eventForm.location}
+                    onChange={e => setEventForm(f => ({ ...f, location: e.target.value }))}
+                    placeholder="Adresa nebo název místa"
+                    className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm"
+                    style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
+                  />
+                </div>
+
+                {/* Účastníci */}
+                {workspaceMembers.length > 0 && (
+                  <div>
+                    <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Účastníci</label>
+                    {/* Tagy + vyhledávání */}
+                    <div
+                      className="min-h-[38px] px-2 py-1.5 rounded-lg border flex flex-wrap gap-1 items-center cursor-text"
+                      style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}
+                      onClick={() => setShowAttendeeDropdown(true)}
+                    >
+                      {eventForm.attendee_ids.map(uid => {
+                        const member = workspaceMembers.find(m => m.user_id === uid);
+                        if (!member) return null;
+                        return (
+                          <span
+                            key={uid}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium text-white flex-shrink-0"
+                            style={{ background: member.avatar_color }}
+                          >
+                            {member.display_name}
+                            <button
+                              onClick={e => { e.stopPropagation(); setEventForm(f => ({ ...f, attendee_ids: f.attendee_ids.filter(id => id !== uid) })); }}
+                              className="ml-0.5 hover:opacity-70"
+                            >
+                              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                              </svg>
+                            </button>
+                          </span>
+                        );
+                      })}
+                      <input
+                        type="text"
+                        value={attendeeSearch}
+                        onChange={e => { setAttendeeSearch(e.target.value); setShowAttendeeDropdown(true); }}
+                        onFocus={() => setShowAttendeeDropdown(true)}
+                        onBlur={() => setTimeout(() => setShowAttendeeDropdown(false), 150)}
+                        placeholder={eventForm.attendee_ids.length === 0 ? 'Přidat účastníka...' : ''}
+                        className="flex-1 min-w-[80px] bg-transparent text-base sm:text-sm outline-none"
+                        style={{ color: 'var(--text-primary)' }}
+                      />
+                    </div>
+                    {/* Dropdown */}
+                    {showAttendeeDropdown && (
+                      <div className="relative z-10">
+                        <div
+                          className="absolute left-0 right-0 rounded-lg border shadow-lg overflow-y-auto"
+                          style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', maxHeight: 180, top: 2 }}
+                        >
+                          {workspaceMembers
+                            .filter(m => !eventForm.attendee_ids.includes(m.user_id) && m.display_name.toLowerCase().includes(attendeeSearch.toLowerCase()))
+                            .map(m => (
+                              <button
+                                key={m.user_id}
+                                onMouseDown={() => {
+                                  setEventForm(f => ({ ...f, attendee_ids: [...f.attendee_ids, m.user_id] }));
+                                  setAttendeeSearch('');
+                                  setShowAttendeeDropdown(false);
+                                }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors"
+                                style={{ color: 'var(--text-primary)' }}
+                                onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+                                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                              >
+                                <span className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0" style={{ background: m.avatar_color }}>
+                                  {m.display_name.slice(0, 1).toUpperCase()}
+                                </span>
+                                {m.display_name}
+                              </button>
+                            ))}
+                          {workspaceMembers.filter(m => !eventForm.attendee_ids.includes(m.user_id) && m.display_name.toLowerCase().includes(attendeeSearch.toLowerCase())).length === 0 && (
+                            <div className="px-3 py-2 text-xs" style={{ color: 'var(--text-muted)' }}>Žádní účastníci nenalezeni</div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    {/* RSVP stav účastníků (při editaci) */}
+                    {editingEvent && (eventAttendees[editingEvent.id]?.length ?? 0) > 0 && (
+                      <div className="mt-2 space-y-1 px-1">
+                        <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Stav pozvání:</p>
+                        {eventAttendees[editingEvent.id].map(att => {
+                          const member = workspaceMembers.find(m => m.user_id === att.user_id);
+                          return (
+                            <div key={att.id} className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-secondary)' }}>
+                              <span className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0" style={{ background: member?.avatar_color ?? '#6b7280' }}>
+                                {(member?.display_name ?? '?').slice(0, 1).toUpperCase()}
+                              </span>
+                              <span className="flex-1 truncate">{member?.display_name ?? 'Uživatel'}</span>
+                              {att.status === 'accepted' && <span className="font-medium" style={{ color: '#22c55e' }}>✓ Přijato</span>}
+                              {att.status === 'declined' && <span className="font-medium" style={{ color: '#ef4444' }}>✗ Odmítnuto</span>}
+                              {att.status === 'pending' && <span style={{ color: 'var(--text-muted)' }}>? Čeká</span>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* URL */}
+                <div>
+                  <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>URL</label>
+                  <input
+                    type="url"
+                    value={eventForm.url}
+                    onChange={e => setEventForm(f => ({ ...f, url: e.target.value }))}
+                    placeholder="https://..."
+                    className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm"
+                    style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
+                  />
+                </div>
+
+                {/* Upozornění */}
+                <div>
+                  <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Upozornění</label>
                   <div className="relative">
                     <select
-                      value={eventForm.calendar_id}
-                      onChange={e => setEventForm(f => ({ ...f, calendar_id: e.target.value }))}
+                      value={eventForm.reminder_minutes === null ? '' : String(eventForm.reminder_minutes)}
+                      onChange={e => setEventForm(f => ({ ...f, reminder_minutes: e.target.value === '' ? null : parseInt(e.target.value) }))}
                       className="w-full appearance-none px-3 py-2 pr-8 rounded-lg border text-base sm:text-sm"
                       style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
                     >
-                      {calendars.map(c => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
+                      <option value="">Bez upozornění</option>
+                      <option value="5">5 minut před</option>
+                      <option value="15">15 minut před</option>
+                      <option value="30">30 minut před</option>
+                      <option value="60">1 hodinu před</option>
+                      <option value="1440">1 den před</option>
                     </select>
                     <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: 'var(--text-muted)' }}>
                       <polyline points="6 9 12 15 18 9" />
                     </svg>
                   </div>
                 </div>
-              )}
 
-              <div className="grid grid-cols-2 gap-3">
+                {/* Poznámka (přejmenováno z Popis) */}
                 <div>
-                  <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Od *</label>
-                  <input
-                    type="date"
-                    value={eventForm.start_date}
-                    onChange={e => setEventForm(f => ({ ...f, start_date: e.target.value, end_date: f.end_date < e.target.value ? e.target.value : f.end_date }))}
-                    className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm"
+                  <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Poznámka</label>
+                  <textarea
+                    value={eventForm.description}
+                    onChange={e => setEventForm(f => ({ ...f, description: e.target.value }))}
+                    placeholder="Volitelná poznámka..."
+                    rows={2}
+                    className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm resize-none"
                     style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
                   />
                 </div>
+
+                {/* Barva */}
                 <div>
-                  <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Do</label>
-                  <input
-                    type="date"
-                    value={eventForm.end_date}
-                    min={eventForm.start_date}
-                    onChange={e => setEventForm(f => ({ ...f, end_date: e.target.value }))}
-                    className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm"
-                    style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="cal_is_all_day"
-                  checked={eventForm.is_all_day}
-                  onChange={e => setEventForm(f => ({ ...f, is_all_day: e.target.checked }))}
-                  className="w-4 h-4 rounded cursor-pointer"
-                  style={{ accentColor: 'var(--primary)' }}
-                />
-                <label htmlFor="cal_is_all_day" className="text-sm cursor-pointer" style={{ color: 'var(--text-secondary)' }}>
-                  Celý den
-                </label>
-              </div>
-
-              {!eventForm.is_all_day && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Čas začátku</label>
-                    <input
-                      type="time"
-                      value={eventForm.start_time}
-                      onChange={e => setEventForm(f => ({ ...f, start_time: e.target.value }))}
-                      className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm"
-                      style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Čas konce</label>
-                    <input
-                      type="time"
-                      value={eventForm.end_time}
-                      onChange={e => setEventForm(f => ({ ...f, end_time: e.target.value }))}
-                      className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm"
-                      style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Popis</label>
-                <textarea
-                  value={eventForm.description}
-                  onChange={e => setEventForm(f => ({ ...f, description: e.target.value }))}
-                  placeholder="Volitelný popis..."
-                  rows={2}
-                  className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm resize-none"
-                  style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium mb-2" style={{ color: 'var(--text-muted)' }}>Barva</label>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <button
-                    onClick={() => setEventForm(f => ({ ...f, color: '' }))}
-                    className="w-6 h-6 rounded-full border-2 flex items-center justify-center text-[10px] font-bold"
-                    style={{ borderColor: !eventForm.color ? 'var(--primary)' : 'var(--border)', color: 'var(--text-muted)', background: 'var(--bg-hover)' }}
-                    title="Barva dle kalendáře"
-                  >
-                    ○
-                  </button>
-                  {DEFAULT_COLORS.map(c => (
+                  <label className="block text-xs font-medium mb-2" style={{ color: 'var(--text-muted)' }}>Barva</label>
+                  <div className="flex items-center gap-2 flex-wrap">
                     <button
-                      key={c}
-                      onClick={() => setEventForm(f => ({ ...f, color: c }))}
-                      className="w-6 h-6 rounded-full transition-all"
-                      style={{
-                        background: c,
-                        boxShadow: eventForm.color === c ? `0 0 0 2px white, 0 0 0 4px ${c}` : 'none',
-                        transform: eventForm.color === c ? 'scale(1.15)' : 'scale(1)',
-                      }}
-                    />
-                  ))}
+                      onClick={() => setEventForm(f => ({ ...f, color: '' }))}
+                      className="w-6 h-6 rounded-full border-2 flex items-center justify-center text-[10px] font-bold"
+                      style={{ borderColor: !eventForm.color ? 'var(--primary)' : 'var(--border)', color: 'var(--text-muted)', background: 'var(--bg-hover)' }}
+                      title="Barva dle kalendáře"
+                    >
+                      ○
+                    </button>
+                    {DEFAULT_COLORS.map(c => (
+                      <button
+                        key={c}
+                        onClick={() => setEventForm(f => ({ ...f, color: c }))}
+                        className="w-6 h-6 rounded-full transition-all"
+                        style={{
+                          background: c,
+                          boxShadow: eventForm.color === c ? `0 0 0 2px white, 0 0 0 4px ${c}` : 'none',
+                          transform: eventForm.color === c ? 'scale(1.15)' : 'scale(1)',
+                        }}
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="flex items-center justify-between mt-6">
-              {editingEvent ? (
-                <button
-                  onClick={async () => { if (confirm('Opravdu smazat tuto událost?')) { await deleteEvent(editingEvent.id); } }}
-                  disabled={deletingEventId === editingEvent.id}
-                  className="px-3 py-2 rounded-lg text-sm transition-colors disabled:opacity-50"
-                  style={{ color: '#ef4444' }}
-                  onMouseEnter={e => (e.currentTarget.style.background = '#fee2e244')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                >
-                  Smazat
-                </button>
-              ) : <div />}
-              <div className="flex gap-2">
-                <button onClick={() => setShowEventForm(false)} className="px-4 py-2 rounded-lg text-sm border transition-colors" style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}>
-                  Zrušit
-                </button>
-                <button
-                  onClick={saveEvent}
-                  disabled={savingEvent || !eventForm.title.trim() || !eventForm.start_date}
-                  className="px-4 py-2 rounded-lg text-sm font-medium text-white transition-opacity disabled:opacity-50"
-                  style={{ background: 'var(--primary)' }}
-                >
-                  {savingEvent ? 'Ukládám...' : editingEvent ? 'Uložit' : 'Přidat'}
-                </button>
+              <div className="flex items-center justify-between mt-6">
+                {editingEvent ? (
+                  <button
+                    onClick={async () => { if (confirm('Opravdu smazat tuto událost?')) { await deleteEvent(editingEvent.id); } }}
+                    disabled={deletingEventId === editingEvent.id}
+                    className="px-3 py-2 rounded-lg text-sm transition-colors disabled:opacity-50"
+                    style={{ color: '#ef4444' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#fee2e244')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    Smazat
+                  </button>
+                ) : <div />}
+                <div className="flex gap-2">
+                  <button onClick={() => setShowEventForm(false)} className="px-4 py-2 rounded-lg text-sm border transition-colors" style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}>
+                    Zrušit
+                  </button>
+                  <button
+                    onClick={saveEvent}
+                    disabled={savingEvent || !eventForm.title.trim() || !eventForm.start_date}
+                    className="px-4 py-2 rounded-lg text-sm font-medium text-white transition-opacity disabled:opacity-50"
+                    style={{ background: 'var(--primary)' }}
+                  >
+                    {savingEvent ? 'Ukládám...' : editingEvent ? 'Uložit' : 'Přidat'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -3614,11 +4402,6 @@ function CalendarContent() {
               </div>
             </div>
 
-            {editingCalendar && (
-              <div className="mt-4 p-3 rounded-lg text-xs" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>
-                💡 Budoucí verze umožní sdílení kalendáře s ostatními členy workspace.
-              </div>
-            )}
 
             <div className="flex items-center justify-between mt-6">
               {editingCalendar && !editingCalendar.is_default ? (
@@ -3649,6 +4432,204 @@ function CalendarContent() {
           </div>
         </div>
       )}
+
+      {/* ══ MODAL – Nastavení sdílení ══════════════════════════════════════════ */}
+      {showShareModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="w-full max-w-md rounded-xl shadow-xl border overflow-y-auto" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', maxHeight: '88vh' }}>
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
+                  Sdílení: {sharingCalendar?.name ?? sharingSubscription?.name}
+                </h2>
+                <button onClick={() => setShowShareModal(false)} className="p-1 rounded" style={{ color: 'var(--text-muted)' }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {/* Sdílet s celým workspace */}
+                <div className="p-3 rounded-lg border" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="share_workspace"
+                        checked={shareModalState.shareWithWorkspace}
+                        onChange={e => setShareModalState(s => ({ ...s, shareWithWorkspace: e.target.checked }))}
+                        className="w-4 h-4 rounded cursor-pointer"
+                        style={{ accentColor: 'var(--primary)' }}
+                      />
+                      <label htmlFor="share_workspace" className="text-sm cursor-pointer font-medium" style={{ color: 'var(--text-primary)' }}>
+                        Sdílet s celým workspace
+                      </label>
+                    </div>
+                    {shareModalState.shareWithWorkspace && (
+                      <div className="flex items-center gap-1.5 text-xs flex-shrink-0 ml-3" style={{ color: 'var(--text-muted)' }}>
+                        <span>Detaily</span>
+                        <button
+                          onClick={() => setShareModalState(s => ({ ...s, workspaceShowDetails: !s.workspaceShowDetails }))}
+                          className="w-8 h-4 rounded-full relative transition-colors flex-shrink-0"
+                          style={{ background: shareModalState.workspaceShowDetails ? 'var(--primary)' : 'var(--border)' }}
+                        >
+                          <span className="absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all shadow-sm" style={{ left: shareModalState.workspaceShowDetails ? '18px' : '2px' }} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  {shareModalState.shareWithWorkspace && !shareModalState.workspaceShowDetails && (
+                    <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>
+                      Ostatní uvidí pouze „Nemá čas" – bez názvů ani detailů událostí.
+                    </p>
+                  )}
+                </div>
+
+                {/* Konkrétní uživatelé */}
+                {workspaceMembers.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>Nebo konkrétní uživatelé:</p>
+                    <div className="space-y-2.5">
+                      {workspaceMembers.map(member => {
+                        const existing = shareModalState.userShares.find(u => u.user_id === member.user_id);
+                        const isEnabled = existing?.enabled ?? false;
+                        const showDetails = existing?.show_details ?? true;
+                        return (
+                          <div key={member.user_id} className="flex items-center gap-2">
+                            <span className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0" style={{ background: member.avatar_color }}>
+                              {member.display_name.slice(0, 1).toUpperCase()}
+                            </span>
+                            <span className="text-sm flex-1 truncate" style={{ color: 'var(--text-primary)' }}>{member.display_name}</span>
+                            {isEnabled && (
+                              <div className="flex items-center gap-1 text-xs flex-shrink-0 mr-1" style={{ color: 'var(--text-muted)' }}>
+                                <span>Detaily</span>
+                                <button
+                                  onClick={() => {
+                                    setShareModalState(s => ({
+                                      ...s,
+                                      userShares: s.userShares.map(u => u.user_id === member.user_id ? { ...u, show_details: !u.show_details } : u),
+                                    }));
+                                  }}
+                                  className="w-7 h-3.5 rounded-full relative transition-colors flex-shrink-0"
+                                  style={{ background: showDetails ? 'var(--primary)' : 'var(--border)' }}
+                                >
+                                  <span className="absolute top-0.5 w-2.5 h-2.5 rounded-full bg-white transition-all shadow-sm" style={{ left: showDetails ? '15px' : '2px' }} />
+                                </button>
+                              </div>
+                            )}
+                            <button
+                              onClick={() => {
+                                setShareModalState(s => {
+                                  const has = s.userShares.find(u => u.user_id === member.user_id);
+                                  if (has) {
+                                    return { ...s, userShares: s.userShares.filter(u => u.user_id !== member.user_id) };
+                                  } else {
+                                    return { ...s, userShares: [...s.userShares, { user_id: member.user_id, enabled: true, show_details: true }] };
+                                  }
+                                });
+                              }}
+                              className="w-8 h-4 rounded-full relative transition-colors flex-shrink-0"
+                              style={{ background: isEnabled ? 'var(--primary)' : 'var(--border)' }}
+                            >
+                              <span className="absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all shadow-sm" style={{ left: isEnabled ? '18px' : '2px' }} />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {workspaceMembers.length === 0 && (
+                  <p className="text-xs text-center py-2" style={{ color: 'var(--text-muted)' }}>
+                    Ve workspace nejsou žádní další členové.
+                  </p>
+                )}
+              </div>
+
+              <div className="flex gap-2 justify-end mt-6">
+                <button
+                  onClick={() => setShowShareModal(false)}
+                  className="px-4 py-2 rounded-lg text-sm border"
+                  style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
+                >
+                  Zrušit
+                </button>
+                <button
+                  onClick={saveShare}
+                  disabled={savingShare}
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50"
+                  style={{ background: 'var(--primary)' }}
+                >
+                  {savingShare ? 'Ukládám...' : 'Uložit sdílení'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══ MODAL – RSVP (přijetí/odmítnutí pozvánky) ════════════════════════ */}
+      {rsvpModalEvent && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setRsvpModalEvent(null)}>
+          <div className="w-full max-w-sm rounded-xl shadow-xl border p-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }} onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>Pozvánka na událost</h2>
+              <button onClick={() => setRsvpModalEvent(null)} className="p-1 rounded" style={{ color: 'var(--text-muted)' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+            {/* Info o události */}
+            <div className="p-3 rounded-lg mb-4" style={{ background: rsvpModalEvent.color + '15', border: `1px solid ${rsvpModalEvent.color}44` }}>
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: rsvpModalEvent.color }} />
+                <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{rsvpModalEvent.title}</span>
+              </div>
+              <p className="text-xs ml-[18px]" style={{ color: 'var(--text-secondary)' }}>
+                {rsvpModalEvent.start_date === rsvpModalEvent.end_date
+                  ? parseDate(rsvpModalEvent.start_date).toLocaleDateString('cs-CZ', { weekday: 'long', day: 'numeric', month: 'long' })
+                  : `${parseDate(rsvpModalEvent.start_date).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'long' })} – ${parseDate(rsvpModalEvent.end_date).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'long' })}`
+                }
+                {rsvpModalEvent.start_time ? ` · ${rsvpModalEvent.start_time.slice(0, 5)}${rsvpModalEvent.end_time ? `–${rsvpModalEvent.end_time.slice(0, 5)}` : ''}` : ''}
+              </p>
+              {rsvpModalEvent.location && (
+                <p className="text-xs ml-[18px] mt-0.5 flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                  {rsvpModalEvent.location}
+                </p>
+              )}
+            </div>
+            {/* Aktuální stav */}
+            <p className="text-xs mb-4 text-center" style={{ color: 'var(--text-muted)' }}>
+              Tvůj stav:{' '}
+              <span style={{ color: rsvpModalEvent.attendee_status === 'accepted' ? '#22c55e' : rsvpModalEvent.attendee_status === 'declined' ? '#ef4444' : 'var(--text-secondary)', fontWeight: 600 }}>
+                {rsvpModalEvent.attendee_status === 'accepted' ? '✓ Přijato' : rsvpModalEvent.attendee_status === 'declined' ? '✗ Odmítnuto' : '? Čeká na odpověď'}
+              </span>
+            </p>
+            {/* RSVP tlačítka */}
+            <div className="flex gap-2">
+              <button
+                onClick={async () => { await respondToAttendance(rsvpModalEvent.source_id, 'accepted'); setRsvpModalEvent(null); }}
+                className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-85"
+                style={{ background: '#22c55e' }}
+              >
+                ✓ Přijmout
+              </button>
+              <button
+                onClick={async () => { await respondToAttendance(rsvpModalEvent.source_id, 'declined'); setRsvpModalEvent(null); }}
+                className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-85"
+                style={{ background: '#ef4444' }}
+              >
+                ✗ Odmítnout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
     </DashboardLayout>
   );

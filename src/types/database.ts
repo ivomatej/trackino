@@ -466,6 +466,9 @@ export interface CalendarEvent {
   user_id: string;
   title: string;
   description: string;
+  location: string;          // místo konání
+  url: string;               // URL odkaz
+  reminder_minutes: number | null; // upozornění X minut před událostí
   start_date: string;    // YYYY-MM-DD
   end_date: string;      // YYYY-MM-DD
   is_all_day: boolean;
@@ -481,8 +484,46 @@ export interface CalendarEvent {
 export interface CalendarShare {
   id: string;
   calendar_id: string;
-  shared_with_user_id: string;
+  shared_with_user_id: string | null; // null = workspace-wide (viz share_with_workspace)
+  share_with_workspace: boolean;      // true = sdílet s celým workspace
+  show_details: boolean;              // false = příjemce vidí jen "Nemá čas"
   can_edit: boolean;
+  created_at: string;
+}
+
+/** Preference příjemce sdíleného kalendáře (barva, zapnuto/vypnuto) */
+export interface CalendarSharePref {
+  id: string;
+  calendar_id: string;
+  user_id: string;
+  is_enabled: boolean;
+  color_override: string | null;
+  created_at: string;
+}
+
+/** Cache ICS událostí pro sdílení (příjemce nevidí URL) */
+export interface IcsEventCache {
+  id: string;
+  subscription_id: string;
+  workspace_id: string;
+  uid: string;
+  title: string;
+  description: string;
+  start_date: string;
+  end_date: string;
+  start_time: string | null;
+  end_time: string | null;
+  is_all_day: boolean;
+  synced_at: string;
+}
+
+/** Účastník události (RSVP) */
+export interface CalendarEventAttendee {
+  id: string;
+  event_id: string;
+  workspace_id: string;
+  user_id: string;
+  status: 'pending' | 'accepted' | 'declined';
   created_at: string;
 }
 
