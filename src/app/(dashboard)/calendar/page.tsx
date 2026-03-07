@@ -1048,8 +1048,7 @@ function CalendarContent() {
     const { data } = await supabase
       .from('trackino_workspace_members')
       .select('user_id, trackino_profiles(display_name, display_nickname, avatar_color)')
-      .eq('workspace_id', currentWorkspace.id)
-      .eq('approved', true);
+      .eq('workspace_id', currentWorkspace.id);
     if (!data) return;
     const members: MemberWithProfile[] = data
       .filter((m: Record<string, unknown>) => m.user_id !== user.id) // vyfiltruj sebe
