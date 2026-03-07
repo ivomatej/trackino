@@ -11,6 +11,14 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.25.0 – 7. 3. 2026</h3>
+<ul>
+  <li><strong>Kalendář – Další kalendáře: výběr barvy</strong> – Státní svátky, Jmeniny a Narozeniny v sekci <em>Další kalendáře</em> nyní podporují vlastní barvu. Najetím myší na řádek se vpravo zobrazí malá barevná tečka – kliknutím na ni otevřete výběr barvy z palety. Tlačítkem ○ obnovíte výchozí barvu. Barva se ukládá do prohlížeče.</li>
+  <li><strong>Kalendář – Sjednocení checkboxů</strong> – všechny zaškrtávátka v levém panelu nyní používají stejný vlastní styl (čtvereček s bílou fajfkou a barevným pozadím). Odstraněna vizuální nekonzistence mezi sekcemi, kde se míchaly nativní a vlastní checkboxy s různým zaoblením rohů.</li>
+  <li><strong>Kalendář – Automaticky: redesign barvy</strong> – barevná tečka (puntík), která se zobrazovala přímo vedle zaškrtávátka, byla přesunuta na konec řádku za název kalendáře. Tečka je viditelná až po najetí myší – formulář tak zůstane přehledný a čistý.</li>
+  <li><strong>Tým – Datum narození: přemístění</strong> – pole <em>Datum narození</em> v editaci člena bylo přesunuto výše – nyní se zobrazuje nad polem <em>Typ spolupráce</em>, hned po kontaktních údajích (telefon, pozice).</li>
+</ul>
+
 <h3>v2.24.0 – 7. 3. 2026</h3>
 <ul>
   <li><strong>Kalendář – Dovolená a Důležité dny: toggle + barva</strong> – sekce „Automaticky" v levém panelu nyní obsahuje zaškrtávátko pro zobrazení/skrytí těchto kalendářů (stejně jako Státní svátky). Kliknutím na barevnou tečku lze nastavit vlastní barvu: Dovolená má výchozí modrou, Důležité dny umožní přebít individuální barvy jednou společnou barvou (výchozí = individuální barvy).</li>
