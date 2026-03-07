@@ -4415,7 +4415,7 @@ function CalendarContent() {
 
             {/* Viditelná část */}
             <p className="text-xs font-semibold mb-2" style={{ color: 'var(--text-secondary)' }}>Počáteční pozice při otevření</p>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-muted)' }}>Od</label>
                 <div className="relative">
@@ -4531,7 +4531,7 @@ function CalendarContent() {
                 )}
 
                 {/* Datum Od / Do */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Od *</label>
                     <input
@@ -4572,7 +4572,7 @@ function CalendarContent() {
 
                 {/* Časy */}
                 {!eventForm.is_all_day && (
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Čas začátku</label>
                       <input

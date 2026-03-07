@@ -952,11 +952,11 @@ function TeamContent() {
                 return (
                   <div
                     key={member.id}
-                    className="flex items-center gap-4 px-4 py-3.5 rounded-xl border"
+                    className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 px-4 py-3.5 rounded-xl border"
                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}
                   >
                     {/* Avatar + jméno */}
-                    <div className="flex items-center gap-3 w-52 flex-shrink-0">
+                    <div className="flex items-center gap-3 min-w-0 sm:w-52 sm:flex-shrink-0">
                       <div
                         className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
                         style={{ background: p?.avatar_color ?? 'var(--primary)' }}
@@ -973,8 +973,8 @@ function TeamContent() {
                       </div>
                     </div>
 
-                    {/* Oddělovač */}
-                    <div className="w-px self-stretch" style={{ background: 'var(--border)' }} />
+                    {/* Oddělovač – jen na desktopu */}
+                    <div className="hidden sm:block w-px self-stretch" style={{ background: 'var(--border)' }} />
 
                     {/* Manažeři */}
                     <div className="flex flex-wrap gap-2 flex-1">

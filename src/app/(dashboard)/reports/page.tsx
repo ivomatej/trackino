@@ -567,14 +567,18 @@ function ReportsContent() {
                   <button
                     key={p.value}
                     onClick={() => setPreset(p.value)}
-                    className="px-3 py-1.5 rounded-md text-xs font-medium transition-colors"
+                    className="px-2 sm:px-3 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap"
                     style={{
                       background: preset === p.value ? 'var(--bg-card)' : 'transparent',
                       color: preset === p.value ? 'var(--text-primary)' : 'var(--text-muted)',
                       boxShadow: preset === p.value ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
                     }}
                   >
-                    {p.label}
+                    {p.value === 'week' ? (
+                      <><span className="hidden sm:inline">Tento </span>týden</>
+                    ) : p.value === 'month' ? (
+                      <><span className="hidden sm:inline">Tento </span>měsíc</>
+                    ) : p.label}
                   </button>
                 ))}
               </div>

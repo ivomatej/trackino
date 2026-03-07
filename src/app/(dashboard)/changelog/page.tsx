@@ -11,6 +11,12 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.31.0 – 7. 3. 2026</h3>
+<ul>
+  <li><strong>Přehled – Upozornění na pozvánky do kalendáře</strong> – panel „K vyřízení" na Přehledu nyní zobrazuje i čekající pozvánky do kalendáře (události, na které jste byli pozváni a dosud jste neodpověděli). Položka je fialová s ikonou kalendáře a odkazuje přímo na stránku Kalendáře. Zobrazuje se všem uživatelům s přístupem ke Kalendáři, kteří mají nevyřízené pozvánky.</li>
+  <li><strong>Mobilní opravy – přetékání polí</strong> – opravena řada míst, kde formulářová pole přetékala mimo obrazovku na mobilech: datum Od/Do v Dovolené, datum Od/Do v Důležitých dnech, karty přiřazení manažerů v Týmu, datum/čas v modalu Nové události v Kalendáři a nastavení pohledu kalendáře. Přepínač období v Reportech (Dnes / Týden / Měsíc / Vlastní) nyní používá kratší text na mobilech, aby se vlezl na jeden řádek.</li>
+</ul>
+
 <h3>v2.30.0 – 7. 3. 2026</h3>
 <ul>
   <li><strong>Mobil – Automatické skrývání záhlaví při scrollu</strong> – na mobilních zařízeních se záhlaví (včetně Měřiče) automaticky skryje při scrollu dolů, aby uvolnilo místo obsahu. Při rychlém scrollu nahoru (rychlost &gt; 300 px/s) nebo po odscrollování alespoň 100 px zpět se záhlaví opět zobrazí. Pomalý scroll nahoru záhlaví nezobrazí. Na vrcholu stránky (méně než 60 px od vrchu) je záhlaví vždy viditelné. Na desktopu a tabletu se záhlaví neskrývá nikdy.</li>

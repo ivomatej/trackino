@@ -419,7 +419,7 @@ CREATE POLICY "Auth full" ON trackino_important_days
 
               {/* Datum(a) */}
               {fRecurring === 'none' ? (
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Od *</label>
                     <input

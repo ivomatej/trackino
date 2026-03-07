@@ -498,7 +498,7 @@ function VacationContent() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-3 mb-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                   <div>
                     <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Datum od</label>
                     <input type="date" value={formStartDate} onChange={(e) => setFormStartDate(e.target.value)} className={inputCls} style={inputStyle} />

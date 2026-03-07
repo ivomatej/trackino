@@ -49,7 +49,7 @@ const DEFAULT_HELP_CONTENT = `
   <li><strong>Pracovní dny</strong> – zbývající pracovní dny (pondělí–pátek bez svátků)</li>
   <li><strong>Přehled měsíce</strong> – progress bar, počty dní, státní svátky ČR</li>
   <li><strong>Dnešní svátek</strong> – kdo dnes slaví svátek dle českého kalendáře</li>
-  <li><strong>K vyřízení</strong> – notifikační panel zobrazující čekající položky: žádosti o dovolenou, žádosti zaměstnanců, nevyřízené připomínky a faktury ke schválení. Zobrazuje se pouze manažerům a adminům, pokud existují nevyřízené položky.</li>
+  <li><strong>K vyřízení</strong> – notifikační panel zobrazující čekající položky: žádosti o dovolenou, žádosti zaměstnanců, nevyřízené připomínky, faktury ke schválení a <strong>pozvánky do kalendáře</strong> (čeká na vaši odpověď). Každá položka odkazuje přímo na příslušnou stránku. Panel se zobrazuje jen tehdy, pokud existují nevyřízené položky.</li>
   <li><strong>Týdenní graf</strong> – sloupcový graf odpracovaných hodin za posledních 7 dní s průměrem a porovnáním dnešního dne oproti průměru</li>
 </ul>
 
