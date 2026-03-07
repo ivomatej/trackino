@@ -1622,6 +1622,119 @@ SUPABASE_SERVICE_ROLE_KEY=... # Supabase → Settings → API → service_role (
 
 ---
 
+## 31. Postup přejmenování aplikace (Trackino → NovýNázev)
+
+> Tento postup popisuje, kde všude je potřeba změnit název, pokud by se aplikace přejmenovala z "Trackino" na jiný název. Pořadí odpovídá doporučené sekvenci.
+
+### A) Supabase – nový projekt (nebo rename)
+Supabase nepodporuje rename projektu – buď si změn na frontend stačí, nebo je nutný nový projekt.
+- **Název projektu** v Supabase dashboardu: https://supabase.com/dashboard → Settings → General → Project name
+- **Supabase URL a ANON_KEY** se při novém projektu změní → aktualizovat `.env.local` + Vercel env vars
+- **Databázové tabulky** mají prefix `trackino_` (~67 tabulek) – přejmenovat přes SQL:
+  ```sql
+  -- Příklad – opakovat pro všechny tabulky:
+  ALTER TABLE trackino_profiles RENAME TO novynazev_profiles;
+  ALTER TABLE trackino_workspaces RENAME TO novynazev_workspaces;
+  -- ... atd. pro všech ~67 tabulek
+  ```
+  Poté aktualizovat **všechny** Supabase dotazy v kódu (hledat: `from('trackino_`).
+- **Storage buckety** (přejmenovat nebo smazat + znovu vytvořit):
+  - `trackino-documents` → `novynazev-documents`
+  - `trackino-invoices` → `novynazev-invoices`
+  Aktualizovat v: `src/app/(dashboard)/documents/page.tsx`, `invoices/page.tsx`
+- **Auth storage key** v `src/lib/supabase.ts`:
+  ```typescript
+  storageKey: 'trackino-auth'  →  storageKey: 'novynazev-auth'
+  ```
+- **RLS politiky** (obsahují-li název): zkontrolovat přes Supabase dashboard → Authentication → Policies
+
+### B) package.json
+```json
+"name": "trackino"  →  "name": "novynazev"
+```
+
+### C) Next.js metadata (src/app/layout.tsx)
+```typescript
+title: "Trackino"         →  title: "NovýNázev"
+description: "Time tracking pro týmy"  →  (libovolný popis)
+```
+- Přidat Open Graph metadata: `openGraph: { title, description, siteName }`
+
+### D) UI – zobrazení názvu
+Hledat `>Trackino<` nebo `"Trackino"` v komponentách:
+| Soubor | Řádek | Kde se zobrazuje |
+|--------|-------|-----------------|
+| `src/app/(auth)/login/page.tsx` | ~logo | Přihlašovací stránka – nadpis |
+| `src/app/(auth)/register/page.tsx` | ~logo | Registrační stránka – nadpis |
+| `src/app/invite/[token]/page.tsx` | ~logo | Stránka přijetí pozvánky |
+| `src/components/Sidebar.tsx` | ~540 | Logo v headeru sidebaru |
+| `src/app/(dashboard)/help/page.tsx` | ~popis | Text nápovědy |
+| `src/app/(dashboard)/changelog/page.tsx` | ~nadpis | „Trackino – Historie verzí" |
+
+### E) API headers
+```typescript
+// src/app/api/ics-proxy/route.ts
+'User-Agent': 'Trackino-Calendar/1.0'  →  'User-Agent': 'NovýNázev-Calendar/1.0'
+```
+
+### F) localStorage klíče (~19 klíčů)
+Hledat `trackino_` v celém `src/` a nahradit. Klíčové soubory:
+- `src/components/Sidebar.tsx` – `trackino_sidebar_collapsed`, `trackino_favorites_*`
+- `src/app/(dashboard)/calendar/page.tsx` – `trackino_cal_*`, `trackino_subs_order`
+- `src/app/(dashboard)/attendance/page.tsx` – `trackino_attendance_order_`
+- `src/app/(dashboard)/ai-assistant/page.tsx` – `trackino_firecrawl_credits_used`
+- `src/components/DashboardLayout.tsx` – `trackino_dismissed_notifications`
+- Ostatní stránky dle `grep -r "trackino_" src/`
+
+> **Důležité**: Existující uživatelé přijdou o lokálně uložená nastavení (sidebar collapse, oblíbené, barvy kalendáře) – po přejmenování klíčů se localStorage resetuje. Pokud je to problém, napsat migrační funkci v `useEffect` při startu.
+
+### G) Komentáře v kódu (volitelné)
+Hledat `// Trackino` v celém `src/` – tyto jsou jen komentáře, na funkčnost nemají vliv.
+
+### H) Dokumentace (CLAUDE.md, UI-STANDARDS.md)
+- `CLAUDE.md` – nadpis, popis projektu, verze
+- `UI-STANDARDS.md` – nadpis
+
+### I) Git repozitář
+1. Přejmenovat repozitář na GitHubu: github.com/ivomatej/trackino → Settings → Rename
+2. Aktualizovat remote:
+   ```bash
+   git remote set-url origin git@github.com:ivomatej/novynazev.git
+   ```
+
+### J) Vercel
+1. Vercel projekt: Settings → General → Project Name (jen display jméno, na funkčnost nemá vliv)
+2. Produkční URL (custom domain) – nastavit novou doménu pokud se mění
+
+### K) Env proměnné (Vercel + .env.local)
+Po přejmenování Supabase projektu:
+```
+NEXT_PUBLIC_SUPABASE_URL=https://NOVY-ID.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...nový klíč...
+SUPABASE_SERVICE_ROLE_KEY=...nový klíč...
+NEXT_PUBLIC_APP_URL=https://novynazev.vercel.app  (nebo custom doména)
+```
+
+### L) cron-job.org (Automatizace)
+Existující cron joby mají URL `https://trackino.vercel.app/api/cron/...`. Po změně URL:
+1. Smazat všechny existující joby v Nastavení → Automatizace
+2. Aktualizovat `NEXT_PUBLIC_APP_URL` v env vars
+3. Znovu přidat joby – nové URL se vytvoří automaticky ze správného `NEXT_PUBLIC_APP_URL`
+
+### Celkový rozsah
+| Kategorie | Počet změn |
+|-----------|-----------|
+| Supabase tabulky (SQL) | ~67 |
+| Supabase Storage buckety | 2 |
+| Env proměnné | 4+ |
+| Kódové soubory (funkční) | ~15 |
+| localStorage klíče | ~19 |
+| UI texty | ~6 |
+| Dokumentace | 2 |
+| Git + Vercel | 2 |
+
+---
+
 ## 16. Konvence kódu
 
 - Vždy `'use client'` na interaktivních stránkách

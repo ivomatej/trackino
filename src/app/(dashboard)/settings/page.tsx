@@ -222,8 +222,7 @@ function SettingsContent() {
   const [expandedResult, setExpandedResult] = useState<string | null>(null);
   // Edit modal pro automatizaci
   const [editingJob, setEditingJob] = useState<CronJob | null>(null);
-  const [editHour, setEditHour] = useState('8');
-  const [editMinute, setEditMinute] = useState('0');
+  const [editTime, setEditTime] = useState('08:00');
   const [editWdays, setEditWdays] = useState<number[]>([-1]);
   const [editMdays, setEditMdays] = useState<number[]>([-1]);
   const [editTimezone, setEditTimezone] = useState('Europe/Prague');
@@ -826,8 +825,9 @@ function SettingsContent() {
 
   function openEditJob(job: CronJob) {
     setEditingJob(job);
-    setEditHour(String(job.schedule.hours?.[0] ?? 8));
-    setEditMinute(String(job.schedule.minutes?.[0] ?? 0));
+    const h = String(job.schedule.hours?.[0] ?? 8).padStart(2, '0');
+    const m = String(job.schedule.minutes?.[0] ?? 0).padStart(2, '0');
+    setEditTime(`${h}:${m}`);
     setEditWdays(job.schedule.wdays ?? [-1]);
     setEditMdays(job.schedule.mdays ?? [-1]);
     setEditTimezone(job.schedule.timezone ?? 'Europe/Prague');
@@ -836,10 +836,11 @@ function SettingsContent() {
   async function saveJobEdit() {
     if (!editingJob) return;
     setEditSaving(true);
+    const [tH, tM] = editTime.split(':');
     const schedule: CronSchedule = {
       timezone: editTimezone,
-      hours: [parseInt(editHour)],
-      minutes: [parseInt(editMinute)],
+      hours: [parseInt(tH ?? '8', 10)],
+      minutes: [parseInt(tM ?? '0', 10)],
       wdays: editWdays,
       mdays: editMdays,
       months: editingJob.schedule.months ?? [-1],
@@ -2211,8 +2212,8 @@ function SettingsContent() {
                             title={job.enabled ? 'Zapnuto – kliknutím vypnout' : 'Vypnuto – kliknutím zapnout'}
                           >
                             <span
-                              className="absolute w-4 h-4 rounded-full bg-white transition-transform top-0.5"
-                              style={{ transform: job.enabled ? 'translateX(20px)' : 'translateX(2px)' }}
+                              className="absolute w-4 h-4 rounded-full bg-white transition-transform top-0.5 left-0.5"
+                              style={{ transform: job.enabled ? 'translateX(16px)' : 'translateX(0)' }}
                             />
                           </button>
 
@@ -2379,29 +2380,13 @@ function SettingsContent() {
                 {/* Čas spuštění */}
                 <div>
                   <label className="text-xs font-medium block mb-2" style={{ color: 'var(--text-secondary)' }}>Čas spuštění</label>
-                  <div className="flex items-center gap-2">
-                    <select
-                      value={editHour}
-                      onChange={e => setEditHour(e.target.value)}
-                      className="flex-1 rounded-lg px-3 py-2 text-sm border text-base sm:text-sm"
-                      style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
-                    >
-                      {Array.from({ length: 24 }, (_, i) => (
-                        <option key={i} value={String(i)}>{String(i).padStart(2, '0')}:00</option>
-                      ))}
-                    </select>
-                    <span className="text-sm" style={{ color: 'var(--text-muted)' }}>:</span>
-                    <select
-                      value={editMinute}
-                      onChange={e => setEditMinute(e.target.value)}
-                      className="flex-1 rounded-lg px-3 py-2 text-sm border text-base sm:text-sm"
-                      style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
-                    >
-                      {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map(m => (
-                        <option key={m} value={String(m)}>{String(m).padStart(2, '0')}</option>
-                      ))}
-                    </select>
-                  </div>
+                  <input
+                    type="time"
+                    value={editTime}
+                    onChange={e => setEditTime(e.target.value)}
+                    className="rounded-lg px-3 py-2 text-sm border text-base sm:text-sm"
+                    style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+                  />
                 </div>
 
                 {/* Den v týdnu */}
@@ -2457,17 +2442,19 @@ function SettingsContent() {
                 {/* Timezone */}
                 <div>
                   <label className="text-xs font-medium block mb-2" style={{ color: 'var(--text-secondary)' }}>Časové pásmo</label>
-                  <select
-                    value={editTimezone}
-                    onChange={e => setEditTimezone(e.target.value)}
-                    className="w-full rounded-lg px-3 py-2 text-sm border text-base sm:text-sm"
-                    style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
-                  >
-                    <option value="Europe/Prague">Europe/Prague (výchozí)</option>
-                    <option value="Europe/London">Europe/London</option>
-                    <option value="Europe/Berlin">Europe/Berlin</option>
-                    <option value="UTC">UTC</option>
-                  </select>
+                  <div className="select-wrapper">
+                    <select
+                      value={editTimezone}
+                      onChange={e => setEditTimezone(e.target.value)}
+                      className="rounded-lg px-3 py-2 text-sm border text-base sm:text-sm"
+                      style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+                    >
+                      <option value="Europe/Prague">Europe/Prague (výchozí)</option>
+                      <option value="Europe/London">Europe/London</option>
+                      <option value="Europe/Berlin">Europe/Berlin</option>
+                      <option value="UTC">UTC</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
