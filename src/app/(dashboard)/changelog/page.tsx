@@ -11,6 +11,14 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.28.0 – 7. 3. 2026</h3>
+<ul>
+  <li><strong>Kalendář – RSVP: stav „Nezávazně"</strong> – přibyl třetí stav odpovědi na pozvánku. Tlačítkem <em>~ Nezávazně</em> (žluté) dáváte najevo, že přítomnost není jistá. Organizátor vidí tento stav v přehledu účastníků. Prefix „~" se zobrazí před názvem události ve všech pohledech.</li>
+  <li><strong>Kalendář – RSVP: dodatečná změna odpovědi</strong> – po přijetí, odmítnutí nebo označení „Nezávazně" jsou tlačítka Přijmout / Nezávazně / Odmítnout stále viditelná v detailu události, takže odpověď lze kdykoliv změnit.</li>
+  <li><strong>Kalendář – Odmítnuté události viditelné, ale zesvětlené</strong> – pokud událost odmítnete, zůstane v kalendáři viditelná, ale je zobrazena průsvitně (opacity ~45 %), název je přeškrtnut a barva je slabší. Platí ve všech pohledech: Měsíc, Týden, Den i Seznam.</li>
+  <li><strong>Kalendář – Čas z mřížky</strong> – kliknutím na konkrétní hodinu v pohledu Týden nebo Den se otevře formulář pro novou událost s automaticky předvyplněným časem (např. klik na 14:00 → čas 14:00–15:00, událost není celodenní).</li>
+</ul>
+
 <h3>v2.27.0 – 7. 3. 2026</h3>
 <ul>
   <li><strong>Kalendář – Upozornění na změnu události</strong> – pokud organizátor po vašem přijetí změní datum, čas nebo místo konání, událost se znovu označí čárkovaným rámečkem a otazníkem „?" (jako nová pozvánka). V detailu události uvidíte žlutý blok „Událost byla upravena organizátorem" se starými hodnotami přeškrtnutými a novými hodnotami. Tlačítko „Beru na vědomí" (nebo „Odmítnout") potvrdí přijetí změny.</li>

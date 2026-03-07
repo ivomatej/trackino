@@ -97,7 +97,7 @@ const DEFAULT_HELP_CONTENT = `
 </ul>
 <p><strong>Nastavení kalendáře:</strong> Tlačítko ⚙ v levém panelu otevře nastavení <em>Viditelné oblasti</em>. Selekty <strong>Od</strong> a <strong>Do</strong> určují, která část dne se zobrazí v okně bez scrollování – zároveň nastavují výšku okna i počáteční scroll pozici. Například 9:00–17:00 zobrazí přesně 8 hodinových řádků. Mimo tuto oblast lze pohybovat scrollem (celá 24h mřížka je vždy dostupná). Nastavení se ukládá do localStorage prohlížeče.</p>
 <p><strong>Checkboxy v levém panelu:</strong> Každý kalendář a odběr má barevné zaškrtávátko vlevo. Fajfka je vždy bílá, takže je dobře čitelná i u světlých barev (žlutá, oranžová apod.). Kliknutím zaškrtávátko přepnete viditelnost daného kalendáře.</p>
-<p><strong>Přidání události:</strong> Klikněte na tlačítko <em>+ Přidat událost</em> nebo klikněte přímo na den v měsíčním pohledu či na časový slot v týdenním pohledu. Formulář události nabízí rozšířená pole:</p>
+<p><strong>Přidání události:</strong> Klikněte na tlačítko <em>+ Přidat událost</em>, nebo klikněte přímo na den v měsíčním pohledu. V pohledech Týden a Den klikněte na konkrétní hodinový slot (např. 14:00) – formulář se otevře s automaticky předvyplněným časem 14:00–15:00 (přepínač Celý den bude vypnutý). Formulář události nabízí rozšířená pole:</p>
 <ul>
   <li><strong>Název</strong> – povinné pole</li>
   <li><strong>Kalendář</strong> – vyberte, do kterého vašeho kalendáře se událost uloží</li>
@@ -111,7 +111,13 @@ const DEFAULT_HELP_CONTENT = `
 </ul>
 <p>Událost lze kdykoli editovat kliknutím na ni, nebo smazat z formuláře. Při editaci vlastní události s účastníky vidí organizátor jejich RSVP stav (✓ přijato, ✗ odmítnuto, ? čeká).</p>
 <p><strong>Sdílení kalendáře:</strong> Kliknutím na ikonu sdílení (zobrazí se při najetí na kalendář v levém panelu) otevřete dialog sdílení. Lze nasdílet celý workspace najednou nebo jen vybraným uživatelům. Pro každého příjemce lze přepínačem <em>Detaily</em> nastavit, zda vidí plné informace o událostech, nebo jen obsazenost (Nemá čas) bez názvů a popisů.</p>
-<p><strong>RSVP – přijetí pozvánky:</strong> Pokud vás někdo přidal jako účastníka události, zobrazí se tato událost ve vašem kalendáři s přerušovaným okrajem a symbolem „?". Kliknutím na ni otevřete RSVP dialog, kde zvolíte <em>Přijmout</em> nebo <em>Odmítnout</em>. Po potvrzení se okraj změní na plný (přijato) nebo událost zůstane označena jako odmítnutá.</p>
+<p><strong>RSVP – přijetí pozvánky:</strong> Pokud vás někdo přidal jako účastníka události, zobrazí se tato událost ve vašem kalendáři s přerušovaným okrajem a symbolem „?". Kliknutím na ni otevřete detail události s RSVP tlačítky:</p>
+<ul>
+  <li><strong>✓ Přijmout</strong> – potvrdíte účast; okraj události se změní na plný</li>
+  <li><strong>~ Nezávazně</strong> (žluté) – označíte, že možná přijdete; událost se zobrazí s vlnovkovým prefixem „~" a přerušovaným okrajem</li>
+  <li><strong>✗ Odmítnout</strong> – zamítnete účast; událost zůstane v kalendáři, ale zobrazí se zesvětleně s přeškrtnutým názvem</li>
+</ul>
+<p>Odpověď lze <strong>kdykoli změnit</strong> – tlačítka jsou vždy viditelná v detailu události, i pokud jste ji již přijali nebo odmítli. Organizátor vidí váš aktuální stav u vlastní události. Kliknutím na odmítnutou událost (zesvětlenou) ji stále zobrazíte a změníte RSVP.</p>
 <p><strong>Poznámky k událostem</strong> (Pohled Seznam): u každé události se po najetí myší zobrazí ikonka 📄. Kliknutím rozbalíte inline editor poznámek přímo pod kartičkou (max. 220 px výšky). Poznámky jsou soukromé (pouze váš pohled). Editor nabízí:</p>
 <ul>
   <li><strong>Formátování textu</strong> – B / I / U, odrážkový a číselný seznam</li>
