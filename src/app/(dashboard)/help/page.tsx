@@ -355,7 +355,7 @@ const DEFAULT_HELP_CONTENT = `
 <h3>Sekce Společnost – nastavení per workspace</h3>
 <p>V záložce <strong>Společnost</strong> v Nastavení workspace (dostupná adminům) lze zapínat a vypínat jednotlivé moduly sekce Společnost pro daný workspace:</p>
 <ul>
-  <li><strong>Znalostní báze</strong> – interní wiki a firemní znalosti</li>
+  <li><strong>Znalostní báze</strong> – interní wiki pro správu stránek ve složkách, rich text editor, verze, komentáře a přístupová práva</li>
   <li><strong>Dokumenty</strong> – centrální úložiště firemních souborů a odkazů</li>
   <li><strong>Firemní pravidla</strong> – rich-text stránka se směrnicemi workspace</li>
   <li><strong>Pravidla v kanceláři</strong> – provozní řád a každodenní kancelářská pravidla</li>
@@ -425,11 +425,27 @@ const DEFAULT_HELP_CONTENT = `
 <h3>Sekce SPOLEČNOST</h3>
 <p>Od tarifu <strong>Pro</strong> je v levém menu dostupná sekce <strong>SPOLEČNOST</strong> s pěti moduly pro správu firemních znalostí, dokumentace a zpětné vazby:</p>
 <ul>
-  <li><strong>Znalostní báze</strong> – připravovaný modul pro interní wiki a sdílení firemních znalostí a postupů</li>
+  <li><strong>Znalostní báze</strong> – interní wiki pro sdílení firemních znalostí a postupů; stránky jsou uspořádány do hierarchických složek s neomezenou hloubkou; podporuje rich text editor (H1–H3, tučné, kurzíva, podtržení, seznamy, oddělovač, kontrolní seznam, callout, přepínací blok, kód s kopírováním, hypertextový odkaz), fulltextové vyhledávání, štítky, přístupová práva (omezené stránky per-user), historii verzí s možností navrácení, revizní připomínky, komentáře, stavy stránky (Koncept/Aktivní/Archiv), oblíbené a 5 šablon</li>
   <li><strong>Dokumenty</strong> – správa firemních souborů a odkazů; dokumenty lze organizovat do barevných složek; všichni členové workspace vidí dokumenty, správci (admin nebo uživatel s příznakem „Spravuje dokumenty") mohou nahrávat, mazat a spravovat složky</li>
   <li><strong>Firemní pravidla</strong> – editovatelná textová stránka s firemními směrnicemi a pravidly; obsah upravuje admin/owner workspace; členové vidí aktuální obsah</li>
   <li><strong>Pravidla v kanceláři</strong> – editovatelná textová stránka s provozním řádem a pravidly kanceláře; stejný editor jako Firemní pravidla</li>
   <li><strong>Připomínky</strong> – anonymní formulář pro zpětnou vazbu; viz sekce Připomínky níže</li>
+</ul>
+
+<h3>Znalostní báze</h3>
+<p>Modul <strong>Znalostní báze</strong> (sekce Společnost) je interní wiki pro tvorbu, organizaci a sdílení firemních znalostí a postupů.</p>
+<ul>
+  <li><strong>Složky a stránky</strong> – stránky jsou uspořádány do hierarchických složek s neomezenou hloubkou; stránky lze vytvářet přímo v kořeni nebo ve složce; levý panel zobrazuje stromovou strukturu složek a stránek</li>
+  <li><strong>Rich text editor</strong> – nadpisy H1–H3, tučné/kurzíva/podtržení, odrážkový a číslovaný seznam, oddělovač, kontrolní seznam (interaktivní zaškrtávání v náhledu), callout (informační rámeček), přepínací blok (toggle/accordion), kód s kopírováním, hypertextový odkaz; v editoru lze vkládat @zmínky (členové workspace) a /odkaz na jinou stránku KB</li>
+  <li><strong>Šablony</strong> – při vytvoření nové stránky si vyberte z 5 přednastavených šablon: Prázdná, Zápis z meetingu, Popis procesu, Onboarding průvodce, Dokumentace projektu</li>
+  <li><strong>Fulltextové vyhledávání</strong> – hledá v názvech i obsahu stránek; výsledky se zobrazují v levém panelu</li>
+  <li><strong>Štítky</strong> – každá stránka může mít libovolný počet štítků; slouží k filtrování a kategorizaci</li>
+  <li><strong>Stav stránky</strong> – Koncept (žlutá), Aktivní (zelená), Archiv (šedá); stav lze měnit v editoru</li>
+  <li><strong>Historie verzí</strong> – každé uložení automaticky vytvoří novou verzi; v záložce Historie lze zobrazit předchozí verze a vrátit se k libovolné z nich</li>
+  <li><strong>Komentáře</strong> – v záložce Komentáře lze přidávat, upravovat a mazat komentáře k dané stránce</li>
+  <li><strong>Revizní připomínky</strong> – k stránce nebo složce lze přiřadit datum revize a zodpovědnou osobu; blížící se revize se zobrazí v panelu „K vyřízení" na Přehledu</li>
+  <li><strong>Přístupová práva</strong> – stránka může být označena jako omezená (příznak „Přístup omezen"); v záložce Přístupy (jen admin) se přidávají konkrétní uživatelé s oprávněním ke čtení nebo editaci</li>
+  <li><strong>Oblíbené</strong> – stránky lze přidávat k oblíbeným (hvězdička); oblíbené stránky se zobrazují v horní části levého panelu</li>
 </ul>
 
 <h3>Dokumenty – správa souborů a složek</h3>

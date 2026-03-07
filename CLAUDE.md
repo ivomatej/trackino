@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 7. 3. 2026 (v2.33.0)
+> Aktualizováno: 7. 3. 2026 (v2.34.0)
 
 ---
 
@@ -493,6 +493,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.34.0 | 7. 3. 2026 | Znalostní báze: plná implementace – hierarchické složky+stránky, rich text editor (H1–H3/B/I/U/seznam/checklist/callout/toggle/kód/link/@mention//page-link), fulltextové hledání, štítky, 5 šablon, stavy (Koncept/Aktivní/Archiv), verze s revert, komentáře, revizní připomínky (→Přehled K vyřízení), přístupová práva (is_restricted+trackino_kb_access), oblíbené; 7 nových DB tabulek |
 | v2.33.0 | 7. 3. 2026 | Analýza kategorií: přidán filtr uživatele (select „Všichni uživatelé" pro admin/manager); sidebar scrollbar skrytý – zobrazí se až při hoveru (CSS třída sidebar-scroll) |
 | v2.32.2 | 7. 3. 2026 | iOS overflow definitívní fix: transform:translateZ(0) na overflow-x-hidden+rounded containery (vacation, important-days, calendar modal, invoices, ManualTimeEntry) → GPU compositing opraví iOS border-radius+overflow-hidden bug; globals.css: appearance:none !important + webkit-datetime-edit-fields-wrapper fix; ManualTimeEntry: overflow-x-hidden přidán |
 | v2.32.1 | 7. 3. 2026 | Definitivní oprava přetékání date/time inputů: globální CSS min-width:0 !important na input[type=date/time/datetime-local]; overflow-x-hidden na formulářových kartách (vacation, important-days, calendar modal, invoices); ManualTimeEntry grid-cols-2 sm:grid-cols-3 s Datum col-span-2 sm:col-span-1; notes custom range → grid-cols-2; invoices → grid-cols-1 sm:grid-cols-2 |
@@ -1305,6 +1306,72 @@ className={`
 ```
 - `open` = mobilní overlay otevřen (přes hamburgera)
 - `collapsed` = desktop stav (z localStorage)
+
+---
+
+## 27. Znalostní báze – architektura (knowledge-base/page.tsx)
+
+### DB tabulky (7 nových)
+| Tabulka | Popis |
+|---------|-------|
+| `trackino_kb_folders` | Hierarchické složky (parent_id self-ref, owner_id) |
+| `trackino_kb_pages` | Stránky (folder_id, title, content HTML, status, tags[], is_restricted, created_by, updated_by) |
+| `trackino_kb_versions` | Verze stránek – každé uložení vytvoří verzi (page_id, content, title, edited_by) |
+| `trackino_kb_comments` | Komentáře k stránce (page_id, user_id, content) |
+| `trackino_kb_favorites` | Oblíbené stránky (PK: page_id + user_id) |
+| `trackino_kb_reviews` | Revizní připomínky (page_id, folder_id, assigned_to, review_date, is_done, note) |
+| `trackino_kb_access` | Přístupová práva k omezené stránce (page_id, user_id, can_edit) |
+
+### Typy (database.ts)
+```typescript
+export type KbPageStatus = 'draft' | 'active' | 'archived';
+export interface KbFolder { id, workspace_id, parent_id, name, owner_id, created_at, updated_at }
+export interface KbPage { id, workspace_id, folder_id, title, content, status: KbPageStatus, tags: string[], is_restricted, created_by, updated_by, created_at, updated_at }
+export interface KbVersion { id, page_id, workspace_id, content, title, edited_by, created_at }
+export interface KbComment { id, page_id, workspace_id, user_id, content, created_at, updated_at }
+export interface KbReview { id, workspace_id, page_id, folder_id, assigned_to, review_date, note, is_done, created_by, created_at }
+export interface KbAccess { id, workspace_id, page_id, user_id, can_edit, created_at }
+```
+
+### Lokální typy (knowledge-base/page.tsx)
+```typescript
+type PageTab = 'comments' | 'history' | 'reviews' | 'access';
+interface KbMember { user_id: string; display_name: string; avatar_color: string; }
+const STATUS_CONFIG: Record<KbPageStatus, { label: string; color: string }>
+```
+
+### Komponenty
+- **RichEditor** – contentEditable div, toolbar: H1/H2/H3, B/I/U, bullet/numbered list, divider, checklist, callout, toggle, kód, link modal, @mention picker (dropdown členů), /page picker (dropdown stránek)
+- **PageViewer** – dangerouslySetInnerHTML + click handler: checklist toggle (DOM index matching → silent save), /page-link navigace, external link (window.open), kód kopírování; vložený `<style>` pro třídy `kb-check-unchecked/checked`, `kb-callout`, `kb-toggle`, `kb-mention`, `kb-page-link`
+- **KbFolderTree** – rekurzivní, max 5 úrovní hloubky, hover-reveal akce: + podsložka, přejmenovat, smazat; stránky zobrazeny inline
+
+### Sentinelový id pro nové stránky
+`id: '__new__'` – rozlišuje INSERT vs UPDATE v `savePage()`
+
+### Klíčové funkce
+- `fetchAll()` – parallel fetch: folders, pages, members (profiles přes workspace_members), favorites
+- `fetchPageDetail(id)` – full page + comments + versions (ORDER BY created_at DESC, limit 20) + reviews + access
+- `savePage()` – INSERT nebo UPDATE + INSERT nové verze + fetchAll + fetchPageDetail
+- `handleChecklistToggle(html)` – silent save bez zobrazení editoru; DOM index matching pro toggle správného prvku
+- `revertToVersion(v)` – confirm → UPDATE page → INSERT verze → fetchPageDetail + fetchAll
+- `toggleUserAccess(userId, canEdit)` – upsert/delete v trackino_kb_access
+
+### Layout
+- Dvoupanelový: záporný margin (`-m-4 lg:-m-6`) k eliminaci DashboardLayout paddingu, `flex flex-row`
+- Levý panel: 260px fixed width, na mobilu overlay (toggle tlačítkem), obsahuje hledání, stromovou strukturu, oblíbené
+- Pravý panel: flex-1, zobrazuje buď viewer nebo editor se záložkami (Komentáře / Historie / Recenze / Přístupy)
+
+### Revize v Přehledu (page.tsx)
+- Přidán typ `'kb_review'` do NotificationItem
+- Query: `trackino_kb_reviews WHERE assigned_to=user.id AND is_done=false AND review_date <= today`
+- Ikona: kniha se zaškrtnutím (SVG), barva `#0ea5e9`, label `'KB Revize'`, href `'/knowledge-base'`
+
+### Šablony (5 hardcoded)
+1. Prázdná – prázdný editor
+2. Zápis z meetingu – H2 sekce: Datum/Účastníci/Program/Záznamy/Úkoly
+3. Popis procesu – H2 sekce: Účel/Kroky/Role/Poznámky
+4. Onboarding průvodce – H2 sekce: Vítejte/IT setup/Procesy/Kontakty
+5. Dokumentace projektu – H2 sekce: Přehled/Architektura/Deployment/FAQ
 
 ---
 
