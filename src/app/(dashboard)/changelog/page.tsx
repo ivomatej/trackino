@@ -11,6 +11,11 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.32.1 – 7. 3. 2026</h3>
+<ul>
+  <li><strong>Definitivní oprava přetékání date/time polí na mobilech</strong> – přidáno globální CSS pravidlo <code>min-width: 0 !important</code> na všechny <code>input[type=date/time/datetime-local]</code>. Toto pravidlo přebíjí nativní minimální šířku prohlížeče (hlavně Chrome na Androidu), která způsobovala přetékání mimo modal. Doplněno <code>overflow-x-hidden</code> na kontejnerech formulářů (Dovolená, Důležité dny, Kalendář, Fakturace). ManualTimeEntry přepracován na <code>grid-cols-2 sm:grid-cols-3</code> – pole Datum zabírá na mobilu celou šířku, Od/Do jsou vedle sebe. Poznámky a Fakturace: vlastní rozsah dat přepracován na grid kontejner.</li>
+</ul>
+
 <h3>v2.32.0 – 7. 3. 2026</h3>
 <ul>
   <li><strong>Mobilní opravy – přetékání datových polí (2. kolo)</strong> – přidány atributy <code>min-w-0</code> a <code>maxWidth: 100 %</code> na všechna datová vstupní pole: Dovolená (formulář), Důležité dny (modal), Reporty (filtr Od/Do), Kalendář (modal události – datum i čas). Reporty filtr Od/Do přepracován na grid kontejner s <code>w-full</code> na vstupech – pole se nyní správně vejdou na mobil bez přetékání za okraj.</li>
