@@ -128,6 +128,13 @@ function AiAssistantContent() {
   const [apiConfigured, setApiConfigured] = useState<boolean | null>(null);
   const [showModelInfo, setShowModelInfo] = useState(false);
 
+  // ── Oblíbené prompty ───────────────────────────────────────────────────────
+  interface FavoritePrompt { id: string; title: string; content: string; }
+  const [favoritePrompts, setFavoritePrompts] = useState<FavoritePrompt[]>([]);
+  const [showFavPrompts, setShowFavPrompts] = useState(false);
+  const [favPromptsLoaded, setFavPromptsLoaded] = useState(false);
+  const [copiedPromptId, setCopiedPromptId] = useState<string | null>(null);
+
   // ── Firecrawl ─────────────────────────────────────────────────────────────
   const [webSearchEnabled, setWebSearchEnabled] = useState(false);
   const [firecrawlStatus, setFirecrawlStatus] = useState<FirecrawlStatus>('idle');
@@ -567,6 +574,64 @@ function AiAssistantContent() {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   };
 
+  // Extrahuje prostý text z HTML obsahu promptu
+  function htmlToPlainText(html: string): string {
+    return html
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/p>/gi, '\n')
+      .replace(/<\/li>/gi, '\n')
+      .replace(/<\/h[1-6]>/gi, '\n')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }
+
+  async function fetchFavoritePrompts() {
+    if (!currentWorkspace || !user) return;
+    if (favPromptsLoaded) { setShowFavPrompts(s => !s); return; }
+    const { data: favs } = await supabase
+      .from('trackino_prompt_favorites')
+      .select('prompt_id')
+      .eq('user_id', user.id);
+    const ids = (favs ?? []).map((f: { prompt_id: string }) => f.prompt_id);
+    if (ids.length === 0) {
+      setFavoritePrompts([]);
+      setFavPromptsLoaded(true);
+      setShowFavPrompts(true);
+      return;
+    }
+    const { data: prompts } = await supabase
+      .from('trackino_prompts')
+      .select('id, title, content')
+      .eq('workspace_id', currentWorkspace.id)
+      .in('id', ids)
+      .order('title');
+    setFavoritePrompts((prompts ?? []).map((p: { id: string; title: string; content: string }) => ({
+      id: p.id, title: p.title, content: p.content,
+    })));
+    setFavPromptsLoaded(true);
+    setShowFavPrompts(true);
+  }
+
+  function usePrompt(prompt: FavoritePrompt) {
+    const text = htmlToPlainText(prompt.content);
+    setInput(text);
+    setShowFavPrompts(false);
+    setTimeout(() => inputRef.current?.focus(), 50);
+  }
+
+  function copyPrompt(prompt: FavoritePrompt) {
+    const text = htmlToPlainText(prompt.content);
+    navigator.clipboard.writeText(text).catch(() => {});
+    setCopiedPromptId(prompt.id);
+    setTimeout(() => setCopiedPromptId(null), 1500);
+  }
+
   // Přístup: tarif Max + canUseAiAssistant
   if (!hasModule('ai_assistant') || !canUseAiAssistant) {
     return (
@@ -682,7 +747,7 @@ function AiAssistantContent() {
             <div className="p-3 border-t text-xs flex-shrink-0" style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
               <div className="flex items-center justify-between mb-1">
                 <span>Firecrawl kredity</span>
-                <span style={{ color: creditColor }}>🔥 {creditsUsed} / {FIRECRAWL_CREDIT_LIMIT}</span>
+                <span style={{ color: creditColor }}>{creditsUsed} / {FIRECRAWL_CREDIT_LIMIT}</span>
               </div>
               <div className="w-full rounded-full h-1" style={{ background: 'var(--bg-hover)' }}>
                 <div
@@ -797,12 +862,12 @@ function AiAssistantContent() {
                     'Shrň tento text',
                     'Pomoz mi s kódem',
                     'Přelož do angličtiny',
-                    ...(firecrawlAvailable ? ['🌐 Co je nejnovějšího v AI?', '🌐 Shrň stránku: https://'] : []),
-                  ].map(s => (
+                    ...(firecrawlAvailable ? ['Co je nejnovějšího v AI?', 'Shrň stránku: https://'] : []),
+                  ].map((s, i) => (
                     <button
                       key={s}
                       onClick={() => {
-                        if (s.startsWith('🌐')) { setWebSearchEnabled(true); setInput(s.replace('🌐 ', '')); }
+                        if (firecrawlAvailable && i >= 4) { setWebSearchEnabled(true); setInput(s); }
                         else setInput(s);
                       }}
                       className="text-xs px-3 py-1.5 rounded-full transition-colors"
@@ -870,7 +935,7 @@ function AiAssistantContent() {
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
                 </div>
                 <div className="px-3 py-2.5 text-sm" style={{ background: '#10b98110', borderRadius: '18px 18px 18px 4px', color: '#10b981', border: '1px solid #10b98130' }}>
-                  {firecrawlStatus === 'searching' ? '🔍 Prohledávám web…' : '📄 Čtu stránku…'}
+                  {firecrawlStatus === 'searching' ? 'Prohledávám web…' : 'Čtu stránku…'}
                 </div>
               </div>
             )}
@@ -1009,7 +1074,7 @@ function AiAssistantContent() {
                   {/* Info tlačítko */}
                   <button
                     onClick={() => setShowModelInfo(s => !s)}
-                    className="text-xs w-6 h-6 rounded-full flex items-center justify-center transition-colors"
+                    className="w-6 h-6 rounded-full flex items-center justify-center transition-colors flex-shrink-0"
                     style={{
                       background: showModelInfo ? 'color-mix(in srgb, var(--primary) 15%, transparent)' : 'var(--bg-hover)',
                       color: showModelInfo ? 'var(--primary)' : 'var(--text-muted)',
@@ -1017,7 +1082,28 @@ function AiAssistantContent() {
                     }}
                     title="Informace o modelech"
                   >
-                    ℹ
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10"/>
+                      <line x1="12" y1="8" x2="12" y2="8" strokeWidth="3"/>
+                      <line x1="12" y1="12" x2="12" y2="16"/>
+                    </svg>
+                  </button>
+
+                  {/* Oblíbené prompty */}
+                  <button
+                    onClick={fetchFavoritePrompts}
+                    className="text-xs px-2.5 py-1 rounded-full flex items-center gap-1.5 transition-colors flex-shrink-0"
+                    style={{
+                      background: showFavPrompts ? 'color-mix(in srgb, var(--primary) 15%, transparent)' : 'var(--bg-hover)',
+                      color: showFavPrompts ? 'var(--primary)' : 'var(--text-muted)',
+                      border: showFavPrompts ? '1px solid color-mix(in srgb, var(--primary) 30%, transparent)' : '1px solid var(--border)',
+                    }}
+                    title="Oblíbené prompty"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill={showFavPrompts ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                    </svg>
+                    Prompty
                   </button>
                 </div>
 
@@ -1049,12 +1135,68 @@ function AiAssistantContent() {
               </div>
             </div>
 
+            {/* ── Panel oblíbených promptů ──────────────────────────────────── */}
+            {showFavPrompts && (
+              <div className="mt-2 rounded-xl overflow-hidden" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+                <div className="flex items-center justify-between px-4 py-2.5 border-b" style={{ borderColor: 'var(--border)' }}>
+                  <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Oblíbené prompty</p>
+                  <button onClick={() => setShowFavPrompts(false)} style={{ color: 'var(--text-muted)' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                </div>
+                {favoritePrompts.length === 0 ? (
+                  <p className="text-sm text-center py-6" style={{ color: 'var(--text-muted)' }}>
+                    Žádné oblíbené prompty. Označte si prompty hvězdičkou v modulu Prompty.
+                  </p>
+                ) : (
+                  <div className="divide-y max-h-64 overflow-y-auto" style={{ borderColor: 'var(--border)' }}>
+                    {favoritePrompts.map(p => (
+                      <div
+                        key={p.id}
+                        className="flex items-start gap-3 px-4 py-3 group cursor-pointer transition-colors"
+                        style={{ background: 'transparent' }}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                        onClick={() => usePrompt(p)}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{p.title}</p>
+                          <p className="text-xs mt-0.5 line-clamp-2" style={{ color: 'var(--text-muted)' }}>
+                            {htmlToPlainText(p.content).slice(0, 120)}
+                          </p>
+                        </div>
+                        {/* Tlačítko kopírovat */}
+                        <button
+                          onClick={e => { e.stopPropagation(); copyPrompt(p); }}
+                          className="flex-shrink-0 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                          style={{
+                            background: copiedPromptId === p.id ? '#10b98118' : 'var(--bg-hover)',
+                            color: copiedPromptId === p.id ? '#10b981' : 'var(--text-muted)',
+                            border: '1px solid var(--border)',
+                          }}
+                          title="Kopírovat do schránky"
+                        >
+                          {copiedPromptId === p.id ? (
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                          ) : (
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                          )}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* ── Info dialog o modelech ─────────────────────────────────────── */}
             {showModelInfo && (
               <div className="mt-2 p-4 rounded-xl" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Dostupné AI modely</p>
-                  <button onClick={() => setShowModelInfo(false)} className="text-xs" style={{ color: 'var(--text-muted)' }}>✕ Zavřít</button>
+                  <button onClick={() => setShowModelInfo(false)} style={{ color: 'var(--text-muted)' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {AI_MODELS.map(m => {
