@@ -34,8 +34,14 @@ interface DisplayEvent {
   shared_owner_name?: string;
   shared_calendar_name?: string;
   // Účastnické události (kde user je účastník, ne vlastník)
-  attendee_status?: 'pending' | 'accepted' | 'declined';
+  attendee_status?: 'pending' | 'accepted' | 'declined' | 'updated';
   event_owner_id?: string;
+  // Předchozí hodnoty pro zobrazení změn (status 'updated')
+  attendee_prev_start_date?: string | null;
+  attendee_prev_end_date?: string | null;
+  attendee_prev_start_time?: string | null;
+  attendee_prev_end_time?: string | null;
+  attendee_prev_location?: string | null;
 }
 
 /** Sdílený kalendář (přijatý od jiného uživatele) */
@@ -1383,7 +1389,7 @@ function CalendarContent() {
     // Najdi záznamy kde jsem účastník
     const { data: myAttendances } = await supabase
       .from('trackino_calendar_event_attendees')
-      .select('event_id, status')
+      .select('event_id, status, prev_start_date, prev_end_date, prev_start_time, prev_end_time, prev_location')
       .eq('user_id', user.id)
       .eq('workspace_id', currentWorkspace.id);
     if (!myAttendances || myAttendances.length === 0) { setAttendeeEvents([]); return; }
@@ -1411,8 +1417,13 @@ function CalendarContent() {
         is_all_day: ev.is_all_day,
         start_time: ev.start_time,
         end_time: ev.end_time,
-        attendee_status: att?.status as 'pending' | 'accepted' | 'declined',
+        attendee_status: att?.status as 'pending' | 'accepted' | 'declined' | 'updated',
         event_owner_id: ev.user_id,
+        attendee_prev_start_date: (att?.prev_start_date as string | null) ?? null,
+        attendee_prev_end_date: (att?.prev_end_date as string | null) ?? null,
+        attendee_prev_start_time: (att?.prev_start_time as string | null) ?? null,
+        attendee_prev_end_time: (att?.prev_end_time as string | null) ?? null,
+        attendee_prev_location: (att?.prev_location as string | null) ?? null,
       });
     }
     setAttendeeEvents(result);
@@ -1596,6 +1607,35 @@ function CalendarContent() {
       };
       let savedEventId: string;
       if (editingEvent) {
+        // Zjisti, zda se změnily klíčové pole a pokud ano, upozorni přijaté účastníky
+        const { data: oldEv } = await supabase
+          .from('trackino_calendar_events')
+          .select('start_date, end_date, start_time, end_time, location')
+          .eq('id', editingEvent.id)
+          .single();
+        if (oldEv) {
+          const changed =
+            (oldEv.start_date !== payload.start_date) ||
+            ((oldEv.end_date ?? oldEv.start_date) !== (payload.end_date || payload.start_date)) ||
+            ((oldEv.start_time ?? null) !== (payload.start_time ?? null)) ||
+            ((oldEv.end_time ?? null) !== (payload.end_time ?? null)) ||
+            ((oldEv.location ?? '') !== (payload.location ?? ''));
+          if (changed) {
+            await supabase
+              .from('trackino_calendar_event_attendees')
+              .update({
+                status: 'updated',
+                prev_start_date: oldEv.start_date,
+                prev_end_date: oldEv.end_date ?? oldEv.start_date,
+                prev_start_time: oldEv.start_time ?? null,
+                prev_end_time: oldEv.end_time ?? null,
+                prev_location: oldEv.location ?? null,
+              })
+              .eq('event_id', editingEvent.id)
+              .in('status', ['accepted', 'updated'])
+              .neq('user_id', user.id);
+          }
+        }
         await supabase.from('trackino_calendar_events').update(payload).eq('id', editingEvent.id);
         savedEventId = editingEvent.id;
       } else {
@@ -1643,7 +1683,7 @@ function CalendarContent() {
     if (!user || !currentWorkspace) return;
     await supabase
       .from('trackino_calendar_event_attendees')
-      .update({ status })
+      .update({ status, prev_start_date: null, prev_end_date: null, prev_start_time: null, prev_end_time: null, prev_location: null })
       .eq('event_id', eventSourceId)
       .eq('user_id', user.id);
     await fetchAttendeeEvents();
@@ -2436,12 +2476,12 @@ function CalendarContent() {
         style={{
           background: ev.color + '22',
           color: ev.color,
-          border: ev.attendee_status === 'pending' ? `2px dashed ${ev.color}` : `1px solid ${ev.color}44`,
+          border: (ev.attendee_status === 'pending' || ev.attendee_status === 'updated') ? `2px dashed ${ev.color}` : `1px solid ${ev.color}44`,
           cursor: 'pointer',
         }}
-        title={ev.attendee_status === 'pending' ? `${ev.title} – čeká na potvrzení` : ev.title}
+        title={ev.attendee_status === 'pending' ? `${ev.title} – čeká na potvrzení` : ev.attendee_status === 'updated' ? `${ev.title} – událost byla změněna` : ev.title}
       >
-        {ev.attendee_status === 'pending' ? '? ' : ''}
+        {(ev.attendee_status === 'pending' || ev.attendee_status === 'updated') ? '? ' : ''}
         {!ev.is_all_day && ev.start_time ? `${ev.start_time.slice(0, 5)} ` : ''}
         {ev.title}
       </div>
@@ -3412,14 +3452,14 @@ function CalendarContent() {
                                   width: `calc(${colW}% - 4px)`,
                                   background: ev.color + '33',
                                   color: ev.color,
-                                  border: ev.attendee_status === 'pending' ? `2px dashed ${ev.color}` : `1px solid ${ev.color}66`,
+                                  border: (ev.attendee_status === 'pending' || ev.attendee_status === 'updated') ? `2px dashed ${ev.color}` : `1px solid ${ev.color}66`,
                                   lineHeight: '13px',
                                   zIndex: ev._col + 1,
                                 }}
                                 onClick={e => { e.stopPropagation(); setDetailEvent(ev); }}
-                                title={ev.attendee_status === 'pending' ? `${ev.title} – čeká na potvrzení` : ev.title}
+                                title={ev.attendee_status === 'pending' ? `${ev.title} – čeká na potvrzení` : ev.attendee_status === 'updated' ? `${ev.title} – událost byla změněna` : ev.title}
                               >
-                                <div className="font-semibold truncate pr-3">{ev.attendee_status === 'pending' ? '? ' : ''}{ev.start_time?.slice(0, 5)} {ev.title}</div>
+                                <div className="font-semibold truncate pr-3">{(ev.attendee_status === 'pending' || ev.attendee_status === 'updated') ? '? ' : ''}{ev.start_time?.slice(0, 5)} {ev.title}</div>
                                 {heightPx > 30 && ev.end_time && (
                                   <div className="opacity-70 truncate">{ev.end_time.slice(0, 5)}</div>
                                 )}
@@ -3519,14 +3559,14 @@ function CalendarContent() {
                                 width: `calc(${colW}% - 4px)`,
                                 background: ev.color + '33',
                                 color: ev.color,
-                                border: ev.attendee_status === 'pending' ? `2px dashed ${ev.color}` : `1px solid ${ev.color}66`,
+                                border: (ev.attendee_status === 'pending' || ev.attendee_status === 'updated') ? `2px dashed ${ev.color}` : `1px solid ${ev.color}66`,
                                 lineHeight: '15px',
                                 zIndex: ev._col + 1,
                               }}
                               onClick={e => { e.stopPropagation(); setDetailEvent(ev); }}
-                              title={ev.attendee_status === 'pending' ? `${ev.title} – čeká na potvrzení` : ev.title}
+                              title={ev.attendee_status === 'pending' ? `${ev.title} – čeká na potvrzení` : ev.attendee_status === 'updated' ? `${ev.title} – událost byla změněna` : ev.title}
                             >
-                              <div className="font-semibold truncate pr-4">{ev.attendee_status === 'pending' ? '? ' : ''}{ev.start_time?.slice(0, 5)} {ev.title}</div>
+                              <div className="font-semibold truncate pr-4">{(ev.attendee_status === 'pending' || ev.attendee_status === 'updated') ? '? ' : ''}{ev.start_time?.slice(0, 5)} {ev.title}</div>
                               {heightPx > 35 && ev.end_time && (
                                 <div className="opacity-70">{ev.end_time.slice(0, 5)}</div>
                               )}
@@ -3965,20 +4005,20 @@ function CalendarContent() {
                                         onClick={() => setDetailEvent(ev)}
                                         className="group/ev w-full md:flex-1 min-w-0 flex items-start gap-3 p-3 rounded-lg transition-colors"
                                         style={{
-                                          borderWidth: ev.attendee_status === 'pending' ? 2 : 1,
-                                          borderStyle: ev.attendee_status === 'pending' ? 'dashed' : 'solid',
-                                          borderColor: ev.attendee_status === 'pending' ? ev.color : 'var(--border)',
+                                          borderWidth: (ev.attendee_status === 'pending' || ev.attendee_status === 'updated') ? 2 : 1,
+                                          borderStyle: (ev.attendee_status === 'pending' || ev.attendee_status === 'updated') ? 'dashed' : 'solid',
+                                          borderColor: (ev.attendee_status === 'pending' || ev.attendee_status === 'updated') ? ev.color : 'var(--border)',
                                           background: 'var(--bg-card)',
                                           cursor: 'pointer',
                                         }}
                                         onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
                                         onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-card)'; }}
-                                        title={ev.attendee_status === 'pending' ? `${ev.title} – čeká na potvrzení` : undefined}
+                                        title={ev.attendee_status === 'pending' ? `${ev.title} – čeká na potvrzení` : ev.attendee_status === 'updated' ? `${ev.title} – událost byla změněna` : undefined}
                                       >
                                         <div className="w-1 self-stretch rounded-full flex-shrink-0" style={{ background: ev.color }} />
                                         <div className="flex-1 min-w-0">
                                           <div className="flex items-center gap-2 flex-wrap">
-                                            <span className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>{ev.attendee_status === 'pending' ? '? ' : ''}{ev.title}</span>
+                                            <span className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>{(ev.attendee_status === 'pending' || ev.attendee_status === 'updated') ? '? ' : ''}{ev.title}</span>
                                             {ev.source === 'shared' ? (
                                               <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: ev.color + '22', color: ev.color }}>
                                                 {ev.shared_calendar_name && ev.shared_owner_name
@@ -4965,8 +5005,8 @@ function CalendarContent() {
             {/* Aktuální stav */}
             <p className="text-xs mb-4 text-center" style={{ color: 'var(--text-muted)' }}>
               Tvůj stav:{' '}
-              <span style={{ color: rsvpModalEvent.attendee_status === 'accepted' ? '#22c55e' : rsvpModalEvent.attendee_status === 'declined' ? '#ef4444' : 'var(--text-secondary)', fontWeight: 600 }}>
-                {rsvpModalEvent.attendee_status === 'accepted' ? '✓ Přijato' : rsvpModalEvent.attendee_status === 'declined' ? '✗ Odmítnuto' : '? Čeká na odpověď'}
+              <span style={{ color: rsvpModalEvent.attendee_status === 'accepted' ? '#22c55e' : rsvpModalEvent.attendee_status === 'declined' ? '#ef4444' : rsvpModalEvent.attendee_status === 'updated' ? '#f59e0b' : 'var(--text-secondary)', fontWeight: 600 }}>
+                {rsvpModalEvent.attendee_status === 'accepted' ? '✓ Přijato' : rsvpModalEvent.attendee_status === 'declined' ? '✗ Odmítnuto' : rsvpModalEvent.attendee_status === 'updated' ? '! Změna čeká na potvrzení' : '? Čeká na odpověď'}
               </span>
             </p>
             {/* RSVP tlačítka */}
@@ -5094,8 +5134,8 @@ function CalendarContent() {
                     <div className="space-y-1 pl-5">
                       {attendeeList.map(att => {
                         const m = workspaceMembers.find(x => x.user_id === att.user_id);
-                        const statusIcon = att.status === 'accepted' ? '✓' : att.status === 'declined' ? '✗' : '?';
-                        const statusColor = att.status === 'accepted' ? '#22c55e' : att.status === 'declined' ? '#ef4444' : '#9ca3af';
+                        const statusIcon = att.status === 'accepted' ? '✓' : att.status === 'declined' ? '✗' : att.status === 'updated' ? '!' : '?';
+                        const statusColor = att.status === 'accepted' ? '#22c55e' : att.status === 'declined' ? '#ef4444' : att.status === 'updated' ? '#f59e0b' : '#9ca3af';
                         return (
                           <div key={att.id} className="flex items-center gap-2 text-xs">
                             <span className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0" style={{ background: m?.avatar_color ?? '#6b7280' }}>
@@ -5118,16 +5158,59 @@ function CalendarContent() {
                   </div>
                 )}
 
+                {/* Blok změn – zobrazí se příjemci, pokud organizátor upravil událost po přijetí */}
+                {isAttendee && ev.attendee_status === 'updated' && (() => {
+                  const p = ev;
+                  const fmtD = (d: string) => parseDate(d).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'numeric', year: 'numeric' });
+                  const prevMultiDay = p.attendee_prev_start_date && p.attendee_prev_end_date && p.attendee_prev_start_date !== p.attendee_prev_end_date;
+                  const prevDateStr = p.attendee_prev_start_date
+                    ? prevMultiDay
+                      ? `${fmtD(p.attendee_prev_start_date)} – ${fmtD(p.attendee_prev_end_date!)}`
+                      : fmtD(p.attendee_prev_start_date)
+                    : null;
+                  const prevTimeStr = p.attendee_prev_start_time
+                    ? `${p.attendee_prev_start_time.slice(0, 5)}${p.attendee_prev_end_time ? ' – ' + p.attendee_prev_end_time.slice(0, 5) : ''}`
+                    : p.attendee_prev_start_date ? 'Celý den' : null;
+                  const dateChanged = p.attendee_prev_start_date && (
+                    p.attendee_prev_start_date !== p.start_date || (p.attendee_prev_end_date ?? p.attendee_prev_start_date) !== p.end_date
+                  );
+                  const timeChanged = p.attendee_prev_start_date && (
+                    (p.attendee_prev_start_time ?? null) !== (p.start_time ?? null) ||
+                    (p.attendee_prev_end_time ?? null) !== (p.end_time ?? null)
+                  );
+                  const locationChanged = p.attendee_prev_location !== undefined && p.attendee_prev_location !== null &&
+                    p.attendee_prev_location !== (p.location ?? '');
+                  const locationAdded = p.attendee_prev_location === '' && p.location;
+                  if (!dateChanged && !timeChanged && !locationChanged && !locationAdded) return null;
+                  return (
+                    <div className="rounded-lg p-3 text-xs space-y-1" style={{ background: '#f59e0b18', borderLeft: '3px solid #f59e0b', color: 'var(--text-secondary)' }}>
+                      <div className="font-semibold mb-1" style={{ color: '#f59e0b' }}>⚠ Událost byla upravena organizátorem</div>
+                      {dateChanged && prevDateStr && (
+                        <div>Datum: <span style={{ textDecoration: 'line-through', opacity: 0.6 }}>{prevDateStr}</span> → {dateStr}</div>
+                      )}
+                      {timeChanged && prevTimeStr && (
+                        <div>Čas: <span style={{ textDecoration: 'line-through', opacity: 0.6 }}>{prevTimeStr}</span> → {timeStr}</div>
+                      )}
+                      {locationChanged && (
+                        <div>Místo: <span style={{ textDecoration: 'line-through', opacity: 0.6 }}>{p.attendee_prev_location}</span> → {p.location || '—'}</div>
+                      )}
+                      {locationAdded && (
+                        <div>Místo: <span style={{ opacity: 0.6 }}>—</span> → {p.location}</div>
+                      )}
+                    </div>
+                  );
+                })()}
+
                 {/* RSVP status pro attendee */}
                 {isAttendee && (
                   <div className="pt-1">
-                    {ev.attendee_status === 'pending' ? (
+                    {(ev.attendee_status === 'pending' || ev.attendee_status === 'updated') ? (
                       <div className="flex gap-2">
                         <button
                           onClick={async () => { await respondToAttendance(ev.source_id, 'accepted'); setDetailEvent(null); }}
                           className="flex-1 py-2 px-3 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-85"
                           style={{ background: '#22c55e' }}
-                        >✓ Přijmout</button>
+                        >✓ {ev.attendee_status === 'updated' ? 'Beru na vědomí' : 'Přijmout'}</button>
                         <button
                           onClick={async () => { await respondToAttendance(ev.source_id, 'declined'); setDetailEvent(null); }}
                           className="flex-1 py-2 px-3 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-85"

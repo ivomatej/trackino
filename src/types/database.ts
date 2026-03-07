@@ -525,8 +525,13 @@ export interface CalendarEventAttendee {
   event_id: string;
   workspace_id: string;
   user_id: string;
-  status: 'pending' | 'accepted' | 'declined';
+  status: 'pending' | 'accepted' | 'declined' | 'updated';
   created_at: string;
+  prev_start_date?: string | null;
+  prev_end_date?: string | null;
+  prev_start_time?: string | null;
+  prev_end_time?: string | null;
+  prev_location?: string | null;
 }
 
 export interface CalendarSubscription {
