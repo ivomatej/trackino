@@ -11,6 +11,13 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.25.1 – 7. 3. 2026</h3>
+<ul>
+  <li><strong>Kalendář – Sdílené kalendáře: přejmenování sekce</strong> – sekce „SDÍLENÉ" v levém panelu byla přejmenována na <strong>SDÍLENÉ KALENDÁŘE</strong> pro konzistenci s ostatními sekcemi.</li>
+  <li><strong>Kalendář – Sdílené kalendáře: pozice výběru barvy</strong> – barevná tečka pro změnu barvy sdíleného kalendáře byla přesunuta z místa za checkboxem (před názvem) na konec řádku za název a jméno vlastníka. Tečka je viditelná jen při najetí myší – stejný vzor jako sekce Automaticky a Další kalendáře.</li>
+  <li><strong>Kalendář – Sdílené kalendáře: pořadí sekce</strong> – sekce Sdílené kalendáře byla přesunuta nad sekci Další kalendáře.</li>
+</ul>
+
 <h3>v2.25.0 – 7. 3. 2026</h3>
 <ul>
   <li><strong>Kalendář – Další kalendáře: výběr barvy</strong> – Státní svátky, Jmeniny a Narozeniny v sekci <em>Další kalendáře</em> nyní podporují vlastní barvu. Najetím myší na řádek se vpravo zobrazí malá barevná tečka – kliknutím na ni otevřete výběr barvy z palety. Tlačítkem ○ obnovíte výchozí barvu. Barva se ukládá do prohlížeče.</li>
