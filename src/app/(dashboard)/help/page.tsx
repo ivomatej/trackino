@@ -316,6 +316,21 @@ const DEFAULT_HELP_CONTENT = `
 <h3>Měřič v záhlaví na všech stránkách</h3>
 <p>Ve výchozím nastavení je Měřič (timer) viditelný pouze na stránce Měřič. Pokud chcete mít přístup k timeru i na ostatních stránkách (Přehled, Reporty, Tým apod.), zapněte v <strong>Detailní nastavení → Zobrazení aplikace</strong> přepínač <em>„Zobrazovat Měřič v záhlaví na všech stránkách"</em>. Toto nastavení je per-uživatel a nijak neovlivňuje ostatní členy workspace.</p>
 
+<h3>Měřič u spodní hrany obrazovky (mobilní)</h3>
+<p>Na mobilních zařízeních (telefon) lze panel Měřiče přesunout ze záhlaví ke <strong>spodní hraně obrazovky</strong> jako pevnou lištu. Zapněte v <strong>Detailní nastavení → Zobrazení aplikace</strong> přepínač <em>„Měřič u spodní hrany obrazovky (pouze mobil)"</em>. Na desktopu a tabletu tato volba nemá žádný efekt – Měřič tam zůstává v záhlaví. Při aktivní spodní liště se obsah stránky automaticky odsadí. Obě volby lze kombinovat: „záhlaví na všech stránkách" řídí <em>zda</em> se Měřič zobrazí, „spodní hrana" řídí <em>kde</em> se zobrazí na mobilu.</p>
+
+<h3>Pozvánky v Kalendáři</h3>
+<p>Pokud vás někdo pozval na událost, najdete všechny pozvánky na jednom místě – tlačítkem <strong>Pozvánky</strong> (ikona obálky) v horním záhlaví Kalendáře, přístupné ze všech pohledů (Den / Týden / Měsíc / Seznam). Červený odznak na tlačítku ukazuje počet pozvánek čekajících na odpověď.</p>
+<p>V panelu Pozvánky:</p>
+<ul>
+  <li>Filtrujte dle stavu: <strong>Vše / Čeká na odpověď / Přijato / Nezávazně / Odmítnuto</strong></li>
+  <li>Hledejte v názvech událostí pomocí pole <em>Hledat…</em></li>
+  <li>U každé pozvánky vidíte datum, čas, jméno organizátora a aktuální stav</li>
+  <li>Tlačítky <strong>✓ / ~ / ✗</strong> okamžitě změňte svůj stav (Přijmout / Nezávazně / Odmítnout)</li>
+  <li>Odmítnuté pozvánky jsou zobrazeny zesvětleně a přeškrtnutě</li>
+  <li>Při více než 20 pozvánkách se načítají postupně (tlačítko „Načíst dalších N")</li>
+</ul>
+
 <h3>Navigace v Nastavení workspace</h3>
 <p>Nastavení workspace využívá <strong>vertikální postranní menu</strong> vlevo s 8 sekcemi: Obecné, Společnost, Předplatné, Fakturace, Povinná pole, Dovolená, Spolupráce a Moduly. Aktivní sekce je zvýrazněna bílým pozadím. Kliknutím na název sekce se obsah zobrazí v pravé části.</p>
 

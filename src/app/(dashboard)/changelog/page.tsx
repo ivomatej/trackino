@@ -11,6 +11,12 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.29.0 – 7. 3. 2026</h3>
+<ul>
+  <li><strong>Měřič – Připnutí ke spodní hraně obrazovky (mobilní)</strong> – nová volba v Profilu → Zobrazení aplikace: <em>Měřič u spodní hrany obrazovky</em>. Po zapnutí se na mobilním zařízení (telefon) panel Měřiče přesune ze záhlaví k dolnímu okraji obrazovky jako fixní lišta. Obsah stránky se automaticky odsadí, aby nic nezůstalo schováno za lištou. Na desktopu a tabletu volba nemá žádný efekt – tam zůstává Měřič v záhlaví. Nastavení nezasahuje do volby „Zobrazovat Měřič v záhlaví na všech stránkách".</li>
+  <li><strong>Kalendář – Panel Pozvánky</strong> – nové tlačítko <strong>Pozvánky</strong> (ikona obálky) v horním záhlaví kalendáře, přístupné ze všech pohledů. Červený odznak zobrazuje počet pozvánek čekajících na odpověď. Kliknutím se otevře panel se všemi událostmi, na které jste byli pozváni. V panelu: filtrování dle stavu (Vše / Čeká na odpověď / Přijato / Nezávazně / Odmítnuto), textové vyhledávání v názvech událostí, u každé pozvánky je vidět datum, čas, jméno organizátora, aktuální stav a tlačítka pro odpověď (✓ / ~ / ✗). Odmítnuté pozvánky jsou zesvětleny a přeškrtnuty. Při více než 20 pozvánkách se zobrazuje tlačítko „Načíst dalších N".</li>
+</ul>
+
 <h3>v2.28.0 – 7. 3. 2026</h3>
 <ul>
   <li><strong>Kalendář – RSVP: stav „Nezávazně"</strong> – přibyl třetí stav odpovědi na pozvánku. Tlačítkem <em>~ Nezávazně</em> (žluté) dáváte najevo, že přítomnost není jistá. Organizátor vidí tento stav v přehledu účastníků. Prefix „~" se zobrazí před názvem události ve všech pohledech.</li>
