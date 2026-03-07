@@ -42,6 +42,7 @@ interface DisplayEvent {
   attendee_prev_start_time?: string | null;
   attendee_prev_end_time?: string | null;
   attendee_prev_location?: string | null;
+  attendee_prev_description?: string | null;
 }
 
 /** Sdílený kalendář (přijatý od jiného uživatele) */
@@ -1389,7 +1390,7 @@ function CalendarContent() {
     // Najdi záznamy kde jsem účastník
     const { data: myAttendances } = await supabase
       .from('trackino_calendar_event_attendees')
-      .select('event_id, status, prev_start_date, prev_end_date, prev_start_time, prev_end_time, prev_location')
+      .select('event_id, status, prev_start_date, prev_end_date, prev_start_time, prev_end_time, prev_location, prev_description')
       .eq('user_id', user.id)
       .eq('workspace_id', currentWorkspace.id);
     if (!myAttendances || myAttendances.length === 0) { setAttendeeEvents([]); return; }
@@ -1424,6 +1425,7 @@ function CalendarContent() {
         attendee_prev_start_time: (att?.prev_start_time as string | null) ?? null,
         attendee_prev_end_time: (att?.prev_end_time as string | null) ?? null,
         attendee_prev_location: (att?.prev_location as string | null) ?? null,
+        attendee_prev_description: (att?.prev_description as string | null) ?? null,
       });
     }
     setAttendeeEvents(result);
@@ -1610,7 +1612,7 @@ function CalendarContent() {
         // Zjisti, zda se změnily klíčové pole a pokud ano, upozorni přijaté účastníky
         const { data: oldEv } = await supabase
           .from('trackino_calendar_events')
-          .select('start_date, end_date, start_time, end_time, location')
+          .select('start_date, end_date, start_time, end_time, location, description')
           .eq('id', editingEvent.id)
           .single();
         if (oldEv) {
@@ -1619,7 +1621,8 @@ function CalendarContent() {
             ((oldEv.end_date ?? oldEv.start_date) !== (payload.end_date || payload.start_date)) ||
             ((oldEv.start_time ?? null) !== (payload.start_time ?? null)) ||
             ((oldEv.end_time ?? null) !== (payload.end_time ?? null)) ||
-            ((oldEv.location ?? '') !== (payload.location ?? ''));
+            ((oldEv.location ?? '') !== (payload.location ?? '')) ||
+            ((oldEv.description ?? '') !== (payload.description ?? ''));
           if (changed) {
             await supabase
               .from('trackino_calendar_event_attendees')
@@ -1630,6 +1633,7 @@ function CalendarContent() {
                 prev_start_time: oldEv.start_time ?? null,
                 prev_end_time: oldEv.end_time ?? null,
                 prev_location: oldEv.location ?? null,
+                prev_description: oldEv.description ?? null,
               })
               .eq('event_id', editingEvent.id)
               .in('status', ['accepted', 'updated'])
@@ -1683,7 +1687,7 @@ function CalendarContent() {
     if (!user || !currentWorkspace) return;
     await supabase
       .from('trackino_calendar_event_attendees')
-      .update({ status, prev_start_date: null, prev_end_date: null, prev_start_time: null, prev_end_time: null, prev_location: null })
+      .update({ status, prev_start_date: null, prev_end_date: null, prev_start_time: null, prev_end_time: null, prev_location: null, prev_description: null })
       .eq('event_id', eventSourceId)
       .eq('user_id', user.id);
     await fetchAttendeeEvents();
@@ -5170,32 +5174,44 @@ function CalendarContent() {
                     : null;
                   const prevTimeStr = p.attendee_prev_start_time
                     ? `${p.attendee_prev_start_time.slice(0, 5)}${p.attendee_prev_end_time ? ' – ' + p.attendee_prev_end_time.slice(0, 5) : ''}`
-                    : p.attendee_prev_start_date ? 'Celý den' : null;
-                  const dateChanged = p.attendee_prev_start_date && (
+                    : (p.attendee_prev_start_date != null ? 'Celý den' : null);
+                  const dateChanged = p.attendee_prev_start_date != null && (
                     p.attendee_prev_start_date !== p.start_date || (p.attendee_prev_end_date ?? p.attendee_prev_start_date) !== p.end_date
                   );
-                  const timeChanged = p.attendee_prev_start_date && (
+                  const timeChanged = p.attendee_prev_start_date != null && (
                     (p.attendee_prev_start_time ?? null) !== (p.start_time ?? null) ||
                     (p.attendee_prev_end_time ?? null) !== (p.end_time ?? null)
                   );
-                  const locationChanged = p.attendee_prev_location !== undefined && p.attendee_prev_location !== null &&
+                  const locationChanged = p.attendee_prev_location != null && p.attendee_prev_location !== '' &&
                     p.attendee_prev_location !== (p.location ?? '');
-                  const locationAdded = p.attendee_prev_location === '' && p.location;
-                  if (!dateChanged && !timeChanged && !locationChanged && !locationAdded) return null;
+                  const locationAdded = p.attendee_prev_location === '' && !!(p.location ?? '');
+                  const descChanged = p.attendee_prev_description != null && p.attendee_prev_description !== '' &&
+                    p.attendee_prev_description !== (p.description ?? '');
+                  const descAdded = p.attendee_prev_description === '' && !!(p.description ?? '');
+                  const hasSpecificChanges = dateChanged || timeChanged || locationChanged || locationAdded || descChanged || descAdded;
                   return (
                     <div className="rounded-lg p-3 text-xs space-y-1" style={{ background: '#f59e0b18', borderLeft: '3px solid #f59e0b', color: 'var(--text-secondary)' }}>
                       <div className="font-semibold mb-1" style={{ color: '#f59e0b' }}>⚠ Událost byla upravena organizátorem</div>
-                      {dateChanged && prevDateStr && (
-                        <div>Datum: <span style={{ textDecoration: 'line-through', opacity: 0.6 }}>{prevDateStr}</span> → {dateStr}</div>
-                      )}
-                      {timeChanged && prevTimeStr && (
-                        <div>Čas: <span style={{ textDecoration: 'line-through', opacity: 0.6 }}>{prevTimeStr}</span> → {timeStr}</div>
-                      )}
-                      {locationChanged && (
-                        <div>Místo: <span style={{ textDecoration: 'line-through', opacity: 0.6 }}>{p.attendee_prev_location}</span> → {p.location || '—'}</div>
-                      )}
-                      {locationAdded && (
-                        <div>Místo: <span style={{ opacity: 0.6 }}>—</span> → {p.location}</div>
+                      {hasSpecificChanges ? (
+                        <>
+                          {dateChanged && prevDateStr && (
+                            <div>Datum: <span style={{ textDecoration: 'line-through', opacity: 0.6 }}>{prevDateStr}</span> → {dateStr}</div>
+                          )}
+                          {timeChanged && prevTimeStr && (
+                            <div>Čas: <span style={{ textDecoration: 'line-through', opacity: 0.6 }}>{prevTimeStr}</span> → {timeStr}</div>
+                          )}
+                          {locationChanged && (
+                            <div>Místo: <span style={{ textDecoration: 'line-through', opacity: 0.6 }}>{p.attendee_prev_location}</span> → {p.location || '—'}</div>
+                          )}
+                          {locationAdded && (
+                            <div>Místo přidáno: {p.location}</div>
+                          )}
+                          {(descChanged || descAdded) && (
+                            <div>Poznámka byla upravena</div>
+                          )}
+                        </>
+                      ) : (
+                        <div style={{ opacity: 0.7 }}>Podrobnosti změny nejsou k dispozici.</div>
                       )}
                     </div>
                   );

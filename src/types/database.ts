@@ -532,6 +532,7 @@ export interface CalendarEventAttendee {
   prev_start_time?: string | null;
   prev_end_time?: string | null;
   prev_location?: string | null;
+  prev_description?: string | null;
 }
 
 export interface CalendarSubscription {
