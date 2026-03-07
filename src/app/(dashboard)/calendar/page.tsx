@@ -1058,11 +1058,11 @@ function CalendarContent() {
     // Krok 2: načti profily
     const { data: profilesData } = await supabase
       .from('trackino_profiles')
-      .select('id, display_name, display_nickname, avatar_color')
+      .select('id, display_name, avatar_color')
       .in('id', userIds);
     const members: MemberWithProfile[] = (profilesData ?? []).map((p: Record<string, string>) => ({
       user_id: p.id,
-      display_name: p.display_nickname?.trim() ? p.display_nickname : (p.display_name ?? 'Uživatel'),
+      display_name: p.display_name ?? 'Uživatel',
       avatar_color: p.avatar_color ?? '#6b7280',
     }));
     setWorkspaceMembers(members);
@@ -1128,10 +1128,10 @@ function CalendarContent() {
     if (ownerIds.length > 0) {
       const { data: profiles } = await supabase
         .from('trackino_profiles')
-        .select('id, display_name, display_nickname')
+        .select('id, display_name')
         .in('id', ownerIds);
       for (const p of (profiles ?? [])) {
-        ownerNames[p.id] = (p.display_nickname?.trim() ? p.display_nickname : p.display_name) ?? 'Uživatel';
+        ownerNames[p.id] = p.display_name ?? 'Uživatel';
       }
     }
 
