@@ -66,6 +66,36 @@ Na iOS Safari se stránka automaticky přiblíží (zoom), pokud má `<input>` n
 - Při generování testovacích SQL dat vždy používej tento workspace_id
 - **Neotevírej Preview (Dev server)** při běžných úpravách – uživatel testuje vše sám na produkci (desktop + mobil). Preview používej jen v nutných případech (např. ladění složitého layoutu).
 
+### 13. iOS date/time inputy – prevence přetékání (overflow)
+
+Na iOS Safari/Chrome způsobují `<input type="date">` a `<input type="time">` přetékání ze svého containeru. Problém má dvě příčiny:
+
+**A) iOS border-radius + overflow-hidden bug**
+`overflow: hidden` / `overflow-x: hidden` na elementu s `border-radius` na iOS WebKit **neclipuje obsah**, pokud element nemá GPU compositing vrstvu. Řešení: přidat `transform: translateZ(0)` na **každý container** s `overflow-x-hidden` + `rounded-*`, který obsahuje date/time inputy.
+
+```tsx
+// ✅ Správně – container s date inputy
+<div className="rounded-xl border p-5 overflow-x-hidden"
+     style={{ ..., transform: 'translateZ(0)' }}>
+```
+
+**B) Nativní iOS date input šířka**
+iOS WebKit přidává k date inputům interní komponenty (`-webkit-calendar-picker-indicator`, `-webkit-datetime-edit-fields-wrapper`) s vlastní min-width. Globální CSS fix je v `globals.css`:
+```css
+input[type="date"], input[type="time"], input[type="datetime-local"] {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+}
+```
+
+**Checklist při přidávání date/time inputů:**
+1. Container s `rounded-*` musí mít `overflow-x-hidden` + `transform: 'translateZ(0)'` v inline style
+2. Input musí mít `w-full` a být v grid/flex buňce s `min-w-0`
+3. Na mobilu nesmí být více než 2 date inputy vedle sebe – použij `grid-cols-1 sm:grid-cols-2` nebo `col-span-2 sm:col-span-1`
+
 ### 9. Responzivita a světlý/tmavý režim
 Každý nový modul nebo funkce musí být plně funkční na:
 - **Mobil** – Android i iPhone (malé obrazovky, touch gesta, dostatečné tap targety min. 44px)
