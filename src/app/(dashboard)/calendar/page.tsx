@@ -34,7 +34,7 @@ interface DisplayEvent {
   shared_owner_name?: string;
   shared_calendar_name?: string;
   // Účastnické události (kde user je účastník, ne vlastník)
-  attendee_status?: 'pending' | 'accepted' | 'declined' | 'updated';
+  attendee_status?: 'pending' | 'accepted' | 'declined' | 'maybe' | 'updated';
   event_owner_id?: string;
   // Předchozí hodnoty pro zobrazení změn (status 'updated')
   attendee_prev_start_date?: string | null;
@@ -1418,7 +1418,7 @@ function CalendarContent() {
         is_all_day: ev.is_all_day,
         start_time: ev.start_time,
         end_time: ev.end_time,
-        attendee_status: att?.status as 'pending' | 'accepted' | 'declined' | 'updated',
+        attendee_status: att?.status as 'pending' | 'accepted' | 'declined' | 'maybe' | 'updated',
         event_owner_id: ev.user_id,
         attendee_prev_start_date: (att?.prev_start_date as string | null) ?? null,
         attendee_prev_end_date: (att?.prev_end_date as string | null) ?? null,
@@ -1537,10 +1537,12 @@ function CalendarContent() {
 
   // ── CRUD – Události ───────────────────────────────────────────────────────
 
-  function openNewEvent(date?: string) {
+  function openNewEvent(date?: string, startHour?: number) {
     const d = date ?? toDateStr(currentDate);
     setEditingEvent(null);
     const defaultCalId = calendars.find(c => c.is_default)?.id ?? calendars[0]?.id ?? '';
+    const hasTime = startHour !== undefined;
+    const endHour = hasTime ? Math.min(startHour! + 1, 23) : 0;
     setEventForm({
       title: '',
       description: '',
@@ -1550,9 +1552,9 @@ function CalendarContent() {
       reminder_minutes: null,
       start_date: d,
       end_date: d,
-      is_all_day: true,
-      start_time: '',
-      end_time: '',
+      is_all_day: !hasTime,
+      start_time: hasTime ? `${String(startHour).padStart(2, '0')}:00` : '',
+      end_time: hasTime ? `${String(endHour).padStart(2, '0')}:00` : '',
       color: '',
       calendar_id: defaultCalId,
     });
@@ -1678,7 +1680,7 @@ function CalendarContent() {
 
   // ── RSVP – přijetí/odmítnutí události jako účastník ──────────────────────
 
-  async function respondToAttendance(eventSourceId: string, status: 'accepted' | 'declined') {
+  async function respondToAttendance(eventSourceId: string, status: 'accepted' | 'declined' | 'maybe') {
     if (!user || !currentWorkspace) return;
     await supabase
       .from('trackino_calendar_event_attendees')
@@ -2468,19 +2470,31 @@ function CalendarContent() {
   // ── Event pill ────────────────────────────────────────────────────────────
 
   function EventPill({ ev, compact = false, wrap = false }: { ev: DisplayEvent; compact?: boolean; wrap?: boolean }) {
+    const isDeclined = ev.attendee_status === 'declined';
+    const isMaybe = ev.attendee_status === 'maybe';
+    const isPendingOrUpdated = ev.attendee_status === 'pending' || ev.attendee_status === 'updated';
+    const prefix = isPendingOrUpdated ? '? ' : isMaybe ? '~ ' : '';
     return (
       <div
         onClick={e => { e.stopPropagation(); setDetailEvent(ev); }}
         className={`${compact ? 'px-1 py-0.5 text-[10px] leading-[14px]' : 'px-1.5 py-0.5 text-xs'} rounded font-medium ${wrap ? 'break-words' : 'truncate'}`}
         style={{
-          background: ev.color + '22',
-          color: ev.color,
-          border: (ev.attendee_status === 'pending' || ev.attendee_status === 'updated') ? `2px dashed ${ev.color}` : `1px solid ${ev.color}44`,
+          background: isDeclined ? ev.color + '0d' : ev.color + '22',
+          color: isDeclined ? ev.color + '99' : ev.color,
+          border: isPendingOrUpdated ? `2px dashed ${ev.color}` : isMaybe ? `1px dashed ${ev.color}88` : `1px solid ${ev.color}44`,
+          opacity: isDeclined ? 0.5 : 1,
           cursor: 'pointer',
+          textDecoration: isDeclined ? 'line-through' : 'none',
         }}
-        title={ev.attendee_status === 'pending' ? `${ev.title} – čeká na potvrzení` : ev.attendee_status === 'updated' ? `${ev.title} – událost byla změněna` : ev.title}
+        title={
+          isPendingOrUpdated ? `${ev.title} – čeká na potvrzení` :
+          ev.attendee_status === 'updated' ? `${ev.title} – událost byla změněna` :
+          isDeclined ? `${ev.title} – odmítnuto` :
+          isMaybe ? `${ev.title} – nezávazně` :
+          ev.title
+        }
       >
-        {(ev.attendee_status === 'pending' || ev.attendee_status === 'updated') ? '? ' : ''}
+        {prefix}
         {!ev.is_all_day && ev.start_time ? `${ev.start_time.slice(0, 5)} ` : ''}
         {ev.title}
       </div>
@@ -3411,7 +3425,7 @@ function CalendarContent() {
                               key={i}
                               className="border-b cursor-pointer transition-colors"
                               style={{ height: ROW_H, borderColor: 'var(--border)' }}
-                              onClick={() => openNewEvent(toDateStr(day))}
+                              onClick={() => openNewEvent(toDateStr(day), i)}
                               onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
                               onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                             />
@@ -3440,6 +3454,10 @@ function CalendarContent() {
                             const heightPx = Math.max(20, (ev._endMin - ev._startMin) * (ROW_H / 60));
                             const colW = 100 / ev._totalCols;
                             const leftPct = ev._col * colW;
+                            const isDeclined = ev.attendee_status === 'declined';
+                            const isMaybe = ev.attendee_status === 'maybe';
+                            const isPendingOrUpdated = ev.attendee_status === 'pending' || ev.attendee_status === 'updated';
+                            const prefix = isPendingOrUpdated ? '? ' : isMaybe ? '~ ' : '';
                             return (
                               <div
                                 key={ev.id}
@@ -3449,16 +3467,18 @@ function CalendarContent() {
                                   height: heightPx,
                                   left: `calc(${leftPct}% + 2px)`,
                                   width: `calc(${colW}% - 4px)`,
-                                  background: ev.color + '33',
-                                  color: ev.color,
-                                  border: (ev.attendee_status === 'pending' || ev.attendee_status === 'updated') ? `2px dashed ${ev.color}` : `1px solid ${ev.color}66`,
+                                  background: isDeclined ? ev.color + '11' : ev.color + '33',
+                                  color: isDeclined ? ev.color + '88' : ev.color,
+                                  border: isPendingOrUpdated ? `2px dashed ${ev.color}` : isMaybe ? `1px dashed ${ev.color}88` : `1px solid ${ev.color}66`,
                                   lineHeight: '13px',
                                   zIndex: ev._col + 1,
+                                  opacity: isDeclined ? 0.5 : 1,
+                                  textDecoration: isDeclined ? 'line-through' : 'none',
                                 }}
                                 onClick={e => { e.stopPropagation(); setDetailEvent(ev); }}
-                                title={ev.attendee_status === 'pending' ? `${ev.title} – čeká na potvrzení` : ev.attendee_status === 'updated' ? `${ev.title} – událost byla změněna` : ev.title}
+                                title={isPendingOrUpdated ? `${ev.title} – čeká na potvrzení` : ev.attendee_status === 'updated' ? `${ev.title} – událost byla změněna` : isDeclined ? `${ev.title} – odmítnuto` : isMaybe ? `${ev.title} – nezávazně` : ev.title}
                               >
-                                <div className="font-semibold truncate pr-3">{(ev.attendee_status === 'pending' || ev.attendee_status === 'updated') ? '? ' : ''}{ev.start_time?.slice(0, 5)} {ev.title}</div>
+                                <div className="font-semibold truncate pr-3">{prefix}{ev.start_time?.slice(0, 5)} {ev.title}</div>
                                 {heightPx > 30 && ev.end_time && (
                                   <div className="opacity-70 truncate">{ev.end_time.slice(0, 5)}</div>
                                 )}
@@ -3521,7 +3541,7 @@ function CalendarContent() {
                             key={i}
                             className="border-b cursor-pointer transition-colors"
                             style={{ height: ROW_H, borderColor: 'var(--border)' }}
-                            onClick={() => openNewEvent(toDateStr(day))}
+                            onClick={() => openNewEvent(toDateStr(day), i)}
                             onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
                             onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                           />
@@ -3547,6 +3567,10 @@ function CalendarContent() {
                           const heightPx = Math.max(20, (ev._endMin - ev._startMin) * (ROW_H / 60));
                           const colW = 100 / ev._totalCols;
                           const leftPct = ev._col * colW;
+                          const isDeclined = ev.attendee_status === 'declined';
+                          const isMaybe = ev.attendee_status === 'maybe';
+                          const isPendingOrUpdated = ev.attendee_status === 'pending' || ev.attendee_status === 'updated';
+                          const prefix = isPendingOrUpdated ? '? ' : isMaybe ? '~ ' : '';
                           return (
                             <div
                               key={ev.id}
@@ -3556,16 +3580,18 @@ function CalendarContent() {
                                 height: heightPx,
                                 left: `calc(${leftPct}% + 2px)`,
                                 width: `calc(${colW}% - 4px)`,
-                                background: ev.color + '33',
-                                color: ev.color,
-                                border: (ev.attendee_status === 'pending' || ev.attendee_status === 'updated') ? `2px dashed ${ev.color}` : `1px solid ${ev.color}66`,
+                                background: isDeclined ? ev.color + '11' : ev.color + '33',
+                                color: isDeclined ? ev.color + '88' : ev.color,
+                                border: isPendingOrUpdated ? `2px dashed ${ev.color}` : isMaybe ? `1px dashed ${ev.color}88` : `1px solid ${ev.color}66`,
                                 lineHeight: '15px',
                                 zIndex: ev._col + 1,
+                                opacity: isDeclined ? 0.5 : 1,
+                                textDecoration: isDeclined ? 'line-through' : 'none',
                               }}
                               onClick={e => { e.stopPropagation(); setDetailEvent(ev); }}
-                              title={ev.attendee_status === 'pending' ? `${ev.title} – čeká na potvrzení` : ev.attendee_status === 'updated' ? `${ev.title} – událost byla změněna` : ev.title}
+                              title={isPendingOrUpdated ? `${ev.title} – čeká na potvrzení` : ev.attendee_status === 'updated' ? `${ev.title} – událost byla změněna` : isDeclined ? `${ev.title} – odmítnuto` : isMaybe ? `${ev.title} – nezávazně` : ev.title}
                             >
-                              <div className="font-semibold truncate pr-4">{(ev.attendee_status === 'pending' || ev.attendee_status === 'updated') ? '? ' : ''}{ev.start_time?.slice(0, 5)} {ev.title}</div>
+                              <div className="font-semibold truncate pr-4">{prefix}{ev.start_time?.slice(0, 5)} {ev.title}</div>
                               {heightPx > 35 && ev.end_time && (
                                 <div className="opacity-70">{ev.end_time.slice(0, 5)}</div>
                               )}
@@ -3999,25 +4025,32 @@ function CalendarContent() {
                                           <div className="flex-shrink-0 w-2 h-2 rounded-full" style={{ background: '#ef4444' }} />
                                         </div>
                                       )}
+                                    {(() => {
+                                        const isDeclined = ev.attendee_status === 'declined';
+                                        const isMaybe = ev.attendee_status === 'maybe';
+                                        const isPendingOrUpdated = ev.attendee_status === 'pending' || ev.attendee_status === 'updated';
+                                        const listPrefix = isPendingOrUpdated ? '? ' : isMaybe ? '~ ' : '';
+                                        return (
                                     <div className="flex flex-col md:flex-row gap-3 md:items-start">
                                       <div
                                         onClick={() => setDetailEvent(ev)}
                                         className="group/ev w-full md:flex-1 min-w-0 flex items-start gap-3 p-3 rounded-lg transition-colors"
                                         style={{
-                                          borderWidth: (ev.attendee_status === 'pending' || ev.attendee_status === 'updated') ? 2 : 1,
-                                          borderStyle: (ev.attendee_status === 'pending' || ev.attendee_status === 'updated') ? 'dashed' : 'solid',
-                                          borderColor: (ev.attendee_status === 'pending' || ev.attendee_status === 'updated') ? ev.color : 'var(--border)',
+                                          borderWidth: isPendingOrUpdated ? 2 : 1,
+                                          borderStyle: isPendingOrUpdated ? 'dashed' : isMaybe ? 'dashed' : 'solid',
+                                          borderColor: isPendingOrUpdated ? ev.color : isMaybe ? ev.color + '88' : 'var(--border)',
                                           background: 'var(--bg-card)',
                                           cursor: 'pointer',
+                                          opacity: isDeclined ? 0.45 : 1,
                                         }}
                                         onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
                                         onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-card)'; }}
-                                        title={ev.attendee_status === 'pending' ? `${ev.title} – čeká na potvrzení` : ev.attendee_status === 'updated' ? `${ev.title} – událost byla změněna` : undefined}
+                                        title={isPendingOrUpdated ? `${ev.title} – čeká na potvrzení` : ev.attendee_status === 'updated' ? `${ev.title} – událost byla změněna` : isDeclined ? `${ev.title} – odmítnuto` : isMaybe ? `${ev.title} – nezávazně` : undefined}
                                       >
-                                        <div className="w-1 self-stretch rounded-full flex-shrink-0" style={{ background: ev.color }} />
+                                        <div className="w-1 self-stretch rounded-full flex-shrink-0" style={{ background: isDeclined ? ev.color + '66' : ev.color }} />
                                         <div className="flex-1 min-w-0">
                                           <div className="flex items-center gap-2 flex-wrap">
-                                            <span className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>{(ev.attendee_status === 'pending' || ev.attendee_status === 'updated') ? '? ' : ''}{ev.title}</span>
+                                            <span className="font-medium text-sm" style={{ color: 'var(--text-primary)', textDecoration: isDeclined ? 'line-through' : 'none' }}>{listPrefix}{ev.title}</span>
                                             {ev.source === 'shared' ? (
                                               <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: ev.color + '22', color: ev.color }}>
                                                 {ev.shared_calendar_name && ev.shared_owner_name
@@ -4081,6 +4114,8 @@ function CalendarContent() {
                                         )}
                                       </div>
                                     </div>
+                                    );
+                                    })()}
                                     </div>
                                   );
                                 })}
@@ -4416,7 +4451,9 @@ function CalendarContent() {
                               <span className="flex-1 truncate">{member?.display_name ?? 'Uživatel'}</span>
                               {att.status === 'accepted' && <span className="font-medium" style={{ color: '#22c55e' }}>✓ Přijato</span>}
                               {att.status === 'declined' && <span className="font-medium" style={{ color: '#ef4444' }}>✗ Odmítnuto</span>}
+                              {att.status === 'maybe' && <span className="font-medium" style={{ color: '#f59e0b' }}>~ Nezávazně</span>}
                               {att.status === 'pending' && <span style={{ color: 'var(--text-muted)' }}>? Čeká</span>}
+                              {att.status === 'updated' && <span style={{ color: '#f59e0b' }}>! Změna čeká</span>}
                             </div>
                           );
                         })}
@@ -5004,23 +5041,39 @@ function CalendarContent() {
             {/* Aktuální stav */}
             <p className="text-xs mb-4 text-center" style={{ color: 'var(--text-muted)' }}>
               Tvůj stav:{' '}
-              <span style={{ color: rsvpModalEvent.attendee_status === 'accepted' ? '#22c55e' : rsvpModalEvent.attendee_status === 'declined' ? '#ef4444' : rsvpModalEvent.attendee_status === 'updated' ? '#f59e0b' : 'var(--text-secondary)', fontWeight: 600 }}>
-                {rsvpModalEvent.attendee_status === 'accepted' ? '✓ Přijato' : rsvpModalEvent.attendee_status === 'declined' ? '✗ Odmítnuto' : rsvpModalEvent.attendee_status === 'updated' ? '! Změna čeká na potvrzení' : '? Čeká na odpověď'}
+              <span style={{
+                color: rsvpModalEvent.attendee_status === 'accepted' ? '#22c55e' :
+                       rsvpModalEvent.attendee_status === 'declined' ? '#ef4444' :
+                       rsvpModalEvent.attendee_status === 'maybe' ? '#f59e0b' :
+                       rsvpModalEvent.attendee_status === 'updated' ? '#f59e0b' : 'var(--text-secondary)',
+                fontWeight: 600
+              }}>
+                {rsvpModalEvent.attendee_status === 'accepted' ? '✓ Přijato' :
+                 rsvpModalEvent.attendee_status === 'declined' ? '✗ Odmítnuto' :
+                 rsvpModalEvent.attendee_status === 'maybe' ? '~ Nezávazně' :
+                 rsvpModalEvent.attendee_status === 'updated' ? '! Změna čeká na potvrzení' : '? Čeká na odpověď'}
               </span>
             </p>
-            {/* RSVP tlačítka */}
+            {/* RSVP tlačítka – vždy 3 */}
             <div className="flex gap-2">
               <button
                 onClick={async () => { await respondToAttendance(rsvpModalEvent.source_id, 'accepted'); setRsvpModalEvent(null); }}
-                className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-85"
-                style={{ background: '#22c55e' }}
+                className="flex-1 py-2.5 px-2 rounded-lg text-xs font-medium text-white transition-opacity hover:opacity-85"
+                style={{ background: rsvpModalEvent.attendee_status === 'accepted' ? '#15803d' : '#22c55e' }}
               >
-                ✓ Přijmout
+                ✓ {rsvpModalEvent.attendee_status === 'updated' ? 'Beru na vědomí' : 'Přijmout'}
+              </button>
+              <button
+                onClick={async () => { await respondToAttendance(rsvpModalEvent.source_id, 'maybe'); setRsvpModalEvent(null); }}
+                className="flex-1 py-2.5 px-2 rounded-lg text-xs font-medium text-white transition-opacity hover:opacity-85"
+                style={{ background: rsvpModalEvent.attendee_status === 'maybe' ? '#b45309' : '#f59e0b' }}
+              >
+                ~ Nezávazně
               </button>
               <button
                 onClick={async () => { await respondToAttendance(rsvpModalEvent.source_id, 'declined'); setRsvpModalEvent(null); }}
-                className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-85"
-                style={{ background: '#ef4444' }}
+                className="flex-1 py-2.5 px-2 rounded-lg text-xs font-medium text-white transition-opacity hover:opacity-85"
+                style={{ background: rsvpModalEvent.attendee_status === 'declined' ? '#b91c1c' : '#ef4444' }}
               >
                 ✗ Odmítnout
               </button>
@@ -5212,27 +5265,43 @@ function CalendarContent() {
                   );
                 })()}
 
-                {/* RSVP status pro attendee */}
+                {/* RSVP status pro attendee – vždy zobrazit aktuální stav + 3 tlačítka pro změnu */}
                 {isAttendee && (
-                  <div className="pt-1">
-                    {(ev.attendee_status === 'pending' || ev.attendee_status === 'updated') ? (
-                      <div className="flex gap-2">
-                        <button
-                          onClick={async () => { await respondToAttendance(ev.source_id, 'accepted'); setDetailEvent(null); }}
-                          className="flex-1 py-2 px-3 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-85"
-                          style={{ background: '#22c55e' }}
-                        >✓ {ev.attendee_status === 'updated' ? 'Beru na vědomí' : 'Přijmout'}</button>
-                        <button
-                          onClick={async () => { await respondToAttendance(ev.source_id, 'declined'); setDetailEvent(null); }}
-                          className="flex-1 py-2 px-3 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-85"
-                          style={{ background: '#ef4444' }}
-                        >✗ Odmítnout</button>
-                      </div>
-                    ) : (
-                      <div className="text-center text-xs py-1 rounded-lg" style={{ background: ev.attendee_status === 'accepted' ? '#22c55e22' : '#ef444422', color: ev.attendee_status === 'accepted' ? '#22c55e' : '#ef4444' }}>
-                        {ev.attendee_status === 'accepted' ? '✓ Přijato' : '✗ Odmítnuto'}
-                      </div>
-                    )}
+                  <div className="pt-1 space-y-2">
+                    {/* Aktuální stav */}
+                    <div className="text-center text-xs py-1 rounded-lg font-medium" style={{
+                      background: ev.attendee_status === 'accepted' ? '#22c55e22' :
+                                  ev.attendee_status === 'declined' ? '#ef444422' :
+                                  ev.attendee_status === 'maybe' ? '#f59e0b22' :
+                                  ev.attendee_status === 'updated' ? '#f59e0b22' : 'var(--bg-hover)',
+                      color: ev.attendee_status === 'accepted' ? '#22c55e' :
+                             ev.attendee_status === 'declined' ? '#ef4444' :
+                             ev.attendee_status === 'maybe' ? '#f59e0b' :
+                             ev.attendee_status === 'updated' ? '#f59e0b' : 'var(--text-muted)',
+                    }}>
+                      {ev.attendee_status === 'accepted' ? '✓ Přijato' :
+                       ev.attendee_status === 'declined' ? '✗ Odmítnuto' :
+                       ev.attendee_status === 'maybe' ? '~ Nezávazně' :
+                       ev.attendee_status === 'updated' ? '! Změna čeká na potvrzení' : '? Čeká na odpověď'}
+                    </div>
+                    {/* 3 tlačítka pro (změnu) odpovědi */}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={async () => { await respondToAttendance(ev.source_id, 'accepted'); setDetailEvent(null); }}
+                        className="flex-1 py-2 px-2 rounded-lg text-xs font-medium text-white transition-opacity hover:opacity-85"
+                        style={{ background: ev.attendee_status === 'accepted' ? '#15803d' : '#22c55e' }}
+                      >✓ {ev.attendee_status === 'updated' ? 'Beru na vědomí' : 'Přijmout'}</button>
+                      <button
+                        onClick={async () => { await respondToAttendance(ev.source_id, 'maybe'); setDetailEvent(null); }}
+                        className="flex-1 py-2 px-2 rounded-lg text-xs font-medium text-white transition-opacity hover:opacity-85"
+                        style={{ background: ev.attendee_status === 'maybe' ? '#b45309' : '#f59e0b' }}
+                      >~ Nezávazně</button>
+                      <button
+                        onClick={async () => { await respondToAttendance(ev.source_id, 'declined'); setDetailEvent(null); }}
+                        className="flex-1 py-2 px-2 rounded-lg text-xs font-medium text-white transition-opacity hover:opacity-85"
+                        style={{ background: ev.attendee_status === 'declined' ? '#b91c1c' : '#ef4444' }}
+                      >✗ Odmítnout</button>
+                    </div>
                   </div>
                 )}
               </div>

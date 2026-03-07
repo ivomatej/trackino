@@ -525,7 +525,7 @@ export interface CalendarEventAttendee {
   event_id: string;
   workspace_id: string;
   user_id: string;
-  status: 'pending' | 'accepted' | 'declined' | 'updated';
+  status: 'pending' | 'accepted' | 'declined' | 'maybe' | 'updated';
   created_at: string;
   prev_start_date?: string | null;
   prev_end_date?: string | null;
