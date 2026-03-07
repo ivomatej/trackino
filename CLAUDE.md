@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 7. 3. 2026 (v2.39.0)
+> Aktualizováno: 7. 3. 2026 (v2.39.2)
 
 ---
 
@@ -493,6 +493,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.39.2 | 7. 3. 2026 | Znalostní báze: Naposledy upravené v levém sidebaru (collapsible, top 10 s cestou složky), Nezařazené a Podle stavu filtry v sidebaru (s počty), dvousloupcová úvodní stránka (upravené+nové, 10 položek každý), tab Odkazující stránky (backlinks s cestou+stavem), oprava layoutu edit polí Status+Složka+Štítky, odsazení puntíku stavu v menu (ml-1 mr-2) |
 | v2.39.1 | 7. 3. 2026 | Automatizace: editace rozvrhu (tužka → modal s hodinam/minutami/dny/timezone), fix dvojitého lomítka v URL (trailing slash strip); Timer: auto manager note "Práce 8+h v kuse. Ověřit." po 8h s vybraným projektem+kategorií+úkolem; AI asistent: výška stránky s paddingem u patičky, Firecrawl kredity přesunuty do pravého panelu (kompaktní progress bar) |
 | v2.39.0 | 7. 3. 2026 | Automatizace: nová záložka v Nastavení (cron-job.org integrace), 5 šablon (weekly-report AI, inactive-check, kb-reviews-digest, feedback-summary AI, vacation-report), proxy routes /api/cron-jobs/*, 5 cron action handlers /api/cron/*, CRON_SECRET server-side injekce, výsledky v trackino_cron_results |
 | v2.38.0 | 7. 3. 2026 | Znalostní báze: vkládání kdekoliv (savedRange+onMouseDown), plovoucí selection popup (Odkaz/@/Stránka), nový vzhled Callout+Toggle (color-mix, animovaná šipka), checklist bez auto textu, Revize v hlavičce stránky (pill odznaky, červený badge, odebrán tab Recenze→záložky: Komentáře/Historie/Přístupy); AI asistent: měsíční statistiky tokenů per user, per-user token limity (denní/týdenní/měsíční) |
@@ -1489,7 +1490,7 @@ export interface KbAccess { id, workspace_id, page_id, user_id, can_edit, create
 
 ### Lokální typy (knowledge-base/page.tsx)
 ```typescript
-type PageTab = 'comments' | 'history' | 'access';
+type PageTab = 'comments' | 'history' | 'access' | 'backlinks';
 interface KbMember { user_id: string; display_name: string; avatar_color: string; }
 const STATUS_CONFIG: Record<KbPageStatus, { label: string; color: string }>
 ```
@@ -1519,7 +1520,8 @@ const STATUS_CONFIG: Record<KbPageStatus, { label: string; color: string }>
 - Sekce Revize přesunuta z záložky „Recenze" do **hlavičky stránky** (za meta row, před content)
 - Zobrazuje se jako flex row s pill odznaky; červený badge s počtem nesplněných
 - Každá revize: checkbox + jméno + datum + volitelná poznámka (ℹ) + × mazání (admin)
-- Tab „Recenze" odstraněn; záložky nyní: `comments | history | access`
+- Tab „Recenze" odstraněn; záložky nyní: `comments | history | access | backlinks`
+- Tab „Odkazující" (backlinks): klientsky detekuje stránky odkazující na aktuální stránku (hledání `data-page-id="${pageId}"` v content HTML); zobrazuje název + cestu složky (getFolderPath) + stav; kliknutí přejde na danou stránku
 - Modal title: „Přidat revizi" (dříve „Přidat revizní připomínku")
 
 ### Revize v Přehledu (page.tsx)

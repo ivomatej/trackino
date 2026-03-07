@@ -11,7 +11,7 @@ import type { KbFolder, KbPage, KbVersion, KbComment, KbReview, KbAccess, KbPage
 
 // ── Local types ──────────────────────────────────────────────────────────────
 
-type PageTab = 'comments' | 'history' | 'access';
+type PageTab = 'comments' | 'history' | 'access' | 'backlinks';
 interface KbMember { user_id: string; display_name: string; avatar_color: string; }
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -65,6 +65,17 @@ function fmtDate(iso: string) {
 
 function fmtDateTime(iso: string) {
   return new Date(iso).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function getFolderPath(folderId: string | null, folders: KbFolder[]): string {
+  if (!folderId) return '';
+  const parts: string[] = [];
+  let current: KbFolder | undefined = folders.find(f => f.id === folderId);
+  while (current) {
+    parts.unshift(current.name);
+    current = current.parent_id ? folders.find(f => f.id === current!.parent_id) : undefined;
+  }
+  return parts.join(' / ');
 }
 
 // ── Rich Editor ───────────────────────────────────────────────────────────────
@@ -495,7 +506,7 @@ function KbFolderTree({ folders, pages, selectedFolderId, selectedPageId, expand
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
                 </svg>
                 <span className="flex-1 text-xs truncate" style={{ color: selectedPageId === p.id ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: selectedPageId === p.id ? 500 : 400 }}>{p.title}</span>
-                <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 mr-1" style={{ background: STATUS_CONFIG[p.status].color, opacity: p.status === 'active' ? 0 : 1 }} />
+                <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 ml-1 mr-2" style={{ background: STATUS_CONFIG[p.status].color, opacity: p.status === 'active' ? 0 : 1 }} />
               </div>
             ))}
             {/* Subfolders */}
@@ -554,6 +565,10 @@ function KnowledgeBaseContent() {
   const [savingComment, setSavingComment] = useState(false);
 
   const [leftOpen, setLeftOpen] = useState(false);
+  const [recentExpanded, setRecentExpanded] = useState(true);
+  const [statusSectionExpanded, setStatusSectionExpanded] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<KbPageStatus | null>(null);
+  const [showUnfiled, setShowUnfiled] = useState(false);
 
   // Folder modal
   const [folderModal, setFolderModal] = useState<{ mode: 'add' | 'edit'; parentId: string | null; depth: number; target: KbFolder | null; name: string } | null>(null);
@@ -892,10 +907,12 @@ function KnowledgeBaseContent() {
     if (search.trim()) {
       const q = search.toLowerCase();
       p = p.filter(pg => pg.title.toLowerCase().includes(q) || pg.content.toLowerCase().includes(q) || pg.tags.some(t => t.toLowerCase().includes(q)));
+    } else if (showUnfiled) {
+      p = p.filter(pg => !pg.folder_id);
+    } else if (statusFilter) {
+      p = p.filter(pg => pg.status === statusFilter);
     } else if (selectedFolderId) {
       p = p.filter(pg => pg.folder_id === selectedFolderId);
-    } else {
-      // All pages
     }
     return p;
   })();
@@ -968,14 +985,85 @@ function KnowledgeBaseContent() {
               </div>
             )}
 
-            {/* Bez složky */}
+            {/* Naposledy upravené */}
+            {!search && pages.length > 0 && (
+              <div className="mb-1">
+                <button type="button" className="flex items-center gap-1.5 w-full px-2 py-1 rounded hover:bg-[var(--bg-hover)] transition-colors"
+                  onClick={() => setRecentExpanded(v => !v)}>
+                  <svg width="8" height="8" viewBox="0 0 10 10" fill="currentColor" style={{ color: 'var(--text-muted)', transition: 'transform 0.15s', transform: recentExpanded ? 'rotate(90deg)' : 'rotate(0deg)', flexShrink: 0 }}>
+                    <path d="M3 2l4 3-4 3V2z"/>
+                  </svg>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)', flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider flex-1 text-left" style={{ color: 'var(--text-muted)' }}>Naposledy upravené</p>
+                </button>
+                {recentExpanded && pages.slice(0, 10).map(p => {
+                  const path = getFolderPath(p.folder_id, folders);
+                  return (
+                    <div key={p.id} className="flex items-center gap-1.5 py-1 rounded-lg cursor-pointer transition-colors"
+                      style={{ paddingLeft: 8, background: selectedPage?.id === p.id ? 'var(--bg-active)' : 'transparent' }}
+                      onClick={() => selectPage(p.id)}>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                      </svg>
+                      <div className="flex-1 min-w-0">
+                        <span className="block text-xs truncate" style={{ color: selectedPage?.id === p.id ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: selectedPage?.id === p.id ? 500 : 400 }}>{p.title}</span>
+                        {path && <span className="block text-[10px] truncate" style={{ color: 'var(--text-muted)' }}>{path}</span>}
+                      </div>
+                      <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 ml-1 mr-2" style={{ background: STATUS_CONFIG[p.status].color, opacity: p.status === 'active' ? 0 : 1 }} />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Všechny stránky */}
             {!search && (
               <div
                 className="flex items-center gap-1.5 py-1 px-2 rounded-lg cursor-pointer transition-colors mb-1"
-                style={{ background: selectedFolderId === null && !search ? 'var(--bg-hover)' : 'transparent' }}
-                onClick={() => setSelectedFolderId(null)}>
+                style={{ background: selectedFolderId === null && !showUnfiled && !statusFilter && !search ? 'var(--bg-hover)' : 'transparent' }}
+                onClick={() => { setSelectedFolderId(null); setShowUnfiled(false); setStatusFilter(null); }}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)' }}><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></svg>
                 <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Všechny stránky</span>
+                <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>{pages.length}</span>
+              </div>
+            )}
+
+            {/* Nezařazené */}
+            {!search && (() => { const count = pages.filter(p => !p.folder_id).length; return count > 0 ? (
+              <div
+                className="flex items-center gap-1.5 py-1 px-2 rounded-lg cursor-pointer transition-colors mb-1"
+                style={{ background: showUnfiled ? 'var(--bg-hover)' : 'transparent' }}
+                onClick={() => { setShowUnfiled(v => !v); setSelectedFolderId(null); setStatusFilter(null); }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)' }}><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>
+                <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Nezařazené</span>
+                <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>{count}</span>
+              </div>
+            ) : null; })()}
+
+            {/* Podle stavu */}
+            {!search && (
+              <div className="mb-1">
+                <button type="button" className="flex items-center gap-1.5 w-full px-2 py-1 rounded hover:bg-[var(--bg-hover)] transition-colors"
+                  onClick={() => setStatusSectionExpanded(v => !v)}>
+                  <svg width="8" height="8" viewBox="0 0 10 10" fill="currentColor" style={{ color: 'var(--text-muted)', transition: 'transform 0.15s', transform: statusSectionExpanded ? 'rotate(90deg)' : 'rotate(0deg)', flexShrink: 0 }}>
+                    <path d="M3 2l4 3-4 3V2z"/>
+                  </svg>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)', flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider flex-1 text-left" style={{ color: 'var(--text-muted)' }}>Podle stavu</p>
+                </button>
+                {statusSectionExpanded && (Object.keys(STATUS_CONFIG) as KbPageStatus[]).map(s => {
+                  const count = pages.filter(p => p.status === s).length;
+                  return (
+                    <div key={s}
+                      className="flex items-center gap-1.5 py-1 rounded-lg cursor-pointer transition-colors"
+                      style={{ paddingLeft: 16, background: statusFilter === s ? 'var(--bg-hover)' : 'transparent' }}
+                      onClick={() => { setStatusFilter(prev => prev === s ? null : s); setSelectedFolderId(null); setShowUnfiled(false); }}>
+                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: STATUS_CONFIG[s].color }} />
+                      <span className="flex-1 text-xs" style={{ color: 'var(--text-secondary)' }}>{STATUS_CONFIG[s].label}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full mr-1" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>{count}</span>
+                    </div>
+                  );
+                })}
               </div>
             )}
 
@@ -983,7 +1071,7 @@ function KnowledgeBaseContent() {
             {!search && (
               <KbFolderTree folders={folders} pages={pages} selectedFolderId={selectedFolderId} selectedPageId={selectedPage?.id ?? null}
                 expanded={expanded}
-                onSelectFolder={id => setSelectedFolderId(prev => prev === id ? null : id)}
+                onSelectFolder={id => { setSelectedFolderId(prev => prev === id ? null : id); setShowUnfiled(false); setStatusFilter(null); }}
                 onSelectPage={selectPage}
                 onToggle={id => setExpanded(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; })}
                 onAddSub={(pid, d) => setFolderModal({ mode: 'add', parentId: pid, depth: d, target: null, name: '' })}
@@ -992,10 +1080,12 @@ function KnowledgeBaseContent() {
                 userId={user?.id ?? ''} />
             )}
 
-            {/* Search results / All pages list */}
-            {(search || !selectedFolderId) && (
+            {/* Search results / Filtered pages list */}
+            {(search || !selectedFolderId || showUnfiled || statusFilter !== null) && (
               <div className="mt-1">
                 {search && <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Výsledky ({filteredPages.length})</p>}
+                {!search && showUnfiled && <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Nezařazené ({filteredPages.length})</p>}
+                {!search && statusFilter && <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>{STATUS_CONFIG[statusFilter].label} ({filteredPages.length})</p>}
                 {filteredPages.map(p => (
                   <div key={p.id} className="group/page flex items-center gap-1.5 py-1 rounded-lg cursor-pointer transition-colors relative"
                     style={{ paddingLeft: 8, background: selectedPage?.id === p.id ? 'var(--bg-active)' : 'transparent' }}
@@ -1064,26 +1154,59 @@ function KnowledgeBaseContent() {
                 Nová stránka
               </button>
 
-              {/* Recent pages */}
+              {/* Two-column: recently edited + newly created */}
               {pages.length > 0 && (
-                <div className="mt-8 w-full max-w-lg">
-                  <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>Naposledy upravené</p>
-                  <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
-                    {pages.slice(0, 6).map((p, i) => (
-                      <div key={p.id}
-                        className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-[var(--bg-hover)] transition-colors"
-                        style={{ background: 'var(--bg-card)', borderBottom: i < Math.min(pages.length, 6) - 1 ? '1px solid var(--border)' : 'none' }}
-                        onClick={() => selectPage(p.id)}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
-                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
-                        </svg>
-                        <span className="flex-1 text-sm truncate" style={{ color: 'var(--text-primary)' }}>{p.title}</span>
-                        <div className="flex items-center gap-1.5 flex-shrink-0">
-                          <div className="w-1.5 h-1.5 rounded-full" style={{ background: STATUS_CONFIG[p.status].color }} />
-                          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{new Date(p.updated_at).toLocaleDateString('cs-CZ')}</span>
-                        </div>
-                      </div>
-                    ))}
+                <div className="mt-8 w-full max-w-3xl grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Naposledy upravené */}
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>Naposledy upravené</p>
+                    <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
+                      {[...pages].sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()).slice(0, 10).map((p, i, arr) => {
+                        const path = getFolderPath(p.folder_id, folders);
+                        return (
+                          <div key={p.id}
+                            className="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-[var(--bg-hover)] transition-colors"
+                            style={{ background: 'var(--bg-card)', borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none' }}
+                            onClick={() => selectPage(p.id)}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
+                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                            </svg>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm truncate" style={{ color: 'var(--text-primary)' }}>{p.title}</p>
+                              {path && <p className="text-[11px] truncate" style={{ color: 'var(--text-muted)' }}>{path}</p>}
+                            </div>
+                            <div className="flex items-center gap-1.5 flex-shrink-0">
+                              <div className="w-1.5 h-1.5 rounded-full" style={{ background: STATUS_CONFIG[p.status].color }} />
+                              <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{new Date(p.updated_at).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'short' })}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  {/* Nově vytvořené */}
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>Nově vytvořené</p>
+                    <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
+                      {[...pages].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 10).map((p, i, arr) => {
+                        const path = getFolderPath(p.folder_id, folders);
+                        return (
+                          <div key={p.id}
+                            className="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-[var(--bg-hover)] transition-colors"
+                            style={{ background: 'var(--bg-card)', borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none' }}
+                            onClick={() => selectPage(p.id)}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
+                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                            </svg>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm truncate" style={{ color: 'var(--text-primary)' }}>{p.title}</p>
+                              {path && <p className="text-[11px] truncate" style={{ color: 'var(--text-muted)' }}>{path}</p>}
+                            </div>
+                            <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{new Date(p.created_at).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'short' })}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               )}
@@ -1157,70 +1280,77 @@ function KnowledgeBaseContent() {
                 </div>
 
                 {/* Meta row */}
-                <div className="flex flex-wrap items-center gap-3 mb-6">
-                  {/* Status */}
-                  {editing ? (
-                    <div className="relative">
-                      <select value={editStatus} onChange={e => setEditStatus(e.target.value as KbPageStatus)}
-                        className="appearance-none pl-3 pr-8 py-1 rounded-full border text-xs font-medium text-base sm:text-sm"
-                        style={{ borderColor: STATUS_CONFIG[editStatus].color, color: STATUS_CONFIG[editStatus].color, background: 'transparent' }}>
-                        {(Object.keys(STATUS_CONFIG) as KbPageStatus[]).map(s => <option key={s} value={s}>{STATUS_CONFIG[s].label}</option>)}
-                      </select>
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2" style={{ color: STATUS_CONFIG[editStatus].color }}><polyline points="6 9 12 15 18 9"/></svg>
+                {editing ? (
+                  <div className="flex flex-col gap-2 mb-6">
+                    {/* Row 1 edit: Status + Složka */}
+                    <div className="flex flex-wrap items-center gap-3">
+                      {/* Status select */}
+                      <div className="relative">
+                        <select value={editStatus} onChange={e => setEditStatus(e.target.value as KbPageStatus)}
+                          className="appearance-none pl-3 pr-8 py-1.5 rounded-lg border text-xs font-medium text-base sm:text-sm"
+                          style={{ borderColor: STATUS_CONFIG[editStatus].color, color: STATUS_CONFIG[editStatus].color, background: 'var(--bg-hover)' }}>
+                          {(Object.keys(STATUS_CONFIG) as KbPageStatus[]).map(s => <option key={s} value={s}>{STATUS_CONFIG[s].label}</option>)}
+                        </select>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2" style={{ color: STATUS_CONFIG[editStatus].color }}><polyline points="6 9 12 15 18 9"/></svg>
+                      </div>
+                      {/* Složka select */}
+                      <div className="relative">
+                        <select value={editFolderId ?? ''} onChange={e => setEditFolderId(e.target.value || null)}
+                          className="appearance-none pl-3 pr-8 py-1.5 rounded-lg border text-xs text-base sm:text-sm"
+                          style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-secondary)' }}>
+                          <option value="">Bez složky</option>
+                          {folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                        </select>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}><polyline points="6 9 12 15 18 9"/></svg>
+                      </div>
                     </div>
-                  ) : (
-                    <span className="px-3 py-1 rounded-full text-xs font-semibold border" style={{ borderColor: STATUS_CONFIG[selectedPage.status].color, color: STATUS_CONFIG[selectedPage.status].color }}>
-                      {STATUS_CONFIG[selectedPage.status].label}
-                    </span>
-                  )}
-
-                  {/* Tags */}
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    {(editing ? editTags : selectedPage.tags).map(tag => (
-                      <span key={tag} className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs" style={{ background: 'var(--bg-hover)', color: 'var(--text-secondary)' }}>
-                        #{tag}
-                        {editing && (
+                    {/* Row 2 edit: Štítky */}
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="text-xs mr-1" style={{ color: 'var(--text-muted)' }}>Štítky:</span>
+                      {editTags.map(tag => (
+                        <span key={tag} className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs" style={{ background: 'var(--bg-hover)', color: 'var(--text-secondary)' }}>
+                          #{tag}
                           <button type="button" onClick={() => setEditTags(prev => prev.filter(t => t !== tag))} className="hover:opacity-70">
                             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                           </button>
-                        )}
-                      </span>
-                    ))}
-                    {editing && (
+                        </span>
+                      ))}
                       <input value={tagInput} onChange={e => setTagInput(e.target.value)}
                         onKeyDown={e => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTag(tagInput); } }}
                         onBlur={() => { if (tagInput.trim()) addTag(tagInput); }}
                         placeholder="+ štítek" className="text-xs px-2 py-0.5 rounded-full border text-base sm:text-sm"
                         style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)', width: 90 }} />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap items-center gap-3 mb-6">
+                    {/* Status badge */}
+                    <span className="px-3 py-1 rounded-full text-xs font-semibold border" style={{ borderColor: STATUS_CONFIG[selectedPage.status].color, color: STATUS_CONFIG[selectedPage.status].color }}>
+                      {STATUS_CONFIG[selectedPage.status].label}
+                    </span>
+                    {/* Tags */}
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {selectedPage.tags.map(tag => (
+                        <span key={tag} className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs" style={{ background: 'var(--bg-hover)', color: 'var(--text-secondary)' }}>
+                          #{tag}
+                        </span>
+                      ))}
+                    </div>
+                    {/* Current folder */}
+                    {selectedPage.folder_id && (
+                      <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                        {getFolderPath(selectedPage.folder_id, folders)}
+                      </span>
+                    )}
+                    {/* Last modified */}
+                    {!selectedPage.id.startsWith('__new__') && (
+                      <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                        Upraveno {fmtDate(selectedPage.updated_at)}{selectedPage.updated_by ? ` · ${memberName(selectedPage.updated_by)}` : ''}
+                      </span>
                     )}
                   </div>
-
-                  {/* Folder picker (edit mode) */}
-                  {editing && (
-                    <div className="relative">
-                      <select value={editFolderId ?? ''} onChange={e => setEditFolderId(e.target.value || null)}
-                        className="appearance-none pl-2 pr-7 py-1 rounded-full border text-xs text-base sm:text-sm"
-                        style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-secondary)' }}>
-                        <option value="">Bez složky</option>
-                        {folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
-                      </select>
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}><polyline points="6 9 12 15 18 9"/></svg>
-                    </div>
-                  )}
-                  {/* Current folder (view mode) */}
-                  {!editing && selectedPage.folder_id && (
-                    <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--text-muted)' }}>
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                      {folders.find(f => f.id === selectedPage.folder_id)?.name ?? ''}
-                    </span>
-                  )}
-                  {/* Last modified */}
-                  {!selectedPage.id.startsWith('__new__') && (
-                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                      Upraveno {fmtDate(selectedPage.updated_at)}{selectedPage.updated_by ? ` · ${memberName(selectedPage.updated_by)}` : ''}
-                    </span>
-                  )}
-                </div>
+                )}
 
                 {/* Revize v hlavičce stránky */}
                 {!selectedPage.id.startsWith('__new__') && (reviews.length > 0 || canAdmin) && !editing && (
@@ -1302,11 +1432,15 @@ function KnowledgeBaseContent() {
                 {!editing && !selectedPage.id.startsWith('__new__') && (
                   <div className="border-t pt-6" style={{ borderColor: 'var(--border)' }}>
                     <div className="flex gap-1 mb-4 border-b" style={{ borderColor: 'var(--border)' }}>
-                      {([
-                        { id: 'comments', label: `Komentáře (${comments.length})` },
-                        { id: 'history', label: `Historie (${versions.length})` },
-                        canAdmin ? { id: 'access', label: 'Přístupy' } : null,
-                      ].filter(Boolean) as { id: string; label: string }[]).map(tab => (
+                      {((() => {
+                        const backlinksCount = pages.filter(p => p.id !== selectedPage.id && p.content.includes(`data-page-id="${selectedPage.id}"`)).length;
+                        return [
+                          { id: 'comments', label: `Komentáře (${comments.length})` },
+                          { id: 'history', label: `Historie (${versions.length})` },
+                          canAdmin ? { id: 'access', label: 'Přístupy' } : null,
+                          { id: 'backlinks', label: `Odkazující (${backlinksCount})` },
+                        ].filter(Boolean) as { id: string; label: string }[];
+                      })()).map(tab => (
                         <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id as PageTab)}
                           className="px-4 py-2 text-xs font-medium border-b-2 -mb-px transition-colors"
                           style={{ borderColor: activeTab === tab.id ? 'var(--primary)' : 'transparent', color: activeTab === tab.id ? 'var(--primary)' : 'var(--text-muted)', background: 'transparent' }}>
@@ -1433,6 +1567,37 @@ function KnowledgeBaseContent() {
                             })}
                           </div>
                         )}
+                      </div>
+                    )}
+
+                    {/* Backlinks */}
+                    {activeTab === 'backlinks' && (
+                      <div>
+                        {(() => {
+                          const linking = pages.filter(p => p.id !== selectedPage.id && p.content.includes(`data-page-id="${selectedPage.id}"`));
+                          if (linking.length === 0) {
+                            return <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Žádná stránka na tuto stránku neodkazuje.</p>;
+                          }
+                          return linking.map(p => {
+                            const path = getFolderPath(p.folder_id, folders);
+                            return (
+                              <div key={p.id} className="flex items-center gap-3 py-3 border-b cursor-pointer hover:bg-[var(--bg-hover)] rounded-lg px-2 transition-colors" style={{ borderColor: 'var(--border)' }}
+                                onClick={() => selectPage(p.id)}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
+                                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                                </svg>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{p.title}</p>
+                                  {path && <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{path}</p>}
+                                </div>
+                                <div className="flex items-center gap-1.5 flex-shrink-0">
+                                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: STATUS_CONFIG[p.status].color }} />
+                                  <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{STATUS_CONFIG[p.status].label}</span>
+                                </div>
+                              </div>
+                            );
+                          });
+                        })()}
                       </div>
                     )}
                   </div>

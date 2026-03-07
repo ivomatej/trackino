@@ -468,6 +468,10 @@ const DEFAULT_HELP_CONTENT = `
   <li><strong>Komentáře</strong> – v záložce Komentáře lze přidávat, upravovat a mazat komentáře k dané stránce</li>
   <li><strong>Přístupová práva</strong> – stránka může být označena jako omezená (příznak „Přístup omezen"); v záložce Přístupy (jen admin) se přidávají konkrétní uživatelé s oprávněním ke čtení nebo editaci; toggle tlačítka reagují okamžitě (optimistický update)</li>
   <li><strong>Oblíbené</strong> – stránky lze přidávat k oblíbeným (hvězdička); oblíbené stránky se zobrazují v horní části levého panelu</li>
+  <li><strong>Naposledy upravené</strong> – v levém panelu je collapsible sekce „Naposledy upravené" se 10 posledně editovanými stránkami včetně cesty do složky</li>
+  <li><strong>Filtry v levém panelu</strong> – „Nezařazené" zobrazí stránky bez složky (s počtem); „Podle stavu" (collapsible) filtruje stránky dle stavu (Koncept / Aktivní / Archiv) s počty</li>
+  <li><strong>Odkazující stránky</strong> – záložka „Odkazující" v dolní části stránky zobrazí seznam všech stránek, které na tuto stránku odkazují (backlinky), včetně cesty složky a stavu</li>
+  <li><strong>Úvodní stránka</strong> – pokud není vybrána žádná stránka, zobrazí se dvousloupcový přehled: Naposledy upravené (10 položek) a Nově vytvořené (10 položek), obojí s cestou složky</li>
 </ul>
 
 <h3>Dokumenty – správa souborů a složek</h3>

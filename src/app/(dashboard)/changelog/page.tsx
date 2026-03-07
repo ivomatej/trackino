@@ -11,6 +11,16 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.39.2 – 7. 3. 2026</h3>
+<ul>
+  <li><strong>Znalostní báze – Naposledy upravené v levém sidebaru</strong> – přidána collapsible sekce „Naposledy upravené" zobrazující 10 posledně editovaných stránek včetně cesty složky (breadcrumb) a barevného stavu. Sekci lze sbalit/rozbalit šipkou.</li>
+  <li><strong>Znalostní báze – Filtry v levém sidebaru</strong> – přibyly nové navigační prvky: „Nezařazené" zobrazí stránky bez složky (s počtem v odznaku); „Podle stavu" (collapsible) umožňuje filtrovat stránky dle stavu Koncept / Aktivní / Archiv s počty u každé položky; „Všechny stránky" zobrazuje celkový počet.</li>
+  <li><strong>Znalostní báze – Úvodní stránka dvousloupcová</strong> – úvodní přehled (bez vybrané stránky) nově zobrazuje dva sloupce vedle sebe: „Naposledy upravené" (10 stránek dle updated_at) a „Nově vytvořené" (10 stránek dle created_at). U každé stránky je zobrazen název, cesta složky a datum.</li>
+  <li><strong>Znalostní báze – Odkazující stránky (backlinks)</strong> – nová záložka „Odkazující" v dolní části stránky zobrazuje seznam všech stránek, které na aktuální stránku odkazují pomocí kb-page-link. U každé odkazující stránky se zobrazí název, cesta složky a barevný badge stavu. Kliknutím přejdete přímo na danou stránku.</li>
+  <li><strong>Znalostní báze – Oprava layoutu editačních polí</strong> – v edit modu jsou pole Status a Složka nyní řazena vedle sebe v prvním řádku (zaoblené select elementy s chevronem), štítky tvoří samostatný druhý řádek s popiskem. Ve view modu je cesta složky zobrazena jako plná hierarchická cesta (getFolderPath).</li>
+  <li><strong>Znalostní báze – Odsazení puntíku stavu v menu</strong> – barevný puntík stavu stránky v levém stromovém menu má nyní správné odsazení od okolního textu (ml-1 mr-2 místo mr-1).</li>
+</ul>
+
 <h3>v2.39.0 – 7. 3. 2026</h3>
 <ul>
   <li><strong>Automatizace – nová záložka v Nastavení workspace</strong> – nový modul automatizovaných úloh integrovaný s cron-job.org. Admini mohou přidávat naplánované joby ze 5 předpřipravených šablon, zapínat/vypínat je togglem, mazat a prohlížet historii spuštění (HTTP status, délka, čas).</li>
