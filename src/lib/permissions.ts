@@ -81,9 +81,8 @@ export function canAccessAuditLog(
 
 /**
  * Může uživatel používat AI asistenta?
- * - Master Admin: vždy
- * - Workspace Admin (owner/admin): vždy
- * - Ostatní: jen pokud mají can_use_ai_assistant příznak
+ * - Master Admin: vždy (nelze zakázat)
+ * - Ostatní (včetně owner/admin): jen pokud mají can_use_ai_assistant příznak
  */
 export function canUseAiAssistant(
   role: UserRole | null | undefined,
@@ -91,6 +90,5 @@ export function canUseAiAssistant(
   membership: WorkspaceMember | null | undefined
 ): boolean {
   if (isMasterAdmin(profile)) return true;
-  if (isWorkspaceAdmin(role)) return true;
   return membership?.can_use_ai_assistant === true;
 }

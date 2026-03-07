@@ -119,7 +119,7 @@ function SettingsContent() {
   // AI asistent – nastavení
   interface AiMemberInfo {
     user_id: string; display_name: string; email: string; avatar_color: string; role: string;
-    can_use_ai_assistant: boolean; ai_allowed_models: string[] | null;
+    is_master_admin: boolean; can_use_ai_assistant: boolean; ai_allowed_models: string[] | null;
   }
   const [aiMembers, setAiMembers] = useState<AiMemberInfo[]>([]);
   const [aiLimits, setAiLimits] = useState<{ daily: string; weekly: string; monthly: string }>({ daily: '', weekly: '', monthly: '' });
@@ -455,12 +455,12 @@ function SettingsContent() {
       const userIds = (members ?? []).map((m: { user_id: string }) => m.user_id);
       const { data: profiles } = await supabase
         .from('trackino_profiles')
-        .select('id, display_name, email, avatar_color')
+        .select('id, display_name, email, avatar_color, is_master_admin')
         .in('id', userIds);
 
-      const profileMap: Record<string, { display_name: string; email: string; avatar_color: string }> = {};
+      const profileMap: Record<string, { display_name: string; email: string; avatar_color: string; is_master_admin: boolean }> = {};
       for (const p of profiles ?? []) {
-        profileMap[(p as { id: string }).id] = p as { display_name: string; email: string; avatar_color: string };
+        profileMap[(p as { id: string }).id] = p as { display_name: string; email: string; avatar_color: string; is_master_admin: boolean };
       }
 
       setAiMembers((members ?? []).map((m: { user_id: string; role: string; can_use_ai_assistant: boolean; ai_allowed_models: string[] | null }) => ({
@@ -469,6 +469,7 @@ function SettingsContent() {
         email: profileMap[m.user_id]?.email ?? '',
         avatar_color: profileMap[m.user_id]?.avatar_color ?? '#6366f1',
         role: m.role,
+        is_master_admin: profileMap[m.user_id]?.is_master_admin ?? false,
         can_use_ai_assistant: m.can_use_ai_assistant ?? false,
         ai_allowed_models: m.ai_allowed_models ?? null,
       })));
@@ -1685,7 +1686,7 @@ function SettingsContent() {
                   <div className="space-y-3">
                     {aiMembers.map(member => {
                       const roleLabels: Record<string, string> = { owner: 'Vlastník', admin: 'Admin', manager: 'Manažer', member: 'Člen' };
-                      const isAlwaysGranted = member.role === 'owner' || member.role === 'admin';
+                      const isAlwaysGranted = member.is_master_admin;
                       return (
                         <div key={member.user_id} className="p-3 rounded-lg border" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
                           <div className="flex items-center gap-3 mb-2">
