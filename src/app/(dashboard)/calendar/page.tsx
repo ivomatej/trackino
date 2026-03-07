@@ -3412,14 +3412,14 @@ function CalendarContent() {
                                   width: `calc(${colW}% - 4px)`,
                                   background: ev.color + '33',
                                   color: ev.color,
-                                  border: `1px solid ${ev.color}66`,
+                                  border: ev.attendee_status === 'pending' ? `2px dashed ${ev.color}` : `1px solid ${ev.color}66`,
                                   lineHeight: '13px',
                                   zIndex: ev._col + 1,
                                 }}
                                 onClick={e => { e.stopPropagation(); setDetailEvent(ev); }}
-                                title={ev.title}
+                                title={ev.attendee_status === 'pending' ? `${ev.title} – čeká na potvrzení` : ev.title}
                               >
-                                <div className="font-semibold truncate pr-3">{ev.start_time?.slice(0, 5)} {ev.title}</div>
+                                <div className="font-semibold truncate pr-3">{ev.attendee_status === 'pending' ? '? ' : ''}{ev.start_time?.slice(0, 5)} {ev.title}</div>
                                 {heightPx > 30 && ev.end_time && (
                                   <div className="opacity-70 truncate">{ev.end_time.slice(0, 5)}</div>
                                 )}
@@ -3519,14 +3519,14 @@ function CalendarContent() {
                                 width: `calc(${colW}% - 4px)`,
                                 background: ev.color + '33',
                                 color: ev.color,
-                                border: `1px solid ${ev.color}66`,
+                                border: ev.attendee_status === 'pending' ? `2px dashed ${ev.color}` : `1px solid ${ev.color}66`,
                                 lineHeight: '15px',
                                 zIndex: ev._col + 1,
                               }}
                               onClick={e => { e.stopPropagation(); setDetailEvent(ev); }}
-                              title={ev.title}
+                              title={ev.attendee_status === 'pending' ? `${ev.title} – čeká na potvrzení` : ev.title}
                             >
-                              <div className="font-semibold truncate pr-4">{ev.start_time?.slice(0, 5)} {ev.title}</div>
+                              <div className="font-semibold truncate pr-4">{ev.attendee_status === 'pending' ? '? ' : ''}{ev.start_time?.slice(0, 5)} {ev.title}</div>
                               {heightPx > 35 && ev.end_time && (
                                 <div className="opacity-70">{ev.end_time.slice(0, 5)}</div>
                               )}
@@ -3963,19 +3963,22 @@ function CalendarContent() {
                                     <div className="flex flex-col md:flex-row gap-3 md:items-start">
                                       <div
                                         onClick={() => setDetailEvent(ev)}
-                                        className="group/ev w-full md:flex-1 min-w-0 flex items-start gap-3 p-3 rounded-lg border transition-colors"
+                                        className="group/ev w-full md:flex-1 min-w-0 flex items-start gap-3 p-3 rounded-lg transition-colors"
                                         style={{
-                                          borderColor: 'var(--border)',
+                                          borderWidth: ev.attendee_status === 'pending' ? 2 : 1,
+                                          borderStyle: ev.attendee_status === 'pending' ? 'dashed' : 'solid',
+                                          borderColor: ev.attendee_status === 'pending' ? ev.color : 'var(--border)',
                                           background: 'var(--bg-card)',
                                           cursor: 'pointer',
                                         }}
                                         onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
                                         onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-card)'; }}
+                                        title={ev.attendee_status === 'pending' ? `${ev.title} – čeká na potvrzení` : undefined}
                                       >
                                         <div className="w-1 self-stretch rounded-full flex-shrink-0" style={{ background: ev.color }} />
                                         <div className="flex-1 min-w-0">
                                           <div className="flex items-center gap-2 flex-wrap">
-                                            <span className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>{ev.title}</span>
+                                            <span className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>{ev.attendee_status === 'pending' ? '? ' : ''}{ev.title}</span>
                                             {ev.source === 'shared' ? (
                                               <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: ev.color + '22', color: ev.color }}>
                                                 {ev.shared_calendar_name && ev.shared_owner_name
