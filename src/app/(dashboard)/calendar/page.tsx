@@ -1010,6 +1010,7 @@ function CalendarContent() {
     // Scroll: force reflow a hned nastavit scrollTop
     void grid.offsetHeight;
     grid.scrollTop = calViewStart * ROW_H;
+    console.log('[CAL-SCROLL] useLayoutEffect: view=', view, 'calViewStart=', calViewStart, 'target=', calViewStart * ROW_H, 'scrollTop=', grid.scrollTop, 'scrollHeight=', grid.scrollHeight, 'clientHeight=', grid.clientHeight, 'gridH=', grid.style.height);
 
     // Resize listener (jen pro week view)
     if (view === 'week' && wrapper) {
@@ -2108,6 +2109,7 @@ function CalendarContent() {
     // Viditelná část – zaklampovat na 0–24 a uložit do localStorage
     const vs = Math.max(0, Math.min(23, calSettingsForm.viewStart));
     const ve = Math.max(vs + 1, Math.min(24, calSettingsForm.viewEnd));
+    console.log('[CAL-SCROLL] saveCalSettings: vs=', vs, 've=', ve, 'target=', vs * ROW_H, 'ROW_H=', ROW_H);
     setCalViewStart(vs);
     setCalViewEnd(ve);
     localStorage.setItem('trackino_cal_view_start', String(vs));
@@ -2116,11 +2118,12 @@ function CalendarContent() {
     // Explicitní scroll po zavření modalu – multi-stage fallback
     const doScroll = () => {
       const grid = weekGridRef.current;
-      if (grid) { void grid.offsetHeight; grid.scrollTop = vs * ROW_H; }
+      console.log('[CAL-SCROLL] doScroll: grid=', !!grid, 'scrollHeight=', grid?.scrollHeight, 'clientHeight=', grid?.clientHeight, 'target=', vs * ROW_H);
+      if (grid) { void grid.offsetHeight; grid.scrollTop = vs * ROW_H; console.log('[CAL-SCROLL] after set: scrollTop=', grid.scrollTop); }
     };
     requestAnimationFrame(() => requestAnimationFrame(doScroll));
     setTimeout(doScroll, 100);
-    setTimeout(doScroll, 250);
+    setTimeout(doScroll, 300);
   }
 
   // ── Navigace ──────────────────────────────────────────────────────────────
