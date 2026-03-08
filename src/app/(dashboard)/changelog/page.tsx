@@ -11,6 +11,11 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.44.4 – 8. 3. 2026</h3>
+<ul>
+  <li><strong>Kalendář – oprava scroll pozice při navigaci</strong> – při přepínání mezi dny/týdny (tlačítka zpět/vpřed a „Dnes") se mřížka nyní správně odscrolluje na nastavenou hodinu „Od" z Nastavení kalendáře. Dříve se scroll prováděl jen při prvním načtení stránky a při přepnutí pohledu.</li>
+</ul>
+
 <h3>v2.44.3 – 8. 3. 2026</h3>
 <ul>
   <li><strong>iOS zoom prevence – globální fix</strong> – na mobilních zařízeních (< 640px) se nyní automaticky nastavuje minimální font-size 16px na všech interaktivních prvcích (input, textarea, select, contenteditable). Toto zabraňuje iOS Safari automatickému přiblížení stránky při kliknutí do textového pole. Fix pokrývá celou aplikaci – Poznámky, Znalostní bázi, Prompty, Převodník textu, formuláře, vyhledávání a další.</li>

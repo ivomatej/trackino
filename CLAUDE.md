@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 8. 3. 2026 (v2.44.3)
+> Aktualizováno: 8. 3. 2026 (v2.44.4)
 
 ---
 
@@ -493,6 +493,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.44.4 | 8. 3. 2026 | Kalendář: oprava scroll pozice při navigaci – přidán currentDate do deps scroll useLayoutEffect+useEffect → scroll na calViewStart*ROW_H se spustí i při prev/next/today |
 | v2.44.3 | 8. 3. 2026 | Globální iOS zoom prevence: globals.css media query (max-width:640px) font-size:16px!important na input/textarea/select/[contenteditable] – pokrývá celou aplikaci; pravidlo přidáno do CLAUDE-ASISTENT.md |
 | v2.44.2 | 8. 3. 2026 | Poznámky: auto-clear názvu nové poznámky onFocus pokud title==='Nová poznámka' (stejný vzor jako KB) |
 | v2.44.1 | 8. 3. 2026 | KB: akce header vpravo na mobilu (self-end md:self-auto), fix tab scroll (touchAction:pan-x + overscrollBehavior:contain), ul/ol padding-left 20px→32px (prose-kb+prose-view), auto-clear titulku nové stránky onFocus pokud editTitle==='Nová stránka' |

@@ -1017,7 +1017,7 @@ function CalendarContent() {
     const grid = weekGridRef.current;
     if (!grid) return;
     grid.scrollTop = calViewStart * ROW_H;
-  }, [loading, view, calViewStart]);
+  }, [loading, view, calViewStart, currentDate]);
 
   useEffect(() => {
     if (view !== 'week' && view !== 'today') return;
@@ -1031,7 +1031,7 @@ function CalendarContent() {
       });
     });
     return () => { cancelAnimationFrame(r1); cancelAnimationFrame(r2); };
-  }, [loading, view, calViewStart]);
+  }, [loading, view, calViewStart, currentDate]);
 
   // Aktualizace aktuálního času každou minutu
   useEffect(() => {
