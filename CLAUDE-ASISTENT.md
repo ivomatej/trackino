@@ -53,11 +53,30 @@ Před implementací nového modulu nebo funkce se podívej do existujícího kó
 - **Color picker**: Po výběru barvy musí být zvolená barva vizuálně jasně oddělena od ostatních – zvýrazňovací kroužek (ring/outline) nesmí přesahovat do sousedních barev. Používej `ring-2 ring-offset-2 ring-[var(--primary)]` nebo ekvivalent s `outline-offset`. Vždy ověř, že se kroužek správně zobrazuje v tmavém i světlém režimu.
 
 ### 11. iOS auto-zoom prevence na inputech
-Na iOS Safari se stránka automaticky přiblíží (zoom), pokud má `<input>` nebo `<textarea>` menší `font-size` než **16px** (tj. méně než `text-base` v Tailwindu). Pravidla:
-- Vždy používej `text-base sm:text-sm` (nebo jen `text-base`) na všech interaktivních inputech a textareách, aby nedocházelo k automatickému přiblížení na iPhonu.
-- **Nikdy** nepoužívej `text-xs` nebo `text-sm` samotné na inputech, které uživatel aktivně vyplňuje (vyhledávací pole, formulářová pole, timer vstup atd.).
-- Výjimka: inputy ve vyskakovacích panelech (dropdown menu, picker) mohou mít `text-sm` pokud jsou malé – ale hlavní vstupní pole na stránce a v headeru musí mít `text-base`.
-- Toto platí pro všechny stránky a komponenty v celé aplikaci Trackino.
+Na iOS Safari se stránka automaticky přiblíží (zoom), pokud má `<input>`, `<textarea>`, `<select>` nebo `[contenteditable]` menší `font-size` než **16px** (tj. méně než `text-base` v Tailwindu).
+
+**Globální fix (platí automaticky pro celou aplikaci):**
+V `src/app/globals.css` existuje media query:
+```css
+@media screen and (max-width: 640px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  textarea, select, [contenteditable], [contenteditable="true"] {
+    font-size: 16px !important;
+  }
+}
+```
+Toto pravidlo **automaticky** zamezuje iOS zoom na všech interaktivních prvcích na mobilech. Nemusíš přidávat `text-base sm:text-sm` ručně pro účely iOS zoom – ale stále doporučuje pro sémanticky správný desktop styling.
+
+**Pravidla při psaní nových komponent:**
+- Vždy používej `text-base sm:text-sm` na všech interaktivních inputech a textareách pro správný desktop styling.
+- **Nikdy** nepoužívej `text-xs` nebo `text-sm` samotné na inputech, které uživatel aktivně vyplňuje.
+- Contenteditable divy (editory) nesmí mít `text-sm` bez `sm:` prefixu – iOS nemůže zoomovat kvůli globálnímu fixu, ale desktop styling by měl být správný.
+- Výjimka: inputy ve vyskakovacích panelech (dropdown menu, picker) mohou mít `text-sm` pokud jsou malé a nejsou primárním vstupem.
+
+**Checklist při přidávání nového modulu nebo funkce:**
+- [ ] Zkontroluj, zda všechny `<input>`, `<textarea>`, `<select>` a contenteditable divy mají `text-base sm:text-sm`
+- [ ] Contenteditable editory (KB, Poznámky, Prompty, atd.) nesmí mít jen `text-sm` bez `sm:` – globální CSS to opraví na mobilu, ale desktop může vypadat špatně
+- [ ] Otestuj na iPhonu, že při kliknutí do textového pole nedochází k zoom
 
 ### 12. Testovací prostředí
 - Testuji v **Google Chrome** na **produkci** (Vercel deploy)

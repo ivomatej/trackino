@@ -219,6 +219,21 @@ body {
   animation: fadeIn 0.2s ease-out;
 }
 
+/* ===== iOS auto-zoom prevence ===== */
+/* iOS Safari automaticky přiblíží stránku (zoom), pokud má interaktivní element
+   font-size menší než 16px (text-sm = 14px → ZOOM). Fix: na mobilech (< 640px)
+   vynucujeme min. 16px na všech editovatelných prvcích – input, textarea, select,
+   contenteditable. Na desktopu (sm:) se uplatní třída text-sm z Tailwindu. */
+@media screen and (max-width: 640px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  textarea,
+  select,
+  [contenteditable],
+  [contenteditable="true"] {
+    font-size: 16px !important;
+  }
+}
+
 /* ===== Fix: date/time input overflow na mobilních prohlížečích ===== */
 /* Na iOS Safari/Chrome má border-radius + overflow:hidden bez GPU vrstvu bug –
    neclipuje obsah. Fix: transform:translateZ(0) na containery (viz níže).
