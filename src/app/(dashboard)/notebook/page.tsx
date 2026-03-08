@@ -701,13 +701,15 @@ function NotebookContent() {
 
   const fetchMembers = useCallback(async () => {
     if (!wsId) return;
-    const { data } = await supabase.from('trackino_workspace_members').select('user_id, trackino_profiles(display_name, avatar_color, email)').eq('workspace_id', wsId);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (data) setMembers((data as any[]).map(m => ({
-      user_id: m.user_id,
-      display_name: Array.isArray(m.trackino_profiles) ? (m.trackino_profiles[0]?.display_name ?? 'Uživatel') : (m.trackino_profiles?.display_name ?? 'Uživatel'),
-      avatar_color: Array.isArray(m.trackino_profiles) ? (m.trackino_profiles[0]?.avatar_color ?? '#6366f1') : (m.trackino_profiles?.avatar_color ?? '#6366f1'),
-      email: Array.isArray(m.trackino_profiles) ? (m.trackino_profiles[0]?.email ?? '') : (m.trackino_profiles?.email ?? ''),
+    const { data: mData } = await supabase.from('trackino_workspace_members').select('user_id').eq('workspace_id', wsId);
+    const memberUserIds = (mData ?? []).map((m: { user_id: string }) => m.user_id);
+    if (memberUserIds.length === 0) return;
+    const { data: profData } = await supabase.from('trackino_profiles').select('id, display_name, email, avatar_color').in('id', memberUserIds);
+    if (profData) setMembers(profData.map((p: { id: string; display_name: string | null; email: string | null; avatar_color: string | null }) => ({
+      user_id: p.id,
+      display_name: p.display_name ?? 'Uživatel',
+      avatar_color: p.avatar_color ?? '#6366f1',
+      email: p.email ?? '',
     })));
   }, [wsId]);
 

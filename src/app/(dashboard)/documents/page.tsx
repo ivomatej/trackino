@@ -255,6 +255,7 @@ function DocumentsContent() {
   const [docForm, setDocForm] = useState<DocForm>({
     open: false, mode: 'file', name: '', url: '', description: '', folder_id: null,
   });
+  const [editingDoc, setEditingDoc] = useState<WorkspaceDocument | null>(null);
   const [savingDoc, setSavingDoc] = useState(false);
   const [deletingDoc, setDeletingDoc] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState('');
@@ -387,12 +388,34 @@ function DocumentsContent() {
     if (!docForm.name) setDocForm(f => ({ ...f, name: file.name.replace(/\.[^.]+$/, '') }));
   };
 
+  const openEditDoc = (doc: WorkspaceDocument) => {
+    setEditingDoc(doc);
+    setDocForm({ open: true, mode: doc.type, name: doc.name, url: doc.url ?? '', description: doc.description ?? '', folder_id: doc.folder_id });
+    setSelectedFile(null);
+    setUploadError('');
+  };
+
   const saveDocument = async () => {
     if (!wsId || !user) return;
     setSavingDoc(true);
     setUploadError('');
     try {
-      if (docForm.mode === 'file') {
+      if (editingDoc) {
+        // Editace existujícího dokumentu
+        const updates: Record<string, unknown> = {
+          name: docForm.name.trim() || editingDoc.name,
+          description: docForm.description.trim(),
+          folder_id: docForm.folder_id,
+          updated_at: new Date().toISOString(),
+        };
+        if (editingDoc.type === 'link') {
+          if (!docForm.url.trim()) { setUploadError('Zadejte URL adresu.'); setSavingDoc(false); return; }
+          updates.url = docForm.url.trim();
+          updates.name = docForm.name.trim() || docForm.url.trim();
+        }
+        await supabase.from('trackino_documents').update(updates).eq('id', editingDoc.id);
+        setEditingDoc(null);
+      } else if (docForm.mode === 'file') {
         if (!selectedFile) { setUploadError('Vyberte soubor.'); setSavingDoc(false); return; }
         const ext = selectedFile.name.split('.').pop() ?? '';
         const filePath = `${wsId}/${crypto.randomUUID()}.${ext}`;
@@ -668,13 +691,25 @@ function DocumentsContent() {
                         </svg>
                       </button>
                       {canManage && (
+                        <button onClick={() => openEditDoc(doc)} className="p-1.5 rounded" style={{ color: 'var(--text-muted)' }} title="Upravit"
+                          onMouseEnter={e => (e.currentTarget.style.color = 'var(--primary)')}
+                          onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                          </svg>
+                        </button>
+                      )}
+                      {canManage && (
                         <button onClick={() => deleteDocument(doc)} disabled={deletingDoc === doc.id}
                           className="p-1.5 rounded disabled:opacity-50" style={{ color: 'var(--text-muted)' }} title="Smazat"
                           onMouseEnter={e => (e.currentTarget.style.color = '#ef4444')}
                           onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}>
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points="3 6 5 6 21 6" />
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                            <path d="M10 11v6M14 11v6"/>
+                            <path d="M9 6V4h6v2"/>
                           </svg>
                         </button>
                       )}
@@ -784,22 +819,24 @@ function DocumentsContent() {
         </div>
       )}
 
-      {/* ── Modal: Přidat dokument ── */}
+      {/* ── Modal: Přidat / Upravit dokument ── */}
       {docForm.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={() => { setDocForm(f => ({ ...f, open: false })); setSelectedFile(null); setUploadError(''); }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={() => { setDocForm(f => ({ ...f, open: false })); setEditingDoc(null); setSelectedFile(null); setUploadError(''); }}>
           <div className="rounded-xl shadow-xl border p-6 w-full max-w-md" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }} onClick={e => e.stopPropagation()}>
-            <h2 className="text-base font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Přidat dokument</h2>
-            <div className="flex rounded-lg border overflow-hidden mb-4" style={{ borderColor: 'var(--border)' }}>
-              {(['file', 'link'] as const).map(mode => (
-                <button key={mode} onClick={() => { setDocForm(f => ({ ...f, mode })); setUploadError(''); setSelectedFile(null); }}
-                  className="flex-1 py-2 text-sm font-medium transition-colors"
-                  style={{ background: docForm.mode === mode ? 'var(--primary)' : 'var(--bg-hover)', color: docForm.mode === mode ? 'white' : 'var(--text-secondary)' }}>
-                  {mode === 'file' ? 'Soubor' : 'Odkaz (URL)'}
-                </button>
-              ))}
-            </div>
+            <h2 className="text-base font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>{editingDoc ? 'Upravit dokument' : 'Přidat dokument'}</h2>
+            {!editingDoc && (
+              <div className="flex rounded-lg border overflow-hidden mb-4" style={{ borderColor: 'var(--border)' }}>
+                {(['file', 'link'] as const).map(mode => (
+                  <button key={mode} onClick={() => { setDocForm(f => ({ ...f, mode })); setUploadError(''); setSelectedFile(null); }}
+                    className="flex-1 py-2 text-sm font-medium transition-colors"
+                    style={{ background: docForm.mode === mode ? 'var(--primary)' : 'var(--bg-hover)', color: docForm.mode === mode ? 'white' : 'var(--text-secondary)' }}>
+                    {mode === 'file' ? 'Soubor' : 'Odkaz (URL)'}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="space-y-3">
-              {docForm.mode === 'file' ? (
+              {!editingDoc && docForm.mode === 'file' ? (
                 <div>
                   <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
                     Soubor <span style={{ color: 'var(--text-muted)' }}>(max {MAX_FILE_SIZE_MB} MB)</span>
@@ -810,13 +847,13 @@ function DocumentsContent() {
                     <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{selectedFile.name} · {fmtSize(selectedFile.size)}</p>
                   )}
                 </div>
-              ) : (
+              ) : (!editingDoc || editingDoc.type === 'link') && docForm.mode === 'link' ? (
                 <div>
                   <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>URL adresa</label>
                   <input type="url" value={docForm.url} onChange={e => setDocForm(f => ({ ...f, url: e.target.value }))}
-                    className={inputCls} style={inputStyle} placeholder="https://…" autoFocus />
+                    className={inputCls} style={inputStyle} placeholder="https://…" autoFocus={!editingDoc} />
                 </div>
-              )}
+              ) : null}
               <div>
                 <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Název</label>
                 <input type="text" value={docForm.name} onChange={e => setDocForm(f => ({ ...f, name: e.target.value }))}
@@ -845,11 +882,11 @@ function DocumentsContent() {
               {uploadError && <p className="text-xs" style={{ color: '#ef4444' }}>{uploadError}</p>}
             </div>
             <div className="flex gap-2 justify-end mt-5">
-              <button onClick={() => { setDocForm({ open: false, mode: 'file', name: '', url: '', description: '', folder_id: null }); setSelectedFile(null); setUploadError(''); if (fileInputRef.current) fileInputRef.current.value = ''; }}
+              <button onClick={() => { setDocForm({ open: false, mode: 'file', name: '', url: '', description: '', folder_id: null }); setEditingDoc(null); setSelectedFile(null); setUploadError(''); if (fileInputRef.current) fileInputRef.current.value = ''; }}
                 className="px-4 py-2 rounded-lg text-sm border" style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}>Zrušit</button>
               <button onClick={saveDocument} disabled={savingDoc}
                 className="px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50" style={{ background: 'var(--primary)' }}>
-                {savingDoc ? 'Ukládám…' : 'Přidat'}
+                {savingDoc ? 'Ukládám…' : editingDoc ? 'Uložit' : 'Přidat'}
               </button>
             </div>
           </div>
