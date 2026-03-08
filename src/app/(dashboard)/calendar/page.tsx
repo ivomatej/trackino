@@ -1009,28 +1009,35 @@ function CalendarContent() {
 
   // ── Scroll na calViewStart ─────────────────────────────────────────────────
   // useLayoutEffect: synchronní scroll před prvním malováním (mobil – bez záblesku).
-  // useEffect s double-rAF: záložní scroll po stabilizaci layoutu (desktop – flex-1
-  // chain se může ustálit až po prvním paint, proto rAF zajistí správný scrollTop).
+  // void grid.offsetHeight zajistí reflow → Chrome aplikuje pending height changes.
   useLayoutEffect(() => {
     if (view !== 'week' && view !== 'today') return;
     if (loading) return;
     const grid = weekGridRef.current;
     if (!grid) return;
+    void grid.offsetHeight; // force reflow – zajistí správný scrollHeight
     grid.scrollTop = calViewStart * ROW_H;
   }, [loading, view, calViewStart, currentDate]);
 
+  // useEffect s multi-stage fallback: double-rAF + setTimeout pro desktop Chrome
+  // kde flex-1 chain se může ustálit až po několika paint cyklech.
   useEffect(() => {
     if (view !== 'week' && view !== 'today') return;
     if (loading) return;
     const target = calViewStart * ROW_H;
-    // double-rAF: počká 2 paint cykly, než flex-1 ustálí výšky → funguje na desktopu
+    const doScroll = () => {
+      const grid = weekGridRef.current;
+      if (grid) { void grid.offsetHeight; grid.scrollTop = target; }
+    };
     let r1: number, r2: number;
+    let t1: ReturnType<typeof setTimeout>;
+    let t2: ReturnType<typeof setTimeout>;
     r1 = requestAnimationFrame(() => {
-      r2 = requestAnimationFrame(() => {
-        if (weekGridRef.current) weekGridRef.current.scrollTop = target;
-      });
+      r2 = requestAnimationFrame(doScroll);
     });
-    return () => { cancelAnimationFrame(r1); cancelAnimationFrame(r2); };
+    t1 = setTimeout(doScroll, 80);
+    t2 = setTimeout(doScroll, 200);
+    return () => { cancelAnimationFrame(r1); cancelAnimationFrame(r2); clearTimeout(t1); clearTimeout(t2); };
   }, [loading, view, calViewStart, currentDate]);
 
   // Aktualizace aktuálního času každou minutu
@@ -2093,14 +2100,14 @@ function CalendarContent() {
     localStorage.setItem('trackino_cal_view_start', String(vs));
     localStorage.setItem('trackino_cal_view_end', String(ve));
     setShowCalSettings(false);
-    // Explicitní scroll po zavření modalu
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        if (weekGridRef.current) {
-          weekGridRef.current.scrollTop = vs * ROW_H;
-        }
-      });
-    });
+    // Explicitní scroll po zavření modalu – multi-stage fallback
+    const doScroll = () => {
+      const grid = weekGridRef.current;
+      if (grid) { void grid.offsetHeight; grid.scrollTop = vs * ROW_H; }
+    };
+    requestAnimationFrame(() => requestAnimationFrame(doScroll));
+    setTimeout(doScroll, 100);
+    setTimeout(doScroll, 250);
   }
 
   // ── Navigace ──────────────────────────────────────────────────────────────
