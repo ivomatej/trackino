@@ -1702,7 +1702,7 @@ function KnowledgeBaseContent() {
 
                 {/* Tabs (only for saved pages) */}
                 {!editing && !selectedPage.id.startsWith('__new__') && (
-                  <div className="border-t pt-6" style={{ borderColor: 'var(--border)' }}>
+                  <div className="border-t pt-6 pb-32" style={{ borderColor: 'var(--border)' }}>
                     <div className="flex flex-wrap gap-1 mb-4 border-b" style={{ borderColor: 'var(--border)' }}>
                       {((() => {
                         const backlinksCount = pages.filter(p => p.id !== selectedPage.id && p.content.includes(`data-page-id="${selectedPage.id}"`)).length;
