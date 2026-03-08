@@ -34,6 +34,7 @@ export const ALL_MODULES: { id: ModuleId; label: string; description: string; gr
   { id: 'company_rules',  label: 'Firemní pravidla',    description: 'Textová stránka s firemními pravidly a směrnicemi', group: 'Společnost' },
   { id: 'office_rules',   label: 'Pravidla v kanceláři', description: 'Textová stránka s pravidly provozu kanceláře',    group: 'Společnost' },
   { id: 'subscriptions', label: 'Předplatná',           description: 'Evidence a správa firemních předplatných a SaaS služeb', group: 'Nástroje' },
+  { id: 'domains',       label: 'Evidence domén',        description: 'Evidence a správa firemních domén',                      group: 'Nástroje' },
 ];
 
 /**
@@ -76,6 +77,7 @@ export const TARIFF_MODULES: Record<Tariff, ModuleId[]> = {
     'bookmarks',
     'notebook',
     'subscriptions',
+    'domains',
   ],
   max: [
     'time_tracker',
@@ -108,6 +110,7 @@ export const TARIFF_MODULES: Record<Tariff, ModuleId[]> = {
     'ai_assistant',
     'automation',
     'subscriptions',
+    'domains',
   ],
 };
 

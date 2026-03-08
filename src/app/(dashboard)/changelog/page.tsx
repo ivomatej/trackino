@@ -11,6 +11,21 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.48.0 – 8. 3. 2026</h3>
+<ul>
+  <li><strong>Nový modul: Evidence domén</strong> – samostatný modul pro evidenci firemních domén (sekce NÁSTROJE, tarif Pro a Max):
+    <ul>
+      <li><strong>Dashboard</strong> – 4 statistické karty: celkem, aktivní, expirující (do 30 dní), expirované</li>
+      <li><strong>Profil domény</strong> – název, registrátor, datum registrace/expirace, status, cíl/URL, projekt, firma, poznámky</li>
+      <li><strong>Automatický status Expirující</strong> – aktivní domény s expirací do 30 dní se zobrazují oranžově</li>
+      <li><strong>Spárování s předplatným</strong> – volitelné propojení domény s existujícím předplatným</li>
+      <li><strong>Řazení a filtrování</strong> – dle názvu, expirace, registrátora, statusu; filtr dle statusu a firmy; fulltext</li>
+      <li><strong>Oprávnění</strong> – nový toggle „Spravuje domény" v Týmu (can_manage_domains)</li>
+    </ul>
+  </li>
+  <li><strong>DB migrace</strong> – nová tabulka <code>trackino_domains</code>, sloupec <code>can_manage_domains</code> na <code>trackino_workspace_members</code></li>
+</ul>
+
 <h3>v2.47.1 – 8. 3. 2026</h3>
 <ul>
   <li><strong>Předplatná – Podkategorie</strong> – kategorie předplatných nyní podporují hierarchickou strukturu (nadřazená/podkategorie):

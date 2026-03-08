@@ -35,7 +35,8 @@ export type ModuleId =
   | 'notebook'
   | 'ai_assistant'
   | 'automation'
-  | 'subscriptions';
+  | 'subscriptions'
+  | 'domains';
 
 /** Per-uživatelský override modulu (nad rámec tarifu nebo zakázání) */
 export interface UserModuleOverride {
@@ -182,6 +183,7 @@ export interface WorkspaceMember {
   can_use_ai_assistant: boolean; // může používat AI asistenta (nad rámec role admin/owner)
   ai_allowed_models: string[] | null; // null = všechny modely; jinak jen uvedené model IDs
   can_manage_subscriptions: boolean; // může spravovat evidenci předplatných
+  can_manage_domains: boolean; // může spravovat evidenci domén
 }
 
 export interface ManagerAssignment {
@@ -986,4 +988,26 @@ export interface SubscriptionAccess {
   note: string;
   created_by: string;
   created_at: string;
+}
+
+// ─── EVIDENCE DOMÉN ──────────────────────────────────────────────────────
+
+export type DomainStatus = 'active' | 'expired' | 'transferred' | 'cancelled';
+
+export interface Domain {
+  id: string;
+  workspace_id: string;
+  name: string;
+  registrar: string;
+  subscription_id: string | null;
+  registration_date: string | null;
+  expiration_date: string | null;
+  status: DomainStatus;
+  notes: string;
+  target_url: string;
+  project_name: string;
+  company_name: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
 }

@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 8. 3. 2026 (v2.47.1)
+> Aktualizováno: 8. 3. 2026 (v2.48.0)
 
 ---
 
@@ -50,6 +50,7 @@ src/
       company-rules/  – Firemní pravidla – editovatelná textová stránka (tarif Pro a Max)
       office-rules/   – Pravidla v kanceláři – editovatelná textová stránka (tarif Pro a Max)
       subscriptions/  – Evidence předplatných (tarif Pro a Max)
+      domains/        – Evidence domén (tarif Pro a Max)
       app-settings/   – Nastavení modulů dle tarifu (admin)
       app-changes/    – Úpravy aplikace (admin)
       bugs/           – Hlášení chyb
@@ -139,6 +140,10 @@ Výchozí policy: `CREATE POLICY "Auth full" ... FOR ALL TO authenticated USING 
 | `trackino_subscription_access_users` | id, workspace_id, name, email, note, created_by, created_at, updated_at | Externí uživatelé pro evidenci přístupů (mimo workspace) |
 | `trackino_subscription_accesses` | id, workspace_id, subscription_id (FK CASCADE), user_id (nullable), external_user_id (FK nullable CASCADE), role, granted_at, note, created_by, created_at | Přiřazení uživatel→služba; CHECK: právě jeden z user_id/external_user_id NOT NULL; UNIQUE partial indexy |
 | `trackino_exchange_rates` | id, date (text YYYY-MM-DD), currency, rate (numeric), fetched_at | Globální cache kurzů ČNB (bez workspace_id); UNIQUE (date, currency) |
+| `trackino_domains` | id, workspace_id, name, registrar, subscription_id (FK nullable), registration_date, expiration_date, status (active/expired/transferred/cancelled), notes, target_url, project_name, company_name, created_by, created_at, updated_at | Evidence firemních domén; computed status „expiring" na klientu (active + ≤30 dní) |
+
+### Nové sloupce (v2.48.0)
+- `trackino_workspace_members.can_manage_domains boolean NOT NULL DEFAULT false` – oprávnění spravovat domény
 
 ### Nové sloupce (v2.46.0)
 - `trackino_workspace_members.can_manage_subscriptions boolean NOT NULL DEFAULT false` – oprávnění spravovat předplatná
@@ -163,7 +168,7 @@ type ModuleId = 'time_tracker' | 'planner' | 'calendar' | 'vacation' | 'invoices
   'attendance' | 'category_report' | 'subordinates' | 'notes' | 'projects' |
   'clients' | 'tags' | 'team' | 'settings' | 'audit' | 'text_converter' | 'important_days' |
   'requests' | 'feedback' | 'knowledge_base' | 'documents' | 'company_rules' | 'office_rules' |
-  'subscriptions';
+  'subscriptions' | 'domains';
 ```
 
 ### Výchozí moduly dle tarifu (hardcoded TARIFF_MODULES)
@@ -194,6 +199,7 @@ type ModuleId = 'time_tracker' | 'planner' | 'calendar' | 'vacation' | 'invoices
 | Pravidla v kanceláři (office_rules) | – | ✓ | ✓ |
 | Kalendář (calendar) | – | – | ✓ |
 | Předplatná (subscriptions) | – | ✓ | ✓ |
+| Evidence domén (domains) | – | ✓ | ✓ |
 
 ### computeEnabledModules()
 ```
@@ -207,7 +213,7 @@ Základ = TARIFF_MODULES[tariff]
 - `'Sledování'`: time_tracker, planner, calendar, vacation, invoices
 - `'Analýza'`: reports, attendance, category_report, subordinates, notes
 - `'Správa'`: projects, clients, tags, team, settings, audit
-- `'Nástroje'`: text_converter, important_days, requests, feedback, subscriptions
+- `'Nástroje'`: text_converter, important_days, requests, feedback, subscriptions, domains
 - `'Společnost'`: knowledge_base, documents, company_rules, office_rules
 
 ---
@@ -451,6 +457,7 @@ TARIFF_MODULES: Record<Tariff, ModuleId[]>
 | &nbsp;&nbsp;Firemní pravidla (rich text editor) | – | ✓ | ✓ |
 | &nbsp;&nbsp;Pravidla v kanceláři (rich text editor) | – | ✓ | ✓ |
 | **Předplatná** | – | ✓ | ✓ |
+| **Evidence domén** | – | ✓ | ✓ |
 
 ---
 
@@ -507,6 +514,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.48.0 | 8. 3. 2026 | Nový modul Evidence domén (domains, NÁSTROJE, Pro+Max) – evidence firemních domén; dashboard (celkem/aktivní/expirující/expirované); computed status „Expirující" (active + ≤30 dní do expirace, oranžové zvýraznění); spárování s předplatným (volitelné FK); tabulka s řazením (název/expirace/registrátor/status) + filtrování (status/firma/fulltext); detail modal; mobilní karty; oprávnění can_manage_domains v Týmu; 1 nová DB tabulka (trackino_domains) |
 | v2.47.1 | 8. 3. 2026 | Předplatná – Podkategorie: hierarchická struktura kategorií (parent_id na trackino_subscription_categories), stromové zobrazení v záložce Kategorie, tlačítko + pro rychlé přidání podkategorie, seskupený select ve formuláři předplatného, filtr zahrnuje podkategorie, kaskádové mazání |
 | v2.47.0 | 8. 3. 2026 | Předplatná – Evidence přístupů: 4. záložka „Přístupy" s 3 pohledy (Podle služby/Podle uživatele/Souhrnný přehled); interní i externí uživatelé; náklad na uživatele = měsíční_CZK / počet_přístupů; CRUD přístupů + externích uživatelů (modály); sekce Přístupy v detail modalu; ČNB kurzy – lazy DB cache (1× denně); 3 nové DB tabulky (trackino_subscription_access_users, trackino_subscription_accesses, trackino_exchange_rates přepis na globální cache) |
 | v2.46.0 | 8. 3. 2026 | Nový modul Předplatná (subscriptions, NÁSTROJE, Pro+Max) – evidence firemních předplatných a SaaS služeb; dashboard statistiky (aktivní/měsíčně/ročně/blížící se platby); 3 záložky (Předplatná/Tipy/Kategorie); CRUD s modálním formulářem (název, typ, stav, cena, měna, frekvence, priorita, obnova, URLs, společnost, registrační email, poznámky); hvězdičkové hodnocení (1-5, per-user); ČNB kurzovní lístek (/api/cnb-rates) pro přepočet EUR/USD→CZK; filtrování (stav/typ/kategorie) + fulltextové hledání + řazení; detail modal; kategorie s barvami; oprávnění can_manage_subscriptions v Týmu; 4 nové DB tabulky (trackino_subscription_categories/subscriptions/subscription_ratings/exchange_rates) |
@@ -2003,6 +2011,87 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_sub_access_user
 CREATE UNIQUE INDEX IF NOT EXISTS uq_sub_access_ext_user
   ON trackino_subscription_accesses (subscription_id, external_user_id)
   WHERE external_user_id IS NOT NULL;
+```
+
+---
+
+## 33. Evidence domén – architektura (domains/page.tsx)
+
+### Soubory
+| Soubor | Popis |
+|--------|-------|
+| `src/app/(dashboard)/domains/page.tsx` | Hlavní stránka modulu – dashboard, tabulka, CRUD, detail modal |
+
+### DB tabulka `trackino_domains`
+| Sloupec | Typ | Popis |
+|---------|-----|-------|
+| id | uuid | PK |
+| workspace_id | uuid | FK na trackino_workspaces |
+| name | text | Název domény (povinné) |
+| registrar | text | Název registrátora |
+| subscription_id | uuid (nullable) | FK na trackino_subscriptions (volitelné spárování) |
+| registration_date | text (nullable) | Datum registrace YYYY-MM-DD |
+| expiration_date | text (nullable) | Datum expirace YYYY-MM-DD |
+| status | text | active / expired / transferred / cancelled |
+| notes | text | Poznámky |
+| target_url | text | Cílová URL |
+| project_name | text | Název projektu |
+| company_name | text | Název firmy |
+| created_by | uuid | FK na auth.users |
+| created_at | timestamptz | Čas vytvoření |
+| updated_at | timestamptz | Čas poslední úpravy |
+
+### Computed status „Expirující"
+- **Není uložen v DB** – počítá se na klientu
+- `getDisplayStatus(domain)` → pokud `status === 'active'` a `expirationDate` ≤ 30 dní → vrací `'expiring'`
+- Expirující domény mají oranžově podbarvený řádek v tabulce (`#fef3c720`)
+- `daysUntilExpiration(date)` → počet dní do expirace (záporné = po expiraci)
+
+### Oprávnění
+```typescript
+const canManage = isMasterAdmin || isWorkspaceAdmin || currentMembership?.can_manage_domains;
+```
+
+### Spárování s předplatným
+- Select s existujícími aktivními předplatnými (jen pokud `hasModule('subscriptions')`)
+- Nullable FK `subscription_id` → při smazání předplatného se nastaví na NULL (ON DELETE SET NULL)
+
+### Dashboard (4 karty)
+- Celkem – všechny domény
+- Aktivní – `status === 'active'`
+- Expirující – computed, active + ≤30 dní
+- Expirované – `status === 'expired'`
+
+### Filtry a řazení
+- **Fulltext**: název, registrátor, firma, projekt, poznámky
+- **Status filtr**: active, expiring (computed), expired, transferred, cancelled
+- **Firma filtr**: select z unikátních company_name
+- **Řazení**: name, expiration_date, registrar, status
+
+### SQL migrace
+```sql
+CREATE TABLE IF NOT EXISTS trackino_domains (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES trackino_workspaces(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  registrar text NOT NULL DEFAULT '',
+  subscription_id uuid REFERENCES trackino_subscriptions(id) ON DELETE SET NULL,
+  registration_date text,
+  expiration_date text,
+  status text NOT NULL DEFAULT 'active' CHECK (status IN ('active','expired','transferred','cancelled')),
+  notes text NOT NULL DEFAULT '',
+  target_url text NOT NULL DEFAULT '',
+  project_name text NOT NULL DEFAULT '',
+  company_name text NOT NULL DEFAULT '',
+  created_by uuid NOT NULL REFERENCES auth.users(id),
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+ALTER TABLE trackino_domains ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Auth full" ON trackino_domains FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+ALTER TABLE trackino_workspace_members
+  ADD COLUMN IF NOT EXISTS can_manage_domains boolean NOT NULL DEFAULT false;
 ```
 
 ---

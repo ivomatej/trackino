@@ -284,6 +284,20 @@ const DEFAULT_HELP_CONTENT = `
 <p><strong>Externí uživatelé</strong> – lidé, kteří nejsou členy workspace (např. dodavatelé, externí konzultanti). Eviduje se jméno, email a poznámka. Smazání externího uživatele automaticky odebere všechny jeho přístupy.</p>
 <p><strong>Detail předplatného</strong> nyní obsahuje i sekci Přístupy s možností přidávat a odebírat uživatele přímo z detailu.</p>
 
+<h3>Evidence domén</h3>
+<p>Modul <strong>Evidence domén</strong> (sekce <strong>NÁSTROJE</strong>, tarif Pro a Max) slouží k evidenci a správě firemních domén s automatickým varováním před expirací.</p>
+<ul>
+  <li><strong>Dashboard</strong> – 4 statistické karty: celkem domén, aktivní, expirující (do 30 dní), expirované</li>
+  <li><strong>Profil domény</strong> – název domény, registrátor, datum registrace, datum expirace, status (Aktivní/Expirovaná/Převedená/Zrušená), cíl/web URL, projekt, firma, poznámky</li>
+  <li><strong>Automatický status Expirující</strong> – domény se statusem Aktivní, kterým do expirace zbývá 30 dní nebo méně, se automaticky zobrazují jako „Expirující" s oranžovým zvýrazněním v tabulce</li>
+  <li><strong>Spárování s předplatným</strong> – volitelné propojení domény s existujícím předplatným z modulu Předplatná (zobrazí se pouze pokud je modul Předplatná aktivní)</li>
+  <li><strong>Tabulkové zobrazení</strong> – sloupce: Název, Registrátor, Expirace (s počtem zbývajících dní), Stav, Firma, Akce</li>
+  <li><strong>Řazení</strong> – dle názvu, data expirace, registrátora, statusu</li>
+  <li><strong>Filtrování</strong> – dle statusu (včetně computed Expirující), dle firmy (select z unikátních firem), fulltextové hledání</li>
+  <li><strong>Detail modal</strong> – přehledné zobrazení všech údajů o doméně včetně klikatelného odkazu na cílový web</li>
+  <li><strong>Oprávnění</strong> – přidávat, upravovat a mazat domény mohou admini, vlastník workspace a členové s oprávněním „Spravuje domény" (nastavitelné v sekci Tým)</li>
+</ul>
+
 <h3>Oblíbené v levém menu</h3>
 <p>Funkce <strong>Oblíbené</strong> je dostupná pro tarify <strong>Pro a Max</strong>. Umožňuje přidat libovolnou položku z levého menu do sekce <strong>OBLÍBENÉ</strong>, která se zobrazuje úplně nahoře v navigaci.</p>
 <ul>
@@ -312,7 +326,7 @@ const DEFAULT_HELP_CONTENT = `
 <p>Aplikace je rozdělena do <strong>modulů</strong>, které lze zapnout nebo vypnout. Výchozí sada modulů závisí na tarifu workspace:</p>
 <ul>
   <li><strong>Free</strong> – Měřič, Reporty, Projekty, Klienti, Štítky, Tým</li>
-  <li><strong>Pro</strong> – Free + Plánovač, Dovolená, Fakturace, Přehled hodin, Analýza kategorií, Podřízení, Poznámky manažera, Nastavení, Převodník textu, Důležité dny, Žádosti, <strong>Prompty</strong>, <strong>Záložky</strong>, <strong>Předplatná</strong>, sekce Společnost (Znalostní báze, Dokumenty, Firemní pravidla, Pravidla v kanceláři, Připomínky) + funkce <strong>Oblíbené</strong> v levém menu</li>
+  <li><strong>Pro</strong> – Free + Plánovač, Dovolená, Fakturace, Přehled hodin, Analýza kategorií, Podřízení, Poznámky manažera, Nastavení, Převodník textu, Důležité dny, Žádosti, <strong>Prompty</strong>, <strong>Záložky</strong>, <strong>Předplatná</strong>, <strong>Evidence domén</strong>, sekce Společnost (Znalostní báze, Dokumenty, Firemní pravidla, Pravidla v kanceláři, Připomínky) + funkce <strong>Oblíbené</strong> v levém menu</li>
   <li><strong>Max</strong> – Pro + Audit log + Kalendář + <strong>AI asistent</strong></li>
 </ul>
 <p>Admin může v <strong>Nastavení → Moduly</strong> nastavit výjimky pro jednotlivé uživatele – přidat modul, který není v tarifu, nebo zakázat modul, který v tarifu je. Výjimky mají vždy přednost před výchozím tarifem. Moduly, které uživatel nemá povoleny, se nezobrazují v levém menu.</p>
