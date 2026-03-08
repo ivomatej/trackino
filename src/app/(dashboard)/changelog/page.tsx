@@ -11,6 +11,36 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.49.0 – 8. 3. 2026</h3>
+<ul>
+  <li><strong>Evidence domén – Registrátoři jako entita</strong>:
+    <ul>
+      <li>Nová záložka <strong>Registrátoři</strong> – CRUD správa registrátorů (název, webové stránky, poznámky)</li>
+      <li>Při vytváření/editaci domény se registrátor vybírá z <strong>roletky</strong> (místo volného textu)</li>
+      <li>Tlačítko <strong>+</strong> vedle roletky pro rychlé přidání nového registrátora přímo z formuláře domény</li>
+      <li>Tabulka registrátorů zobrazuje počet přiřazených domén, webové stránky a poznámky</li>
+      <li>Nový filtr dle registrátora v seznamu domén</li>
+    </ul>
+  </li>
+  <li><strong>Evidence domén – nový status Dobíhá</strong>:
+    <ul>
+      <li>Nový status <strong>Dobíhá</strong> (fialový) pro domény, u kterých smlouva/registrace dobíhá a nebude prodlužována</li>
+      <li>Dashboard rozšířen na 5 statistických karet (+ karta Dobíhá)</li>
+      <li>Řádky se statusem Dobíhá jsou zvýrazněny fialovým podbarvením</li>
+    </ul>
+  </li>
+  <li><strong>Kalendář – nový pohled 3 dny</strong>:
+    <ul>
+      <li>Nový pohled <strong>3 dny</strong> zobrazující předchozí den, dnešek a následující den v mřížce s časovou osou</li>
+      <li>Umístěn mezi Den a Týden v přepínači pohledů</li>
+      <li>Navigace tlačítky prev/next po jednom dni</li>
+      <li>Funguje nastavení kalendáře (volba časového rozsahu)</li>
+      <li>Zvýraznění dnešního dne, indikátor aktuálního času, celodenní události</li>
+    </ul>
+  </li>
+  <li><strong>DB migrace</strong> – nová tabulka <code>trackino_domain_registrars</code>; ALTER constraint na <code>trackino_domains.status</code> (přidán 'winding_down')</li>
+</ul>
+
 <h3>v2.48.0 – 8. 3. 2026</h3>
 <ul>
   <li><strong>Nový modul: Evidence domén</strong> – samostatný modul pro evidenci firemních domén (sekce NÁSTROJE, tarif Pro a Max):

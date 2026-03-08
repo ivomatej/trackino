@@ -73,7 +73,7 @@ interface BirthdayMember {
   birth_date: string; // YYYY-MM-DD
 }
 
-type ViewType = 'list' | 'week' | 'month' | 'today' | 'year';
+type ViewType = 'list' | 'week' | 'month' | 'today' | 'three_days' | 'year';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -777,7 +777,7 @@ function CalendarContent() {
   const [view, setView] = useState<ViewType>(() => {
     if (typeof window === 'undefined') return 'week';
     const saved = localStorage.getItem('trackino_calendar_view') as ViewType | null;
-    return (saved && (['today', 'week', 'month', 'year', 'list'] as string[]).includes(saved)) ? saved as ViewType : 'week';
+    return (saved && (['today', 'three_days', 'week', 'month', 'year', 'list'] as string[]).includes(saved)) ? saved as ViewType : 'week';
   });
   const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
   const [calendars, setCalendars] = useState<Calendar[]>([]);
@@ -987,7 +987,7 @@ function CalendarContent() {
   // Řešení: wrapper.style.flex = 'none' + explicitní height z viewportu
   // přeruší flex chain; grid uvnitř pak dostane omezenou výšku a scrolluje.
   useLayoutEffect(() => {
-    if (view !== 'week' && view !== 'today') return;
+    if (view !== 'week' && view !== 'today' && view !== 'three_days') return;
     if (loading) return;
 
     const wrapper = calWeekWrapperRef.current;
@@ -1017,7 +1017,7 @@ function CalendarContent() {
 
   // Fallback: setTimeout zajistí scroll i pokud useLayoutEffect nestihne
   useEffect(() => {
-    if (view !== 'week' && view !== 'today') return;
+    if (view !== 'week' && view !== 'today' && view !== 'three_days') return;
     if (loading) return;
     const target = calViewStart * ROW_H;
     const doScroll = () => {
@@ -2135,6 +2135,7 @@ function CalendarContent() {
     const d = new Date(currentDate);
     if (view === 'week') d.setDate(d.getDate() - 7);
     else if (view === 'today') d.setDate(d.getDate() - 1);
+    else if (view === 'three_days') d.setDate(d.getDate() - 1);
     else if (view === 'year') d.setFullYear(d.getFullYear() - 1);
     else d.setMonth(d.getMonth() - 1);
     setCurrentDate(d);
@@ -2145,6 +2146,7 @@ function CalendarContent() {
     const d = new Date(currentDate);
     if (view === 'week') d.setDate(d.getDate() + 7);
     else if (view === 'today') d.setDate(d.getDate() + 1);
+    else if (view === 'three_days') d.setDate(d.getDate() + 1);
     else if (view === 'year') d.setFullYear(d.getFullYear() + 1);
     else d.setMonth(d.getMonth() + 1);
     setCurrentDate(d);
@@ -2166,6 +2168,10 @@ function CalendarContent() {
       const todayStart = new Date(currentDate); todayStart.setHours(0, 0, 0, 0);
       const todayEnd = new Date(currentDate); todayEnd.setHours(23, 59, 59, 999);
       return { start: todayStart, end: todayEnd };
+    } else if (view === 'three_days') {
+      const start = addDays(new Date(currentDate), -1); start.setHours(0, 0, 0, 0);
+      const end = addDays(new Date(currentDate), 1); end.setHours(23, 59, 59, 999);
+      return { start, end };
     } else if (view === 'year') {
       const year = currentDate.getFullYear();
       return { start: new Date(year, 0, 1), end: new Date(year, 11, 31) };
@@ -2526,6 +2532,12 @@ function CalendarContent() {
     if (view === 'today') {
       return currentDate.toLocaleDateString('cs-CZ', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     }
+    if (view === 'three_days') {
+      const d1 = addDays(new Date(currentDate), -1);
+      const d3 = addDays(new Date(currentDate), 1);
+      const fmt = (d: Date) => d.toLocaleDateString('cs-CZ', { day: 'numeric', month: 'numeric' });
+      return `${fmt(d1)} – ${fmt(d3)}`;
+    }
     if (view === 'year') {
       return String(currentDate.getFullYear());
     }
@@ -2663,7 +2675,7 @@ function CalendarContent() {
 
         {/* Přepínač pohledu – v hlavičce */}
         <div className="flex rounded-lg overflow-hidden border flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
-          {(['today', 'week', 'month', 'year', 'list'] as ViewType[]).map(v => (
+          {(['today', 'three_days', 'week', 'month', 'year', 'list'] as ViewType[]).map(v => (
             <button
               key={v}
               onClick={() => { if (v === 'today') { const t = new Date(); setCurrentDate(t); setMiniCalDate(t); } setView(v); }}
@@ -2673,7 +2685,7 @@ function CalendarContent() {
                 color: view === v ? 'white' : 'var(--text-secondary)',
               }}
             >
-              {v === 'today' ? 'Den' : v === 'week' ? 'Týden' : v === 'month' ? 'Měsíc' : v === 'year' ? 'Rok' : 'Seznam'}
+              {v === 'today' ? 'Den' : v === 'three_days' ? '3 dny' : v === 'week' ? 'Týden' : v === 'month' ? 'Měsíc' : v === 'year' ? 'Rok' : 'Seznam'}
             </button>
           ))}
         </div>
@@ -3771,6 +3783,187 @@ function CalendarContent() {
                   </div>
                 </div>
               )}
+
+              {/* ══ POHLED 3 DNY ═════════════════════════════════════════════ */}
+              {view === 'three_days' && (() => {
+                const threeDays = [addDays(new Date(currentDate), -1), new Date(currentDate), addDays(new Date(currentDate), 1)];
+                return (
+                  <div ref={calWeekWrapperRef} className="flex-1 flex flex-col overflow-x-auto overflow-y-hidden" style={{ minHeight: 0 }}>
+                    <div className="flex flex-col" style={{ minWidth: 400, height: '100%' }}>
+                    {/* Záhlaví dnů */}
+                    <div className="flex-shrink-0 flex border-b" style={{ borderColor: 'var(--border)', background: 'var(--bg-card)' }}>
+                      <div className="flex-shrink-0 border-r" style={{ width: 56, borderColor: 'var(--border)' }} />
+                      {threeDays.map((day, i) => {
+                        const isToday = isSameDay(day, today);
+                        const dayIdx = (day.getDay() + 6) % 7;
+                        return (
+                          <div
+                            key={i}
+                            className="flex-1 text-center py-2 border-r last:border-r-0"
+                            style={{
+                              borderColor: 'var(--border)',
+                              background: isToday ? 'color-mix(in srgb, var(--primary) 5%, transparent)' : 'transparent',
+                            }}
+                          >
+                            <div className="text-[10px] font-semibold uppercase mb-0.5" style={{ color: 'var(--text-muted)' }}>
+                              {DAY_NAMES_SHORT[dayIdx]}
+                            </div>
+                            <div
+                              className="w-7 h-7 mx-auto flex items-center justify-center rounded-full text-sm font-semibold"
+                              style={{
+                                background: isToday ? 'var(--primary)' : 'transparent',
+                                color: isToday ? 'white' : 'var(--text-primary)',
+                              }}
+                            >
+                              {day.getDate()}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Pás celodennních událostí */}
+                    {(() => {
+                      const allDayRows = threeDays.map(day =>
+                        eventsOnDay(day).filter(ev => ev.is_all_day || !ev.start_time)
+                      );
+                      const hasAny = allDayRows.some(r => r.length > 0);
+                      if (!hasAny) return null;
+                      return (
+                        <div className="flex-shrink-0 flex border-b" style={{ borderColor: 'var(--border)', background: 'var(--bg-card)' }}>
+                          <div
+                            className="flex-shrink-0 border-r flex items-center justify-end pr-1.5"
+                            style={{ width: 56, borderColor: 'var(--border)' }}
+                          >
+                            <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>celý den</span>
+                          </div>
+                          {threeDays.map((day, i) => {
+                            const isToday = isSameDay(day, today);
+                            return (
+                              <div
+                                key={i}
+                                className="flex-1 border-r last:border-r-0 p-0.5 min-h-[28px] space-y-0.5"
+                                style={{
+                                  borderColor: 'var(--border)',
+                                  background: isToday ? 'color-mix(in srgb, var(--primary) 5%, transparent)' : 'transparent',
+                                }}
+                              >
+                                {allDayRows[i].map(ev => (
+                                  <EventPill key={ev.id} ev={ev} compact wrap />
+                                ))}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+
+                    {/* Časová mřížka */}
+                    <div ref={weekGridRef} className="flex-1 overflow-y-auto overflow-x-hidden sidebar-scroll" style={{ minHeight: 0 }}>
+                    <div className="flex">
+                      {/* Sloupec hodin */}
+                      <div className="flex-shrink-0 border-r" style={{ width: 56, borderColor: 'var(--border)' }}>
+                        {Array.from({ length: 24 }, (_, i) => (
+                          <div
+                            key={i}
+                            className="relative border-b"
+                            style={{ height: ROW_H, borderColor: 'var(--border)' }}
+                          >
+                            <span className="absolute text-[10px] right-1.5 top-1" style={{ color: 'var(--text-muted)' }}>
+                              {String(i).padStart(2, '0')}:00
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Sloupce dnů */}
+                      {threeDays.map((day, dayIdx) => {
+                        const timedEvs = eventsOnDay(day).filter(ev => !ev.is_all_day && ev.start_time);
+                        const isToday = isSameDay(day, today);
+                        return (
+                          <div
+                            key={dayIdx}
+                            className="flex-1 border-r last:border-r-0 relative"
+                            style={{
+                              borderColor: 'var(--border)',
+                              background: isToday ? 'color-mix(in srgb, var(--primary) 3%, transparent)' : 'transparent',
+                            }}
+                          >
+                            {/* Hodinové linky */}
+                            {Array.from({ length: 24 }, (_, i) => (
+                              <div
+                                key={i}
+                                className="border-b cursor-pointer transition-colors"
+                                style={{ height: ROW_H, borderColor: 'var(--border)' }}
+                                onClick={() => openNewEvent(toDateStr(day), i)}
+                                onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+                                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                              />
+                            ))}
+
+                            {/* Indikátor aktuálního času */}
+                            {isToday && (
+                              <div
+                                className="absolute left-0 right-0 pointer-events-none"
+                                style={{ top: nowTopPx, zIndex: 5 }}
+                              >
+                                <div
+                                  className="absolute w-2 h-2 rounded-full"
+                                  style={{ background: '#ef4444', left: 2, top: -4 }}
+                                />
+                                <div
+                                  className="absolute left-0 right-0"
+                                  style={{ height: 2, background: '#ef4444', opacity: 0.85, top: -1 }}
+                                />
+                              </div>
+                            )}
+
+                            {/* Timed events */}
+                            {layoutTimedEvents(timedEvs).map(ev => {
+                              const topPx = Math.max(0, ev._startMin * (ROW_H / 60));
+                              const heightPx = Math.max(20, (ev._endMin - ev._startMin) * (ROW_H / 60));
+                              const colW = 100 / ev._totalCols;
+                              const leftPct = ev._col * colW;
+                              const isDeclined = ev.attendee_status === 'declined';
+                              const isMaybe = ev.attendee_status === 'maybe';
+                              const isPendingOrUpdated = ev.attendee_status === 'pending' || ev.attendee_status === 'updated';
+                              const prefix = isPendingOrUpdated ? '? ' : isMaybe ? '~ ' : '';
+                              return (
+                                <div
+                                  key={ev.id}
+                                  className="absolute rounded px-1.5 py-0.5 text-xs font-medium overflow-hidden cursor-pointer"
+                                  style={{
+                                    top: topPx,
+                                    height: heightPx,
+                                    left: `calc(${leftPct}% + 2px)`,
+                                    width: `calc(${colW}% - 4px)`,
+                                    background: isDeclined ? ev.color + '11' : ev.color + '33',
+                                    color: isDeclined ? ev.color + '88' : ev.color,
+                                    border: isPendingOrUpdated ? `2px dashed ${ev.color}` : isMaybe ? `1px dashed ${ev.color}88` : `1px solid ${ev.color}66`,
+                                    lineHeight: '14px',
+                                    zIndex: ev._col + 1,
+                                    opacity: isDeclined ? 0.5 : 1,
+                                    textDecoration: isDeclined ? 'line-through' : 'none',
+                                  }}
+                                  onClick={e => { e.stopPropagation(); setDetailEvent(ev); }}
+                                  title={isPendingOrUpdated ? `${ev.title} – čeká na potvrzení` : ev.attendee_status === 'updated' ? `${ev.title} – událost byla změněna` : isDeclined ? `${ev.title} – odmítnuto` : isMaybe ? `${ev.title} – nezávazně` : ev.title}
+                                >
+                                  <div className="font-semibold truncate pr-3">{prefix}{ev.start_time?.slice(0, 5)} {ev.title}</div>
+                                  {heightPx > 32 && ev.end_time && (
+                                    <div className="opacity-70 truncate">{ev.end_time.slice(0, 5)}</div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* ══ DNES POHLED ══════════════════════════════════════════════ */}
               {view === 'today' && (() => {

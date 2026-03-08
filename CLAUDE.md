@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 8. 3. 2026 (v2.48.0)
+> Aktualizováno: 8. 3. 2026 (v2.49.0)
 
 ---
 
@@ -140,6 +140,7 @@ Výchozí policy: `CREATE POLICY "Auth full" ... FOR ALL TO authenticated USING 
 | `trackino_subscription_access_users` | id, workspace_id, name, email, note, created_by, created_at, updated_at | Externí uživatelé pro evidenci přístupů (mimo workspace) |
 | `trackino_subscription_accesses` | id, workspace_id, subscription_id (FK CASCADE), user_id (nullable), external_user_id (FK nullable CASCADE), role, granted_at, note, created_by, created_at | Přiřazení uživatel→služba; CHECK: právě jeden z user_id/external_user_id NOT NULL; UNIQUE partial indexy |
 | `trackino_exchange_rates` | id, date (text YYYY-MM-DD), currency, rate (numeric), fetched_at | Globální cache kurzů ČNB (bez workspace_id); UNIQUE (date, currency) |
+| `trackino_domain_registrars` | id, workspace_id, name, website_url, notes, created_by, created_at, updated_at | Registrátoři domén (entita pro select ve formuláři domény) |
 | `trackino_domains` | id, workspace_id, name, registrar, subscription_id (FK nullable), registration_date, expiration_date, status (active/expired/transferred/cancelled), notes, target_url, project_name, company_name, created_by, created_at, updated_at | Evidence firemních domén; computed status „expiring" na klientu (active + ≤30 dní) |
 
 ### Nové sloupce (v2.48.0)
@@ -514,6 +515,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.49.0 | 8. 3. 2026 | Evidence domén – Registrátoři jako entita: nová záložka Registrátoři s CRUD (název, web, poznámky), select registrátora ve formuláři domény (místo volného textu), tlačítko + pro rychlé přidání, filtr dle registrátora; nový status Dobíhá (winding_down, fialový); dashboard rozšířen na 5 karet; Kalendář – nový pohled 3 dny: 3sloupcová mřížka (předchozí/dnešek/další den) s časovou osou, navigace po 1 dni, nastavení časového rozsahu, celodenní události; 1 nová DB tabulka (trackino_domain_registrars) |
 | v2.48.0 | 8. 3. 2026 | Nový modul Evidence domén (domains, NÁSTROJE, Pro+Max) – evidence firemních domén; dashboard (celkem/aktivní/expirující/expirované); computed status „Expirující" (active + ≤30 dní do expirace, oranžové zvýraznění); spárování s předplatným (volitelné FK); tabulka s řazením (název/expirace/registrátor/status) + filtrování (status/firma/fulltext); detail modal; mobilní karty; oprávnění can_manage_domains v Týmu; 1 nová DB tabulka (trackino_domains) |
 | v2.47.1 | 8. 3. 2026 | Předplatná – Podkategorie: hierarchická struktura kategorií (parent_id na trackino_subscription_categories), stromové zobrazení v záložce Kategorie, tlačítko + pro rychlé přidání podkategorie, seskupený select ve formuláři předplatného, filtr zahrnuje podkategorie, kaskádové mazání |
 | v2.47.0 | 8. 3. 2026 | Předplatná – Evidence přístupů: 4. záložka „Přístupy" s 3 pohledy (Podle služby/Podle uživatele/Souhrnný přehled); interní i externí uživatelé; náklad na uživatele = měsíční_CZK / počet_přístupů; CRUD přístupů + externích uživatelů (modály); sekce Přístupy v detail modalu; ČNB kurzy – lazy DB cache (1× denně); 3 nové DB tabulky (trackino_subscription_access_users, trackino_subscription_accesses, trackino_exchange_rates přepis na globální cache) |
@@ -682,12 +684,14 @@ AppChangeStatus = 'open' | 'in_progress' | 'solved' | 'archived'
 
 ### Pohledy
 - `'list'` – chronologický výpis po měsících, 6 měsíců dopředu od začátku aktuálního měsíce
+- `'today'` – jeden den s časovou osou (24h mřížka)
+- `'three_days'` – 3 sloupce (předchozí den, dnešek, další den) s časovou osou, navigace po 1 dni (v2.49.0)
 - `'week'` – 7 sloupců (Po–Ne), `getMonday(currentDate)` jako začátek
 - `'month'` – mřížka; týdny začínají pondělím; dny mimo měsíc jsou šedě podbarveny
 
 ### View switcher (v2.15.0)
 - Přesunut z levého panelu do **top headeru** (vedle „Přidat událost")
-- Tlačítka: „Seznam" / „Týden" / „Měsíc" (plné texty, ne zkratky)
+- Tlačítka: „Den" / „3 dny" / „Týden" / „Měsíc" / „Rok" / „Seznam"
 - Responzivní: `px-2.5 sm:px-3.5 py-1.5 text-xs sm:text-sm font-medium`
 - „Přidat událost" button: `<span className="hidden sm:inline">Přidat událost</span><span className="sm:hidden">Přidat</span>`
 

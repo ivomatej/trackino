@@ -992,7 +992,7 @@ export interface SubscriptionAccess {
 
 // ─── EVIDENCE DOMÉN ──────────────────────────────────────────────────────
 
-export type DomainStatus = 'active' | 'expired' | 'transferred' | 'cancelled';
+export type DomainStatus = 'active' | 'expired' | 'transferred' | 'cancelled' | 'winding_down';
 
 export interface Domain {
   id: string;
@@ -1007,6 +1007,17 @@ export interface Domain {
   target_url: string;
   project_name: string;
   company_name: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DomainRegistrar {
+  id: string;
+  workspace_id: string;
+  name: string;
+  website_url: string;
+  notes: string;
   created_by: string;
   created_at: string;
   updated_at: string;

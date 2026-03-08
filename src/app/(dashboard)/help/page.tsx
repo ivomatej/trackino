@@ -97,7 +97,7 @@ const DEFAULT_HELP_CONTENT = `
 </ul>
 <p><strong>Nastavení kalendáře:</strong> Tlačítko ⚙ v levém panelu otevře nastavení <em>Viditelné oblasti</em>. Selekty <strong>Od</strong> a <strong>Do</strong> určují, která část dne se zobrazí v okně bez scrollování – zároveň nastavují výšku okna i počáteční scroll pozici. Například 9:00–17:00 zobrazí přesně 8 hodinových řádků. Mimo tuto oblast lze pohybovat scrollem (celá 24h mřížka je vždy dostupná). Scroll pozice se automaticky nastaví při načtení stránky, přepnutí pohledu i navigaci mezi dny/týdny (tlačítka ← Dnes →). Nastavení se ukládá do localStorage prohlížeče.</p>
 <p><strong>Checkboxy v levém panelu:</strong> Každý kalendář a odběr má barevné zaškrtávátko vlevo. Fajfka je vždy bílá, takže je dobře čitelná i u světlých barev (žlutá, oranžová apod.). Kliknutím zaškrtávátko přepnete viditelnost daného kalendáře.</p>
-<p><strong>Přidání události:</strong> Klikněte na tlačítko <em>+ Přidat událost</em>, nebo klikněte přímo na den v měsíčním pohledu. V pohledech Týden a Den klikněte na konkrétní hodinový slot (např. 14:00) – formulář se otevře s automaticky předvyplněným časem 14:00–15:00 (přepínač Celý den bude vypnutý). Formulář události nabízí rozšířená pole:</p>
+<p><strong>Přidání události:</strong> Klikněte na tlačítko <em>+ Přidat událost</em>, nebo klikněte přímo na den v měsíčním pohledu. V pohledech Týden, 3 dny a Den klikněte na konkrétní hodinový slot (např. 14:00) – formulář se otevře s automaticky předvyplněným časem 14:00–15:00 (přepínač Celý den bude vypnutý). Formulář události nabízí rozšířená pole:</p>
 <ul>
   <li><strong>Název</strong> – povinné pole</li>
   <li><strong>Kalendář</strong> – vyberte, do kterého vašeho kalendáře se událost uloží</li>
@@ -287,13 +287,15 @@ const DEFAULT_HELP_CONTENT = `
 <h3>Evidence domén</h3>
 <p>Modul <strong>Evidence domén</strong> (sekce <strong>NÁSTROJE</strong>, tarif Pro a Max) slouží k evidenci a správě firemních domén s automatickým varováním před expirací.</p>
 <ul>
-  <li><strong>Dashboard</strong> – 4 statistické karty: celkem domén, aktivní, expirující (do 30 dní), expirované</li>
-  <li><strong>Profil domény</strong> – název domény, registrátor, datum registrace, datum expirace, status (Aktivní/Expirovaná/Převedená/Zrušená), cíl/web URL, projekt, firma, poznámky</li>
+  <li><strong>Dashboard</strong> – 5 statistických karet: celkem domén, aktivní, expirující (do 30 dní), dobíhá, expirované</li>
+  <li><strong>Profil domény</strong> – název domény, registrátor (výběr z entity), datum registrace, datum expirace, status (Aktivní/Dobíhá/Expirovaná/Převedená/Zrušená), cíl/web URL, projekt, firma, poznámky</li>
   <li><strong>Automatický status Expirující</strong> – domény se statusem Aktivní, kterým do expirace zbývá 30 dní nebo méně, se automaticky zobrazují jako „Expirující" s oranžovým zvýrazněním v tabulce</li>
+  <li><strong>Status Dobíhá</strong> – manuální status pro domény, u kterých smlouva/registrace dobíhá a nebude prodlužována (fialové zvýraznění)</li>
+  <li><strong>Registrátoři</strong> – záložka Registrátoři umožňuje spravovat seznam registrátorů (WEDOS, Forpsi, Cloudflare apod.) s názvem, webovou stránkou a poznámkami. Při tvorbě/editaci domény se registrátor vybírá z roletky. Nového registrátora lze přidat tlačítkem + přímo z formuláře domény.</li>
   <li><strong>Spárování s předplatným</strong> – volitelné propojení domény s existujícím předplatným z modulu Předplatná (zobrazí se pouze pokud je modul Předplatná aktivní)</li>
   <li><strong>Tabulkové zobrazení</strong> – sloupce: Název, Registrátor, Expirace (s počtem zbývajících dní), Stav, Firma, Akce</li>
   <li><strong>Řazení</strong> – dle názvu, data expirace, registrátora, statusu</li>
-  <li><strong>Filtrování</strong> – dle statusu (včetně computed Expirující), dle firmy (select z unikátních firem), fulltextové hledání</li>
+  <li><strong>Filtrování</strong> – dle statusu (včetně computed Expirující), dle registrátora, dle firmy, fulltextové hledání</li>
   <li><strong>Detail modal</strong> – přehledné zobrazení všech údajů o doméně včetně klikatelného odkazu na cílový web</li>
   <li><strong>Oprávnění</strong> – přidávat, upravovat a mazat domény mohou admini, vlastník workspace a členové s oprávněním „Spravuje domény" (nastavitelné v sekci Tým)</li>
 </ul>
@@ -399,7 +401,7 @@ const DEFAULT_HELP_CONTENT = `
 <p>Na mobilních zařízeních (telefon) lze panel Měřiče přesunout ze záhlaví ke <strong>spodní hraně obrazovky</strong> jako pevnou lištu. Zapněte v <strong>Detailní nastavení → Zobrazení aplikace</strong> přepínač <em>„Měřič u spodní hrany obrazovky (pouze mobil)"</em>. Na desktopu a tabletu tato volba nemá žádný efekt – Měřič tam zůstává v záhlaví. Při aktivní spodní liště se obsah stránky automaticky odsadí. Lišta respektuje bezpečnou oblast displeje (safe area) – na iPhonech se zaoblenými displeji jsou tlačítka dostatečně daleko od hrany. Obě volby lze kombinovat: „záhlaví na všech stránkách" řídí <em>zda</em> se Měřič zobrazí, „spodní hrana" řídí <em>kde</em> se zobrazí na mobilu.</p>
 
 <h3>Pozvánky v Kalendáři</h3>
-<p>Pokud vás někdo pozval na událost, najdete všechny pozvánky na jednom místě – tlačítkem <strong>Pozvánky</strong> (ikona obálky) v horním záhlaví Kalendáře, přístupné ze všech pohledů (Den / Týden / Měsíc / Seznam). Červený odznak na tlačítku ukazuje počet pozvánek čekajících na odpověď.</p>
+<p>Pokud vás někdo pozval na událost, najdete všechny pozvánky na jednom místě – tlačítkem <strong>Pozvánky</strong> (ikona obálky) v horním záhlaví Kalendáře, přístupné ze všech pohledů (Den / 3 dny / Týden / Měsíc / Seznam). Červený odznak na tlačítku ukazuje počet pozvánek čekajících na odpověď.</p>
 <p>V panelu Pozvánky:</p>
 <ul>
   <li>Filtrujte dle stavu: <strong>Vše / Čeká na odpověď / Přijato / Nezávazně / Odmítnuto</strong></li>
