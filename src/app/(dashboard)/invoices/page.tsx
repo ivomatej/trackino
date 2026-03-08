@@ -746,7 +746,7 @@ function InvoicesContent() {
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                    <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
                       {fmtMonth(inv.billing_period_year, inv.billing_period_month)}
                     </span>
                   </div>
@@ -754,25 +754,35 @@ function InvoicesContent() {
                     <span className="text-xs" style={{ color: 'var(--text-muted)' }}>VS: {inv.variable_symbol}</span>
                     <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Vystaveno: {fmtDate(inv.issue_date)}</span>
                     <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Splatnost: {fmtDate(inv.due_date)}</span>
-                    {inv.total_hours !== null && (
-                      <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{inv.total_hours} h</span>
-                    )}
-                    {inv.amount !== null && (
-                      <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
-                        {inv.amount.toLocaleString('cs-CZ')} {currencySymbol}
-                      </span>
-                    )}
-                    {inv.approved_at && (
-                      <span className="text-xs" style={{ color: '#1e40af' }}>
-                        Schváleno: {fmtDate(inv.approved_at.split('T')[0])}
-                      </span>
-                    )}
-                    {inv.paid_at && (
-                      <span className="text-xs font-medium" style={{ color: '#15803d' }}>
-                        Proplaceno: {fmtDate(inv.paid_at.split('T')[0])}
-                      </span>
-                    )}
                   </div>
+                  {(inv.amount !== null || inv.total_hours !== null) && (
+                    <div className="flex items-center gap-1 mt-0.5">
+                      {inv.amount !== null && (
+                        <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                          {inv.amount.toLocaleString('cs-CZ')} {currencySymbol}
+                        </span>
+                      )}
+                      {inv.total_hours !== null && (
+                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                          ({inv.total_hours} h)
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {(inv.approved_at || inv.paid_at) && (
+                    <div className="flex items-center gap-3 mt-0.5">
+                      {inv.approved_at && (
+                        <span className="text-xs" style={{ color: '#1e40af' }}>
+                          Schváleno: {fmtDate(inv.approved_at.split('T')[0])}
+                        </span>
+                      )}
+                      {inv.paid_at && (
+                        <span className="text-xs font-medium" style={{ color: '#15803d' }}>
+                          Proplaceno: {fmtDate(inv.paid_at.split('T')[0])}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   {renderStatusBadge(inv.status)}
