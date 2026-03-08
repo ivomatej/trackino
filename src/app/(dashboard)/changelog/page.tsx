@@ -11,6 +11,21 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.47.0 – 8. 3. 2026</h3>
+<ul>
+  <li><strong>Předplatná – Evidence přístupů</strong> – nová 4. záložka „Přístupy" v modulu Předplatná umožňuje evidovat, kteří uživatelé mají přístup ke kterým službám:
+    <ul>
+      <li><strong>Dva typy uživatelů</strong> – interní (členové workspace) a externí (přidaní manuálně – jméno, email, poznámka)</li>
+      <li><strong>Podle služby</strong> – seznam uživatelů s přístupem ke každé službě, počet uživatelů, měsíční cena, náklad na uživatele</li>
+      <li><strong>Podle uživatele</strong> – dvě sekce (interní/externí), seznam služeb u každého uživatele, celkový měsíční náklad</li>
+      <li><strong>Souhrnný přehled</strong> – seřaditelná tabulka se statistikami + souhrnné karty (celkem uživatelů, měsíční náklady, průměr na uživatele)</li>
+      <li><strong>Detail předplatného</strong> – nová sekce Přístupy s možností přidání/odebrání přístupu přímo z detailu</li>
+    </ul>
+  </li>
+  <li><strong>ČNB kurzy – DB cache</strong> – kurzovní lístek se nyní cachuje v databázi jednou denně (lazy refresh). Při dalších požadavcích se kurzy čtou z cache bez opakovaného volání ČNB API.</li>
+  <li><strong>DB migrace</strong> – 2 nové tabulky: <code>trackino_subscription_access_users</code> (externí uživatelé), <code>trackino_subscription_accesses</code> (přiřazení uživatel→služba); rozšíření <code>trackino_exchange_rates</code> o sloupce <code>date</code> a odebrání <code>workspace_id</code> (globální cache)</li>
+</ul>
+
 <h3>v2.46.0 – 8. 3. 2026</h3>
 <ul>
   <li><strong>Nový modul: Předplatná</strong> – evidence firemních předplatných a SaaS služeb (sekce NÁSTROJE, tarif Pro a Max). Hlavní funkce:

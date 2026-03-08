@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 8. 3. 2026 (v2.46.0)
+> Aktualizováno: 8. 3. 2026 (v2.47.0)
 
 ---
 
@@ -136,6 +136,9 @@ Výchozí policy: `CREATE POLICY "Auth full" ... FOR ALL TO authenticated USING 
 | `trackino_subscription_categories` | id, workspace_id, name, color, sort_order, created_at | Kategorie předplatných (barva, řazení) |
 | `trackino_subscriptions` | id, workspace_id, name, type, website_url, login_url, registration_email, company_name, registered_by, description, notes, priority, status, renewal_type, price, currency, frequency, next_payment_date, registration_date, category_id, is_tip, created_by, created_at, updated_at | Evidence firemních předplatných a SaaS služeb |
 | `trackino_subscription_ratings` | id, subscription_id, workspace_id, user_id, rating (1-5), created_at, updated_at | Hvězdičkové hodnocení předplatných (per-user, UNIQUE subscription_id+user_id) |
+| `trackino_subscription_access_users` | id, workspace_id, name, email, note, created_by, created_at, updated_at | Externí uživatelé pro evidenci přístupů (mimo workspace) |
+| `trackino_subscription_accesses` | id, workspace_id, subscription_id (FK CASCADE), user_id (nullable), external_user_id (FK nullable CASCADE), role, granted_at, note, created_by, created_at | Přiřazení uživatel→služba; CHECK: právě jeden z user_id/external_user_id NOT NULL; UNIQUE partial indexy |
+| `trackino_exchange_rates` | id, date (text YYYY-MM-DD), currency, rate (numeric), fetched_at | Globální cache kurzů ČNB (bez workspace_id); UNIQUE (date, currency) |
 
 ### Nové sloupce (v2.46.0)
 - `trackino_workspace_members.can_manage_subscriptions boolean NOT NULL DEFAULT false` – oprávnění spravovat předplatná
@@ -504,6 +507,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.47.0 | 8. 3. 2026 | Předplatná – Evidence přístupů: 4. záložka „Přístupy" s 3 pohledy (Podle služby/Podle uživatele/Souhrnný přehled); interní i externí uživatelé; náklad na uživatele = měsíční_CZK / počet_přístupů; CRUD přístupů + externích uživatelů (modály); sekce Přístupy v detail modalu; ČNB kurzy – lazy DB cache (1× denně); 3 nové DB tabulky (trackino_subscription_access_users, trackino_subscription_accesses, trackino_exchange_rates přepis na globální cache) |
 | v2.46.0 | 8. 3. 2026 | Nový modul Předplatná (subscriptions, NÁSTROJE, Pro+Max) – evidence firemních předplatných a SaaS služeb; dashboard statistiky (aktivní/měsíčně/ročně/blížící se platby); 3 záložky (Předplatná/Tipy/Kategorie); CRUD s modálním formulářem (název, typ, stav, cena, měna, frekvence, priorita, obnova, URLs, společnost, registrační email, poznámky); hvězdičkové hodnocení (1-5, per-user); ČNB kurzovní lístek (/api/cnb-rates) pro přepočet EUR/USD→CZK; filtrování (stav/typ/kategorie) + fulltextové hledání + řazení; detail modal; kategorie s barvami; oprávnění can_manage_subscriptions v Týmu; 4 nové DB tabulky (trackino_subscription_categories/subscriptions/subscription_ratings/exchange_rates) |
 | v2.45.2 | 8. 3. 2026 | KB: task box ve stylu Poznámek – tlačítko Úkol v toolbaru přidává panel s úkoly pod editor (checkboxy, text inputy, Enter=nový, Backspace=smazat), read-only zobrazení při prohlížení; AI asistent: scroll v info panelu (overflow-y-auto, max 60vh), model pills seskupeny po řádcích dle providera (GPT/Gemini); Nastavení: přesun „Skrýt štítky" z Obecné do Povinná pole s lepším popisem |
 | v2.45.1 | 8. 3. 2026 | Fakturace: redesign desktop výpisu – 4 řádky (měsíc, VS+vystaveno+splatnost, částka s hodinami v závorce, Schváleno+Proplaceno); Kalendář: fix race condition načítání poznámek v pohledu Seznam (prevDisplayEventsRef clear cache při změně displayEvents); KB: odstraněn fixní task panel pod stránkou – tlačítko Úkol vkládá checklist inline do editoru přes insBlock() |
@@ -1828,8 +1832,8 @@ Existující cron joby mají URL `https://trackino.vercel.app/api/cron/...`. Po 
 ### Soubory
 | Soubor | Popis |
 |--------|-------|
-| `src/app/(dashboard)/subscriptions/page.tsx` | Hlavní stránka modulu – dashboard, 3 záložky, CRUD, hodnocení |
-| `src/app/api/cnb-rates/route.ts` | Proxy pro ČNB kurzovní lístek (EUR/USD→CZK), cache 1h |
+| `src/app/(dashboard)/subscriptions/page.tsx` | Hlavní stránka modulu – dashboard, 4 záložky (Předplatná/Tipy/Kategorie/Přístupy), CRUD, hodnocení, evidence přístupů |
+| `src/app/api/cnb-rates/route.ts` | ČNB kurzovní lístek (EUR/USD→CZK) s lazy DB cache (1× denně) |
 
 ### DB tabulky
 | Tabulka | Popis |
@@ -1837,6 +1841,9 @@ Existující cron joby mají URL `https://trackino.vercel.app/api/cron/...`. Po 
 | `trackino_subscription_categories` | Kategorie předplatných (name, color, sort_order) |
 | `trackino_subscriptions` | Záznamy předplatných (profil, cena, stav, URLs, poznámky, is_tip) |
 | `trackino_subscription_ratings` | Hvězdičkové hodnocení (per-user, 1-5, UNIQUE subscription_id+user_id) |
+| `trackino_subscription_access_users` | Externí uživatelé (name, email, note) pro evidenci přístupů |
+| `trackino_subscription_accesses` | Přiřazení uživatel→služba (subscription_id, user_id XOR external_user_id, role, granted_at) |
+| `trackino_exchange_rates` | Globální cache kurzů ČNB (date, currency, rate); UNIQUE(date,currency) |
 
 ### Typy (database.ts)
 ```typescript
@@ -1856,6 +1863,7 @@ const canManage = isMasterAdmin || isWorkspaceAdmin || currentMembership?.can_ma
 - **Předplatná** – hlavní tabulkový výpis (subs kde `is_tip=false`)
 - **Tipy** – doporučení (subs kde `is_tip=true`)
 - **Kategorie** – CRUD kategorií s barvami
+- **Přístupy** – evidence přístupů uživatelů ke službám (3 pohledy)
 
 ### Dashboard statistiky (4 karty)
 - Aktivních (z celkových)
@@ -1866,7 +1874,18 @@ const canManage = isMasterAdmin || isWorkspaceAdmin || currentMembership?.can_ma
 ### Cenový přepočet
 - `toMonthly(price, freq)` / `toYearly(price, freq)` – normalizace dle frekvence
 - `toCzk(price, currency)` – přepočet přes ČNB kurzovní lístek
-- API route `/api/cnb-rates` → fetch z `cnb.cz/...denni_kurz.txt`, parsuje formát `země|měna|množství|kód|kurz`
+- API route `/api/cnb-rates` → lazy DB cache: 1. check `trackino_exchange_rates` pro dnešní datum, 2. pokud chybí → fetch z ČNB → upsert do DB
+- Výpočet nákladu na uživatele: `toMonthly(toCzk(cena, měna), frekvence) / počet_přístupů`
+
+### Evidence přístupů (záložka Přístupy)
+- **Dva typy uživatelů**: interní (členové workspace) a externí (`trackino_subscription_access_users`)
+- **3 pohledy**: Podle služby / Podle uživatele / Souhrnný přehled (sub-přepínač)
+- **Podle služby**: karta per předplatné → seznam uživatelů s přístupem, počet, cena/měs, náklad/uživatel
+- **Podle uživatele**: sekce Interní/Externí, pro každého seznam služeb + celkový měsíční náklad
+- **Souhrnný přehled**: seřaditelná tabulka (název/uživatelů/náklad/stav/cena/kategorie) + 3 souhrnné karty
+- **CRUD**: `openAccessModal()`, `saveAccess()`, `removeAccess()`, `openNewExtUser()`, `saveExtUser()`, `deleteExtUser()`
+- **Detail modal**: sekce Přístupy (seznam + přidat/odebrat)
+- **Oprávnění**: sdílí `canManage` (can_manage_subscriptions)
 
 ### SQL migrace
 ```sql
@@ -1928,6 +1947,60 @@ CREATE POLICY "Auth full" ON trackino_subscription_ratings
 
 ALTER TABLE trackino_workspace_members
   ADD COLUMN IF NOT EXISTS can_manage_subscriptions boolean NOT NULL DEFAULT false;
+
+-- Evidence přístupů (v2.47.0)
+CREATE TABLE IF NOT EXISTS trackino_exchange_rates (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  date text NOT NULL,
+  currency text NOT NULL,
+  rate numeric NOT NULL,
+  fetched_at timestamptz DEFAULT now(),
+  UNIQUE (date, currency)
+);
+ALTER TABLE trackino_exchange_rates ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Auth full" ON trackino_exchange_rates
+  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+CREATE TABLE IF NOT EXISTS trackino_subscription_access_users (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES trackino_workspaces(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  email text NOT NULL DEFAULT '',
+  note text NOT NULL DEFAULT '',
+  created_by uuid NOT NULL REFERENCES auth.users(id),
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+ALTER TABLE trackino_subscription_access_users ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Auth full" ON trackino_subscription_access_users
+  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+CREATE TABLE IF NOT EXISTS trackino_subscription_accesses (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES trackino_workspaces(id) ON DELETE CASCADE,
+  subscription_id uuid NOT NULL REFERENCES trackino_subscriptions(id) ON DELETE CASCADE,
+  user_id uuid REFERENCES auth.users(id),
+  external_user_id uuid REFERENCES trackino_subscription_access_users(id) ON DELETE CASCADE,
+  role text NOT NULL DEFAULT '',
+  granted_at text,
+  note text NOT NULL DEFAULT '',
+  created_by uuid NOT NULL REFERENCES auth.users(id),
+  created_at timestamptz DEFAULT now(),
+  CHECK (
+    (user_id IS NOT NULL AND external_user_id IS NULL) OR
+    (user_id IS NULL AND external_user_id IS NOT NULL)
+  )
+);
+ALTER TABLE trackino_subscription_accesses ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Auth full" ON trackino_subscription_accesses
+  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_sub_access_user
+  ON trackino_subscription_accesses (subscription_id, user_id)
+  WHERE user_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_sub_access_ext_user
+  ON trackino_subscription_accesses (subscription_id, external_user_id)
+  WHERE external_user_id IS NOT NULL;
 ```
 
 ---

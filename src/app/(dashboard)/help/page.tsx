@@ -264,14 +264,24 @@ const DEFAULT_HELP_CONTENT = `
 <p>Modul <strong>Předplatná</strong> (sekce <strong>NÁSTROJE</strong>, tarif Pro a Max) slouží k evidenci firemních předplatných, licencí a SaaS služeb.</p>
 <ul>
   <li><strong>Dashboard</strong> – 4 statistické karty: počet aktivních, měsíční náklady v CZK, roční náklady v CZK, blížící se platby (do 30 dní)</li>
-  <li><strong>3 záložky</strong> – Předplatná (hlavní výpis), Tipy (doporučení), Kategorie (správa kategorií s barvami)</li>
+  <li><strong>4 záložky</strong> – Předplatná (hlavní výpis), Tipy (doporučení), Kategorie (správa kategorií s barvami), Přístupy (evidence přístupů uživatelů ke službám)</li>
   <li><strong>Profil předplatného</strong> – název, typ (SaaS/Hosting/Licence/Doména/Jiné), web URL, login URL, registrační email, společnost, registroval, popis, poznámky, priorita (Vysoká/Střední/Nízká), stav (Aktivní/Pozastaveno/Zrušeno/Zkušební/Ke schválení), typ obnovy (auto/manuální)</li>
   <li><strong>Platba</strong> – cena, měna (CZK/EUR/USD), frekvence (Měsíčně/Čtvrtletně/Ročně/Dvouletně/Jednorázově), datum další platby, datum registrace; automatický přepočet na měsíční/roční náklady</li>
-  <li><strong>ČNB kurz</strong> – ceny v EUR/USD se automaticky přepočítávají na CZK dle aktuálního kurzovního lístku ČNB</li>
+  <li><strong>ČNB kurz</strong> – ceny v EUR/USD se automaticky přepočítávají na CZK dle aktuálního kurzovního lístku ČNB (kurzy se cachují v DB jednou denně)</li>
   <li><strong>Hodnocení</strong> – hvězdičky 1–5 per uživatel, průměrné hodnocení zobrazeno v tabulce i detailu</li>
   <li><strong>Filtrování a řazení</strong> – fulltextové hledání, filtr dle stavu/typu/kategorie, řazení dle názvu/ceny/další platby/stavu/hodnocení</li>
   <li><strong>Oprávnění</strong> – přidávat, upravovat a mazat předplatná mohou admini, vlastník workspace a členové s oprávněním „Spravuje předplatná" (nastavitelné v sekci Tým)</li>
 </ul>
+
+<h4>Evidence přístupů</h4>
+<p>Záložka <strong>Přístupy</strong> umožňuje evidovat, kteří lidé (interní i externí) mají přístup ke kterým službám. Nabízí tři pohledy:</p>
+<ul>
+  <li><strong>Podle služby</strong> – pro každé předplatné zobrazuje seznam přiřazených uživatelů, počet uživatelů, měsíční cenu a náklad na uživatele</li>
+  <li><strong>Podle uživatele</strong> – dvě sekce: Interní uživatelé (ze workspace) a Externí uživatelé (přidaní manuálně). Pro každého zobrazuje seznam služeb a celkový měsíční náklad</li>
+  <li><strong>Souhrnný přehled</strong> – seřaditelná tabulka se statistikami: služba, počet uživatelů, náklad na uživatele, stav, cena/měs, kategorie; souhrnné karty (celkem uživatelů, měsíční náklady, průměr na uživatele)</li>
+</ul>
+<p><strong>Externí uživatelé</strong> – lidé, kteří nejsou členy workspace (např. dodavatelé, externí konzultanti). Eviduje se jméno, email a poznámka. Smazání externího uživatele automaticky odebere všechny jeho přístupy.</p>
+<p><strong>Detail předplatného</strong> nyní obsahuje i sekci Přístupy s možností přidávat a odebírat uživatele přímo z detailu.</p>
 
 <h3>Oblíbené v levém menu</h3>
 <p>Funkce <strong>Oblíbené</strong> je dostupná pro tarify <strong>Pro a Max</strong>. Umožňuje přidat libovolnou položku z levého menu do sekce <strong>OBLÍBENÉ</strong>, která se zobrazuje úplně nahoře v navigaci.</p>

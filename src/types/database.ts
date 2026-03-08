@@ -955,8 +955,34 @@ export interface SubscriptionRating {
 
 export interface ExchangeRate {
   id: string;
-  workspace_id: string;
+  date: string;     // YYYY-MM-DD
   currency: string; // EUR, USD
-  rate: number; // kurz k CZK
+  rate: number;     // kurz k CZK
+  fetched_at: string;
+}
+
+// ── Evidence přístupů k předplatným ─────────────────────────────────────
+
+export interface SubscriptionAccessUser {
+  id: string;
+  workspace_id: string;
+  name: string;
+  email: string;
+  note: string;
+  created_by: string;
+  created_at: string;
   updated_at: string;
+}
+
+export interface SubscriptionAccess {
+  id: string;
+  workspace_id: string;
+  subscription_id: string;
+  user_id: string | null;
+  external_user_id: string | null;
+  role: string;
+  granted_at: string | null;
+  note: string;
+  created_by: string;
+  created_at: string;
 }
