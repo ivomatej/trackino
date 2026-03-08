@@ -3657,7 +3657,7 @@ function CalendarContent() {
                   })()}
 
                   {/* Časová mřížka – POUZE tato část scrolluje vertikálně */}
-                  <div ref={weekGridRef} className="flex-1 overflow-y-auto overflow-x-hidden" style={{ minHeight: 0 }}>
+                  <div ref={weekGridRef} className="flex-1 overflow-y-auto overflow-x-hidden sidebar-scroll" style={{ minHeight: 0 }}>
                   <div className="flex">
                     {/* Sloupec hodin */}
                     <div className="flex-shrink-0 border-r" style={{ width: 56, borderColor: 'var(--border)' }}>
@@ -3783,7 +3783,7 @@ function CalendarContent() {
                     )}
 
                     {/* Časová mřížka – POUZE tato část scrolluje vertikálně */}
-                    <div ref={weekGridRef} className="flex-1 overflow-auto" style={{ minHeight: 0 }}>
+                    <div ref={weekGridRef} className="flex-1 overflow-auto sidebar-scroll" style={{ minHeight: 0 }}>
                     <div className="flex">
                       {/* Sloupec hodin */}
                       <div className="flex-shrink-0 border-r" style={{ width: 56, borderColor: 'var(--border)' }}>
