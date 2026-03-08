@@ -1249,7 +1249,7 @@ function NotebookContent() {
                         {stripHtml(note.content) && <span className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>· {stripHtml(note.content).slice(0, 80)}</span>}
                       </div>
                     </div>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="flex-shrink-0 opacity-0 group-hover:opacity-40" style={{ color: 'var(--text-muted)' }}><polyline points="9 18 15 12 9 6"/></svg>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="flex-shrink-0 opacity-40 md:opacity-0 md:group-hover:opacity-40" style={{ color: 'var(--text-muted)' }}><polyline points="9 18 15 12 9 6"/></svg>
                   </div>
                 ))
               )}
@@ -1287,7 +1287,7 @@ function NotebookContent() {
                       </div>
                     </div>
                     {/* Actions */}
-                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                    <div className="flex items-center gap-0.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex-shrink-0">
                       {/* Important toggle */}
                       <button onClick={e => { e.stopPropagation(); toggleFlag(note, 'is_important'); }}
                         className="w-7 h-7 flex items-center justify-center rounded-lg"

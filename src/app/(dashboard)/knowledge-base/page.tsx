@@ -594,7 +594,7 @@ function KbFolderTree({ folders, pages, selectedFolderId, expanded, onSelectFold
               </svg>
               <span className="flex-1 text-xs truncate" style={{ color: isSel ? 'var(--primary)' : 'var(--text-secondary)', fontWeight: isSel ? 600 : 400 }}>{folder.name}</span>
               {pageCount > 0 && <span className="text-[10px] px-1 mr-1 rounded" style={{ color: 'var(--text-muted)', background: 'var(--bg-hover)' }}>{pageCount}</span>}
-              <div className="opacity-0 group-hover/folder:opacity-100 flex items-center gap-0.5 flex-shrink-0 transition-opacity">
+              <div className="opacity-100 md:opacity-0 md:group-hover/folder:opacity-100 flex items-center gap-0.5 flex-shrink-0 transition-opacity">
                 {depth < MAX_FOLDER_DEPTH - 1 && (
                   <button type="button" onClick={e => { e.stopPropagation(); onAddSub(folder.id, depth + 1); }} title="Přidat podsložku"
                     className="w-5 h-5 flex items-center justify-center rounded hover:bg-[var(--bg-active)]" style={{ color: 'var(--text-muted)' }}>
@@ -1689,7 +1689,7 @@ function KnowledgeBaseContent() {
                                 style={{ color: task.checked ? 'var(--text-muted)' : 'var(--text-primary)', textDecoration: task.checked ? 'line-through' : 'none' }}
                                 placeholder="Úkol…" />
                               <button onClick={() => removeKbTask(task.id)}
-                                className="opacity-0 group-hover/task:opacity-60 hover:!opacity-100 flex-shrink-0 transition-opacity"
+                                className="opacity-60 md:opacity-0 md:group-hover/task:opacity-60 hover:!opacity-100 flex-shrink-0 transition-opacity"
                                 style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
                                 <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                   <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
