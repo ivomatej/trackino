@@ -980,22 +980,25 @@ function CalendarContent() {
 
   // ── (calendar_day_start/end z profilu se již nepoužívají – grid je vždy 0–24) ──
 
-  // ── Výška calWeekWrapperRef = celá dostupná výška viewportu ─────────────
-  // ── Výška pro týdenní pohled ───────────────────────────────────────────────
-  // Jen pro 'week' – today view používá přirozené CSS výšky (flex-1 chain funguje).
-  // loading v deps: wrapper neexistuje při loading=true (spinner nahrazuje obsah),
-  // takže potřebujeme re-run až když loading=false a wrapper se poprvé připojí.
+  // ── Výška gridu + scroll na calViewStart (atomicky v jednom efektu) ────────
+  // Sloučeno: nastavení výšky + scroll probíhá ve STEJNÉM synchronním cyklu,
+  // aby Chrome stihl přepočítat layout před scrollTop assignment.
+  // Deps: view, loading (wrapper mount), calViewStart (nastavení), currentDate (navigace).
   useLayoutEffect(() => {
+    if (view !== 'week' && view !== 'today') return;
+    if (loading) return;
+
     const wrapper = calWeekWrapperRef.current;
     const grid = weekGridRef.current;
-    if (!wrapper || view !== 'week') return;
+    if (!grid) return;
 
+    // Week view: explicitně nastavit výšku wrapperu a gridu
     const applyHeight = () => {
-      const wRect = wrapper.getBoundingClientRect();
-      const totalH = window.innerHeight - wRect.top;
-      if (totalH <= 60) return; // bezpečnostní guard: wrapper mimo viewport
-      wrapper.style.height = `${totalH}px`;
-      if (grid) {
+      if (view === 'week' && wrapper) {
+        const wRect = wrapper.getBoundingClientRect();
+        const totalH = window.innerHeight - wRect.top;
+        if (totalH <= 60) return;
+        wrapper.style.height = `${totalH}px`;
         void wrapper.offsetHeight; // force reflow
         const headerH = Math.max(0, grid.getBoundingClientRect().top - wRect.top);
         grid.style.height = `${Math.max(60, totalH - headerH)}px`;
@@ -1003,42 +1006,52 @@ function CalendarContent() {
     };
 
     applyHeight();
-    window.addEventListener('resize', applyHeight);
-    return () => window.removeEventListener('resize', applyHeight);
-  }, [view, loading]); // loading: wrapper se připojí až když loading=false
 
-  // ── Scroll na calViewStart ─────────────────────────────────────────────────
-  // useLayoutEffect: synchronní scroll před prvním malováním (mobil – bez záblesku).
-  // void grid.offsetHeight zajistí reflow → Chrome aplikuje pending height changes.
-  useLayoutEffect(() => {
-    if (view !== 'week' && view !== 'today') return;
-    if (loading) return;
-    const grid = weekGridRef.current;
-    if (!grid) return;
-    void grid.offsetHeight; // force reflow – zajistí správný scrollHeight
+    // Scroll: force reflow a hned nastavit scrollTop
+    void grid.offsetHeight;
     grid.scrollTop = calViewStart * ROW_H;
-  }, [loading, view, calViewStart, currentDate]);
 
-  // useEffect s multi-stage fallback: double-rAF + setTimeout pro desktop Chrome
-  // kde flex-1 chain se může ustálit až po několika paint cyklech.
+    // Resize listener (jen pro week view)
+    if (view === 'week' && wrapper) {
+      window.addEventListener('resize', applyHeight);
+      return () => window.removeEventListener('resize', applyHeight);
+    }
+  }, [view, loading, calViewStart, currentDate]);
+
+  // Fallback: setTimeout zajistí scroll i pokud useLayoutEffect nestihne
+  // (desktop Chrome – flex-1 chain se může ustálit až po paint).
   useEffect(() => {
     if (view !== 'week' && view !== 'today') return;
     if (loading) return;
     const target = calViewStart * ROW_H;
     const doScroll = () => {
       const grid = weekGridRef.current;
-      if (grid) { void grid.offsetHeight; grid.scrollTop = target; }
+      if (!grid) return;
+      // Pro week view: ověřit/přepočítat výšku gridu
+      if (view === 'week') {
+        const wrapper = calWeekWrapperRef.current;
+        if (wrapper) {
+          const wRect = wrapper.getBoundingClientRect();
+          const totalH = window.innerHeight - wRect.top;
+          if (totalH > 60) {
+            wrapper.style.height = `${totalH}px`;
+            void wrapper.offsetHeight;
+            const headerH = Math.max(0, grid.getBoundingClientRect().top - wRect.top);
+            grid.style.height = `${Math.max(60, totalH - headerH)}px`;
+          }
+        }
+      }
+      void grid.offsetHeight;
+      grid.scrollTop = target;
     };
-    let r1: number, r2: number;
     let t1: ReturnType<typeof setTimeout>;
     let t2: ReturnType<typeof setTimeout>;
-    r1 = requestAnimationFrame(() => {
-      r2 = requestAnimationFrame(doScroll);
-    });
-    t1 = setTimeout(doScroll, 80);
-    t2 = setTimeout(doScroll, 200);
-    return () => { cancelAnimationFrame(r1); cancelAnimationFrame(r2); clearTimeout(t1); clearTimeout(t2); };
-  }, [loading, view, calViewStart, currentDate]);
+    let t3: ReturnType<typeof setTimeout>;
+    t1 = setTimeout(doScroll, 50);
+    t2 = setTimeout(doScroll, 150);
+    t3 = setTimeout(doScroll, 350);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+  }, [view, loading, calViewStart, currentDate]);
 
   // Aktualizace aktuálního času každou minutu
   useEffect(() => {
