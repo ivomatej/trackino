@@ -393,8 +393,8 @@ function RichEditor({ value, onChange, members, pages }: {
         .prose-kb h1{font-size:1.6em;font-weight:800;margin:28px 0 10px;line-height:1.2}
         .prose-kb h2{font-size:1.25em;font-weight:700;margin:24px 0 8px}
         .prose-kb h3{font-size:1.05em;font-weight:600;margin:20px 0 6px}
-        .prose-kb ul{list-style:disc;padding-left:20px;margin:4px 0}
-        .prose-kb ol{list-style:decimal;padding-left:20px;margin:4px 0}
+        .prose-kb ul{list-style:disc;padding-left:32px;margin:4px 0}
+        .prose-kb ol{list-style:decimal;padding-left:32px;margin:4px 0}
         .prose-kb p{margin:4px 0;line-height:1.6}
         .prose-kb pre{position:relative;background:var(--bg-hover);padding:12px 40px 12px 12px;border-radius:8px;font-family:monospace;font-size:13px;overflow-x:auto;margin:16px 0;border:1px solid var(--border);white-space:pre-wrap}
         .prose-kb pre code{display:block;min-height:3em;white-space:pre-wrap;word-break:break-all;outline:none}
@@ -527,8 +527,8 @@ function PageViewer({ page, onChecklistToggle, onPageLinkClick }: {
         .prose-view h1{font-size:1.6em;font-weight:800;margin:28px 0 10px;line-height:1.2}
         .prose-view h2{font-size:1.25em;font-weight:700;margin:24px 0 8px}
         .prose-view h3{font-size:1.05em;font-weight:600;margin:20px 0 6px}
-        .prose-view ul{list-style:disc;padding-left:20px;margin:4px 0}
-        .prose-view ol{list-style:decimal;padding-left:20px;margin:4px 0}
+        .prose-view ul{list-style:disc;padding-left:32px;margin:4px 0}
+        .prose-view ol{list-style:decimal;padding-left:32px;margin:4px 0}
         .prose-view p{margin:4px 0;line-height:1.6}
         .prose-view pre{position:relative;background:var(--bg-hover);padding:12px 40px 12px 12px;border-radius:8px;font-family:monospace;font-size:13px;overflow-x:auto;margin:16px 0;border:1px solid var(--border);cursor:default;white-space:pre-wrap;word-break:break-all}
         .prose-view pre code{white-space:pre-wrap;word-break:break-all;display:block}
@@ -1534,6 +1534,7 @@ function KnowledgeBaseContent() {
                   <div className="flex-1 min-w-0">
                     {editing ? (
                       <input value={editTitle} onChange={e => setEditTitle(e.target.value)}
+                        onFocus={() => { if (selectedPage?.id.startsWith('__new__') && editTitle === 'Nová stránka') setEditTitle(''); }}
                         className="w-full text-2xl font-bold bg-transparent border-0 border-b-2 focus:outline-none pb-1 text-base sm:text-2xl"
                         style={{ borderColor: 'var(--primary)', color: 'var(--text-primary)' }}
                         placeholder="Název stránky" />
@@ -1541,8 +1542,8 @@ function KnowledgeBaseContent() {
                       <h1 className="text-xl md:text-2xl font-bold break-words" style={{ color: 'var(--text-primary)' }}>{selectedPage.title}</h1>
                     )}
                   </div>
-                  {/* Actions – top row on mobile */}
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                  {/* Actions – top row on mobile, right-aligned on mobile */}
+                  <div className="flex items-center gap-1.5 flex-shrink-0 self-end md:self-auto">
                     {/* Back to list */}
                     {(listFilter !== null || search.trim()) && !selectedPage.id.startsWith('__new__') && (
                       <button type="button" onClick={backToList} title="Zpět na seznam"
@@ -1740,7 +1741,7 @@ function KnowledgeBaseContent() {
                 {/* Tabs (only for saved pages) */}
                 {!editing && !selectedPage.id.startsWith('__new__') && (
                   <div className="border-t pt-6" style={{ borderColor: 'var(--border)' }}>
-                    <div className="flex gap-1 mb-4 border-b overflow-x-auto" style={{ borderColor: 'var(--border)', WebkitOverflowScrolling: 'touch' }}>
+                    <div className="flex gap-1 mb-4 border-b overflow-x-auto" style={{ borderColor: 'var(--border)', WebkitOverflowScrolling: 'touch', touchAction: 'pan-x', overscrollBehavior: 'contain' }}>
                       {((() => {
                         const backlinksCount = pages.filter(p => p.id !== selectedPage.id && p.content.includes(`data-page-id="${selectedPage.id}"`)).length;
                         const pendingReviews = reviews.filter(r => !r.is_done).length;

@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 8. 3. 2026 (v2.44.0)
+> Aktualizováno: 8. 3. 2026 (v2.44.1)
 
 ---
 
@@ -493,6 +493,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.44.1 | 8. 3. 2026 | KB: akce header vpravo na mobilu (self-end md:self-auto), fix tab scroll (touchAction:pan-x + overscrollBehavior:contain), ul/ol padding-left 20px→32px (prose-kb+prose-view), auto-clear titulku nové stránky onFocus pokud editTitle==='Nová stránka' |
 | v2.44.0 | 8. 3. 2026 | Poznámky: 3řádkový výpis (název/popisek/datum+autor), větší action buttony na mobilu (w-9 h-9, gap-1.5), standardní 4-path koš ikona, task panel větší na mobilu (w-5 h-5 checkboxy, text-base inputy=iOS zoom fix, viditelné × tlačítko); KB: flex-col-reverse header (akce nahoře, název přes šířku na mobilu), datum month:numeric (2. 3. 2026), px-5 odsazení obsahu na mobilu, overflow-x-auto tabs, text-base komentář input (iOS zoom fix), pb-8 pod komentářem |
 | v2.43.3 | 8. 3. 2026 | Poznámky: action buttony (Důležité/Oblíbené/Přesunout/Archivovat) vždy viditelné na mobilu (opacity-100 md:opacity-0 md:group-hover:opacity-100); KB: folder hover menu + task remove tlačítko vždy viditelné na mobilu |
 | v2.43.2 | 8. 3. 2026 | Poznámky: URL auto-link při Space/Enter v editoru (handleEditorKeyDown + handleKeyDown v NoteEditor+CalEventNoteEditor; DOM manipulation: Range API, createTextNode, createElement('a'), cursor reposition) |

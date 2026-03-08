@@ -11,6 +11,14 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.44.1 – 8. 3. 2026</h3>
+<ul>
+  <li><strong>KB – akce vpravo na mobilu</strong> – panel s akcemi (Kopírovat, Oblíbené, Upravit, Uložit, Zrušit, Smazat) je nyní na mobilních zařízeních zarovnán na pravou stranu (self-end v flex-col-reverse layoutu).</li>
+  <li><strong>KB – záložky bez page-scroll</strong> – záložky Komentáře, Historie, Přístupy, Odkazující a Revize mají opravenou gesto-detekci na mobilu (touchAction: pan-x + overscrollBehavior: contain), horizontální scroll záložek již nevyvolává nežádoucí vertikální posun stránky.</li>
+  <li><strong>KB – větší odsazení odrážkových a číselných seznamů</strong> – ul a ol elementy v obsahu stránky (editor i viewer) zvýšily padding-left z 20px na 32px pro lepší čitelnost a vizuální hierarchii.</li>
+  <li><strong>KB – auto-mazání titulku nové stránky</strong> – při kliknutí do políčka názvu u nově vytvořené stránky se výchozí text „Nová stránka" automaticky vymaže, takže lze okamžitě psát vlastní název.</li>
+</ul>
+
 <h3>v2.44.0 – 8. 3. 2026</h3>
 <ul>
   <li><strong>Poznámky – 3řádkový výpis na mobilu</strong> – seznam poznámek nyní zobrazuje název, popisek obsahu a datum s jménem autora na třech řádcích. Akční tlačítka jsou na mobilu větší (w-9 h-9) a s větším rozestupem pro pohodlné klikání.</li>
