@@ -980,77 +980,65 @@ function CalendarContent() {
 
   // ── (calendar_day_start/end z profilu se již nepoužívají – grid je vždy 0–24) ──
 
-  // ── Výška gridu + scroll na calViewStart (atomicky v jednom efektu) ────────
-  // Sloučeno: nastavení výšky + scroll probíhá ve STEJNÉM synchronním cyklu,
-  // aby Chrome stihl přepočítat layout před scrollTop assignment.
-  // Deps: view, loading (wrapper mount), calViewStart (nastavení), currentDate (navigace).
+  // ── Výška gridu + scroll na calViewStart ──────────────────────────────────
+  // DashboardLayout používá min-h-screen (ne h-screen), takže flex-1 chain
+  // neumí omezit výšku gridu na viewport – grid se roztáhne na plných 1440px
+  // (24h × 60px) a clientHeight === scrollHeight → scrollTop se ignoruje.
+  // Řešení: wrapper.style.flex = 'none' + explicitní height z viewportu
+  // přeruší flex chain; grid uvnitř pak dostane omezenou výšku a scrolluje.
   useLayoutEffect(() => {
     if (view !== 'week' && view !== 'today') return;
     if (loading) return;
 
     const wrapper = calWeekWrapperRef.current;
     const grid = weekGridRef.current;
-    if (!grid) return;
+    if (!wrapper || !grid) return;
 
-    // Week view: explicitně nastavit výšku wrapperu a gridu
     const applyHeight = () => {
-      if (view === 'week' && wrapper) {
-        const wRect = wrapper.getBoundingClientRect();
-        const totalH = window.innerHeight - wRect.top;
-        if (totalH <= 60) return;
-        wrapper.style.height = `${totalH}px`;
-        void wrapper.offsetHeight; // force reflow
-        const headerH = Math.max(0, grid.getBoundingClientRect().top - wRect.top);
-        grid.style.height = `${Math.max(60, totalH - headerH)}px`;
-      }
+      const wRect = wrapper.getBoundingClientRect();
+      const totalH = window.innerHeight - wRect.top;
+      if (totalH <= 60) return;
+      // Přerušit flex-1 chain – wrapper dostane fixní výšku z viewportu
+      wrapper.style.flex = 'none';
+      wrapper.style.height = `${totalH}px`;
+      void wrapper.offsetHeight;
+      // Grid maxHeight jako pojistka (flex-1 uvnitř wrapper by měl stačit)
+      const headerH = Math.max(0, grid.getBoundingClientRect().top - wRect.top);
+      grid.style.maxHeight = `${Math.max(60, totalH - headerH)}px`;
     };
 
     applyHeight();
-
-    // Scroll: force reflow a hned nastavit scrollTop
     void grid.offsetHeight;
     grid.scrollTop = calViewStart * ROW_H;
-    console.log('[CAL-SCROLL] useLayoutEffect: view=', view, 'calViewStart=', calViewStart, 'target=', calViewStart * ROW_H, 'scrollTop=', grid.scrollTop, 'scrollHeight=', grid.scrollHeight, 'clientHeight=', grid.clientHeight, 'gridH=', grid.style.height);
 
-    // Resize listener (jen pro week view)
-    if (view === 'week' && wrapper) {
-      window.addEventListener('resize', applyHeight);
-      return () => window.removeEventListener('resize', applyHeight);
-    }
+    window.addEventListener('resize', applyHeight);
+    return () => window.removeEventListener('resize', applyHeight);
   }, [view, loading, calViewStart, currentDate]);
 
   // Fallback: setTimeout zajistí scroll i pokud useLayoutEffect nestihne
-  // (desktop Chrome – flex-1 chain se může ustálit až po paint).
   useEffect(() => {
     if (view !== 'week' && view !== 'today') return;
     if (loading) return;
     const target = calViewStart * ROW_H;
     const doScroll = () => {
+      const wrapper = calWeekWrapperRef.current;
       const grid = weekGridRef.current;
-      if (!grid) return;
-      // Pro week view: ověřit/přepočítat výšku gridu
-      if (view === 'week') {
-        const wrapper = calWeekWrapperRef.current;
-        if (wrapper) {
-          const wRect = wrapper.getBoundingClientRect();
-          const totalH = window.innerHeight - wRect.top;
-          if (totalH > 60) {
-            wrapper.style.height = `${totalH}px`;
-            void wrapper.offsetHeight;
-            const headerH = Math.max(0, grid.getBoundingClientRect().top - wRect.top);
-            grid.style.height = `${Math.max(60, totalH - headerH)}px`;
-          }
-        }
+      if (!wrapper || !grid) return;
+      const wRect = wrapper.getBoundingClientRect();
+      const totalH = window.innerHeight - wRect.top;
+      if (totalH > 60) {
+        wrapper.style.flex = 'none';
+        wrapper.style.height = `${totalH}px`;
+        void wrapper.offsetHeight;
+        const headerH = Math.max(0, grid.getBoundingClientRect().top - wRect.top);
+        grid.style.maxHeight = `${Math.max(60, totalH - headerH)}px`;
       }
       void grid.offsetHeight;
       grid.scrollTop = target;
     };
-    let t1: ReturnType<typeof setTimeout>;
-    let t2: ReturnType<typeof setTimeout>;
-    let t3: ReturnType<typeof setTimeout>;
-    t1 = setTimeout(doScroll, 50);
-    t2 = setTimeout(doScroll, 150);
-    t3 = setTimeout(doScroll, 350);
+    const t1 = setTimeout(doScroll, 50);
+    const t2 = setTimeout(doScroll, 150);
+    const t3 = setTimeout(doScroll, 350);
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
   }, [view, loading, calViewStart, currentDate]);
 
@@ -2106,20 +2094,29 @@ function CalendarContent() {
   // ── Nastavení kalendáře ───────────────────────────────────────────────────
 
   function saveCalSettings() {
-    // Viditelná část – zaklampovat na 0–24 a uložit do localStorage
     const vs = Math.max(0, Math.min(23, calSettingsForm.viewStart));
     const ve = Math.max(vs + 1, Math.min(24, calSettingsForm.viewEnd));
-    console.log('[CAL-SCROLL] saveCalSettings: vs=', vs, 've=', ve, 'target=', vs * ROW_H, 'ROW_H=', ROW_H);
     setCalViewStart(vs);
     setCalViewEnd(ve);
     localStorage.setItem('trackino_cal_view_start', String(vs));
     localStorage.setItem('trackino_cal_view_end', String(ve));
     setShowCalSettings(false);
-    // Explicitní scroll po zavření modalu – multi-stage fallback
+    // Explicitní scroll po zavření modalu – včetně přepočtu výšky
     const doScroll = () => {
+      const wrapper = calWeekWrapperRef.current;
       const grid = weekGridRef.current;
-      console.log('[CAL-SCROLL] doScroll: grid=', !!grid, 'scrollHeight=', grid?.scrollHeight, 'clientHeight=', grid?.clientHeight, 'target=', vs * ROW_H);
-      if (grid) { void grid.offsetHeight; grid.scrollTop = vs * ROW_H; console.log('[CAL-SCROLL] after set: scrollTop=', grid.scrollTop); }
+      if (!wrapper || !grid) return;
+      const wRect = wrapper.getBoundingClientRect();
+      const totalH = window.innerHeight - wRect.top;
+      if (totalH > 60) {
+        wrapper.style.flex = 'none';
+        wrapper.style.height = `${totalH}px`;
+        void wrapper.offsetHeight;
+        const headerH = Math.max(0, grid.getBoundingClientRect().top - wRect.top);
+        grid.style.maxHeight = `${Math.max(60, totalH - headerH)}px`;
+      }
+      void grid.offsetHeight;
+      grid.scrollTop = vs * ROW_H;
     };
     requestAnimationFrame(() => requestAnimationFrame(doScroll));
     setTimeout(doScroll, 100);
