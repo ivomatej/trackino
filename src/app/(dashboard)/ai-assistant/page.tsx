@@ -1096,14 +1096,14 @@ function AiAssistantContent() {
               {/* Levá část: model switcher + info */}
               <div className="flex flex-col gap-1.5 min-w-0">
                 {/* Quick model pills */}
-                <div className="flex flex-wrap items-center gap-1">
+                <div className="flex flex-col gap-1">
                   {AI_PROVIDERS.map(prov => {
                     const providerModels = AI_MODELS.filter(m => m.provider === prov.id);
                     if (providerModels.length === 0) return null;
                     return (
-                      <div key={prov.id} className="flex items-center gap-1">
+                      <div key={prov.id} className="flex items-center gap-1 flex-wrap">
                         {AI_PROVIDERS.length > 1 && (
-                          <span className="text-[10px] font-semibold uppercase tracking-wide mr-0.5" style={{ color: 'var(--text-muted)' }}>
+                          <span className="text-[10px] font-semibold uppercase tracking-wide mr-0.5 w-10" style={{ color: 'var(--text-muted)' }}>
                             {prov.name === 'OpenAI' ? 'GPT' : 'Gemini'}
                           </span>
                         )}
@@ -1125,44 +1125,43 @@ function AiAssistantContent() {
                             )}
                           </button>
                         ))}
-                        <span className="mx-0.5" />
                       </div>
                     );
                   })}
-                  {/* Info tlačítko */}
-                  <button
-                    onClick={() => setShowModelInfo(s => !s)}
-                    className="w-6 h-6 rounded-full flex items-center justify-center transition-colors flex-shrink-0"
-                    style={{
-                      background: showModelInfo ? 'color-mix(in srgb, var(--primary) 15%, transparent)' : 'var(--bg-hover)',
-                      color: showModelInfo ? 'var(--primary)' : 'var(--text-muted)',
-                      border: '1px solid var(--border)',
-                    }}
-                    title="Informace o modelech"
-                  >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="10"/>
-                      <line x1="12" y1="8" x2="12" y2="8" strokeWidth="3"/>
-                      <line x1="12" y1="12" x2="12" y2="16"/>
-                    </svg>
-                  </button>
-
-                  {/* Oblíbené prompty */}
-                  <button
-                    onClick={fetchFavoritePrompts}
-                    className="text-xs px-2.5 py-1 rounded-full flex items-center gap-1.5 transition-colors flex-shrink-0"
-                    style={{
-                      background: showFavPrompts ? 'color-mix(in srgb, var(--primary) 15%, transparent)' : 'var(--bg-hover)',
-                      color: showFavPrompts ? 'var(--primary)' : 'var(--text-muted)',
-                      border: showFavPrompts ? '1px solid color-mix(in srgb, var(--primary) 30%, transparent)' : '1px solid var(--border)',
-                    }}
-                    title="Oblíbené prompty"
-                  >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill={showFavPrompts ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                    </svg>
-                    Prompty
-                  </button>
+                  {/* Info + Prompty řádek */}
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => setShowModelInfo(s => !s)}
+                      className="w-6 h-6 rounded-full flex items-center justify-center transition-colors flex-shrink-0"
+                      style={{
+                        background: showModelInfo ? 'color-mix(in srgb, var(--primary) 15%, transparent)' : 'var(--bg-hover)',
+                        color: showModelInfo ? 'var(--primary)' : 'var(--text-muted)',
+                        border: '1px solid var(--border)',
+                      }}
+                      title="Informace o modelech"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="8" x2="12" y2="8" strokeWidth="3"/>
+                        <line x1="12" y1="12" x2="12" y2="16"/>
+                      </svg>
+                    </button>
+                    <button
+                      onClick={fetchFavoritePrompts}
+                      className="text-xs px-2.5 py-1 rounded-full flex items-center gap-1.5 transition-colors flex-shrink-0"
+                      style={{
+                        background: showFavPrompts ? 'color-mix(in srgb, var(--primary) 15%, transparent)' : 'var(--bg-hover)',
+                        color: showFavPrompts ? 'var(--primary)' : 'var(--text-muted)',
+                        border: showFavPrompts ? '1px solid color-mix(in srgb, var(--primary) 30%, transparent)' : '1px solid var(--border)',
+                      }}
+                      title="Oblíbené prompty"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill={showFavPrompts ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                      </svg>
+                      Prompty
+                    </button>
+                  </div>
                 </div>
 
                 {/* Stavový řádek */}
@@ -1262,7 +1261,7 @@ function AiAssistantContent() {
 
             {/* ── Info dialog o modelech ─────────────────────────────────────── */}
             {showModelInfo && (
-              <div className="mt-2 p-4 rounded-xl" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+              <div className="mt-2 p-4 rounded-xl overflow-y-auto" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', maxHeight: 'min(60vh, 500px)' }}>
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Dostupné AI modely</p>
                   <button onClick={() => setShowModelInfo(false)} style={{ color: 'var(--text-muted)' }}>

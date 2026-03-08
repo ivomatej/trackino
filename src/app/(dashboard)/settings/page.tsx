@@ -908,14 +908,14 @@ function SettingsContent() {
 
     const { error } = await supabase
       .from('trackino_workspaces')
-      .update({ required_fields: requiredFields })
+      .update({ required_fields: requiredFields, hide_tags_globally: hideTagsGlobally })
       .eq('id', currentWorkspace.id);
 
     setSaving(false);
     if (error) {
       setMessage('Chyba při ukládání: ' + error.message);
     } else {
-      setMessage('Povinná pole uložena.');
+      setMessage('Nastavení uloženo.');
       await refreshWorkspace();
       setTimeout(() => setMessage(''), 3000);
     }
@@ -1113,25 +1113,6 @@ function SettingsContent() {
                   </p>
                 </div>
 
-                {/* Globální skrytí štítků */}
-                <label
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors"
-                  style={{ background: hideTagsGlobally ? 'var(--bg-active)' : 'transparent' }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = hideTagsGlobally ? 'var(--bg-active)' : 'transparent'}
-                >
-                  <input
-                    type="checkbox"
-                    checked={hideTagsGlobally}
-                    onChange={(e) => setHideTagsGlobally(e.target.checked)}
-                    className="w-4 h-4 rounded"
-                    style={{ accentColor: 'var(--primary)' }}
-                  />
-                  <div>
-                    <span className="text-sm block" style={{ color: 'var(--text-primary)' }}>Skrýt štítky pro všechny</span>
-                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>TagPicker se nebude zobrazovat v Time Trackeru</span>
-                  </div>
-                </label>
               </div>
 
               <button
@@ -1412,6 +1393,28 @@ function SettingsContent() {
                   <span className="text-sm" style={{ color: 'var(--text-primary)' }}>{field.label}</span>
                 </label>
               ))}
+            </div>
+
+            {/* Skrytí štítků */}
+            <div className="mt-5 pt-4 border-t" style={{ borderColor: 'var(--border)' }}>
+              <label
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors"
+                style={{ background: hideTagsGlobally ? 'var(--bg-active)' : 'transparent' }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = hideTagsGlobally ? 'var(--bg-active)' : 'transparent'}
+              >
+                <input
+                  type="checkbox"
+                  checked={hideTagsGlobally}
+                  onChange={(e) => setHideTagsGlobally(e.target.checked)}
+                  className="w-4 h-4 rounded"
+                  style={{ accentColor: 'var(--primary)' }}
+                />
+                <div>
+                  <span className="text-sm block" style={{ color: 'var(--text-primary)' }}>Skrýt štítky pro všechny</span>
+                  <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Výběr štítků se nebude zobrazovat v Měřiči ani v manuálním zadání</span>
+                </div>
+              </label>
             </div>
 
             <button
