@@ -11,6 +11,11 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.44.2 – 8. 3. 2026</h3>
+<ul>
+  <li><strong>Poznámky – auto-mazání titulku nové poznámky</strong> – při kliknutí do políčka názvu u nově vytvořené poznámky se výchozí text „Nová poznámka" automaticky vymaže, takže lze okamžitě psát vlastní název. Stejný vzor jako v Znalostní bázi.</li>
+</ul>
+
 <h3>v2.44.1 – 8. 3. 2026</h3>
 <ul>
   <li><strong>KB – akce vpravo na mobilu</strong> – panel s akcemi (Kopírovat, Oblíbené, Upravit, Uložit, Zrušit, Smazat) je nyní na mobilních zařízeních zarovnán na pravou stranu (self-end v flex-col-reverse layoutu).</li>
