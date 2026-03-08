@@ -855,6 +855,12 @@ function TasksContent() {
     }
   };
 
+  // ── Left panel folder tree (hooks must be before early returns) ──
+  const rootFolders = useMemo(() => folders.filter(f => !f.parent_id).sort((a, b) => a.sort_order - b.sort_order), [folders]);
+  const unfiledBoards = useMemo(() => visibleBoards.filter(b => !b.folder_id), [visibleBoards]);
+  const getFolderChildren = useCallback((parentId: string) => folders.filter(f => f.parent_id === parentId).sort((a, b) => a.sort_order - b.sort_order), [folders]);
+  const getBoardsInFolder = useCallback((folderId: string) => visibleBoards.filter(b => b.folder_id === folderId), [visibleBoards]);
+
   // ── Chevron SVG for selects ──
   const selectCls = 'appearance-none pr-8 text-base sm:text-sm rounded-lg border px-3 py-2 w-full';
   const SelectChevron = () => (
@@ -878,11 +884,6 @@ function TasksContent() {
   // ══════════════════════════════════════
   // ██  RENDER
   // ══════════════════════════════════════
-  // ── Left panel folder tree ──
-  const rootFolders = useMemo(() => folders.filter(f => !f.parent_id).sort((a, b) => a.sort_order - b.sort_order), [folders]);
-  const unfiledBoards = useMemo(() => visibleBoards.filter(b => !b.folder_id), [visibleBoards]);
-  const getFolderChildren = useCallback((parentId: string) => folders.filter(f => f.parent_id === parentId).sort((a, b) => a.sort_order - b.sort_order), [folders]);
-  const getBoardsInFolder = useCallback((folderId: string) => visibleBoards.filter(b => b.folder_id === folderId), [visibleBoards]);
 
   const toggleFolder = (id: string) => setExpandedFolders(prev => {
     const next = new Set(prev);
