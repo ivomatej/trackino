@@ -93,8 +93,8 @@ function nanoid() {
 
 // ── Rich Editor ───────────────────────────────────────────────────────────────
 
-function RichEditor({ value, onChange, members, pages, onAddTask, taskPanel }: {
-  value: string; onChange: (v: string) => void; members: KbMember[]; pages: KbPage[]; onAddTask?: () => void; taskPanel?: React.ReactNode;
+function RichEditor({ value, onChange, members, pages }: {
+  value: string; onChange: (v: string) => void; members: KbMember[]; pages: KbPage[];
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const savedRange = useRef<Range | null>(null);
@@ -329,7 +329,7 @@ function RichEditor({ value, onChange, members, pages, onAddTask, taskPanel }: {
           </div>
           <Sep />
           {/* Úkol */}
-          <TBtn onClick={() => { if (typeof onAddTask === 'function') onAddTask(); }} title="Přidat úkol">
+          <TBtn onClick={() => insBlock('<div class="kb-task-box"><div class="kb-task-box-title">Úkoly</div><ul class="kb-checklist"><li class="kb-check-unchecked" data-kbm></li></ul></div><p><br></p>')} title="Přidat blok úkolů">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 12l2 2 4-4"/></svg>
             Úkol
           </TBtn>
@@ -389,7 +389,6 @@ function RichEditor({ value, onChange, members, pages, onAddTask, taskPanel }: {
         className="min-h-[280px] p-4 focus:outline-none prose-kb"
         style={{ color: 'var(--text-primary)', background: 'var(--bg-card)' }}
       />
-      {taskPanel}
       <style>{`
         .prose-kb h1{font-size:1.6em;font-weight:800;margin:28px 0 10px;line-height:1.2}
         .prose-kb h2{font-size:1.25em;font-weight:700;margin:24px 0 8px}
@@ -415,6 +414,9 @@ function RichEditor({ value, onChange, members, pages, onAddTask, taskPanel }: {
         .prose-kb .kb-callout[data-color="gray"]{border-color:color-mix(in srgb,#6b7280 35%,transparent);background:color-mix(in srgb,#6b7280 8%,var(--bg-card))}
         .prose-kb .kb-callout::after{content:"";position:absolute;top:8px;right:8px;width:18px;height:18px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Ccircle cx='9' cy='9' r='1.5' fill='%23888' stroke='none'/%3E%3Ccircle cx='15' cy='9' r='1.5' fill='%23888' stroke='none'/%3E%3Ccircle cx='9' cy='15' r='1.5' fill='%23888' stroke='none'/%3E%3Ccircle cx='15' cy='15' r='1.5' fill='%23888' stroke='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:center;cursor:pointer;opacity:0;transition:opacity 0.15s}
         .prose-kb .kb-callout:hover::after{opacity:0.5}
+        .prose-kb .kb-task-box{border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin:16px 0;background:var(--bg-hover)}
+        .prose-kb .kb-task-box .kb-task-box-title{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:6px}
+        .prose-kb .kb-task-box .kb-checklist{margin:0;padding-left:2px}
         .prose-kb details.kb-toggle{border:none;border-radius:10px;background:var(--bg-hover);padding:0;margin:16px 0;overflow:hidden}
         .prose-kb details.kb-toggle>summary{padding:10px 14px;cursor:pointer;font-weight:600;list-style:none;display:flex;align-items:center;gap:8px}
         .prose-kb details.kb-toggle>summary::-webkit-details-marker{display:none}
@@ -547,6 +549,9 @@ function PageViewer({ page, onChecklistToggle, onPageLinkClick }: {
         .prose-view .kb-callout[data-color="red"]{border-color:color-mix(in srgb,#ef4444 35%,transparent);background:color-mix(in srgb,#ef4444 8%,var(--bg-card))}
         .prose-view .kb-callout[data-color="purple"]{border-color:color-mix(in srgb,#8b5cf6 35%,transparent);background:color-mix(in srgb,#8b5cf6 8%,var(--bg-card))}
         .prose-view .kb-callout[data-color="gray"]{border-color:color-mix(in srgb,#6b7280 35%,transparent);background:color-mix(in srgb,#6b7280 8%,var(--bg-card))}
+        .prose-view .kb-task-box{border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin:16px 0;background:var(--bg-hover)}
+        .prose-view .kb-task-box .kb-task-box-title{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:6px}
+        .prose-view .kb-task-box .kb-checklist{margin:0;padding-left:2px}
         .prose-view details.kb-toggle{border:none;border-radius:10px;background:var(--bg-hover);padding:0;margin:16px 0;overflow:hidden}
         .prose-view details.kb-toggle>summary{padding:10px 14px;cursor:pointer;font-weight:600;list-style:none;display:flex;align-items:center;gap:8px;user-select:none}
         .prose-view details.kb-toggle>summary::-webkit-details-marker{display:none}
@@ -900,7 +905,7 @@ function KnowledgeBaseContent() {
     if (!user || !currentWorkspace || !selectedPage) return;
     setSaving(true);
     const now = new Date().toISOString();
-    const payload = { title: editTitle.trim() || 'Bez názvu', content: editContent, tasks: editTasks, status: editStatus, is_restricted: editRestricted, folder_id: editFolderId, updated_by: user.id, updated_at: now };
+    const payload = { title: editTitle.trim() || 'Bez názvu', content: editContent, tasks: [] as { id: string; text: string; checked: boolean }[], status: editStatus, is_restricted: editRestricted, folder_id: editFolderId, updated_by: user.id, updated_at: now };
 
     if (selectedPage.id.startsWith('__new__')) {
       const { data: np } = await supabase.from('trackino_kb_pages').insert({
@@ -1670,68 +1675,13 @@ function KnowledgeBaseContent() {
                 {/* Content */}
                 <div className="mb-8">
                   {editing ? (
-                    <RichEditor value={editContent} onChange={setEditContent} members={members} pages={pages} onAddTask={addKbTask} taskPanel={editTasks.length > 0 ? (
-                      <div className="border-t px-3 md:px-4 py-3 md:py-2.5" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
-                        <div className="text-[10px] font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>Úkoly</div>
-                        <div className="space-y-2 md:space-y-1">
-                          {editTasks.map(task => (
-                            <div key={task.id} className="flex items-center gap-2.5 md:gap-2 group/task">
-                              <input type="checkbox" checked={task.checked} onChange={() => toggleKbTask(task.id)}
-                                className="w-5 h-5 md:w-3.5 md:h-3.5 flex-shrink-0 cursor-pointer rounded" style={{ accentColor: '#9ca3af' }} />
-                              <input
-                                ref={el => { if (el) kbTaskRefs.current.set(task.id, el); else kbTaskRefs.current.delete(task.id); }}
-                                type="text" value={task.text}
-                                onChange={e => updateKbTaskText(task.id, e.target.value)}
-                                onKeyDown={e => {
-                                  if (e.key === 'Enter') { e.preventDefault(); addKbTask(); }
-                                  if (e.key === 'Backspace' && task.text === '') { e.preventDefault(); removeKbTask(task.id); }
-                                }}
-                                className="flex-1 bg-transparent outline-none min-w-0 text-base md:text-xs py-1 md:py-0"
-                                style={{ color: task.checked ? 'var(--text-muted)' : 'var(--text-primary)', textDecoration: task.checked ? 'line-through' : 'none' }}
-                                placeholder="Úkol…" />
-                              <button onClick={() => removeKbTask(task.id)}
-                                className="opacity-60 md:opacity-0 md:group-hover/task:opacity-60 hover:!opacity-100 flex-shrink-0 transition-opacity p-1.5 md:p-0"
-                                style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}>
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="md:w-[9px] md:h-[9px]">
-                                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                                </svg>
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                        <button onClick={addKbTask} className="flex items-center gap-1.5 md:gap-1 text-sm md:text-[11px] mt-2.5 md:mt-1.5 py-1 md:py-0 transition-colors"
-                          style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
-                          onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
-                          onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}>
-                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="md:w-2 md:h-2">
-                            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-                          </svg>
-                          Přidat úkol
-                        </button>
-                      </div>
-                    ) : undefined} />
+                    <RichEditor value={editContent} onChange={setEditContent} members={members} pages={pages} />
                   ) : (
                     <>
                     {selectedPage.content
                       ? <PageViewer page={selectedPage} onChecklistToggle={handleChecklistToggle} onPageLinkClick={selectPage} />
                       : <p className="text-sm italic" style={{ color: 'var(--text-muted)' }}>Stránka je prázdná. Klikněte Upravit a začněte psát.</p>
                     }
-                    {Array.isArray(selectedPage.tasks) && selectedPage.tasks.length > 0 && (
-                      <div className="mt-4 border rounded-xl px-3 md:px-4 py-3 md:py-2.5" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
-                        <div className="text-[10px] font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>Úkoly</div>
-                        <div className="space-y-2 md:space-y-1">
-                          {selectedPage.tasks.map((task: { id: string; text: string; checked: boolean }) => (
-                            <div key={task.id} className="flex items-center gap-2.5 md:gap-2">
-                              <input type="checkbox" checked={task.checked} readOnly
-                                className="w-5 h-5 md:w-3.5 md:h-3.5 flex-shrink-0 cursor-default rounded" style={{ accentColor: '#9ca3af' }} />
-                              <span className="text-base md:text-xs" style={{ color: task.checked ? 'var(--text-muted)' : 'var(--text-primary)', textDecoration: task.checked ? 'line-through' : 'none' }}>
-                                {task.text || <em style={{ color: 'var(--text-muted)' }}>prázdný úkol</em>}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                     </>
                   )}
                 </div>
