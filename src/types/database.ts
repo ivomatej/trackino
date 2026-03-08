@@ -774,6 +774,7 @@ export interface KbPage {
   status: KbPageStatus;
   tags: string[];
   is_restricted: boolean;
+  public_token: string | null;
   created_by: string;
   updated_by: string | null;
   created_at: string;

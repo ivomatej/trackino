@@ -528,6 +528,7 @@ const DEFAULT_HELP_CONTENT = `
   <li><strong>Kopírování kódu s animací</strong> – v bloku kódu (editor i viewer) se při kliknutí na ikonu kopírování zobrazí zelená fajfka na 1,5 sekundy pro potvrzení úspěšného zkopírování</li>
   <li><strong>Odkazující stránky</strong> – záložka „Odkazující" v dolní části stránky zobrazí seznam všech stránek, které na tuto stránku odkazují (backlinky), včetně cesty složky a stavu</li>
   <li><strong>Úvodní stránka</strong> – pokud není aktivní žádný filtr, zobrazí se dvousloupcový přehled: Naposledy upravené (10 položek) a Nově vytvořené (10 položek), obojí s cestou složky, plným datem (den, měsíc, rok) a v sekci Nově vytvořené i barevnou tečkou stavu stránky</li>
+  <li><strong>Publikování stránky</strong> – admin může kliknutím na ikonku zeměkoule v hlavičce stránky zpřístupnit stránku veřejně na unikátní URL bez nutnosti přihlášení; URL obsahuje slug z názvu a bezpečnostní token; u publikované stránky se zobrazí zelený proužek s tlačítky „Kopírovat odkaz" a „Otevřít"; opětovným kliknutím na zeměkouli se publikace zruší a URL přestane fungovat</li>
 </ul>
 
 <h3>Dokumenty – správa souborů a složek</h3>

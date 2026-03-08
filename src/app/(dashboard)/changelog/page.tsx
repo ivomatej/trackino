@@ -11,6 +11,27 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.49.1 – 8. 3. 2026</h3>
+<ul>
+  <li><strong>Znalostní báze – Publikování stránky</strong>:
+    <ul>
+      <li>Nové tlačítko <strong>Publikovat</strong> (ikona zeměkoule) v hlavičce stránky – zpřístupní stránku na veřejné URL bez nutnosti přihlášení</li>
+      <li>Veřejná URL obsahuje <strong>slug</strong> z názvu stránky a <strong>16znakový bezpečnostní token</strong> (kryptograficky náhodný)</li>
+      <li>Formát: <code>/kb/nazev-stranky/abc123...</code></li>
+      <li>Zelený proužek s tlačítky <strong>Kopírovat odkaz</strong> a <strong>Otevřít</strong> se zobrazí u publikovaných stránek</li>
+      <li>Kliknutím na zeměkouli znovu lze publikaci <strong>zrušit</strong> (odstraní token, URL přestane fungovat)</li>
+      <li>Veřejná stránka zobrazuje obsah ve stylu KB s názvem workspace a datem poslední úpravy</li>
+    </ul>
+  </li>
+  <li><strong>Kalendář – ikonka opakující se události</strong>:
+    <ul>
+      <li>Události z Důležitých dnů, které se opakují (týdně/měsíčně/ročně), nyní zobrazují malou <strong>SVG ikonku opakování</strong> (dvě šipky) v boxíku události</li>
+      <li>Ikonka je viditelná ve všech pohledech: Měsíc, Týden, 3 dny, Den a Seznam</li>
+    </ul>
+  </li>
+  <li><strong>DB migrace</strong> – <code>ALTER TABLE trackino_kb_pages ADD COLUMN IF NOT EXISTS public_token text DEFAULT NULL</code></li>
+</ul>
+
 <h3>v2.49.0 – 8. 3. 2026</h3>
 <ul>
   <li><strong>Evidence domén – Registrátoři jako entita</strong>:

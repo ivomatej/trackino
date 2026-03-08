@@ -91,6 +91,16 @@ function nanoid() {
   return Math.random().toString(36).slice(2, 10);
 }
 
+function slugify(text: string): string {
+  return text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'stranka';
+}
+
+function generatePublicToken(): string {
+  const arr = new Uint8Array(12);
+  crypto.getRandomValues(arr);
+  return Array.from(arr, b => b.toString(36).padStart(2, '0')).join('').slice(0, 16);
+}
+
 // ── Rich Editor ───────────────────────────────────────────────────────────────
 
 function RichEditor({ value, onChange, members, pages }: {
@@ -786,6 +796,8 @@ function KnowledgeBaseContent() {
   const [saving, setSaving] = useState(false);
   const [movingPageId, setMovingPageId] = useState<string | null>(null);
   const [copiedPage, setCopiedPage] = useState(false);
+  const [copiedPublicUrl, setCopiedPublicUrl] = useState(false);
+  const [publishingPage, setPublishingPage] = useState(false);
 
   const [search, setSearch] = useState('');
   const [members, setMembers] = useState<KbMember[]>([]);
@@ -960,6 +972,40 @@ function KnowledgeBaseContent() {
     await fetchAll();
   };
 
+  // ── Publish / Unpublish ───────────────────────────────────────────────────
+
+  const getPublicUrl = (page: KbPage) => {
+    if (!page.public_token) return '';
+    const slug = slugify(page.title);
+    return `${window.location.origin}/kb/${slug}/${page.public_token}`;
+  };
+
+  const togglePublish = async (page: KbPage) => {
+    if (page.id.startsWith('__new__')) return;
+    setPublishingPage(true);
+    if (page.public_token) {
+      // Unpublish
+      await supabase.from('trackino_kb_pages').update({ public_token: null }).eq('id', page.id);
+      setSelectedPage(prev => prev ? { ...prev, public_token: null } : prev);
+      setPages(prev => prev.map(p => p.id === page.id ? { ...p, public_token: null } : p));
+    } else {
+      // Publish
+      const token = generatePublicToken();
+      await supabase.from('trackino_kb_pages').update({ public_token: token }).eq('id', page.id);
+      setSelectedPage(prev => prev ? { ...prev, public_token: token } : prev);
+      setPages(prev => prev.map(p => p.id === page.id ? { ...p, public_token: token } : p));
+    }
+    setPublishingPage(false);
+  };
+
+  const copyPublicUrl = (page: KbPage) => {
+    const url = getPublicUrl(page);
+    if (!url) return;
+    navigator.clipboard.writeText(url);
+    setCopiedPublicUrl(true);
+    setTimeout(() => setCopiedPublicUrl(false), 2000);
+  };
+
   // ── New page ───────────────────────────────────────────────────────────────
 
   const openNewPage = (folderId?: string | null) => {
@@ -972,7 +1018,7 @@ function KnowledgeBaseContent() {
     const fake: KbPage = {
       id: '__new__', workspace_id: currentWorkspace?.id ?? '', folder_id: folderId,
       title: template.title === 'Prázdná stránka' ? 'Nová stránka' : template.title,
-      content: template.content, tasks: [], status: 'draft', tags: [], is_restricted: false,
+      content: template.content, tasks: [], status: 'draft', tags: [], is_restricted: false, public_token: null,
       created_by: user?.id ?? '', updated_by: null,
       created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
     };
@@ -1584,6 +1630,16 @@ function KnowledgeBaseContent() {
                         )}
                       </button>
                     )}
+                    {/* Publish */}
+                    {canAdmin && !selectedPage.id.startsWith('__new__') && !editing && (
+                      <button type="button" onClick={() => togglePublish(selectedPage)} title={selectedPage.public_token ? 'Zrušit publikaci' : 'Publikovat veřejně'} disabled={publishingPage}
+                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[var(--bg-hover)] transition-colors"
+                        style={{ color: selectedPage.public_token ? '#22c55e' : 'var(--text-muted)', opacity: publishingPage ? 0.5 : 1 }}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                        </svg>
+                      </button>
+                    )}
                     {/* Star */}
                     {!selectedPage.id.startsWith('__new__') && (
                       <button type="button" onClick={() => toggleFavorite(selectedPage.id)} title="Oblíbené" className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[var(--bg-hover)] transition-colors">
@@ -1668,6 +1724,43 @@ function KnowledgeBaseContent() {
                   </div>
                 )}
 
+
+                {/* Public URL strip (when published) */}
+                {!editing && selectedPage.public_token && !selectedPage.id.startsWith('__new__') && (
+                  <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg border" style={{ borderColor: '#22c55e44', background: '#22c55e0a' }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+                      <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                    </svg>
+                    <span className="text-xs font-medium flex-1 min-w-0 truncate" style={{ color: '#22c55e' }}>
+                      Veřejně dostupná
+                    </span>
+                    <button type="button" onClick={() => copyPublicUrl(selectedPage)} title="Kopírovat veřejný odkaz"
+                      className="flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium transition-colors"
+                      style={{ background: '#22c55e18', color: '#22c55e' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = '#22c55e28')}
+                      onMouseLeave={e => (e.currentTarget.style.background = '#22c55e18')}>
+                      {copiedPublicUrl ? (
+                        <>
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                          Zkopírováno
+                        </>
+                      ) : (
+                        <>
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                          Kopírovat odkaz
+                        </>
+                      )}
+                    </button>
+                    <button type="button" onClick={() => window.open(getPublicUrl(selectedPage), '_blank')} title="Otevřít veřejnou stránku"
+                      className="flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium transition-colors"
+                      style={{ background: '#22c55e18', color: '#22c55e' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = '#22c55e28')}
+                      onMouseLeave={e => (e.currentTarget.style.background = '#22c55e18')}>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                      Otevřít
+                    </button>
+                  </div>
+                )}
 
                 {/* Restricted access toggle (admin only, edit mode) */}
                 {editing && canAdmin && (

@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 8. 3. 2026 (v2.49.0)
+> Aktualizováno: 8. 3. 2026 (v2.49.1)
 
 ---
 
@@ -515,6 +515,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.49.1 | 8. 3. 2026 | Znalostní báze – Publikování stránky (veřejná URL s bezpečnostním tokenem); Kalendář – SVG ikonka opakující se události ve všech pohledech; nová veřejná route /kb/[slug]/[token]; API route /api/kb-public; 1 nový sloupec (public_token na trackino_kb_pages) |
 | v2.49.0 | 8. 3. 2026 | Evidence domén – Registrátoři jako entita: nová záložka Registrátoři s CRUD (název, web, poznámky), select registrátora ve formuláři domény (místo volného textu), tlačítko + pro rychlé přidání, filtr dle registrátora; nový status Dobíhá (winding_down, fialový); dashboard rozšířen na 5 karet; Kalendář – nový pohled 3 dny: 3sloupcová mřížka (předchozí/dnešek/další den) s časovou osou, navigace po 1 dni, nastavení časového rozsahu, celodenní události; 1 nová DB tabulka (trackino_domain_registrars) |
 | v2.48.0 | 8. 3. 2026 | Nový modul Evidence domén (domains, NÁSTROJE, Pro+Max) – evidence firemních domén; dashboard (celkem/aktivní/expirující/expirované); computed status „Expirující" (active + ≤30 dní do expirace, oranžové zvýraznění); spárování s předplatným (volitelné FK); tabulka s řazením (název/expirace/registrátor/status) + filtrování (status/firma/fulltext); detail modal; mobilní karty; oprávnění can_manage_domains v Týmu; 1 nová DB tabulka (trackino_domains) |
 | v2.47.1 | 8. 3. 2026 | Předplatná – Podkategorie: hierarchická struktura kategorií (parent_id na trackino_subscription_categories), stromové zobrazení v záložce Kategorie, tlačítko + pro rychlé přidání podkategorie, seskupený select ve formuláři předplatného, filtr zahrnuje podkategorie, kaskádové mazání |
@@ -1528,7 +1529,7 @@ POST https://api.firecrawl.dev/v2/agent    # pro budoucí use cases
 | Tabulka | Popis |
 |---------|-------|
 | `trackino_kb_folders` | Hierarchické složky (parent_id self-ref, owner_id, is_shared bool) |
-| `trackino_kb_pages` | Stránky (folder_id, title, content HTML, tasks jsonb, status, tags[], is_restricted, created_by, updated_by) |
+| `trackino_kb_pages` | Stránky (folder_id, title, content HTML, tasks jsonb, status, tags[], is_restricted, public_token, created_by, updated_by) |
 | `trackino_kb_versions` | Verze stránek – každé uložení vytvoří verzi (page_id, content, title, edited_by) |
 | `trackino_kb_comments` | Komentáře k stránce (page_id, user_id, content) |
 | `trackino_kb_favorites` | Oblíbené stránky (PK: page_id + user_id) |
@@ -1540,7 +1541,7 @@ POST https://api.firecrawl.dev/v2/agent    # pro budoucí use cases
 ```typescript
 export type KbPageStatus = 'draft' | 'active' | 'archived';
 export interface KbFolder { id, workspace_id, parent_id, name, owner_id, is_shared?: boolean, created_at, updated_at }
-export interface KbPage { id, workspace_id, folder_id, title, content, tasks: { id: string; text: string; checked: boolean }[], status: KbPageStatus, tags: string[], is_restricted, created_by, updated_by, created_at, updated_at }
+export interface KbPage { id, workspace_id, folder_id, title, content, tasks: { id: string; text: string; checked: boolean }[], status: KbPageStatus, tags: string[], is_restricted, public_token: string | null, created_by, updated_by, created_at, updated_at }
 export interface KbVersion { id, page_id, workspace_id, content, title, edited_by, created_at }
 export interface KbComment { id, page_id, workspace_id, user_id, content, created_at, updated_at }
 export interface KbReview { id, workspace_id, page_id, folder_id, assigned_to, review_date, note, is_done, created_by, created_at }
@@ -1578,6 +1579,17 @@ const STATUS_CONFIG: Record<KbPageStatus, { label: string; color: string }>
 - `handleChecklistToggle(html)` – silent save bez zobrazení editoru; DOM index matching pro toggle správného prvku
 - `revertToVersion(v)` – confirm → UPDATE page → INSERT verze → fetchPageDetail + fetchAll
 - `toggleUserAccess(userId, canEdit)` – upsert/delete v trackino_kb_access
+- `togglePublish(page)` – generuje/maže `public_token` na stránce; pokud token existuje → nastaví na null (unpublish); jinak vygeneruje 16znakový kryptograficky náhodný token
+- `getPublicUrl(page)` → `{origin}/kb/{slugify(title)}/{public_token}` – veřejná URL pro sdílení
+- `copyPublicUrl(page)` – zkopíruje veřejnou URL do schránky
+
+### Publikování stránky (v2.49.1)
+- **DB sloupec**: `trackino_kb_pages.public_token text DEFAULT NULL` – kryptograficky náhodný 16znakový token (crypto.getRandomValues)
+- **Veřejná route**: `/kb/[slug]/[token]` – Next.js stránka bez auth, slug je jen pro hezčí URL (ignorován serverem), token je klíčový
+- **API route**: `GET /api/kb-public?token=...` – server-side přes supabase-admin (bypasuje RLS), vrací title, content, updated_at, workspace_name
+- **UI**: ikona zeměkoule v action baru stránky (zelená = publikováno, šedá = nepublikováno); zelený proužek s „Kopírovat odkaz" a „Otevřít" u publikovaných stránek
+- **Oprávnění**: jen admin (canAdmin) může publikovat/odvolat
+- **Bezpečnost**: token je 16 znaků z `crypto.getRandomValues(Uint8Array(12))` → base36 = ~62 bitů entropie; URL nelze uhádnout
 
 ### Layout
 - Dvoupanelový: záporný margin (`-m-4 lg:-m-6`) k eliminaci DashboardLayout paddingu, `flex flex-row`
