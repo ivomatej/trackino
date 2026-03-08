@@ -2390,10 +2390,20 @@ function CalendarContent() {
       });
   }, [attendeeEvents, invitationsTab, invitationsSearch]);
 
+  // Při změně displayEvents vyčistit cache, aby se poznámky načetly znovu
+  const prevDisplayEventsRef = useRef<string>('');
+  useEffect(() => {
+    const key = displayEvents.map(ev => ev.id).join(',');
+    if (key !== prevDisplayEventsRef.current) {
+      prevDisplayEventsRef.current = key;
+      notesLoadedRefs.current.clear();
+    }
+  }, [displayEvents]);
+
   // Načtení poznámek pro viditelné události (seznam pohled) – vždy při seznam pohledu
   // Umístěno ZDE aby se mohlo odkazovat na displayEvents
   useEffect(() => {
-    if (view === 'list' && !loading) {
+    if (view === 'list' && !loading && displayEvents.length > 0) {
       const refs = displayEvents.map(ev => ev.id);
       fetchNotesBatch(refs);
     }

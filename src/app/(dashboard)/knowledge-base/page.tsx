@@ -899,7 +899,7 @@ function KnowledgeBaseContent() {
     if (!user || !currentWorkspace || !selectedPage) return;
     setSaving(true);
     const now = new Date().toISOString();
-    const payload = { title: editTitle.trim() || 'Bez názvu', content: editContent, tasks: editTasks, status: editStatus, is_restricted: editRestricted, folder_id: editFolderId, updated_by: user.id, updated_at: now };
+    const payload = { title: editTitle.trim() || 'Bez názvu', content: editContent, tasks: [] as { id: string; text: string; checked: boolean }[], status: editStatus, is_restricted: editRestricted, folder_id: editFolderId, updated_by: user.id, updated_at: now };
 
     if (selectedPage.id.startsWith('__new__')) {
       const { data: np } = await supabase.from('trackino_kb_pages').insert({
@@ -1669,72 +1669,11 @@ function KnowledgeBaseContent() {
                 {/* Content */}
                 <div className="mb-8">
                   {editing ? (
-                    <>
-                      <RichEditor value={editContent} onChange={setEditContent} members={members} pages={pages} />
-                      {/* Tasks checklist panel */}
-                      <div className="mx-6 my-3 border rounded-xl px-3 py-2.5" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
-                        <div className="text-[10px] font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>Úkoly</div>
-                        <div className="space-y-1">
-                          {editTasks.map(task => (
-                            <div key={task.id} className="flex items-center gap-2 group/task">
-                              <input type="checkbox" checked={task.checked} onChange={() => toggleKbTask(task.id)}
-                                className="w-3.5 h-3.5 flex-shrink-0 cursor-pointer rounded" style={{ accentColor: '#9ca3af' }} />
-                              <input
-                                ref={el => { if (el) kbTaskRefs.current.set(task.id, el); else kbTaskRefs.current.delete(task.id); }}
-                                type="text" value={task.text}
-                                onChange={e => updateKbTaskText(task.id, e.target.value)}
-                                onKeyDown={e => {
-                                  if (e.key === 'Enter') { e.preventDefault(); addKbTask(); }
-                                  if (e.key === 'Backspace' && task.text === '') { e.preventDefault(); removeKbTask(task.id); }
-                                }}
-                                className="flex-1 text-xs bg-transparent outline-none min-w-0 text-base sm:text-xs"
-                                style={{ color: task.checked ? 'var(--text-muted)' : 'var(--text-primary)', textDecoration: task.checked ? 'line-through' : 'none' }}
-                                placeholder="Úkol…" />
-                              <button onClick={() => removeKbTask(task.id)}
-                                className="opacity-60 md:opacity-0 md:group-hover/task:opacity-60 hover:!opacity-100 flex-shrink-0 transition-opacity"
-                                style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                                </svg>
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                        <button onClick={addKbTask} className="flex items-center gap-1 text-[11px] mt-1.5 transition-colors"
-                          style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: '1px 0' }}
-                          onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
-                          onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}>
-                          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-                          </svg>
-                          Přidat úkol
-                        </button>
-                      </div>
-                    </>
+                    <RichEditor value={editContent} onChange={setEditContent} members={members} pages={pages} />
                   ) : (
-                    <>
-                      {selectedPage.content
-                        ? <PageViewer page={selectedPage} onChecklistToggle={handleChecklistToggle} onPageLinkClick={selectPage} />
-                        : <p className="text-sm italic" style={{ color: 'var(--text-muted)' }}>Stránka je prázdná. Klikněte Upravit a začněte psát.</p>
-                      }
-                      {/* Tasks read-only view */}
-                      {Array.isArray(selectedPage.tasks) && selectedPage.tasks.length > 0 && (
-                        <div className="mx-8 mt-4 border rounded-xl px-3 py-2.5" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
-                          <div className="text-[10px] font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>Úkoly</div>
-                          <div className="space-y-1">
-                            {selectedPage.tasks.map((task: { id: string; text: string; checked: boolean }) => (
-                              <div key={task.id} className="flex items-center gap-2">
-                                <input type="checkbox" checked={task.checked} readOnly
-                                  className="w-3.5 h-3.5 flex-shrink-0 cursor-default" style={{ accentColor: '#9ca3af' }} />
-                                <span className="text-xs" style={{ color: task.checked ? 'var(--text-muted)' : 'var(--text-primary)', textDecoration: task.checked ? 'line-through' : 'none' }}>
-                                  {task.text || <em style={{ color: 'var(--text-muted)' }}>prázdný úkol</em>}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </>
+                    selectedPage.content
+                      ? <PageViewer page={selectedPage} onChecklistToggle={handleChecklistToggle} onPageLinkClick={selectPage} />
+                      : <p className="text-sm italic" style={{ color: 'var(--text-muted)' }}>Stránka je prázdná. Klikněte Upravit a začněte psát.</p>
                   )}
                 </div>
 

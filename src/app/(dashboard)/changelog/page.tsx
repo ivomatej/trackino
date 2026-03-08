@@ -11,6 +11,13 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.45.1 – 8. 3. 2026</h3>
+<ul>
+  <li><strong>Fakturace – přehlednější výpis faktur</strong> – na desktopu se nyní faktura zobrazuje ve 4 řádcích: název měsíce, VS + vystaveno + splatnost, částka s hodinami v závorce, Schváleno a Proplaceno.</li>
+  <li><strong>Kalendář – oprava načítání poznámek</strong> – poznámky k událostem se v pohledu Seznam nyní správně načtou hned při prvním otevření Kalendáře. Dříve bylo potřeba stránku 2–3× přenačíst.</li>
+  <li><strong>Znalostní báze – inline úkoly</strong> – kliknutí na tlačítko „Úkol" v toolbaru nyní vloží checklist přímo do obsahu stránky (jako kódový blok nebo infobox). Odstraněn fixní panel úkolů pod stránkou.</li>
+</ul>
+
 <h3>v2.45.0 – 8. 3. 2026</h3>
 <ul>
   <li><strong>AI asistent – Google Gemini integrace</strong> – AI asistent nyní podporuje dva poskytovatele: OpenAI a Google Gemini. Přidány 4 nové modely: Gemini 2.5 Flash, Gemini 2.5 Flash-Lite (nejlevnější dostupný model), Gemini 2.5 Pro a Gemini 3 Flash Preview. Modely jsou v přepínači seskupeny dle poskytovatele (GPT / Gemini). Info dialog o modelech zobrazuje oba poskytovatele s odkazem na ceník. Kontextové okno Gemini modelů je 1M tokenů. Gemini API klíč (<code>GEMINI_API_KEY</code>) se nastavuje jako Vercel Environment Variable.</li>

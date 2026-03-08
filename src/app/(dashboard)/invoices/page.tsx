@@ -549,27 +549,35 @@ function InvoicesContent() {
           <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
             Splatnost: {fmtDate(invoice.due_date)}
           </span>
-          {invoice.total_hours !== null && (
-            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-              {invoice.total_hours} h
-            </span>
-          )}
-          {invoice.amount !== null && (
-            <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
-              {invoice.amount.toLocaleString('cs-CZ')} {currencySymbol}
-            </span>
-          )}
-          {invoice.approved_at && (
-            <span className="text-xs" style={{ color: '#1e40af' }}>
-              Schváleno: {fmtDate(invoice.approved_at.split('T')[0])}
-            </span>
-          )}
-          {invoice.paid_at && (
-            <span className="text-xs font-medium" style={{ color: '#15803d' }}>
-              Proplaceno: {fmtDate(invoice.paid_at.split('T')[0])}
-            </span>
-          )}
         </div>
+        {(invoice.amount !== null || invoice.total_hours !== null) && (
+          <div className="flex items-center gap-1 mt-0.5">
+            {invoice.amount !== null && (
+              <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                {invoice.amount.toLocaleString('cs-CZ')} {currencySymbol}
+              </span>
+            )}
+            {invoice.total_hours !== null && (
+              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                ({invoice.total_hours} h)
+              </span>
+            )}
+          </div>
+        )}
+        {(invoice.approved_at || invoice.paid_at) && (
+          <div className="flex items-center gap-3 mt-0.5">
+            {invoice.approved_at && (
+              <span className="text-xs" style={{ color: '#1e40af' }}>
+                Schváleno: {fmtDate(invoice.approved_at.split('T')[0])}
+              </span>
+            )}
+            {invoice.paid_at && (
+              <span className="text-xs font-medium" style={{ color: '#15803d' }}>
+                Proplaceno: {fmtDate(invoice.paid_at.split('T')[0])}
+              </span>
+            )}
+          </div>
+        )}
         {/* Poznámka k vrácení – viditelná v "Moje faktury" */}
         {invoice.status === 'returned' && invoice.note && (
           <div className="flex items-center gap-1 mt-1">

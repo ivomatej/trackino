@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 8. 3. 2026 (v2.45.0)
+> Aktualizováno: 8. 3. 2026 (v2.45.1)
 
 ---
 
@@ -493,6 +493,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.45.1 | 8. 3. 2026 | Fakturace: redesign desktop výpisu – 4 řádky (měsíc, VS+vystaveno+splatnost, částka s hodinami v závorce, Schváleno+Proplaceno); Kalendář: fix race condition načítání poznámek v pohledu Seznam (prevDisplayEventsRef clear cache při změně displayEvents); KB: odstraněn fixní task panel pod stránkou – tlačítko Úkol vkládá checklist inline do editoru přes insBlock() |
 | v2.45.0 | 8. 3. 2026 | AI asistent: Google Gemini integrace – přidán provider 'google' (AiProvider type), 4 nové modely (gemini-2.5-flash, gemini-2.5-flash-lite, gemini-2.5-pro, gemini-3-flash-preview), @google/generative-ai SDK, handleGemini() v API route, model pills seskupeny dle providera, info dialog s provider sekcemi, env GEMINI_API_KEY |
 | v2.44.4 | 8. 3. 2026 | Kalendář: oprava scroll pozice při navigaci – přidán currentDate do deps scroll useLayoutEffect+useEffect → scroll na calViewStart*ROW_H se spustí i při prev/next/today |
 | v2.44.3 | 8. 3. 2026 | Globální iOS zoom prevence: globals.css media query (max-width:640px) font-size:16px!important na input/textarea/select/[contenteditable] – pokrývá celou aplikaci; pravidlo přidáno do CLAUDE-ASISTENT.md |
