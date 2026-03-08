@@ -1040,11 +1040,21 @@ export interface DomainRegistrar {
 
 export type TaskPriority = 'urgent' | 'high' | 'medium' | 'low' | 'none';
 
+export interface TaskBoardSettings {
+  auto_complete_column_id?: string | null;
+  column_colors_enabled?: boolean;
+}
+
 export interface TaskBoard {
   id: string;
   workspace_id: string;
   name: string;
   created_by: string;
+  settings: TaskBoardSettings;
+  folder_id: string | null;
+  color: string;
+  description: string;
+  is_shared: boolean;
   created_at: string;
 }
 
@@ -1069,6 +1079,7 @@ export interface TaskItem {
   sort_order: number;
   created_by: string;
   assigned_to: string | null;
+  is_completed: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -1079,6 +1090,7 @@ export interface TaskSubtask {
   title: string;
   is_done: boolean;
   sort_order: number;
+  assigned_to: string | null;
   created_at: string;
 }
 
@@ -1109,5 +1121,36 @@ export interface TaskHistory {
   action: string;
   old_value: string | null;
   new_value: string | null;
+  created_at: string;
+}
+
+export interface TaskFolder {
+  id: string;
+  workspace_id: string;
+  name: string;
+  color: string;
+  sort_order: number;
+  parent_id: string | null;
+  created_by: string;
+  is_shared: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TaskFolderShare {
+  id: string;
+  folder_id: string;
+  workspace_id: string;
+  user_id: string | null;
+  shared_by: string;
+  created_at: string;
+}
+
+export interface TaskBoardMember {
+  id: string;
+  board_id: string;
+  workspace_id: string;
+  user_id: string;
+  can_edit: boolean;
   created_at: string;
 }

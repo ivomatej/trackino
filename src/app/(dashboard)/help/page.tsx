@@ -302,16 +302,18 @@ const DEFAULT_HELP_CONTENT = `
 </ul>
 
 <h3>Úkoly</h3>
-<p>Modul <strong>Úkoly</strong> (sekce <strong>SPRÁVA</strong>, tarif Pro a Max) poskytuje kompletní správu úkolů s kanban nástěnkou inspirovanou Asanou a ClickUp.</p>
+<p>Modul <strong>Úkoly</strong> (sekce <strong>NÁSTROJE</strong>, tarif Pro a Max) poskytuje kompletní správu úkolů s kanban nástěnkou, složkami a projekty.</p>
 <ul>
-  <li><strong>3 pohledy</strong> – Seznam (jednoduchý výpis), Kanban (sloupcový přehled s drag & drop přesouváním), Tabulka (kompaktní řádkový výpis s řazením)</li>
-  <li><strong>Kanban nástěnka</strong> – sloupce (stavy) s barevným kódováním; přesouvání úkolů mezi sloupci tažením; rychlé přidání úkolu tlačítkem + na konci sloupce; přidání nového sloupce</li>
-  <li><strong>Úkol</strong> – název, popis (editovatelný rich text), priorita (Urgentní/Vysoká/Střední/Nízká/Žádná), deadline, přiřazený člen, stav (sloupec)</li>
-  <li><strong>Detail panel</strong> – vysouvá se zprava; editovatelný název, status/priorita/osoba/deadline; popis; podúkoly s progress barem; přílohy (nahrávání souborů do Supabase Storage); komentáře; sbalitelná historie změn</li>
-  <li><strong>Podúkoly</strong> – checklist s progress barem; přidávání nových podúkolů inputem; zaškrtnutí/odškrtnutí</li>
-  <li><strong>Přílohy</strong> – nahrávání souborů (max 20 MB); stahování podepsaným URL; mazání</li>
-  <li><strong>Komentáře</strong> – textové komentáře s avatarem autora a časem</li>
-  <li><strong>Historie</strong> – automatický log změn (vytvoření, přesun, změna priority/deadline/přiřazení)</li>
+  <li><strong>Levý sidebar</strong> – strom složek a projektů (nástěnek); složky lze vnořovat do 5 úrovní; projekty se zobrazují uvnitř složek nebo jako nezařazené; na mobilu se sidebar skrývá a otevírá toggle tlačítkem</li>
+  <li><strong>3 pohledy</strong> – Seznam (výpis s checkboxy dokončení), Kanban (sloupcový přehled s drag & drop), Tabulka (kompaktní řádkový výpis s řazením)</li>
+  <li><strong>Kanban nástěnka</strong> – přesouvání úkolů mezi sloupci tažením; přesouvání celých sloupců tažením za záhlaví; editace/mazání sloupců (double-click přejmenuje, koš smaže); přidání nového sloupce</li>
+  <li><strong>Dokončení úkolu</strong> – checkbox před názvem; po zaškrtnutí karta zesvětlí (opacity + přeškrtnutý text); lze opakovaně zapínat/vypínat</li>
+  <li><strong>Nastavení nástěnky</strong> – auto-přesun dokončených úkolů do zvoleného sloupce; barevné podbarvení sloupců (toggle + color picker)</li>
+  <li><strong>Úkol</strong> – název, popis (rich text: tučné/kurzíva/podtržení/seznamy), priorita, deadline, přiřazený člen, stav</li>
+  <li><strong>Detail panel</strong> – vysouvá se zprava; klik mimo panel ho zavře; editovatelný název, status/priorita/osoba/deadline; rich text popis; podúkoly s přiřazením řešitele; přílohy; komentáře (rich text); historie</li>
+  <li><strong>Podúkoly</strong> – checklist s progress barem; přiřazení řešitele ke každému podúkolu</li>
+  <li><strong>Komentáře</strong> – rich text (tučné/kurzíva/podtržení) s avatarem autora</li>
+  <li><strong>Sdílení projektů</strong> – 3 režimy: Nesdílet / Celý workspace / Konkrétní uživatelé; nesdílené projekty vidí jen vlastník a admini</li>
   <li><strong>Filtrování</strong> – fulltextové hledání, filtr dle přiřazeného člena, priority, deadline; přepínač „Jen moje úkoly"; skrytí dokončených</li>
   <li><strong>Oprávnění</strong> – úkoly mohou spravovat admini, vlastník workspace a členové s oprávněním „Spravuje úkoly" (nastavitelné v sekci Tým)</li>
   <li><strong>Badge</strong> – v levém menu se zobrazuje červený odznak s počtem otevřených úkolů přiřazených aktuálnímu uživateli</li>

@@ -171,6 +171,28 @@ body {
   background-color: var(--border-hover);
 }
 
+/* Kanban scrollbar – skrytý, zobrazí se až při hoveru (horizontální) */
+.kanban-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.kanban-scroll:hover {
+  scrollbar-color: var(--border-hover) transparent;
+}
+.kanban-scroll::-webkit-scrollbar {
+  height: 4px;
+}
+.kanban-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.kanban-scroll::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 4px;
+}
+.kanban-scroll:hover::-webkit-scrollbar-thumb {
+  background-color: var(--border-hover);
+}
+
 /* ===== Toast notifikace ===== */
 .toast {
   position: fixed;

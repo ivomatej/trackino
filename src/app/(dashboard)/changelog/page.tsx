@@ -11,6 +11,40 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.51.0 – 8. 3. 2026</h3>
+<ul>
+  <li><strong>Úkoly – kompletní refaktoring modulu</strong>:
+    <ul>
+      <li>Přesun modulu z sekce SPRÁVA na <strong>první pozici v NÁSTROJE</strong></li>
+      <li><strong>Drag & drop přesouvání úkolů mezi sloupci</strong> – opraveno pomocí useDroppable (fix prázdných sloupců)</li>
+      <li><strong>Drag & drop přesouvání celých sloupců</strong> – přetažením za záhlaví lze měnit pořadí sloupců</li>
+      <li><strong>Editace a mazání sloupců</strong> – double-click na název pro přejmenování, ikona koše pro smazání (s potvrzením)</li>
+      <li>Odstraněny <strong>barevné puntíky</strong> ze záhlaví sloupců</li>
+      <li><strong>Checkbox dokončení úkolu</strong> – zaškrtnutí zesvětlí kartu (opacity + přeškrtnutý text), lze opakovaně zapínat/vypínat</li>
+      <li><strong>Nastavení nástěnky</strong> (ikona ozubeného kola):
+        <ul>
+          <li>Auto-přesun dokončených úkolů do zvoleného sloupce</li>
+          <li>Barevné podbarvení sloupců (toggle + color picker pro každý sloupec)</li>
+        </ul>
+      </li>
+      <li><strong>Rich text editor</strong> v popisu úkolu (B/I/U, odrážky, číslování) a komentářích</li>
+      <li><strong>Přiřazení řešitele podúkolu</strong> – select s členy workspace</li>
+      <li><strong>Klik mimo detail panel</strong> = automatické zavření</li>
+      <li><strong>Levý sidebar se složkami a projekty</strong>:
+        <ul>
+          <li>Rekurzivní strom složek (max 5 úrovní) se sdílením</li>
+          <li>Projekty (nástěnky) uvnitř složek nebo volně nezařazené</li>
+          <li>Vytváření, přejmenování, mazání složek a projektů</li>
+          <li>Na mobilu: overlay s toggle tlačítkem</li>
+        </ul>
+      </li>
+      <li><strong>Sdílení projektů</strong> – 3 režimy: Nesdílet / Celý workspace / Konkrétní uživatelé</li>
+      <li><strong>Auto-hide horizontální scrollbar</strong> v Kanban (zobrazí se jen při hoveru)</li>
+    </ul>
+  </li>
+  <li><strong>DB migrace</strong> – 3 nové tabulky (<code>trackino_task_folders</code>, <code>trackino_task_folder_shares</code>, <code>trackino_task_board_members</code>) + 7 ALTER (is_completed, settings, folder_id, color, description, is_shared na boards; assigned_to na subtasks)</li>
+</ul>
+
 <h3>v2.50.1 – 8. 3. 2026</h3>
 <ul>
   <li><strong>Kalendář – Opakující se události</strong>:

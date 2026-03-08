@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 8. 3. 2026 (v2.50.1)
+> Aktualizováno: 8. 3. 2026 (v2.51.0)
 
 ---
 
@@ -143,13 +143,25 @@ Výchozí policy: `CREATE POLICY "Auth full" ... FOR ALL TO authenticated USING 
 | `trackino_exchange_rates` | id, date (text YYYY-MM-DD), currency, rate (numeric), fetched_at | Globální cache kurzů ČNB (bez workspace_id); UNIQUE (date, currency) |
 | `trackino_domain_registrars` | id, workspace_id, name, website_url, notes, created_by, created_at, updated_at | Registrátoři domén (entita pro select ve formuláři domény) |
 | `trackino_domains` | id, workspace_id, name, registrar, subscription_id (FK nullable), registration_date, expiration_date, status (active/expired/transferred/cancelled), notes, target_url, project_name, company_name, created_by, created_at, updated_at | Evidence firemních domén; computed status „expiring" na klientu (active + ≤30 dní) |
-| `trackino_task_boards` | id, workspace_id, name, created_by, created_at | Nástěnky úkolů |
+| `trackino_task_boards` | id, workspace_id, name, settings (jsonb), folder_id (FK nullable), color, description, is_shared (bool), created_by, created_at | Nástěnky/projekty úkolů |
 | `trackino_task_columns` | id, board_id, name, color, sort_order, created_at | Sloupce/stavy nástěnky (K řešení, Rozpracováno, ...) |
-| `trackino_task_items` | id, workspace_id, board_id, column_id, title, description, priority, deadline, sort_order, created_by, assigned_to, created_at, updated_at | Úkoly |
-| `trackino_task_subtasks` | id, task_id, title, is_done, sort_order, created_at | Podúkoly (checklist) |
+| `trackino_task_items` | id, workspace_id, board_id, column_id, title, description, priority, deadline, sort_order, created_by, assigned_to, is_completed (bool), created_at, updated_at | Úkoly |
+| `trackino_task_subtasks` | id, task_id, title, is_done, sort_order, assigned_to (uuid nullable), created_at | Podúkoly (checklist) s přiřazením řešitele |
 | `trackino_task_comments` | id, task_id, user_id, content, created_at, updated_at | Komentáře k úkolům |
 | `trackino_task_attachments` | id, task_id, file_path, file_name, file_size, file_mime, uploaded_by, created_at | Přílohy úkolů (Supabase Storage) |
 | `trackino_task_history` | id, task_id, user_id, action, old_value, new_value, created_at | Historie změn úkolů |
+| `trackino_task_folders` | id, workspace_id, name, color, sort_order, parent_id (self-ref), created_by, is_shared, created_at, updated_at | Složky pro organizaci projektů/nástěnek |
+| `trackino_task_folder_shares` | id, folder_id, workspace_id, user_id (nullable), shared_by, created_at | Sdílení složek úkolů (user_id=null = celý workspace) |
+| `trackino_task_board_members` | id, board_id, workspace_id, user_id, can_edit (bool), created_at | Sdílení nástěnky s konkrétními členy (UNIQUE board_id+user_id) |
+
+### Nové sloupce (v2.51.0)
+- `trackino_task_items.is_completed boolean NOT NULL DEFAULT false` – checkbox dokončení úkolu
+- `trackino_task_boards.settings jsonb NOT NULL DEFAULT '{}'` – nastavení nástěnky (auto_complete_column_id, column_colors_enabled)
+- `trackino_task_boards.folder_id uuid REFERENCES trackino_task_folders(id) ON DELETE SET NULL` – zařazení do složky
+- `trackino_task_boards.color text NOT NULL DEFAULT '#6366f1'` – barva projektu
+- `trackino_task_boards.description text NOT NULL DEFAULT ''` – popis projektu
+- `trackino_task_boards.is_shared boolean NOT NULL DEFAULT false` – sdílení projektu
+- `trackino_task_subtasks.assigned_to uuid REFERENCES auth.users(id)` – přiřazení řešitele podúkolu
 
 ### Nové sloupce (v2.50.0)
 - `trackino_workspace_members.can_manage_tasks boolean NOT NULL DEFAULT false` – oprávnění spravovat úkoly
@@ -226,7 +238,7 @@ Základ = TARIFF_MODULES[tariff]
 - `'Sledování'`: time_tracker, planner, calendar, vacation, invoices
 - `'Analýza'`: reports, attendance, category_report, subordinates, notes
 - `'Správa'`: projects, clients, tags, team, settings, audit, tasks
-- `'Nástroje'`: text_converter, important_days, requests, feedback, subscriptions, domains
+- `'Nástroje'`: tasks, text_converter, important_days, requests, feedback, subscriptions, domains
 - `'Společnost'`: knowledge_base, documents, company_rules, office_rules
 
 ---
@@ -322,6 +334,7 @@ ANALÝZA
   Podřízení (/subordinates)
   Poznámky (/notes)
 NÁSTROJE
+  Úkoly (/tasks)
   Převodník textu (/text-converter)
   Důležité dny (/important-days)
   Předplatná (/subscriptions)
@@ -330,11 +343,8 @@ SPRÁVA
   Klienti (/clients)
   Štítky (/tags)
   Tým (/team)
-  Úkoly (/tasks)
   Nastavení (/settings)
   Audit log (/audit)
-NÁSTROJE
-  Převodník textu (/text-converter)
 ─────────────────────────
 [bottom items]
   Nápověda (/help)
@@ -530,6 +540,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.51.0 | 8. 3. 2026 | Úkoly – kompletní refaktoring modulu: přesun do NÁSTROJE v sidebaru; DnD přesouvání úkolů mezi sloupci (useDroppable fix); DnD přesouvání celých sloupců (horizontalListSortingStrategy); editace/mazání sloupců (double-click přejmenování); checkbox dokončení úkolu (is_completed, line-through + opacity); nastavení nástěnky (auto-přesun dokončených, barvy sloupců); rich text editor v popisu a komentářích (B/I/U, seznamy); přiřazení řešitele podúkolů; klik mimo detail panel = zavření; levý sidebar se složkami a projekty (rekurzivní strom, max 5 úrovní); sdílení projektů (nesdílet/workspace/konkrétní uživatelé); auto-hide horizontální scrollbar (kanban-scroll CSS); 3 nové DB tabulky + 7 ALTER |
 | v2.50.1 | 8. 3. 2026 | Kalendář – Opakující se události: 14 typů opakování (denně/týdně/měsíčně/ročně + speciální vzory: 1./poslední den v týdnu/měsíci/kvartálu/roce + konkrétní den v měsíci); expandRecurringEvent() funkce; UI select v event modalu; info o opakování v detail modalu; podpora pro sdílené i účastnické události; 2 nové sloupce (recurrence_type, recurrence_day na trackino_calendar_events) |
 | v2.50.0 | 8. 3. 2026 | Nový modul Úkoly (tasks, SPRÁVA, Pro+Max) – kompletní správa úkolů s Kanban nástěnkou; 3 pohledy (Seznam/Kanban/Tabulka); drag & drop přesouvání (@dnd-kit); detail panel s editovatelným názvem, statusem, prioritou, deadline, přiřazením; podúkoly s progress barem; přílohy (Supabase Storage); komentáře; historie změn; filtrování (fulltext/priorita/deadline/assignee/jen moje/skrytí hotových); auto-vytvoření nástěnky se 4 sloupci; badge otevřených úkolů v sidebar; oprávnění can_manage_tasks v Týmu; 7 nových DB tabulek + 1 ALTER |
 | v2.49.1 | 8. 3. 2026 | Znalostní báze – Publikování stránky (veřejná URL s bezpečnostním tokenem); Kalendář – SVG ikonka opakující se události ve všech pohledech; nová veřejná route /kb/[slug]/[token]; API route /api/kb-public; 1 nový sloupec (public_token na trackino_kb_pages) |
@@ -2149,63 +2160,114 @@ ALTER TABLE trackino_workspace_members
 ### Soubory
 | Soubor | Popis |
 |--------|-------|
-| `src/app/(dashboard)/tasks/page.tsx` | Hlavní stránka modulu – 3 pohledy (Seznam/Kanban/Tabulka), detail panel, CRUD, drag & drop |
+| `src/app/(dashboard)/tasks/page.tsx` | Hlavní stránka modulu – levý sidebar se složkami a projekty, 3 pohledy (Seznam/Kanban/Tabulka), detail panel, CRUD, DnD karet i sloupců |
 
-### DB tabulky (7 nových)
+### DB tabulky (7 + 3 nové)
 | Tabulka | Popis |
 |---------|-------|
-| `trackino_task_boards` | Nástěnky (workspace_id, name, created_by) |
+| `trackino_task_boards` | Nástěnky/projekty (workspace_id, name, settings jsonb, folder_id, color, description, is_shared, created_by) |
 | `trackino_task_columns` | Sloupce/stavy nástěnky (board_id, name, color, sort_order) |
-| `trackino_task_items` | Úkoly (board_id, column_id, title, description, priority, deadline, assigned_to, sort_order) |
-| `trackino_task_subtasks` | Podúkoly (task_id, title, is_done, sort_order) |
+| `trackino_task_items` | Úkoly (board_id, column_id, title, description, priority, deadline, assigned_to, is_completed, sort_order) |
+| `trackino_task_subtasks` | Podúkoly (task_id, title, is_done, sort_order, assigned_to) |
 | `trackino_task_comments` | Komentáře k úkolu (task_id, user_id, content) |
 | `trackino_task_attachments` | Přílohy (task_id, file_path, file_name, file_size, file_mime, uploaded_by) |
 | `trackino_task_history` | Historie změn (task_id, user_id, action, old_value, new_value) |
+| `trackino_task_folders` | Složky pro organizaci projektů (parent_id self-ref, is_shared, max 5 úrovní) |
+| `trackino_task_folder_shares` | Sdílení složek (user_id nullable = celý workspace) |
+| `trackino_task_board_members` | Sdílení nástěnky s konkrétními členy (UNIQUE board_id+user_id, can_edit) |
 
 ### Typy (database.ts)
 ```typescript
 export type TaskPriority = 'urgent' | 'high' | 'medium' | 'low' | 'none';
-export interface TaskBoard { id, workspace_id, name, created_by, created_at }
+export interface TaskBoardSettings { auto_complete_column_id?: string | null; column_colors_enabled?: boolean; }
+export interface TaskBoard { id, workspace_id, name, settings: TaskBoardSettings, folder_id, color, description, is_shared, created_by, created_at }
 export interface TaskColumn { id, board_id, name, color, sort_order, created_at }
-export interface TaskItem { id, workspace_id, board_id, column_id, title, description, priority: TaskPriority, deadline, sort_order, created_by, assigned_to, created_at, updated_at }
-export interface TaskSubtask { id, task_id, title, is_done, sort_order, created_at }
+export interface TaskItem { id, workspace_id, board_id, column_id, title, description, priority: TaskPriority, deadline, sort_order, created_by, assigned_to, is_completed, created_at, updated_at }
+export interface TaskSubtask { id, task_id, title, is_done, sort_order, assigned_to, created_at }
 export interface TaskComment { id, task_id, user_id, content, created_at, updated_at }
 export interface TaskAttachment { id, task_id, file_path, file_name, file_size, file_mime, uploaded_by, created_at }
 export interface TaskHistory { id, task_id, user_id, action, old_value, new_value, created_at }
+export interface TaskFolder { id, workspace_id, name, color, sort_order, parent_id, created_by, is_shared, created_at, updated_at }
+export interface TaskFolderShare { id, folder_id, workspace_id, user_id, shared_by, created_at }
+export interface TaskBoardMember { id, board_id, workspace_id, user_id, can_edit, created_at }
+```
+
+### Layout (v2.51.0)
+- Dvoupanelový: záporný margin (`-m-4 lg:-m-6`) pro plný viewport, `flex flex-row`
+- **Levý panel**: 260px fixed width, na mobilu overlay (toggle tlačítkem), obsahuje strom složek, projekty
+- **Pravý panel**: flex-1, zobrazuje Kanban/List/Table view + detail panel
+
+### Levý sidebar – struktura
+```
+[Záhlaví: "Úkoly" + tlačítka Nový projekt / Nová složka]
+[Navigace]
+  ├─ Všechny úkoly
+  ├─ Moje úkoly
+  ├─ SLOŽKY (rekurzivní strom, max 5 úrovní)
+  │   ├─ Složka A (sdílená – modrá ikona)
+  │   │   ├─ Projekt 1 ← kliknutelný (nastaví activeBoardId)
+  │   │   └─ Projekt 2
+  │   └─ Složka B
+  └─ NEZAŘAZENÉ PROJEKTY
+      ├─ Hlavní board
+      └─ ...
 ```
 
 ### Pohledy
-- `'list'` – jednoduchý vertikální výpis úkolů s ikonami priority, deadline, assignee
-- `'kanban'` – sloupcový přehled s drag & drop přes @dnd-kit; `SortableCard` komponenta; `closestCorners` collision detection
-- `'table'` – kompaktní tabulka s řazením (title, priority, deadline, created_at, assigned_to)
+- `'list'` – vertikální výpis s checkboxy dokončení, bez barevných puntíků
+- `'kanban'` – sloupcový přehled; DnD karet (verticalListSortingStrategy) + DnD celých sloupců (horizontalListSortingStrategy); `DroppableColumn` wrapper (useDroppable) pro cross-column přesun; `SortableColumnWrapper` s render prop pro drag sloupců; `kanban-scroll` CSS třída pro auto-hide scrollbar
+- `'table'` – kompaktní tabulka s řazením
 
 ### Oprávnění
 ```typescript
 const canManage = isMasterAdmin || isAdmin || (currentMembership?.can_manage_tasks ?? false);
 ```
 
-### Auto-vytvoření nástěnky
-Při prvním načtení, pokud `boards.length === 0 && canManage`:
-- Vytvoří se „Hlavní board" s 4 výchozími sloupci:
-  1. K řešení (#9ca3af, šedá)
-  2. Rozpracováno (#3b82f6, modrá)
-  3. Ve schvalování (#f97316, oranžová)
-  4. Hotovo (#22c55e, zelená)
+### Drag & Drop (v2.51.0)
+- `@dnd-kit/core`: DndContext, DragOverlay, closestCorners, PointerSensor, useDroppable
+- `@dnd-kit/sortable`: SortableContext, useSortable, arrayMove, horizontalListSortingStrategy, verticalListSortingStrategy
+- **ID prefix**: sloupce mají ID `col-{id}`, droppable areas `droppable-{id}`, karty holé ID
+- **dragType state**: `'card' | 'column' | null` – detekce v handleDragStart dle prefixu
+- **handleDragEnd**:
+  - `dragType === 'column'` → arrayMove sloupců + UPDATE sort_order v DB
+  - `dragType === 'card'` → cross-column přesun (detekce `droppable-` prefixu nebo nalezení sloupce karty)
+- **DroppableColumn** komponenta: obaluje SortableContext karet, registruje sloupec jako droppable cíl
+- **SortableColumnWrapper** komponenta: obaluje sloupec, render prop předává drag listeners na záhlaví
+
+### Dokončení úkolu (v2.51.0)
+- Checkbox v SortableCard (Kanban), List view, Table view
+- `is_completed` boolean na TaskItem
+- Po zaškrtnutí: karta zesvětlí (opacity-50, text line-through)
+- Lze opakovaně zapínat/vypínat
+- `toggleComplete(task)`: toggle `is_completed` + volitelný auto-přesun dle nastavení boardu
+
+### Nastavení nástěnky (v2.51.0)
+- `settings: TaskBoardSettings` jako JSONB na boardu
+- Modal s ikonou ozubeného kola:
+  - **Auto-přesun dokončených**: select sloupce (nebo „Nepřesouvat")
+  - **Barvy sloupců**: toggle + color pickery (6 barev) pro každý sloupec
+- Kanban sloupec: `background: column_colors_enabled ? col.color + '0d' : 'var(--bg-hover)'`
+
+### Editace/mazání sloupců (v2.51.0)
+- Odstraněny barevné puntíky ze záhlaví sloupců
+- Double-click na název → inline input pro přejmenování
+- Ikona koše → smazání sloupce (s confirm dialogem)
+- Hover reveal akce (opacity-0 group-hover:opacity-100)
 
 ### Detail panel (slide-in, 480px)
 - Editovatelný název (kliknutí → input)
 - Grid 2×2: Status (select sloupce), Priorita, Přiřazení, Deadline
-- Popis: contentEditable div s auto-save po 1s
-- Podúkoly: checklist s progress barem, přidávání přes input
-- Přílohy: upload do Supabase Storage bucket `trackino-task-attachments`, download přes signedUrl, mazání
-- Komentáře: input + odeslání, seznam s avatarem autora
-- Historie: collapsible, log změn (vytvoření, přesun, změna priority/deadline/přiřazení)
+- **Popis**: contentEditable div, min-h-[120px], rich text toolbar (B/I/U, odrážky, číslování) s `document.execCommand` + `onMouseDown={e => e.preventDefault()}`
+- **Podúkoly**: checklist s progress barem + select přiřazení řešitele (assigned_to na subtask)
+- Přílohy: upload do Supabase Storage bucket `trackino-task-attachments`, download přes signedUrl
+- **Komentáře**: contentEditable div s mini toolbarem (B/I/U), dangerouslySetInnerHTML pro zobrazení
+- Historie: collapsible, log změn
+- **Klik mimo panel**: backdrop overlay (`onClick → setSelectedTask(null)`)
 
-### Drag & Drop (Kanban)
-- `@dnd-kit/core` + `@dnd-kit/sortable`
-- `PointerSensor` s `activationConstraint: { distance: 5 }`
-- `handleDragEnd`: přesun mezi sloupci → UPDATE column_id + INSERT history záznam
-- `DragOverlay` pro vizuální zpětnou vazbu při tažení
+### Sdílení projektů (v2.51.0)
+- Share modal (vzor z KB): 3 volby – Nesdílet / Celý workspace / Konkrétní uživatelé
+- `is_shared = true` na boardu → viditelné jen sdíleným členům (+ admin/owner vždy vidí)
+- `visibleBoards` useMemo: admin vidí vše, `!is_shared` viditelné všem, `is_shared` jen pro board members
 
 ### Filtrování
 - `search` – fulltextové hledání v názvu a popisu
@@ -2213,14 +2275,7 @@ Při prvním načtení, pokud `boards.length === 0 && canManage`:
 - `filterPriority` – select priority
 - `filterDeadline` – all, overdue, today, this_week, this_month, no_deadline
 - `onlyMine` – toggle „Jen moje"
-- `hideCompleted` – skryje úkoly ve sloupci „Hotovo"
-
-### Badge v sidebar
-```typescript
-// Sidebar.tsx – badge count pro tasks
-// Najde sloupce s názvem obsahujícím 'hotovo', spočítá úkoly přiřazené uživateli MIMO tyto sloupce
-myOpenTasks: number
-```
+- `hideCompleted` – skryje dokončené úkoly (is_completed)
 
 ### Supabase Storage
 - Bucket: `trackino-task-attachments` (private)
@@ -2228,96 +2283,71 @@ myOpenTasks: number
 - Max velikost: 20 MB
 - Signed URL pro stahování (60s)
 
-### SQL migrace
+### SQL migrace (v2.51.0 – nové tabulky a ALTER)
 ```sql
-CREATE TABLE IF NOT EXISTS trackino_task_boards (
+-- Nové sloupce na existujících tabulkách
+ALTER TABLE trackino_task_items
+  ADD COLUMN IF NOT EXISTS is_completed boolean NOT NULL DEFAULT false;
+
+ALTER TABLE trackino_task_boards
+  ADD COLUMN IF NOT EXISTS settings jsonb NOT NULL DEFAULT '{}';
+
+ALTER TABLE trackino_task_boards
+  ADD COLUMN IF NOT EXISTS folder_id uuid REFERENCES trackino_task_folders(id) ON DELETE SET NULL;
+
+ALTER TABLE trackino_task_boards
+  ADD COLUMN IF NOT EXISTS color text NOT NULL DEFAULT '#6366f1';
+
+ALTER TABLE trackino_task_boards
+  ADD COLUMN IF NOT EXISTS description text NOT NULL DEFAULT '';
+
+ALTER TABLE trackino_task_boards
+  ADD COLUMN IF NOT EXISTS is_shared boolean NOT NULL DEFAULT false;
+
+ALTER TABLE trackino_task_subtasks
+  ADD COLUMN IF NOT EXISTS assigned_to uuid REFERENCES auth.users(id);
+
+-- Nové tabulky
+CREATE TABLE IF NOT EXISTS trackino_task_folders (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id uuid NOT NULL REFERENCES trackino_workspaces(id) ON DELETE CASCADE,
-  name text NOT NULL DEFAULT '',
-  created_by uuid NOT NULL REFERENCES auth.users(id),
-  created_at timestamptz DEFAULT now()
-);
-ALTER TABLE trackino_task_boards ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Auth full" ON trackino_task_boards FOR ALL TO authenticated USING (true) WITH CHECK (true);
-
-CREATE TABLE IF NOT EXISTS trackino_task_columns (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  board_id uuid NOT NULL REFERENCES trackino_task_boards(id) ON DELETE CASCADE,
-  name text NOT NULL DEFAULT '',
+  name text NOT NULL,
   color text NOT NULL DEFAULT '#6366f1',
   sort_order integer NOT NULL DEFAULT 0,
-  created_at timestamptz DEFAULT now()
-);
-ALTER TABLE trackino_task_columns ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Auth full" ON trackino_task_columns FOR ALL TO authenticated USING (true) WITH CHECK (true);
-
-CREATE TABLE IF NOT EXISTS trackino_task_items (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL REFERENCES trackino_workspaces(id) ON DELETE CASCADE,
-  board_id uuid NOT NULL REFERENCES trackino_task_boards(id) ON DELETE CASCADE,
-  column_id uuid REFERENCES trackino_task_columns(id) ON DELETE SET NULL,
-  title text NOT NULL DEFAULT '',
-  description text NOT NULL DEFAULT '',
-  priority text NOT NULL DEFAULT 'none' CHECK (priority IN ('urgent','high','medium','low','none')),
-  deadline text,
-  sort_order integer NOT NULL DEFAULT 0,
+  parent_id uuid REFERENCES trackino_task_folders(id) ON DELETE SET NULL,
   created_by uuid NOT NULL REFERENCES auth.users(id),
-  assigned_to uuid REFERENCES auth.users(id),
+  is_shared boolean NOT NULL DEFAULT false,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );
-ALTER TABLE trackino_task_items ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Auth full" ON trackino_task_items FOR ALL TO authenticated USING (true) WITH CHECK (true);
+ALTER TABLE trackino_task_folders ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Auth full" ON trackino_task_folders
+  FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
-CREATE TABLE IF NOT EXISTS trackino_task_subtasks (
+CREATE TABLE IF NOT EXISTS trackino_task_folder_shares (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  task_id uuid NOT NULL REFERENCES trackino_task_items(id) ON DELETE CASCADE,
-  title text NOT NULL DEFAULT '',
-  is_done boolean NOT NULL DEFAULT false,
-  sort_order integer NOT NULL DEFAULT 0,
+  folder_id uuid NOT NULL REFERENCES trackino_task_folders(id) ON DELETE CASCADE,
+  workspace_id uuid NOT NULL REFERENCES trackino_workspaces(id) ON DELETE CASCADE,
+  user_id uuid REFERENCES auth.users(id),
+  shared_by uuid NOT NULL REFERENCES auth.users(id),
   created_at timestamptz DEFAULT now()
 );
-ALTER TABLE trackino_task_subtasks ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Auth full" ON trackino_task_subtasks FOR ALL TO authenticated USING (true) WITH CHECK (true);
+ALTER TABLE trackino_task_folder_shares ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Auth full" ON trackino_task_folder_shares
+  FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
-CREATE TABLE IF NOT EXISTS trackino_task_comments (
+CREATE TABLE IF NOT EXISTS trackino_task_board_members (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  task_id uuid NOT NULL REFERENCES trackino_task_items(id) ON DELETE CASCADE,
+  board_id uuid NOT NULL REFERENCES trackino_task_boards(id) ON DELETE CASCADE,
+  workspace_id uuid NOT NULL REFERENCES trackino_workspaces(id) ON DELETE CASCADE,
   user_id uuid NOT NULL REFERENCES auth.users(id),
-  content text NOT NULL DEFAULT '',
+  can_edit boolean NOT NULL DEFAULT true,
   created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
+  UNIQUE (board_id, user_id)
 );
-ALTER TABLE trackino_task_comments ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Auth full" ON trackino_task_comments FOR ALL TO authenticated USING (true) WITH CHECK (true);
-
-CREATE TABLE IF NOT EXISTS trackino_task_attachments (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  task_id uuid NOT NULL REFERENCES trackino_task_items(id) ON DELETE CASCADE,
-  file_path text NOT NULL,
-  file_name text NOT NULL DEFAULT '',
-  file_size bigint NOT NULL DEFAULT 0,
-  file_mime text NOT NULL DEFAULT '',
-  uploaded_by uuid NOT NULL REFERENCES auth.users(id),
-  created_at timestamptz DEFAULT now()
-);
-ALTER TABLE trackino_task_attachments ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Auth full" ON trackino_task_attachments FOR ALL TO authenticated USING (true) WITH CHECK (true);
-
-CREATE TABLE IF NOT EXISTS trackino_task_history (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  task_id uuid NOT NULL REFERENCES trackino_task_items(id) ON DELETE CASCADE,
-  user_id uuid NOT NULL REFERENCES auth.users(id),
-  action text NOT NULL DEFAULT '',
-  old_value text,
-  new_value text,
-  created_at timestamptz DEFAULT now()
-);
-ALTER TABLE trackino_task_history ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Auth full" ON trackino_task_history FOR ALL TO authenticated USING (true) WITH CHECK (true);
-
-ALTER TABLE trackino_workspace_members
-  ADD COLUMN IF NOT EXISTS can_manage_tasks boolean NOT NULL DEFAULT false;
+ALTER TABLE trackino_task_board_members ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Auth full" ON trackino_task_board_members
+  FOR ALL TO authenticated USING (true) WITH CHECK (true);
 ```
 
 ---

@@ -311,8 +311,11 @@ export default function Sidebar({ open, onClose, collapsed = false, onCollapseDe
       analyzeItems.push({ label: 'Analýza kategorií', href: '/category-report', icon: ICONS.categoryReport });
     }
 
-    // NÁSTROJE – pořadí: Poznámky, Záložky, Prompty, Převodník textu
+    // NÁSTROJE – pořadí: Úkoly, Poznámky, Záložky, Prompty, Převodník textu
     const nastrojeItems: NavItem[] = [];
+    if (hasModule('tasks')) {
+      nastrojeItems.push({ label: 'Úkoly', href: '/tasks', icon: ICONS.tasks });
+    }
     if (hasModule('notebook')) {
       nastrojeItems.push({ label: 'Poznámky', href: '/notebook', icon: ICONS.notebook });
     }
@@ -352,10 +355,6 @@ export default function Sidebar({ open, onClose, collapsed = false, onCollapseDe
 
     if (hasModule('team')) {
       spravaManagedItems.push({ label: 'Tým', href: '/team', icon: ICONS.team });
-    }
-
-    if (hasModule('tasks')) {
-      spravaManagedItems.push({ label: 'Úkoly', href: '/tasks', icon: ICONS.tasks });
     }
 
     // Nastavení – pouze pro admin/owner
