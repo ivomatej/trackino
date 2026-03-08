@@ -11,6 +11,14 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.43.1 – 8. 3. 2026</h3>
+<ul>
+  <li><strong>Poznámky – sdílení: výpis uživatelů</strong> – opravena chyba, kdy dialog sdílení složky „Konkrétní uživatelé" nezobrazoval žádné členy workspace. Příčina: Supabase nested join bez definovaného FK. Přepnuto na spolehlivý dvou-krokový fetch (workspace_members → profiles).</li>
+  <li><strong>Dokumenty – editace dokumentu</strong> – přidáno tlačítko tužky ke každému dokumentu v seznamu. Kliknutím se otevře modal „Upravit dokument" s předvyplněnými hodnotami (název, popis, složka; pro typ odkaz i URL adresa). Pole pro nahrání nového souboru se při editaci neskrývá – soubor samotný nelze přenahrát (pouze metadata).</li>
+  <li><strong>Dokumenty – ikona koše</strong> – ikona mazání dokumentu sjednocena s ostatními místy aplikace (standardní 4-path SVG s postranními pruhy).</li>
+  <li><strong>AI asistent – ikona Nastavení</strong> – tlačítko „Nastavení" v záhlaví AI asistenta nyní zobrazuje ikonu ozubeného kola (SVG gear) místo původní ikony rádiových vln.</li>
+</ul>
+
 <h3>v2.43.0 – 8. 3. 2026</h3>
 <ul>
   <li><strong>Znalostní báze – panel s úkoly</strong> – každá KB stránka může mít samostatný seznam úkolů (checklist) s checkboxy. V editoru je panel „Úkoly" umístěn pod rich text editorem; Enter přidá nový úkol, Backspace na prázdném odstraní; splněné úkoly jsou přeškrtnuté. V zobrazení stránky jsou úkoly pouze pro čtení.</li>

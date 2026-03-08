@@ -497,6 +497,7 @@ const DEFAULT_HELP_CONTENT = `
   <li><strong>Typy dokumentů</strong> – soubory (PDF, Word, Excel, PowerPoint, obrázky, ZIP, TXT, CSV; max 20 MB) nebo webové odkazy (URL)</li>
   <li><strong>Nahrání souboru</strong> – klikněte Přidat → záložka Soubor → vyberte soubor, zadejte název, popis a složku → klikněte Přidat</li>
   <li><strong>Přidání odkazu</strong> – klikněte Přidat → záložka Odkaz (URL) → zadejte URL adresu, název a složku → klikněte Přidat</li>
+  <li><strong>Úprava dokumentu</strong> – najeďte myší na dokument a klikněte ikonu tužky; lze měnit název, popis, složku a u odkazů i URL adresu</li>
   <li><strong>Otevření dokumentu</strong> – klikněte na název nebo ikonu otevření; soubory se otevírají v novém okně pomocí podepsané URL (platné 60 sekund)</li>
   <li><strong>Správa přístupu</strong> – nastavuje se v Tým → Členové → editace → příznak „Spravuje dokumenty"</li>
 </ul>
