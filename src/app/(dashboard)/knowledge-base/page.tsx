@@ -1255,7 +1255,7 @@ function KnowledgeBaseContent() {
 
         {/* LEFT PANEL */}
         <aside className={`fixed lg:relative top-0 left-0 bottom-0 z-40 lg:z-auto flex flex-col border-r flex-shrink-0 transition-transform duration-200 ${leftOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
-          style={{ width: 260, background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+          style={{ width: 340, background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
 
           {/* Header */}
           <div className="flex items-center gap-2 p-3 border-b" style={{ borderColor: 'var(--border)' }}>

@@ -81,7 +81,8 @@ function toYearly(price: number, freq: SubscriptionFrequency): number {
 }
 
 function fmtPrice(n: number, currency: string): string {
-  return n.toLocaleString('cs-CZ', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' ' + currency;
+  const display = currency === 'CZK' ? 'Kč' : currency;
+  return n.toLocaleString('cs-CZ', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' ' + display;
 }
 
 function fmtDate(d: string | null): string {
@@ -795,7 +796,7 @@ function SubscriptionsContent() {
                       <p className="font-medium">{fmtPrice(detailSub.price, detailSub.currency)} / {FREQUENCY_LABELS[detailSub.frequency].toLowerCase()}</p>
                     </div>
                     <div>
-                      <p className="text-xs mb-0.5" style={{ color: 'var(--text-muted)' }}>Měsíčně (CZK)</p>
+                      <p className="text-xs mb-0.5" style={{ color: 'var(--text-muted)' }}>Měsíčně (Kč)</p>
                       <p className="font-medium">{fmtPrice(Math.round(toMonthly(toCzk(detailSub.price, detailSub.currency) ?? 0, detailSub.frequency)), 'CZK')}</p>
                     </div>
                   </>
@@ -983,7 +984,7 @@ function SubscriptionsContent() {
                 {/* CZK přepočet */}
                 {form.price && form.currency !== 'CZK' && rates[form.currency as keyof typeof rates] && (
                   <p className="text-xs px-1" style={{ color: 'var(--text-muted)' }}>
-                    ≈ {fmtPrice(Math.round(parseFloat(form.price) * (rates[form.currency as keyof typeof rates] ?? 1)), 'CZK')} (ČNB kurz)
+                    ≈ {fmtPrice(Math.round(parseFloat(form.price) * (rates[form.currency as keyof typeof rates] ?? 1)), 'CZK')} (kurz ČNB)
                   </p>
                 )}
 
