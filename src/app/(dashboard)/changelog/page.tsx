@@ -11,6 +11,16 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.44.0 – 8. 3. 2026</h3>
+<ul>
+  <li><strong>Poznámky – 3řádkový výpis na mobilu</strong> – seznam poznámek nyní zobrazuje název, popisek obsahu a datum s jménem autora na třech řádcích. Akční tlačítka jsou na mobilu větší (w-9 h-9) a s větším rozestupem pro pohodlné klikání.</li>
+  <li><strong>Poznámky – task panel na mobilu</strong> – větší checkboxy, input úkolů text-base (odstraněn iOS Safari zoom), větší tlačítko „Přidat úkol", viditelné tlačítko × pro odebrání úkolu.</li>
+  <li><strong>Poznámky – ikona koše</strong> – ikona smazání v detailu poznámky sjednocena se standardní 4-path SVG ikonou používanou v celé aplikaci.</li>
+  <li><strong>KB – mobilní layout detailu</strong> – akce (Zpět, Kopírovat, Oblíbené, Upravit, Smazat) jsou na mobilu na prvním řádku, název stránky je pod nimi přes celou šířku. Datum ve formátu „2. 3. 2026". Větší odsazení obsahu stránky z levé strany (px-5 na mobilu).</li>
+  <li><strong>KB – záložky na mobilu</strong> – Komentáře, Historie, Přístupy, Odkazující a Revize jsou na mobilu horizontálně scrollovatelné.</li>
+  <li><strong>KB – komentáře na mobilu</strong> – pole pro nový komentář text-base (odstraněn iOS zoom), přidán prostor pod polem (pb-8) pro pohodlný scroll.</li>
+</ul>
+
 <h3>v2.43.3 – 8. 3. 2026</h3>
 <ul>
   <li><strong>Poznámky – mobilní viditelnost akcí</strong> – v seznamu poznámek jsou tlačítka (Důležité, Oblíbené, Přesunout, Archivovat) nyní vždy viditelná na mobilních zařízeních; na desktopu se zobrazují jen při najetí myší. Chevron šipka u položek Poznámky k událostem je na mobilu taktéž lehce viditelná.</li>
