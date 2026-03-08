@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 8. 3. 2026 (v2.44.4)
+> Aktualizováno: 8. 3. 2026 (v2.45.0)
 
 ---
 
@@ -493,6 +493,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.45.0 | 8. 3. 2026 | AI asistent: Google Gemini integrace – přidán provider 'google' (AiProvider type), 4 nové modely (gemini-2.5-flash, gemini-2.5-flash-lite, gemini-2.5-pro, gemini-3-flash-preview), @google/generative-ai SDK, handleGemini() v API route, model pills seskupeny dle providera, info dialog s provider sekcemi, env GEMINI_API_KEY |
 | v2.44.4 | 8. 3. 2026 | Kalendář: oprava scroll pozice při navigaci – přidán currentDate do deps scroll useLayoutEffect+useEffect → scroll na calViewStart*ROW_H se spustí i při prev/next/today |
 | v2.44.3 | 8. 3. 2026 | Globální iOS zoom prevence: globals.css media query (max-width:640px) font-size:16px!important na input/textarea/select/[contenteditable] – pokrývá celou aplikaci; pravidlo přidáno do CLAUDE-ASISTENT.md |
 | v2.44.2 | 8. 3. 2026 | Poznámky: auto-clear názvu nové poznámky onFocus pokud title==='Nová poznámka' (stejný vzor jako KB) |
@@ -1341,7 +1342,7 @@ className={`
 
 ### AI providers (src/lib/ai-providers.ts)
 ```typescript
-export type AiProvider = 'openai'; // Budoucí: | 'anthropic' | 'google' | 'mistral'
+export type AiProvider = 'openai' | 'google'; // Budoucí: | 'anthropic' | 'mistral'
 export interface AiProviderConfig { id, name, envKey, baseUrl, available }
 export interface AiModel { id, name, provider, description, contextWindow, supportsStreaming }
 export const AI_PROVIDERS: AiProviderConfig[]
@@ -1350,26 +1351,41 @@ export const DEFAULT_MODEL_ID = 'gpt-4o-mini'
 export function getProviderForModel(modelId): AiProviderConfig | undefined
 ```
 
+### Dostupné modely
+| Provider | Model | API ID | Input $/1M | Output $/1M | Streaming |
+|----------|-------|--------|-----------|------------|-----------|
+| OpenAI | GPT-4o | gpt-4o | 2.50 | 10.00 | Ano |
+| OpenAI | GPT-4o mini | gpt-4o-mini | 0.15 | 0.60 | Ano |
+| OpenAI | GPT-4 Turbo | gpt-4-turbo | 10.00 | 30.00 | Ano |
+| OpenAI | o1-mini | o1-mini | 1.10 | 4.40 | Ne |
+| Google | Gemini 2.5 Flash | gemini-2.5-flash | 0.30 | 2.50 | Ano |
+| Google | Gemini 2.5 Flash-Lite | gemini-2.5-flash-lite | 0.10 | 0.40 | Ano |
+| Google | Gemini 2.5 Pro | gemini-2.5-pro | 1.25 | 10.00 | Ano |
+| Google | Gemini 3 Flash Preview | gemini-3-flash-preview | 0.50 | 3.00 | Ano |
+
 ### Přidání nového providera
 1. Přidat do `type AiProvider` v `ai-providers.ts`
-2. Odkomentovat/přidat objekt do `AI_PROVIDERS[]` s `envKey` (název env proměnné)
+2. Přidat objekt do `AI_PROVIDERS[]` s `envKey` (název env proměnné)
 3. Přidat modely do `AI_MODELS[]` se správným `provider`
-4. Přidat env proměnnou do `.env.local` a Vercel
-5. Serverová route (`/api/ai-chat/route.ts`) funguje automaticky – používá OpenAI-compatible formát
+4. Přidat env proměnnou do Vercel Environment Variables
+5. Pro OpenAI-compatible API: automaticky funguje přes `handleOpenAI()`
+6. Pro non-OpenAI API (jako Gemini): přidat handler funkci do `route.ts` a podmínku v POST handleru
 
 ### API route (/api/ai-chat)
 - `POST /api/ai-chat` – přijímá `{ messages, model, systemPrompt?, stream?, temperature?, maxTokens? }`
 - Validace modelu, lookup providera, check env klíče
-- Streaming: `ReadableStream` parses SSE chunks (`data: {...}` → delta content)
+- **OpenAI**: OpenAI-compatible formát (SSE stream, `data: {...}` chunks)
+- **Google Gemini**: @google/generative-ai SDK, `generateContentStream()` / `generateContent()`
+- Obě větve vrací stejný formát: streaming text + `__USAGE__:{json}` suffix
 - Non-streaming: vrací `{ content, usage }`
 - Chybové stavy: 400 neznámý model, 503 chybí API klíč, 500 interní chyba
 
-### Env proměnné (přidat do .env.local i Vercel)
+### Env proměnné (přidat do Vercel Environment Variables)
 ```
 OPENAI_API_KEY=sk-...
+GEMINI_API_KEY=AIza...
 # Budoucí:
 # ANTHROPIC_API_KEY=...
-# GOOGLE_AI_API_KEY=...
 # MISTRAL_API_KEY=...
 ```
 

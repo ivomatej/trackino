@@ -155,7 +155,7 @@ const DEFAULT_HELP_CONTENT = `
 <p>V <strong>Tým → editace člena → sekce Fakturace</strong> lze každému členovi přiřadit konkrétní fakturační profil. Pokud není přiřazen žádný, použije se výchozí profil workspace. Přiřazený profil se uživateli zobrazí při podání žádosti o fakturaci v pravém panelu formuláře.</p>
 
 <h3>AI asistent</h3>
-<p>Modul <strong>AI asistent</strong> (dostupný v tarifu <strong>Max</strong>, sekce <strong>NÁSTROJE</strong>) je chatovací okno napojené na AI modely přes API. Aktuálně podporuje <strong>OpenAI</strong> (GPT-4o, GPT-4o mini, GPT-4 Turbo, o1-mini).</p>
+<p>Modul <strong>AI asistent</strong> (dostupný v tarifu <strong>Max</strong>, sekce <strong>NÁSTROJE</strong>) je chatovací okno napojené na AI modely přes API. Podporuje dva poskytovatele: <strong>OpenAI</strong> (GPT-4o, GPT-4o mini, GPT-4 Turbo, o1-mini) a <strong>Google Gemini</strong> (Gemini 2.5 Flash, Gemini 2.5 Flash-Lite, Gemini 2.5 Pro, Gemini 3 Flash Preview). Modely jsou seskupeny dle poskytovatele v přepínači pod vstupním polem.</p>
 <ul>
   <li><strong>Konverzace</strong> – každá konverzace je uložena v databázi; v levém panelu vidíte historii svých konverzací. Konverzaci lze vyhledat nebo smazat ikonkou koše (zobrazí se při najetí myší). Kliknutím na hvězdičku ☆ vedle koše přidáte konverzaci do <strong>Oblíbených</strong> – oblíbené konverzace se zobrazí v horní sekci „OBLÍBENÉ" odděleně od ostatních a hvězdička svítí zlatě i bez najetí myší.</li>
   <li><strong>Přepínání modelu</strong> – pill tlačítka ve spodní části chatu umožňují rychlé přepnutí modelu. Tlačítko ℹ zobrazí podrobný popis každého modelu, jeho silné stránky a orientační cenu v Kč.</li>
@@ -172,7 +172,7 @@ const DEFAULT_HELP_CONTENT = `
   <li><strong>Počítadlo Firecrawl kreditů (🔥)</strong> – v levém panelu (pod seznamem konverzací) se zobrazuje stav spotřebovaných kreditů. Barva: zelená (≥200 zbývá), oranžová (50–199), červená (&lt;50 – zobrazí se i varování). Free Plan má 500 jednorázových kreditů (1 kredit za URL, ~7 za web search).</li>
 </ul>
 <p><strong>Přístupová práva</strong> – AI asistent je dostupný pro master admina, workspace admina (owner/admin) a uživatele s explicitně uděleným oprávněním <code>can_use_ai_assistant</code> (nastavitelné v záložce <strong>Nastavení → AI asistent</strong>). Admin tam může také omezit, které AI modely má každý uživatel k dispozici.</p>
-<p><strong>Nastavení API klíčů</strong> – AI asistent vyžaduje platný API klíč od OpenAI (<code>OPENAI_API_KEY</code>). Pro funkce web search a URL čtení je navíc potřeba Firecrawl klíč (<code>FIRECRAWL_API_KEY</code>). Oba klíče se přidávají do <code>.env.local</code> pro lokální vývoj a do Vercel Environment Variables pro produkci. Pokud OpenAI klíč chybí, zobrazí se červené upozornění přímo na stránce AI asistenta.</p>
+<p><strong>Nastavení API klíčů</strong> – AI asistent vyžaduje platný API klíč od poskytovatele modelu: <code>OPENAI_API_KEY</code> pro OpenAI modely a <code>GEMINI_API_KEY</code> pro Google Gemini modely. Pro funkce web search a URL čtení je navíc potřeba Firecrawl klíč (<code>FIRECRAWL_API_KEY</code>). Klíče se přidávají do Vercel Environment Variables pro produkci. Pokud klíč pro vybraný model chybí, zobrazí se červené upozornění přímo na stránce AI asistenta.</p>
 
 <h3>Převodník textu</h3>
 <p>Modul <strong>Převodník textu</strong> (dostupný v tarifu <strong>Pro a Max</strong>, sekce <strong>NÁSTROJE</strong>) podporuje dva směry konverze:</p>

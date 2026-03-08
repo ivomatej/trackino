@@ -1,7 +1,7 @@
 // Trackino – AI provider konfigurace
 // Přidání nového providera: přidat do AiProvider type + AI_PROVIDERS + AI_MODELS
 
-export type AiProvider = 'openai'; // Budoucí: | 'anthropic' | 'google' | 'mistral'
+export type AiProvider = 'openai' | 'google'; // Budoucí: | 'anthropic' | 'mistral'
 
 export interface AiModel {
   id: string;
@@ -32,6 +32,13 @@ export const AI_PROVIDERS: AiProviderConfig[] = [
     envKey: 'OPENAI_API_KEY',
     baseUrl: 'https://api.openai.com/v1',
     available: !!process.env.OPENAI_API_KEY,
+  },
+  {
+    id: 'google',
+    name: 'Google Gemini',
+    envKey: 'GEMINI_API_KEY',
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+    available: !!process.env.GEMINI_API_KEY,
   },
   // Budoucí provideri (odkomentovat + přidat env klíče):
   // {
@@ -90,6 +97,53 @@ export const AI_MODELS: AiModel[] = [
     supportsStreaming: false,
     inputCostPer1M: 1.10,
     outputCostPer1M: 4.40,
+  },
+  // ─── Google Gemini ────────────────────────────────────────────────────────
+  {
+    id: 'gemini-2.5-flash',
+    name: 'Gemini 2.5 Flash',
+    provider: 'google',
+    description: 'Rychlý a cenově efektivní model od Google.',
+    longDescription: 'Nejrychlejší model řady Gemini 2.5 s výborným poměrem cena/výkon. Zvládá text, kód i analýzu. Ideální pro běžné úlohy, kde záleží na rychlosti odpovědi a nízké ceně.',
+    contextWindow: 1_048_576,
+    supportsStreaming: true,
+    inputCostPer1M: 0.30,
+    outputCostPer1M: 2.50,
+  },
+  {
+    id: 'gemini-2.5-flash-lite',
+    name: 'Gemini 2.5 Flash-Lite',
+    provider: 'google',
+    description: 'Nejlevnější Gemini model pro jednoduché úlohy.',
+    longDescription: 'Ultra-levná varianta Gemini Flash – optimalizovaná pro maximální efektivitu. Vhodná pro jednoduché dotazy, shrnutí, drafty a rutinní úlohy. Nejnižší cena ze všech dostupných modelů.',
+    contextWindow: 1_048_576,
+    supportsStreaming: true,
+    inputCostPer1M: 0.10,
+    outputCostPer1M: 0.40,
+    badge: 'Nejlevnější',
+  },
+  {
+    id: 'gemini-2.5-pro',
+    name: 'Gemini 2.5 Pro',
+    provider: 'google',
+    description: 'Nejsilnější Gemini model pro náročné úlohy.',
+    longDescription: 'Nejschopnější model od Google – exceluje v komplexním uvažování, analýze, psaní kódu a kreativním obsahu. Obrovské kontextové okno (1M tokenů) umožňuje zpracovat rozsáhlé dokumenty. Vhodný pro náročné profesionální úlohy.',
+    contextWindow: 1_048_576,
+    supportsStreaming: true,
+    inputCostPer1M: 1.25,
+    outputCostPer1M: 10.00,
+  },
+  {
+    id: 'gemini-3-flash-preview',
+    name: 'Gemini 3 Flash Preview',
+    provider: 'google',
+    description: 'Preview nejnovějšího modelu Gemini 3.',
+    longDescription: 'Předběžná verze příští generace Gemini. Nabízí vylepšený výkon oproti Gemini 2.5 Flash s moderní architekturou. Poznámka: jako preview verze může být méně stabilní než produkční modely.',
+    contextWindow: 1_048_576,
+    supportsStreaming: true,
+    inputCostPer1M: 0.50,
+    outputCostPer1M: 3.00,
+    badge: 'Preview',
   },
 ];
 

@@ -11,6 +11,11 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.45.0 – 8. 3. 2026</h3>
+<ul>
+  <li><strong>AI asistent – Google Gemini integrace</strong> – AI asistent nyní podporuje dva poskytovatele: OpenAI a Google Gemini. Přidány 4 nové modely: Gemini 2.5 Flash, Gemini 2.5 Flash-Lite (nejlevnější dostupný model), Gemini 2.5 Pro a Gemini 3 Flash Preview. Modely jsou v přepínači seskupeny dle poskytovatele (GPT / Gemini). Info dialog o modelech zobrazuje oba poskytovatele s odkazem na ceník. Kontextové okno Gemini modelů je 1M tokenů. Gemini API klíč (<code>GEMINI_API_KEY</code>) se nastavuje jako Vercel Environment Variable.</li>
+</ul>
+
 <h3>v2.44.4 – 8. 3. 2026</h3>
 <ul>
   <li><strong>Kalendář – oprava scroll pozice při navigaci</strong> – při přepínání mezi dny/týdny (tlačítka zpět/vpřed a „Dnes") se mřížka nyní správně odscrolluje na nastavenou hodinu „Od" z Nastavení kalendáře. Dříve se scroll prováděl jen při prvním načtení stránky a při přepnutí pohledu.</li>

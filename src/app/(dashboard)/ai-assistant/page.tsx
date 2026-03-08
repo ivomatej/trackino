@@ -5,7 +5,7 @@ import { WorkspaceProvider, useWorkspace } from '@/contexts/WorkspaceContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import DashboardLayout from '@/components/DashboardLayout';
-import { AI_MODELS, DEFAULT_MODEL_ID, CZK_PER_USD, calcCostUsd, formatCostCzk } from '@/lib/ai-providers';
+import { AI_MODELS, AI_PROVIDERS, DEFAULT_MODEL_ID, CZK_PER_USD, calcCostUsd, formatCostCzk } from '@/lib/ai-providers';
 import { supabase } from '@/lib/supabase';
 import type { AiChatMessage } from '@/app/api/ai-chat/route';
 import type { ScrapeResponse } from '@/app/api/firecrawl/scrape/route';
@@ -845,10 +845,10 @@ function AiAssistantContent() {
             </div>
           </div>
 
-          {/* OpenAI API chyba */}
+          {/* API klíč chyba */}
           {apiConfigured === false && (
             <div className="mb-3 p-3 rounded-xl text-sm flex-shrink-0" style={{ background: '#ef444418', border: '1px solid #ef444440', color: '#ef4444' }}>
-              <strong>API klíč OpenAI není nastaven.</strong> Přidejte <code className="mx-1 px-1 rounded" style={{ background: '#ef444422' }}>OPENAI_API_KEY</code> do <code className="mx-1 px-1 rounded" style={{ background: '#ef444422' }}>.env.local</code>.
+              <strong>API klíč pro vybraný model není nastaven.</strong> Přidejte příslušný klíč do proměnných prostředí na Vercelu.
             </div>
           )}
 
@@ -1097,24 +1097,38 @@ function AiAssistantContent() {
               <div className="flex flex-col gap-1.5 min-w-0">
                 {/* Quick model pills */}
                 <div className="flex flex-wrap items-center gap-1">
-                  {AI_MODELS.map(m => (
-                    <button
-                      key={m.id}
-                      onClick={() => setSelectedModel(m.id)}
-                      className="text-xs px-2.5 py-1 rounded-full transition-colors flex items-center gap-1"
-                      style={{
-                        background: selectedModel === m.id ? 'var(--primary)' : 'var(--bg-hover)',
-                        color: selectedModel === m.id ? '#fff' : 'var(--text-muted)',
-                        border: selectedModel === m.id ? 'none' : '1px solid var(--border)',
-                      }}
-                      title={m.description}
-                    >
-                      {m.name}
-                      {m.badge && selectedModel !== m.id && (
-                        <span className="text-[10px] px-1 rounded" style={{ background: '#10b98115', color: '#10b981' }}>★</span>
-                      )}
-                    </button>
-                  ))}
+                  {AI_PROVIDERS.map(prov => {
+                    const providerModels = AI_MODELS.filter(m => m.provider === prov.id);
+                    if (providerModels.length === 0) return null;
+                    return (
+                      <div key={prov.id} className="flex items-center gap-1">
+                        {AI_PROVIDERS.length > 1 && (
+                          <span className="text-[10px] font-semibold uppercase tracking-wide mr-0.5" style={{ color: 'var(--text-muted)' }}>
+                            {prov.name === 'OpenAI' ? 'GPT' : 'Gemini'}
+                          </span>
+                        )}
+                        {providerModels.map(m => (
+                          <button
+                            key={m.id}
+                            onClick={() => setSelectedModel(m.id)}
+                            className="text-xs px-2.5 py-1 rounded-full transition-colors flex items-center gap-1"
+                            style={{
+                              background: selectedModel === m.id ? 'var(--primary)' : 'var(--bg-hover)',
+                              color: selectedModel === m.id ? '#fff' : 'var(--text-muted)',
+                              border: selectedModel === m.id ? 'none' : '1px solid var(--border)',
+                            }}
+                            title={m.description}
+                          >
+                            {m.name.replace('Gemini ', '').replace('GPT-', '')}
+                            {m.badge && selectedModel !== m.id && (
+                              <span className="text-[10px] px-1 rounded" style={{ background: '#10b98115', color: '#10b981' }}>★</span>
+                            )}
+                          </button>
+                        ))}
+                        <span className="mx-0.5" />
+                      </div>
+                    );
+                  })}
                   {/* Info tlačítko */}
                   <button
                     onClick={() => setShowModelInfo(s => !s)}
@@ -1255,46 +1269,58 @@ function AiAssistantContent() {
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                   </button>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {AI_MODELS.map(m => {
-                    const model = m;
-                    const inputCzk = formatCostCzk(model.inputCostPer1M / 1_000_000 * 1000);
-                    const outputCzk = formatCostCzk(model.outputCostPer1M / 1_000_000 * 1000);
-                    return (
-                      <div
-                        key={m.id}
-                        className="p-3 rounded-lg cursor-pointer transition-all"
-                        style={{
-                          background: selectedModel === m.id ? 'color-mix(in srgb, var(--primary) 8%, transparent)' : 'var(--bg-hover)',
-                          border: selectedModel === m.id ? '1px solid color-mix(in srgb, var(--primary) 30%, transparent)' : '1px solid var(--border)',
-                        }}
-                        onClick={() => { setSelectedModel(m.id); setShowModelInfo(false); }}
-                      >
-                        <div className="flex items-center gap-2 mb-1">
-                          <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{m.name}</p>
-                          {m.badge && (
-                            <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: '#10b98115', color: '#10b981' }}>
-                              {m.badge}
-                            </span>
-                          )}
-                          {selectedModel === m.id && (
-                            <span className="text-xs px-1.5 py-0.5 rounded-full ml-auto" style={{ background: 'var(--primary)', color: '#fff' }}>Aktivní</span>
-                          )}
-                        </div>
-                        <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>{m.longDescription}</p>
-                        <div className="grid grid-cols-2 gap-x-3 text-xs" style={{ color: 'var(--text-muted)' }}>
-                          <span>Kontext: <strong style={{ color: 'var(--text-primary)' }}>{(m.contextWindow / 1000).toFixed(0)}k</strong></span>
-                          <span>Streaming: <strong style={{ color: 'var(--text-primary)' }}>{m.supportsStreaming ? 'Ano' : 'Ne'}</strong></span>
-                          <span title={`$${m.inputCostPer1M}/1M tokenů`}>Input: <strong style={{ color: 'var(--text-primary)' }}>{inputCzk}/1k</strong></span>
-                          <span title={`$${m.outputCostPer1M}/1M tokenů`}>Output: <strong style={{ color: 'var(--text-primary)' }}>{outputCzk}/1k</strong></span>
-                        </div>
+                {AI_PROVIDERS.map(prov => {
+                  const providerModels = AI_MODELS.filter(m => m.provider === prov.id);
+                  if (providerModels.length === 0) return null;
+                  return (
+                    <div key={prov.id} className="mb-4 last:mb-0">
+                      <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
+                        {prov.name}
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {providerModels.map(m => {
+                          const inputCzk = formatCostCzk(m.inputCostPer1M / 1_000_000 * 1000);
+                          const outputCzk = formatCostCzk(m.outputCostPer1M / 1_000_000 * 1000);
+                          return (
+                            <div
+                              key={m.id}
+                              className="p-3 rounded-lg cursor-pointer transition-all"
+                              style={{
+                                background: selectedModel === m.id ? 'color-mix(in srgb, var(--primary) 8%, transparent)' : 'var(--bg-hover)',
+                                border: selectedModel === m.id ? '1px solid color-mix(in srgb, var(--primary) 30%, transparent)' : '1px solid var(--border)',
+                              }}
+                              onClick={() => { setSelectedModel(m.id); setShowModelInfo(false); }}
+                            >
+                              <div className="flex items-center gap-2 mb-1">
+                                <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{m.name}</p>
+                                {m.badge && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: '#10b98115', color: '#10b981' }}>
+                                    {m.badge}
+                                  </span>
+                                )}
+                                {selectedModel === m.id && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded-full ml-auto" style={{ background: 'var(--primary)', color: '#fff' }}>Aktivní</span>
+                                )}
+                              </div>
+                              <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>{m.longDescription}</p>
+                              <div className="grid grid-cols-2 gap-x-3 text-xs" style={{ color: 'var(--text-muted)' }}>
+                                <span>Kontext: <strong style={{ color: 'var(--text-primary)' }}>{m.contextWindow >= 1_000_000 ? `${(m.contextWindow / 1_000_000).toFixed(0)}M` : `${(m.contextWindow / 1000).toFixed(0)}k`}</strong></span>
+                                <span>Streaming: <strong style={{ color: 'var(--text-primary)' }}>{m.supportsStreaming ? 'Ano' : 'Ne'}</strong></span>
+                                <span title={`$${m.inputCostPer1M}/1M tokenů`}>Input: <strong style={{ color: 'var(--text-primary)' }}>{inputCzk}/1k</strong></span>
+                                <span title={`$${m.outputCostPer1M}/1M tokenů`}>Output: <strong style={{ color: 'var(--text-primary)' }}>{outputCzk}/1k</strong></span>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                    );
-                  })}
-                </div>
+                    </div>
+                  );
+                })}
                 <p className="text-xs mt-3" style={{ color: 'var(--text-muted)' }}>
-                  Ceny jsou orientační dle OpenAI API ceníku (kurz {CZK_PER_USD} Kč/USD). Přesné ceny viz{' '}
-                  <a href="https://openai.com/api/pricing" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)' }}>openai.com/api/pricing</a>.
+                  Ceny jsou orientační (kurz {CZK_PER_USD} Kč/USD). Přesné ceny:{' '}
+                  <a href="https://openai.com/api/pricing" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)' }}>OpenAI</a>
+                  {' · '}
+                  <a href="https://ai.google.dev/pricing" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)' }}>Google Gemini</a>
                 </p>
               </div>
             )}
