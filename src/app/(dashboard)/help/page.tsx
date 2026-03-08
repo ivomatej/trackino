@@ -260,6 +260,19 @@ const DEFAULT_HELP_CONTENT = `
 <p><strong>Přesun z Bug logu:</strong> V sekci Nahlásit chybu (Master Admin vidí tlačítko <strong>→ Úpravy aplikace</strong> u každého reportu po rozbalení karty) se kliknutím automaticky vytvoří položka v Úpravách. Obsah pole Poznámka se přenese do popisu. Přesunuté bugy jsou okamžitě označeny zeleným štítkem <em>„Přesunuto ✓"</em> v headeru karty a nelze je přesunout znovu. Přesunuté položky v Úpravách aplikace jsou označeny štítkem <em>„Z Bug logu"</em>. Původní report zůstane v Bug logu nezměněn.</p>
 <p><strong>Poznámka Master Admina:</strong> Poznámka se zobrazuje v šedém poli. Na pravém kraji řádku jsou dvě ikonky – <em>tužka</em> (upravit) a <em>koš</em> (smazat). Pokud poznámka dosud neexistuje, zobrazuje se odkaz „+ Přidat poznámku".</p>
 
+<h3>Předplatná</h3>
+<p>Modul <strong>Předplatná</strong> (sekce <strong>NÁSTROJE</strong>, tarif Pro a Max) slouží k evidenci firemních předplatných, licencí a SaaS služeb.</p>
+<ul>
+  <li><strong>Dashboard</strong> – 4 statistické karty: počet aktivních, měsíční náklady v CZK, roční náklady v CZK, blížící se platby (do 30 dní)</li>
+  <li><strong>3 záložky</strong> – Předplatná (hlavní výpis), Tipy (doporučení), Kategorie (správa kategorií s barvami)</li>
+  <li><strong>Profil předplatného</strong> – název, typ (SaaS/Hosting/Licence/Doména/Jiné), web URL, login URL, registrační email, společnost, registroval, popis, poznámky, priorita (Vysoká/Střední/Nízká), stav (Aktivní/Pozastaveno/Zrušeno/Zkušební/Ke schválení), typ obnovy (auto/manuální)</li>
+  <li><strong>Platba</strong> – cena, měna (CZK/EUR/USD), frekvence (Měsíčně/Čtvrtletně/Ročně/Dvouletně/Jednorázově), datum další platby, datum registrace; automatický přepočet na měsíční/roční náklady</li>
+  <li><strong>ČNB kurz</strong> – ceny v EUR/USD se automaticky přepočítávají na CZK dle aktuálního kurzovního lístku ČNB</li>
+  <li><strong>Hodnocení</strong> – hvězdičky 1–5 per uživatel, průměrné hodnocení zobrazeno v tabulce i detailu</li>
+  <li><strong>Filtrování a řazení</strong> – fulltextové hledání, filtr dle stavu/typu/kategorie, řazení dle názvu/ceny/další platby/stavu/hodnocení</li>
+  <li><strong>Oprávnění</strong> – přidávat, upravovat a mazat předplatná mohou admini, vlastník workspace a členové s oprávněním „Spravuje předplatná" (nastavitelné v sekci Tým)</li>
+</ul>
+
 <h3>Oblíbené v levém menu</h3>
 <p>Funkce <strong>Oblíbené</strong> je dostupná pro tarify <strong>Pro a Max</strong>. Umožňuje přidat libovolnou položku z levého menu do sekce <strong>OBLÍBENÉ</strong>, která se zobrazuje úplně nahoře v navigaci.</p>
 <ul>
@@ -288,7 +301,7 @@ const DEFAULT_HELP_CONTENT = `
 <p>Aplikace je rozdělena do <strong>modulů</strong>, které lze zapnout nebo vypnout. Výchozí sada modulů závisí na tarifu workspace:</p>
 <ul>
   <li><strong>Free</strong> – Měřič, Reporty, Projekty, Klienti, Štítky, Tým</li>
-  <li><strong>Pro</strong> – Free + Plánovač, Dovolená, Fakturace, Přehled hodin, Analýza kategorií, Podřízení, Poznámky manažera, Nastavení, Převodník textu, Důležité dny, Žádosti, <strong>Prompty</strong>, <strong>Záložky</strong>, sekce Společnost (Znalostní báze, Dokumenty, Firemní pravidla, Pravidla v kanceláři, Připomínky) + funkce <strong>Oblíbené</strong> v levém menu</li>
+  <li><strong>Pro</strong> – Free + Plánovač, Dovolená, Fakturace, Přehled hodin, Analýza kategorií, Podřízení, Poznámky manažera, Nastavení, Převodník textu, Důležité dny, Žádosti, <strong>Prompty</strong>, <strong>Záložky</strong>, <strong>Předplatná</strong>, sekce Společnost (Znalostní báze, Dokumenty, Firemní pravidla, Pravidla v kanceláři, Připomínky) + funkce <strong>Oblíbené</strong> v levém menu</li>
   <li><strong>Max</strong> – Pro + Audit log + Kalendář + <strong>AI asistent</strong></li>
 </ul>
 <p>Admin může v <strong>Nastavení → Moduly</strong> nastavit výjimky pro jednotlivé uživatele – přidat modul, který není v tarifu, nebo zakázat modul, který v tarifu je. Výjimky mají vždy přednost před výchozím tarifem. Moduly, které uživatel nemá povoleny, se nezobrazují v levém menu.</p>

@@ -90,6 +90,7 @@ function TeamContent() {
   const [editCanProcessRequests, setEditCanProcessRequests] = useState(false);
   const [editCanReceiveFeedback, setEditCanReceiveFeedback] = useState(false);
   const [editCanManageDocuments, setEditCanManageDocuments] = useState(false);
+  const [editCanManageSubscriptions, setEditCanManageSubscriptions] = useState(false);
   const [editCanViewBirthdays, setEditCanViewBirthdays] = useState(false);
   const [editBirthDate, setEditBirthDate] = useState('');
   const [editCooperationTypeId, setEditCooperationTypeId] = useState<string>('');
@@ -311,6 +312,7 @@ function TeamContent() {
     setEditCanProcessRequests(member.can_process_requests ?? false);
     setEditCanReceiveFeedback(member.can_receive_feedback ?? false);
     setEditCanManageDocuments(member.can_manage_documents ?? false);
+    setEditCanManageSubscriptions(member.can_manage_subscriptions ?? false);
     setEditCanViewBirthdays(member.can_view_birthdays ?? false);
     setEditBirthDate(member.profile?.birth_date ?? '');
     setEditCooperationTypeId(member.cooperation_type_id ?? '');
@@ -351,6 +353,7 @@ function TeamContent() {
         can_process_requests: editCanProcessRequests,
         can_receive_feedback: editCanReceiveFeedback,
         can_manage_documents: editCanManageDocuments,
+        can_manage_subscriptions: editCanManageSubscriptions,
         can_view_birthdays: editCanViewBirthdays,
         cooperation_type_id: editCooperationTypeId || null,
         billing_profile_id: editBillingProfileId || null,
@@ -1254,6 +1257,24 @@ function TeamContent() {
                   <div>
                     <span className="text-sm block" style={{ color: 'var(--text-primary)' }}>Spravuje dokumenty</span>
                     <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Může nahrávat, mazat a spravovat složky v Dokumentech</span>
+                  </div>
+                </label>
+                <label
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors"
+                  style={{ background: editCanManageSubscriptions ? 'var(--bg-active)' : 'var(--bg-hover)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = editCanManageSubscriptions ? 'var(--bg-active)' : 'var(--bg-hover)'}
+                >
+                  <input
+                    type="checkbox"
+                    checked={editCanManageSubscriptions}
+                    onChange={(e) => setEditCanManageSubscriptions(e.target.checked)}
+                    className="w-4 h-4 rounded flex-shrink-0"
+                    style={{ accentColor: 'var(--primary)' }}
+                  />
+                  <div>
+                    <span className="text-sm block" style={{ color: 'var(--text-primary)' }}>Spravuje předplatná</span>
+                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Může přidávat, upravovat a mazat firemní předplatná</span>
                   </div>
                 </label>
                 <label

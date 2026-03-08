@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 8. 3. 2026 (v2.45.2)
+> Aktualizováno: 8. 3. 2026 (v2.46.0)
 
 ---
 
@@ -49,6 +49,7 @@ src/
       documents/      – Dokumenty – správa souborů a složek (tarif Pro a Max)
       company-rules/  – Firemní pravidla – editovatelná textová stránka (tarif Pro a Max)
       office-rules/   – Pravidla v kanceláři – editovatelná textová stránka (tarif Pro a Max)
+      subscriptions/  – Evidence předplatných (tarif Pro a Max)
       app-settings/   – Nastavení modulů dle tarifu (admin)
       app-changes/    – Úpravy aplikace (admin)
       bugs/           – Hlášení chyb
@@ -132,6 +133,12 @@ Výchozí policy: `CREATE POLICY "Auth full" ... FOR ALL TO authenticated USING 
 | `trackino_document_folders` | id, workspace_id, name, color, sort_order, created_by, created_at, updated_at | Složky pro organizaci dokumentů |
 | `trackino_documents` | id, workspace_id, folder_id (uuid\|null), name, type ('file'\|'link'), file_path (text\|null), file_size (int\|null), file_mime (text\|null), url (text\|null), description, created_by, created_at, updated_at | Firemní dokumenty a odkazy; soubory uloženy v Supabase Storage bucket `trackino-documents` |
 | `trackino_calendar_event_notes` | id, workspace_id, user_id, event_ref (text – ID události), content (HTML), tasks (jsonb – TaskItem[]), is_important (bool), is_done (bool), is_favorite (bool), created_at, updated_at | Poznámky k událostem v kalendáři – per-user, UNIQUE (workspace_id, user_id, event_ref) |
+| `trackino_subscription_categories` | id, workspace_id, name, color, sort_order, created_at | Kategorie předplatných (barva, řazení) |
+| `trackino_subscriptions` | id, workspace_id, name, type, website_url, login_url, registration_email, company_name, registered_by, description, notes, priority, status, renewal_type, price, currency, frequency, next_payment_date, registration_date, category_id, is_tip, created_by, created_at, updated_at | Evidence firemních předplatných a SaaS služeb |
+| `trackino_subscription_ratings` | id, subscription_id, workspace_id, user_id, rating (1-5), created_at, updated_at | Hvězdičkové hodnocení předplatných (per-user, UNIQUE subscription_id+user_id) |
+
+### Nové sloupce (v2.46.0)
+- `trackino_workspace_members.can_manage_subscriptions boolean NOT NULL DEFAULT false` – oprávnění spravovat předplatná
 
 ### Nové sloupce (v2.23.0)
 - `trackino_profiles.birth_date text DEFAULT NULL` – datum narození uživatele (YYYY-MM-DD), zobrazuje se v Narozeninách v kalendáři
@@ -152,7 +159,8 @@ Výchozí policy: `CREATE POLICY "Auth full" ... FOR ALL TO authenticated USING 
 type ModuleId = 'time_tracker' | 'planner' | 'calendar' | 'vacation' | 'invoices' | 'reports' |
   'attendance' | 'category_report' | 'subordinates' | 'notes' | 'projects' |
   'clients' | 'tags' | 'team' | 'settings' | 'audit' | 'text_converter' | 'important_days' |
-  'requests' | 'feedback' | 'knowledge_base' | 'documents' | 'company_rules' | 'office_rules';
+  'requests' | 'feedback' | 'knowledge_base' | 'documents' | 'company_rules' | 'office_rules' |
+  'subscriptions';
 ```
 
 ### Výchozí moduly dle tarifu (hardcoded TARIFF_MODULES)
@@ -182,6 +190,7 @@ type ModuleId = 'time_tracker' | 'planner' | 'calendar' | 'vacation' | 'invoices
 | Firemní pravidla (company_rules) | – | ✓ | ✓ |
 | Pravidla v kanceláři (office_rules) | – | ✓ | ✓ |
 | Kalendář (calendar) | – | – | ✓ |
+| Předplatná (subscriptions) | – | ✓ | ✓ |
 
 ### computeEnabledModules()
 ```
@@ -195,7 +204,7 @@ Základ = TARIFF_MODULES[tariff]
 - `'Sledování'`: time_tracker, planner, calendar, vacation, invoices
 - `'Analýza'`: reports, attendance, category_report, subordinates, notes
 - `'Správa'`: projects, clients, tags, team, settings, audit
-- `'Nástroje'`: text_converter, important_days, requests, feedback
+- `'Nástroje'`: text_converter, important_days, requests, feedback, subscriptions
 - `'Společnost'`: knowledge_base, documents, company_rules, office_rules
 
 ---
@@ -293,6 +302,7 @@ ANALÝZA
 NÁSTROJE
   Převodník textu (/text-converter)
   Důležité dny (/important-days)
+  Předplatná (/subscriptions)
 SPRÁVA
   Projekty (/projects)
   Klienti (/clients)
@@ -437,6 +447,7 @@ TARIFF_MODULES: Record<Tariff, ModuleId[]>
 | &nbsp;&nbsp;Dokumenty (soubory + složky) | – | ✓ | ✓ |
 | &nbsp;&nbsp;Firemní pravidla (rich text editor) | – | ✓ | ✓ |
 | &nbsp;&nbsp;Pravidla v kanceláři (rich text editor) | – | ✓ | ✓ |
+| **Předplatná** | – | ✓ | ✓ |
 
 ---
 
@@ -493,6 +504,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.46.0 | 8. 3. 2026 | Nový modul Předplatná (subscriptions, NÁSTROJE, Pro+Max) – evidence firemních předplatných a SaaS služeb; dashboard statistiky (aktivní/měsíčně/ročně/blížící se platby); 3 záložky (Předplatná/Tipy/Kategorie); CRUD s modálním formulářem (název, typ, stav, cena, měna, frekvence, priorita, obnova, URLs, společnost, registrační email, poznámky); hvězdičkové hodnocení (1-5, per-user); ČNB kurzovní lístek (/api/cnb-rates) pro přepočet EUR/USD→CZK; filtrování (stav/typ/kategorie) + fulltextové hledání + řazení; detail modal; kategorie s barvami; oprávnění can_manage_subscriptions v Týmu; 4 nové DB tabulky (trackino_subscription_categories/subscriptions/subscription_ratings/exchange_rates) |
 | v2.45.2 | 8. 3. 2026 | KB: task box ve stylu Poznámek – tlačítko Úkol v toolbaru přidává panel s úkoly pod editor (checkboxy, text inputy, Enter=nový, Backspace=smazat), read-only zobrazení při prohlížení; AI asistent: scroll v info panelu (overflow-y-auto, max 60vh), model pills seskupeny po řádcích dle providera (GPT/Gemini); Nastavení: přesun „Skrýt štítky" z Obecné do Povinná pole s lepším popisem |
 | v2.45.1 | 8. 3. 2026 | Fakturace: redesign desktop výpisu – 4 řádky (měsíc, VS+vystaveno+splatnost, částka s hodinami v závorce, Schváleno+Proplaceno); Kalendář: fix race condition načítání poznámek v pohledu Seznam (prevDisplayEventsRef clear cache při změně displayEvents); KB: odstraněn fixní task panel pod stránkou – tlačítko Úkol vkládá checklist inline do editoru přes insBlock() |
 | v2.45.0 | 8. 3. 2026 | AI asistent: Google Gemini integrace – přidán provider 'google' (AiProvider type), 4 nové modely (gemini-2.5-flash, gemini-2.5-flash-lite, gemini-2.5-pro, gemini-3-flash-preview), @google/generative-ai SDK, handleGemini() v API route, model pills seskupeny dle providera, info dialog s provider sekcemi, env GEMINI_API_KEY |
@@ -1808,6 +1820,115 @@ Existující cron joby mají URL `https://trackino.vercel.app/api/cron/...`. Po 
 - Datum: ISO string `YYYY-MM-DD`, čas `ISO 8601`
 - Supabase queries: vždy `.eq('workspace_id', currentWorkspace.id)` pro RLS
 - Po každé větší změně: `npm run build` pro ověření TypeScript
+
+---
+
+## 32. Předplatná – architektura (subscriptions/page.tsx)
+
+### Soubory
+| Soubor | Popis |
+|--------|-------|
+| `src/app/(dashboard)/subscriptions/page.tsx` | Hlavní stránka modulu – dashboard, 3 záložky, CRUD, hodnocení |
+| `src/app/api/cnb-rates/route.ts` | Proxy pro ČNB kurzovní lístek (EUR/USD→CZK), cache 1h |
+
+### DB tabulky
+| Tabulka | Popis |
+|---------|-------|
+| `trackino_subscription_categories` | Kategorie předplatných (name, color, sort_order) |
+| `trackino_subscriptions` | Záznamy předplatných (profil, cena, stav, URLs, poznámky, is_tip) |
+| `trackino_subscription_ratings` | Hvězdičkové hodnocení (per-user, 1-5, UNIQUE subscription_id+user_id) |
+
+### Typy (database.ts)
+```typescript
+type SubscriptionType = 'saas' | 'hosting' | 'license' | 'domain' | 'other';
+type SubscriptionStatus = 'active' | 'paused' | 'cancelled' | 'trial' | 'pending_approval';
+type SubscriptionFrequency = 'monthly' | 'quarterly' | 'yearly' | 'biennial' | 'one_time';
+type SubscriptionPriority = 'high' | 'medium' | 'low';
+type SubscriptionCurrency = 'CZK' | 'EUR' | 'USD';
+```
+
+### Oprávnění
+```typescript
+const canManage = isMasterAdmin || isWorkspaceAdmin || currentMembership?.can_manage_subscriptions;
+```
+
+### Záložky
+- **Předplatná** – hlavní tabulkový výpis (subs kde `is_tip=false`)
+- **Tipy** – doporučení (subs kde `is_tip=true`)
+- **Kategorie** – CRUD kategorií s barvami
+
+### Dashboard statistiky (4 karty)
+- Aktivních (z celkových)
+- Měsíčně v CZK (přepočet přes ČNB kurz)
+- Ročně v CZK
+- Blížící se platby (do 30 dní)
+
+### Cenový přepočet
+- `toMonthly(price, freq)` / `toYearly(price, freq)` – normalizace dle frekvence
+- `toCzk(price, currency)` – přepočet přes ČNB kurzovní lístek
+- API route `/api/cnb-rates` → fetch z `cnb.cz/...denni_kurz.txt`, parsuje formát `země|měna|množství|kód|kurz`
+
+### SQL migrace
+```sql
+CREATE TABLE IF NOT EXISTS trackino_subscription_categories (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES trackino_workspaces(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  color text NOT NULL DEFAULT '#6366f1',
+  sort_order integer NOT NULL DEFAULT 0,
+  created_at timestamptz DEFAULT now()
+);
+ALTER TABLE trackino_subscription_categories ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Auth full" ON trackino_subscription_categories
+  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+CREATE TABLE IF NOT EXISTS trackino_subscriptions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES trackino_workspaces(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  type text NOT NULL DEFAULT 'saas' CHECK (type IN ('saas','hosting','license','domain','other')),
+  website_url text NOT NULL DEFAULT '',
+  login_url text NOT NULL DEFAULT '',
+  registration_email text NOT NULL DEFAULT '',
+  company_name text NOT NULL DEFAULT '',
+  registered_by uuid REFERENCES auth.users(id),
+  description text NOT NULL DEFAULT '',
+  notes text NOT NULL DEFAULT '',
+  priority text NOT NULL DEFAULT 'medium' CHECK (priority IN ('high','medium','low')),
+  status text NOT NULL DEFAULT 'active' CHECK (status IN ('active','paused','cancelled','trial','pending_approval')),
+  renewal_type text NOT NULL DEFAULT 'auto' CHECK (renewal_type IN ('auto','manual')),
+  price numeric,
+  currency text NOT NULL DEFAULT 'CZK' CHECK (currency IN ('CZK','EUR','USD')),
+  frequency text NOT NULL DEFAULT 'monthly' CHECK (frequency IN ('monthly','quarterly','yearly','biennial','one_time')),
+  next_payment_date text,
+  registration_date text,
+  category_id uuid REFERENCES trackino_subscription_categories(id) ON DELETE SET NULL,
+  is_tip boolean NOT NULL DEFAULT false,
+  created_by uuid NOT NULL REFERENCES auth.users(id),
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+ALTER TABLE trackino_subscriptions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Auth full" ON trackino_subscriptions
+  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+CREATE TABLE IF NOT EXISTS trackino_subscription_ratings (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  subscription_id uuid NOT NULL REFERENCES trackino_subscriptions(id) ON DELETE CASCADE,
+  workspace_id uuid NOT NULL REFERENCES trackino_workspaces(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES auth.users(id),
+  rating integer NOT NULL CHECK (rating >= 1 AND rating <= 5),
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  UNIQUE (subscription_id, user_id)
+);
+ALTER TABLE trackino_subscription_ratings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Auth full" ON trackino_subscription_ratings
+  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+ALTER TABLE trackino_workspace_members
+  ADD COLUMN IF NOT EXISTS can_manage_subscriptions boolean NOT NULL DEFAULT false;
+```
 
 ---
 

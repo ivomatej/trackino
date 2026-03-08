@@ -66,6 +66,7 @@ const ICONS = {
   prompts: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>,
   bookmarks: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>,
   aiAssistant: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a8 8 0 0 1 8 8c0 3.5-2 6.5-5 7.7V20h-6v-2.3C6 16.5 4 13.5 4 10a8 8 0 0 1 8-8z"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="9" y1="23" x2="15" y2="23"/><circle cx="9" cy="10" r="1" fill="currentColor"/><circle cx="15" cy="10" r="1" fill="currentColor"/></svg>,
+  subscriptions: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>,
 };
 
 // Ikonka hvězdičky pro tlačítko oblíbených (inline SVG pro různé stavy)
@@ -305,6 +306,9 @@ export default function Sidebar({ open, onClose, collapsed = false, onCollapseDe
     }
     if (hasModule('ai_assistant')) {
       nastrojeItems.push({ label: 'AI asistent', href: '/ai-assistant', icon: ICONS.aiAssistant });
+    }
+    if (hasModule('subscriptions')) {
+      nastrojeItems.push({ label: 'Předplatná', href: '/subscriptions', icon: ICONS.subscriptions });
     }
 
     // SPRÁVA

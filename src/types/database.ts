@@ -34,7 +34,8 @@ export type ModuleId =
   | 'bookmarks'
   | 'notebook'
   | 'ai_assistant'
-  | 'automation';
+  | 'automation'
+  | 'subscriptions';
 
 /** Per-uživatelský override modulu (nad rámec tarifu nebo zakázání) */
 export interface UserModuleOverride {
@@ -180,6 +181,7 @@ export interface WorkspaceMember {
   can_view_birthdays: boolean;   // vidí narozeniny kolegů v kalendáři
   can_use_ai_assistant: boolean; // může používat AI asistenta (nad rámec role admin/owner)
   ai_allowed_models: string[] | null; // null = všechny modely; jinak jen uvedené model IDs
+  can_manage_subscriptions: boolean; // může spravovat evidenci předplatných
 }
 
 export interface ManagerAssignment {
@@ -895,4 +897,66 @@ export interface NoteFolderShare {
   user_id: string | null; // null = celý workspace
   shared_by: string;
   created_at: string;
+}
+
+// ─── EVIDENCE PŘEDPLATNÝCH ────────────────────────────────────────────────
+
+export interface SubscriptionCategory {
+  id: string;
+  workspace_id: string;
+  name: string;
+  color: string;
+  sort_order: number;
+  created_at: string;
+}
+
+export type SubscriptionType = 'saas' | 'hosting' | 'license' | 'domain' | 'other';
+export type SubscriptionStatus = 'active' | 'paused' | 'cancelled' | 'trial' | 'pending_approval';
+export type SubscriptionFrequency = 'monthly' | 'quarterly' | 'yearly' | 'biennial' | 'one_time';
+export type SubscriptionPriority = 'high' | 'medium' | 'low';
+export type SubscriptionCurrency = 'CZK' | 'EUR' | 'USD';
+
+export interface Subscription {
+  id: string;
+  workspace_id: string;
+  name: string;
+  type: SubscriptionType;
+  website_url: string;
+  login_url: string;
+  registration_email: string;
+  company_name: string;
+  registered_by: string | null; // user_id z workspace
+  description: string;
+  notes: string; // HTML formátované poznámky
+  priority: SubscriptionPriority;
+  status: SubscriptionStatus;
+  renewal_type: 'auto' | 'manual';
+  price: number | null;
+  currency: SubscriptionCurrency;
+  frequency: SubscriptionFrequency;
+  next_payment_date: string | null; // YYYY-MM-DD
+  registration_date: string | null; // YYYY-MM-DD
+  category_id: string | null;
+  is_tip: boolean; // true = tip/doporučení, ne aktivní předplatné
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SubscriptionRating {
+  id: string;
+  subscription_id: string;
+  workspace_id: string;
+  user_id: string;
+  rating: number; // 1-5
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ExchangeRate {
+  id: string;
+  workspace_id: string;
+  currency: string; // EUR, USD
+  rate: number; // kurz k CZK
+  updated_at: string;
 }

@@ -11,6 +11,23 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.46.0 – 8. 3. 2026</h3>
+<ul>
+  <li><strong>Nový modul: Předplatná</strong> – evidence firemních předplatných a SaaS služeb (sekce NÁSTROJE, tarif Pro a Max). Hlavní funkce:
+    <ul>
+      <li><strong>Dashboard</strong> – 4 souhrnné karty: počet aktivních, měsíční náklady v CZK, roční náklady, blížící se platby (do 30 dní)</li>
+      <li><strong>3 záložky</strong> – Předplatná (hlavní výpis), Tipy (doporučení), Kategorie (správa kategorií s barvami)</li>
+      <li><strong>Profil předplatného</strong> – název, typ (SaaS/Hosting/Licence/Doména/Jiné), web URL, login URL, registrační email, společnost, registroval (výběr z členů), popis, poznámky, priorita (Vysoká/Střední/Nízká), stav (Aktivní/Pozastaveno/Zrušeno/Zkušební/Ke schválení), typ obnovy (auto/manuální)</li>
+      <li><strong>Platba</strong> – cena, měna (CZK/EUR/USD), frekvence (Měsíčně/Čtvrtletně/Ročně/Dvouletně/Jednorázově), datum další platby, datum registrace</li>
+      <li><strong>ČNB kurz</strong> – automatický přepočet EUR/USD na CZK dle aktuálního kurzovního lístku České národní banky (API route <code>/api/cnb-rates</code>)</li>
+      <li><strong>Hodnocení</strong> – hvězdičky 1–5 per uživatel, průměrné hodnocení zobrazeno v tabulce i v detailu</li>
+      <li><strong>Filtrování a řazení</strong> – fulltextové hledání, filtr dle stavu/typu/kategorie, řazení dle názvu/ceny/další platby/stavu/hodnocení</li>
+    </ul>
+  </li>
+  <li><strong>Tým – nové oprávnění</strong> – „Spravuje předplatná" (<code>can_manage_subscriptions</code>) toggle v editaci člena</li>
+  <li><strong>DB migrace</strong> – 3 nové tabulky: <code>trackino_subscription_categories</code>, <code>trackino_subscriptions</code>, <code>trackino_subscription_ratings</code>; nový sloupec <code>can_manage_subscriptions</code> na <code>trackino_workspace_members</code></li>
+</ul>
+
 <h3>v2.45.2 – 8. 3. 2026</h3>
 <ul>
   <li><strong>Znalostní báze – task box ve stylu Poznámek</strong> – tlačítko „Úkol" v toolbaru nyní přidá úkol do panelu pod editorem (stejný design jako v modulu Poznámky: checkboxy, textové inputy, Enter = nový úkol, Backspace na prázdném = smazat). Úkoly se ukládají do DB a zobrazují v read-only pohledu.</li>
