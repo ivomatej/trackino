@@ -585,7 +585,7 @@ function PromptsContent() {
         {/* ── Left Panel ── */}
         <div className={`fixed md:static inset-y-0 left-0 z-40 md:z-auto flex flex-col border-r overflow-hidden transition-transform duration-200 flex-shrink-0
           ${showFolderPanel ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
-          style={{ width: 260, background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+          style={{ width: 340, background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
 
           {/* Header */}
           <div className="px-4 pt-4 pb-2 flex-shrink-0">
