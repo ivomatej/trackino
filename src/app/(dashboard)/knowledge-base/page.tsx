@@ -125,8 +125,8 @@ function RichEditor({ value, onChange, members, pages }: {
     }
   };
 
-  const ins = (html: string) => {
-    setSelectionPopup(null);
+  // Obnoví kurzor do editoru – buď ze savedRange, nebo zachová stávající pozici
+  const restoreCursor = () => {
     if (savedRange.current) {
       try {
         const sel = window.getSelection();
@@ -134,8 +134,16 @@ function RichEditor({ value, onChange, members, pages }: {
       } catch { /* ignore */ }
       savedRange.current = null;
     } else {
-      ref.current?.focus();
+      // Pokud kurzor už je v editoru, neměnit pozici – jen fokus pokud není
+      const sel = window.getSelection();
+      const inside = sel && sel.rangeCount > 0 && ref.current?.contains(sel.anchorNode);
+      if (!inside) ref.current?.focus();
     }
+  };
+
+  const ins = (html: string) => {
+    setSelectionPopup(null);
+    restoreCursor();
     document.execCommand('insertHTML', false, html);
     if (ref.current) onChange(ref.current.innerHTML);
   };
@@ -143,15 +151,7 @@ function RichEditor({ value, onChange, members, pages }: {
   // insBlock: jako ins(), ale po vložení přesune kurzor do elementu s data-kbm atributem
   const insBlock = (html: string) => {
     setSelectionPopup(null);
-    if (savedRange.current) {
-      try {
-        const sel = window.getSelection();
-        if (sel) { sel.removeAllRanges(); sel.addRange(savedRange.current); }
-      } catch { /* ignore */ }
-      savedRange.current = null;
-    } else {
-      ref.current?.focus();
-    }
+    restoreCursor();
     document.execCommand('insertHTML', false, html);
     if (ref.current) {
       const target = ref.current.querySelector('[data-kbm]') as HTMLElement | null;
@@ -361,6 +361,17 @@ function RichEditor({ value, onChange, members, pages }: {
           }
         }}
         onClick={e => {
+          // Task box delete – kliknutí na × v pravém horním rohu
+          const taskBox = (e.target as Element).closest('.kb-task-box') as HTMLElement | null;
+          if (taskBox) {
+            const rect = taskBox.getBoundingClientRect();
+            if (e.clientX > rect.right - 36 && e.clientY < rect.top + 36) {
+              e.preventDefault();
+              taskBox.remove();
+              if (ref.current) onChange(ref.current.innerHTML);
+              return;
+            }
+          }
           const preEl = (e.target as Element).closest('pre');
           if (preEl) {
             const rect = preEl.getBoundingClientRect();
@@ -414,9 +425,12 @@ function RichEditor({ value, onChange, members, pages }: {
         .prose-kb .kb-callout[data-color="gray"]{border-color:color-mix(in srgb,#6b7280 35%,transparent);background:color-mix(in srgb,#6b7280 8%,var(--bg-card))}
         .prose-kb .kb-callout::after{content:"";position:absolute;top:8px;right:8px;width:18px;height:18px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Ccircle cx='9' cy='9' r='1.5' fill='%23888' stroke='none'/%3E%3Ccircle cx='15' cy='9' r='1.5' fill='%23888' stroke='none'/%3E%3Ccircle cx='9' cy='15' r='1.5' fill='%23888' stroke='none'/%3E%3Ccircle cx='15' cy='15' r='1.5' fill='%23888' stroke='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:center;cursor:pointer;opacity:0;transition:opacity 0.15s}
         .prose-kb .kb-callout:hover::after{opacity:0.5}
-        .prose-kb .kb-task-box{border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin:16px 0;background:var(--bg-hover)}
+        .prose-kb .kb-task-box{position:relative;border:1px solid var(--border);border-radius:10px;padding:12px 36px 12px 16px;margin:16px 0;background:var(--bg-hover)}
         .prose-kb .kb-task-box .kb-task-box-title{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:6px}
         .prose-kb .kb-task-box .kb-checklist{margin:0;padding-left:2px}
+        .prose-kb .kb-task-box::after{content:"";position:absolute;top:10px;right:10px;width:18px;height:18px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='18' y1='6' x2='6' y2='18'/%3E%3Cline x1='6' y1='6' x2='18' y2='18'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:center;cursor:pointer;opacity:0;transition:opacity 0.15s;border-radius:4px}
+        .prose-kb .kb-task-box:hover::after{opacity:0.5}
+        .prose-kb .kb-task-box::after:hover{opacity:1}
         .prose-kb details.kb-toggle{border:none;border-radius:10px;background:var(--bg-hover);padding:0;margin:16px 0;overflow:hidden}
         .prose-kb details.kb-toggle>summary{padding:10px 14px;cursor:pointer;font-weight:600;list-style:none;display:flex;align-items:center;gap:8px}
         .prose-kb details.kb-toggle>summary::-webkit-details-marker{display:none}
@@ -549,7 +563,7 @@ function PageViewer({ page, onChecklistToggle, onPageLinkClick }: {
         .prose-view .kb-callout[data-color="red"]{border-color:color-mix(in srgb,#ef4444 35%,transparent);background:color-mix(in srgb,#ef4444 8%,var(--bg-card))}
         .prose-view .kb-callout[data-color="purple"]{border-color:color-mix(in srgb,#8b5cf6 35%,transparent);background:color-mix(in srgb,#8b5cf6 8%,var(--bg-card))}
         .prose-view .kb-callout[data-color="gray"]{border-color:color-mix(in srgb,#6b7280 35%,transparent);background:color-mix(in srgb,#6b7280 8%,var(--bg-card))}
-        .prose-view .kb-task-box{border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin:16px 0;background:var(--bg-hover)}
+        .prose-view .kb-task-box{position:relative;border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin:16px 0;background:var(--bg-hover)}
         .prose-view .kb-task-box .kb-task-box-title{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:6px}
         .prose-view .kb-task-box .kb-checklist{margin:0;padding-left:2px}
         .prose-view details.kb-toggle{border:none;border-radius:10px;background:var(--bg-hover);padding:0;margin:16px 0;overflow:hidden}
