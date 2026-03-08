@@ -11,6 +11,18 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.43.3 – 8. 3. 2026</h3>
+<ul>
+  <li><strong>Poznámky – mobilní viditelnost akcí</strong> – v seznamu poznámek jsou tlačítka (Důležité, Oblíbené, Přesunout, Archivovat) nyní vždy viditelná na mobilních zařízeních; na desktopu se zobrazují jen při najetí myší. Chevron šipka u položek Poznámky k událostem je na mobilu taktéž lehce viditelná.</li>
+  <li><strong>Znalostní báze – mobilní viditelnost akcí složek</strong> – hovermenu složky (+podsložka, Sdílet, Přejmenovat, Smazat) je nyní vždy viditelné na mobilních zařízeních; na desktopu se zobrazuje jen při najetí myší.</li>
+  <li><strong>Znalostní báze – mobilní viditelnost odstranění úkolu</strong> – tlačítko × pro odebrání úkolu z KB stránky je nyní vždy lehce viditelné na mobilních zařízeních.</li>
+</ul>
+
+<h3>v2.43.2 – 8. 3. 2026</h3>
+<ul>
+  <li><strong>Poznámky – URL auto-link při psaní</strong> – pokud v editoru poznámky (NoteEditor i CalEventNoteEditor) napíšete URL a stisknete mezerník nebo Enter, adresa se automaticky stane klikatelným odkazem otevírajícím se v nové záložce prohlížeče. Dříve ke zlinkování docházelo až při opuštění editoru (onBlur).</li>
+</ul>
+
 <h3>v2.43.1 – 8. 3. 2026</h3>
 <ul>
   <li><strong>Poznámky – sdílení: výpis uživatelů</strong> – opravena chyba, kdy dialog sdílení složky „Konkrétní uživatelé" nezobrazoval žádné členy workspace. Příčina: Supabase nested join bez definovaného FK. Přepnuto na spolehlivý dvou-krokový fetch (workspace_members → profiles).</li>

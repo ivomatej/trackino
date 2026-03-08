@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 8. 3. 2026 (v2.43.1)
+> Aktualizováno: 8. 3. 2026 (v2.43.3)
 
 ---
 
@@ -493,6 +493,8 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.43.3 | 8. 3. 2026 | Poznámky: action buttony (Důležité/Oblíbené/Přesunout/Archivovat) vždy viditelné na mobilu (opacity-100 md:opacity-0 md:group-hover:opacity-100); KB: folder hover menu + task remove tlačítko vždy viditelné na mobilu |
+| v2.43.2 | 8. 3. 2026 | Poznámky: URL auto-link při Space/Enter v editoru (handleEditorKeyDown + handleKeyDown v NoteEditor+CalEventNoteEditor; DOM manipulation: Range API, createTextNode, createElement('a'), cursor reposition) |
 | v2.43.1 | 8. 3. 2026 | Poznámky: fetchMembers přepnut na dvou-krokový fetch (workspace_members → profiles) → sdílení složek „Konkrétní uživatelé" zobrazuje členy; Dokumenty: přidáno tlačítko editace (tužka) + edit modal (název/popis/složka/url), ikona koše sjednocena na 4-path SVG; AI asistent: ikona Nastavení → gear SVG |
 | v2.43.0 | 8. 3. 2026 | KB: panel s úkoly (checklist, editTasks state, kbTaskRefs, addKbTask/toggleKbTask/updateKbTaskText/removeKbTask, SQL: ALTER trackino_kb_pages ADD tasks jsonb DEFAULT '[]'), sdílení složek (trackino_kb_folder_shares tabulka, is_shared na folder, openShare/saveShare funkce, KbFolderShare typ), datum s rokem na homepage, status dot v Nově vytvořené, info-circle ikona Nezařazené; Poznámky: nadpis Poznámky v levém panelu, Všechny poznámky nav položka, pořadí Události→Archiv, URL klikatelné v NoteEditor+CalEventNoteEditor (handleEditorClick+handleBlur+linkifyHtml), sdílení ve stylu karet (3 volby s popisky) |
 | v2.40.0 | 7. 3. 2026 | Znalostní báze: redesign navigace – levý panel čistě navigační (bez inline stránek), nový typ ListFilter (discriminated union), nová komponenta PageListView (mezivrstva seznam stránek při aktivním filtru), tlačítko ← Zpět v záhlaví stránky (backToList), computed showList/showWelcome; fulltextové hledání v názvech+obsahu+štítcích; animace kopírování kódu (CSS třída kb-code-copied, zelená fajfka 1,5s, editor+viewer) |
