@@ -401,6 +401,7 @@ function NoteEditor({
           type="text"
           value={title}
           onChange={e => handleTitleChange(e.target.value)}
+          onFocus={() => { if (title === 'Nová poznámka') handleTitleChange(''); }}
           placeholder="Název poznámky"
           className="w-full text-xl font-semibold bg-transparent border-none outline-none text-base sm:text-xl"
           style={{ color: 'var(--text-primary)' }}
