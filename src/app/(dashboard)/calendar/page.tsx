@@ -2793,7 +2793,7 @@ function CalendarContent() {
     return (
       <div
         onClick={e => { e.stopPropagation(); setDetailEvent(ev); }}
-        className={`${compact ? 'px-1 py-0.5 text-[10px] leading-[14px]' : 'px-1.5 py-0.5 text-xs'} rounded font-medium ${wrap ? 'break-words' : 'truncate'} flex items-center gap-0.5`}
+        className={`${compact ? 'px-1 py-0.5 text-[10px] leading-[14px]' : 'px-1.5 py-0.5 text-xs'} rounded font-medium ${wrap ? 'break-words' : 'truncate'} relative`}
         style={{
           background: isDeclined ? ev.color + '0d' : ev.color + '22',
           color: isDeclined ? ev.color + '99' : ev.color,
@@ -2811,7 +2811,7 @@ function CalendarContent() {
         }
       >
         {ev.is_recurring && (
-          <svg width={compact ? 9 : 11} height={compact ? 9 : 11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0" style={{ opacity: 0.7 }}>
+          <svg width={compact ? 8 : 9} height={compact ? 8 : 9} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="absolute right-0.5 top-0.5 flex-shrink-0" style={{ opacity: 0.7 }}>
             <polyline points="17 1 21 5 17 9" /><path d="M3 11V9a4 4 0 0 1 4-4h14" /><polyline points="7 23 3 19 7 15" /><path d="M21 13v2a4 4 0 0 1-4 4H3" />
           </svg>
         )}
@@ -4014,7 +4014,8 @@ function CalendarContent() {
                                 onClick={e => { e.stopPropagation(); setDetailEvent(ev); }}
                                 title={isPendingOrUpdated ? `${ev.title} – čeká na potvrzení` : ev.attendee_status === 'updated' ? `${ev.title} – událost byla změněna` : isDeclined ? `${ev.title} – odmítnuto` : isMaybe ? `${ev.title} – nezávazně` : ev.title}
                               >
-                                <div className="font-semibold truncate pr-3 flex items-center gap-0.5">{ev.is_recurring && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0" style={{ opacity: 0.7 }}><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>}<span className="truncate">{prefix}{ev.start_time?.slice(0, 5)} {ev.title}</span></div>
+                                {ev.is_recurring && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="absolute right-0.5 top-0.5 flex-shrink-0" style={{ opacity: 0.7 }}><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>}
+                                <div className="font-semibold truncate pr-3"><span className="truncate">{prefix}{ev.start_time?.slice(0, 5)} {ev.title}</span></div>
                                 {heightPx > 30 && ev.end_time && (
                                   <div className="opacity-70 truncate">{ev.end_time.slice(0, 5)}</div>
                                 )}
@@ -4194,7 +4195,8 @@ function CalendarContent() {
                                   onClick={e => { e.stopPropagation(); setDetailEvent(ev); }}
                                   title={isPendingOrUpdated ? `${ev.title} – čeká na potvrzení` : ev.attendee_status === 'updated' ? `${ev.title} – událost byla změněna` : isDeclined ? `${ev.title} – odmítnuto` : isMaybe ? `${ev.title} – nezávazně` : ev.title}
                                 >
-                                  <div className="font-semibold truncate pr-3 flex items-center gap-0.5">{ev.is_recurring && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0" style={{ opacity: 0.7 }}><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>}<span className="truncate">{prefix}{ev.start_time?.slice(0, 5)} {ev.title}</span></div>
+                                  {ev.is_recurring && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="absolute right-0.5 top-0.5 flex-shrink-0" style={{ opacity: 0.7 }}><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>}
+                                  <div className="font-semibold truncate pr-3"><span className="truncate">{prefix}{ev.start_time?.slice(0, 5)} {ev.title}</span></div>
                                   {heightPx > 32 && ev.end_time && (
                                     <div className="opacity-70 truncate">{ev.end_time.slice(0, 5)}</div>
                                   )}
@@ -4308,7 +4310,8 @@ function CalendarContent() {
                               onClick={e => { e.stopPropagation(); setDetailEvent(ev); }}
                               title={isPendingOrUpdated ? `${ev.title} – čeká na potvrzení` : ev.attendee_status === 'updated' ? `${ev.title} – událost byla změněna` : isDeclined ? `${ev.title} – odmítnuto` : isMaybe ? `${ev.title} – nezávazně` : ev.title}
                             >
-                              <div className="font-semibold truncate pr-4 flex items-center gap-0.5">{ev.is_recurring && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0" style={{ opacity: 0.7 }}><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>}<span className="truncate">{prefix}{ev.start_time?.slice(0, 5)} {ev.title}</span></div>
+                              {ev.is_recurring && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="absolute right-0.5 top-0.5 flex-shrink-0" style={{ opacity: 0.7 }}><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>}
+                              <div className="font-semibold truncate pr-4"><span className="truncate">{prefix}{ev.start_time?.slice(0, 5)} {ev.title}</span></div>
                               {heightPx > 35 && ev.end_time && (
                                 <div className="opacity-70">{ev.end_time.slice(0, 5)}</div>
                               )}

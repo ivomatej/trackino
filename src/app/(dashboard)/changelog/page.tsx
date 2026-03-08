@@ -11,6 +11,22 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.51.1 – 8. 3. 2026</h3>
+<ul>
+  <li><strong>Úkoly – 8 vylepšení</strong>:
+    <ul>
+      <li>Odstraněn badge (počet úkolů) z navigace v sidebaru</li>
+      <li><strong>Detail úkolu jako overlay</strong> – panel vyjíždí z pravé strany přes celý viewport (fixní pozice, backdrop)</li>
+      <li><strong>Pořadí sloupců v Nastavení</strong> – nová sekce s šipkami nahoru/dolů pro změnu pořadí sloupců</li>
+      <li><strong>Editace projektů</strong> – hover akce na projektech v levém panelu (tužka/křížek); nový modal pro úpravu názvu, barvy, popisu, složky a sdílení; tlačítko Smazat</li>
+      <li>Oprava zaoblení <strong>priority strip</strong> – barevný proužek se správně ořezává s kartou (overflow-hidden)</li>
+      <li>Redesign <strong>komentářového pole</strong> – větší min-height, tlačítko Odeslat pod inputem</li>
+      <li><strong>Zasouvací/vysouvací levý sidebar</strong> – nové tlačítko pro skrytí/zobrazení panelu na desktopu (localStorage persist)</li>
+    </ul>
+  </li>
+  <li><strong>Kalendář</strong> – SVG ikonka opakující se události přesunuta z levého do <strong>pravého horního rohu</strong> (pohledy Týden, 3 dny, Den, Měsíc); Seznam beze změny</li>
+</ul>
+
 <h3>v2.51.0 – 8. 3. 2026</h3>
 <ul>
   <li><strong>Úkoly – kompletní refaktoring modulu</strong>:

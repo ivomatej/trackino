@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 8. 3. 2026 (v2.51.0)
+> Aktualizováno: 8. 3. 2026 (v2.51.1)
 
 ---
 
@@ -540,6 +540,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.51.1 | 8. 3. 2026 | Úkoly – 8 vylepšení: odstraněn badge ze sidebaru; detail úkolu jako fixní overlay z pravé strany (celý viewport); pořadí sloupců v nastavení boardu (šipky ↑↓); editace projektů v levém panelu (hover akce tužka/křížek + modal); oprava priority strip zaoblení (overflow-hidden); redesign komentářového pole; zasouvací/vysouvací levý sidebar na desktopu (localStorage persist); Kalendář – SVG ikonka opakující se události přesunuta do pravého horního rohu (Týden/3 dny/Den/Měsíc) |
 | v2.51.0 | 8. 3. 2026 | Úkoly – kompletní refaktoring modulu: přesun do NÁSTROJE v sidebaru; DnD přesouvání úkolů mezi sloupci (useDroppable fix); DnD přesouvání celých sloupců (horizontalListSortingStrategy); editace/mazání sloupců (double-click přejmenování); checkbox dokončení úkolu (is_completed, line-through + opacity); nastavení nástěnky (auto-přesun dokončených, barvy sloupců); rich text editor v popisu a komentářích (B/I/U, seznamy); přiřazení řešitele podúkolů; klik mimo detail panel = zavření; levý sidebar se složkami a projekty (rekurzivní strom, max 5 úrovní); sdílení projektů (nesdílet/workspace/konkrétní uživatelé); auto-hide horizontální scrollbar (kanban-scroll CSS); 3 nové DB tabulky + 7 ALTER |
 | v2.50.1 | 8. 3. 2026 | Kalendář – Opakující se události: 14 typů opakování (denně/týdně/měsíčně/ročně + speciální vzory: 1./poslední den v týdnu/měsíci/kvartálu/roce + konkrétní den v měsíci); expandRecurringEvent() funkce; UI select v event modalu; info o opakování v detail modalu; podpora pro sdílené i účastnické události; 2 nové sloupce (recurrence_type, recurrence_day na trackino_calendar_events) |
 | v2.50.0 | 8. 3. 2026 | Nový modul Úkoly (tasks, SPRÁVA, Pro+Max) – kompletní správa úkolů s Kanban nástěnkou; 3 pohledy (Seznam/Kanban/Tabulka); drag & drop přesouvání (@dnd-kit); detail panel s editovatelným názvem, statusem, prioritou, deadline, přiřazením; podúkoly s progress barem; přílohy (Supabase Storage); komentáře; historie změn; filtrování (fulltext/priorita/deadline/assignee/jen moje/skrytí hotových); auto-vytvoření nástěnky se 4 sloupci; badge otevřených úkolů v sidebar; oprávnění can_manage_tasks v Týmu; 7 nových DB tabulek + 1 ALTER |

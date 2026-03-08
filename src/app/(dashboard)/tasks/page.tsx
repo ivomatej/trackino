@@ -98,7 +98,7 @@ function SortableCard({ task, members, subtaskMap, commentCountMap, attachCountM
 
   return (
     <div ref={setNodeRef} {...attributes} {...(canDrag ? listeners : {})}
-      className="rounded-lg border p-3 mb-2 cursor-pointer transition-colors"
+      className="rounded-lg border p-3 mb-2 cursor-pointer transition-colors overflow-hidden"
       onClick={() => onOpen(task)}
       role="button" tabIndex={0}
       onKeyDown={e => { if (e.key === 'Enter') onOpen(task); }}
@@ -177,6 +177,10 @@ function TasksContent() {
   const [activeBoardId, setActiveBoardId] = useState<string | null>(null);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [leftOpen, setLeftOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem('trackino_tasks_sidebar_collapsed') === '1';
+  });
 
   // ── Board settings state ──
   const [showBoardSettings, setShowBoardSettings] = useState(false);
@@ -524,10 +528,11 @@ function TasksContent() {
   }, []);
 
   // ── Board CRUD ──
-  const createBoard = useCallback(async (name: string, folderId?: string | null) => {
+  const createBoard = useCallback(async (name: string, folderId?: string | null, color?: string, description?: string) => {
     if (!wsId || !user) return;
     const { data: nb } = await supabase.from('trackino_task_boards').insert({
       workspace_id: wsId, name, folder_id: folderId ?? null, created_by: user.id,
+      ...(color ? { color } : {}), ...(description ? { description } : {}),
     }).select().single();
     if (nb) {
       const board = nb as TaskBoard;
@@ -942,14 +947,26 @@ function TasksContent() {
                 <>
                   {renderFolderTree(folder.id, depth + 1)}
                   {folderBoards.map(b => (
-                    <div key={b.id} className="flex items-center gap-2 py-1 px-2 rounded-lg cursor-pointer transition-colors"
+                    <div key={b.id} className="flex items-center gap-2 py-1 px-2 rounded-lg cursor-pointer transition-colors group/board"
                       style={{ paddingLeft: (depth + 1) * 12 + 8, background: activeBoardId === b.id ? 'var(--bg-hover)' : 'transparent' }}
                       onMouseEnter={e => { if (activeBoardId !== b.id) e.currentTarget.style.background = 'var(--bg-hover)'; }}
                       onMouseLeave={e => { if (activeBoardId !== b.id) e.currentTarget.style.background = 'transparent'; }}
                       onClick={() => { setActiveBoardId(b.id); setLeftOpen(false); }}>
                       <div className="w-2.5 h-2.5 rounded flex-shrink-0" style={{ background: b.color ?? '#6366f1' }} />
                       <span className="text-sm flex-1 min-w-0 truncate" style={{ color: activeBoardId === b.id ? 'var(--text-primary)' : 'var(--text-muted)' }}>{b.name}</span>
-                      {b.is_shared && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)' }}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>}
+                      {b.is_shared && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="flex-shrink-0" style={{ color: 'var(--text-muted)' }}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>}
+                      {canManage && (
+                        <span className="opacity-0 group-hover/board:opacity-100 flex gap-0.5 flex-shrink-0 transition-opacity">
+                          <button onClick={e => { e.stopPropagation(); setBoardModalEditId(b.id); setBoardModalName(b.name); setBoardModalColor(b.color ?? '#6366f1'); setBoardModalDesc(b.description ?? ''); setBoardModalFolderId(b.folder_id ?? null); setShowBoardModal(true); }}
+                            className="p-0.5 rounded" title="Upravit" style={{ color: 'var(--text-muted)' }}>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                          </button>
+                          <button onClick={e => { e.stopPropagation(); if (confirm(`Smazat projekt „${b.name}"?`)) deleteBoard(b.id); }}
+                            className="p-0.5 rounded" title="Smazat" style={{ color: 'var(--text-muted)' }}>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                          </button>
+                        </span>
+                      )}
                     </div>
                   ))}
                 </>
@@ -977,11 +994,19 @@ function TasksContent() {
       {/* ── LEFT SIDEBAR ── */}
       {/* Mobile overlay */}
       {leftOpen && <div className="fixed inset-0 z-20 bg-black/20 md:hidden" onClick={() => setLeftOpen(false)} />}
-      <div className={`fixed md:relative z-30 md:z-auto top-0 bottom-0 left-0 w-[260px] flex-shrink-0 border-r flex flex-col transition-transform md:translate-x-0 ${leftOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
+      <div className={`fixed md:relative z-30 md:z-auto top-0 bottom-0 left-0 flex-shrink-0 border-r flex flex-col transition-all duration-200 ${leftOpen ? 'translate-x-0' : '-translate-x-full'} ${sidebarCollapsed ? 'md:w-0 md:overflow-hidden md:border-r-0 md:-translate-x-full' : 'md:w-[260px] md:translate-x-0'} w-[260px]`}
         style={{ borderColor: 'var(--border)', background: 'var(--bg-card)' }}>
         {/* Left panel header */}
         <div className="p-3 border-b flex items-center gap-2" style={{ borderColor: 'var(--border)' }}>
           <span className="text-sm font-bold flex-1" style={{ color: 'var(--text-primary)' }}>Úkoly</span>
+          {/* Desktop collapse button */}
+          <button className="hidden md:flex p-1 rounded transition-colors" title="Skrýt panel"
+            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            style={{ color: 'var(--text-muted)' }}
+            onClick={() => { setSidebarCollapsed(true); localStorage.setItem('trackino_tasks_sidebar_collapsed', '1'); }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
           {canManage && (
             <>
               <button onClick={() => { setAddingBoard(true); setAddingBoardFolderId(null); setNewBoardName(''); }}
@@ -1067,14 +1092,26 @@ function TasksContent() {
             <>
               <div className="text-[10px] font-semibold uppercase tracking-wider px-2 py-1 mt-2" style={{ color: 'var(--text-muted)' }}>Projekty</div>
               {unfiledBoards.map(b => (
-                <div key={b.id} className="flex items-center gap-2 py-1 px-2 rounded-lg cursor-pointer transition-colors"
+                <div key={b.id} className="flex items-center gap-2 py-1 px-2 rounded-lg cursor-pointer transition-colors group/board"
                   style={{ background: activeBoardId === b.id ? 'var(--bg-hover)' : 'transparent' }}
                   onMouseEnter={e => { if (activeBoardId !== b.id) e.currentTarget.style.background = 'var(--bg-hover)'; }}
                   onMouseLeave={e => { if (activeBoardId !== b.id) e.currentTarget.style.background = 'transparent'; }}
                   onClick={() => { setActiveBoardId(b.id); setLeftOpen(false); }}>
                   <div className="w-2.5 h-2.5 rounded flex-shrink-0" style={{ background: b.color ?? '#6366f1' }} />
                   <span className="text-sm flex-1 min-w-0 truncate" style={{ color: activeBoardId === b.id ? 'var(--text-primary)' : 'var(--text-muted)' }}>{b.name}</span>
-                  {b.is_shared && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)' }}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>}
+                  {b.is_shared && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="flex-shrink-0" style={{ color: 'var(--text-muted)' }}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>}
+                  {canManage && (
+                    <span className="opacity-0 group-hover/board:opacity-100 flex gap-0.5 flex-shrink-0 transition-opacity">
+                      <button onClick={e => { e.stopPropagation(); setBoardModalEditId(b.id); setBoardModalName(b.name); setBoardModalColor(b.color ?? '#6366f1'); setBoardModalDesc(b.description ?? ''); setBoardModalFolderId(b.folder_id ?? null); setShowBoardModal(true); }}
+                        className="p-0.5 rounded" title="Upravit" style={{ color: 'var(--text-muted)' }}>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                      </button>
+                      <button onClick={e => { e.stopPropagation(); if (confirm(`Smazat projekt „${b.name}"?`)) deleteBoard(b.id); }}
+                        className="p-0.5 rounded" title="Smazat" style={{ color: 'var(--text-muted)' }}>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                      </button>
+                    </span>
+                  )}
                 </div>
               ))}
             </>
@@ -1084,11 +1121,17 @@ function TasksContent() {
 
       {/* ── MAIN CONTENT ── */}
       <div className="flex-1 min-w-0 flex flex-col overflow-hidden p-4 lg:p-6">
-      {/* Mobile left panel toggle */}
-      <button className="md:hidden mb-3 flex items-center gap-2 text-sm" style={{ color: 'var(--text-muted)' }}
-        onClick={() => setLeftOpen(true)}>
+      {/* Left panel toggle (mobile: overlay, desktop: collapse/expand) */}
+      <button className={`mb-3 flex items-center gap-2 text-sm ${sidebarCollapsed ? '' : 'md:hidden'}`} style={{ color: 'var(--text-muted)' }}
+        onClick={() => {
+          if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+            setSidebarCollapsed(prev => { const next = !prev; localStorage.setItem('trackino_tasks_sidebar_collapsed', next ? '1' : '0'); return next; });
+          } else {
+            setLeftOpen(true);
+          }
+        }}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-        Projekty
+        <span className="md:hidden">Projekty</span>
       </button>
 
     <div className="flex flex-col flex-1 min-h-0">
@@ -1214,7 +1257,7 @@ function TasksContent() {
       {/* ══════════════════════════════════ */}
 
       <div className="flex-1 min-h-0 overflow-hidden flex">
-        <div className={`flex-1 min-w-0 overflow-auto ${selectedTask ? 'hidden md:block' : ''}`}>
+        <div className="flex-1 min-w-0 overflow-auto">
 
           {/* ── LIST VIEW ── */}
           {view === 'list' && (
@@ -1502,10 +1545,10 @@ function TasksContent() {
         {/* ══════════════════════════════════ */}
         {/* Backdrop – click outside to close */}
         {selectedTask && (
-          <div className="fixed inset-0 z-30 md:relative md:inset-auto md:z-auto" onClick={e => { if (e.target === e.currentTarget) setSelectedTask(null); }}
+          <div className="fixed inset-0 z-50" onClick={e => { if (e.target === e.currentTarget) setSelectedTask(null); }}
             style={{ background: 'rgba(0,0,0,0.2)' }}>
-          <div className="md:w-[480px] w-full flex-shrink-0 border-l overflow-y-auto absolute right-0 top-0 bottom-0 md:relative"
-            style={{ borderColor: 'var(--border)', background: 'var(--bg-card)' }} onClick={e => e.stopPropagation()}>
+          <div className="w-full md:w-[520px] flex-shrink-0 border-l overflow-y-auto fixed right-0 top-0 bottom-0"
+            style={{ borderColor: 'var(--border)', background: 'var(--bg-card)', transition: 'transform 0.2s ease-out' }} onClick={e => e.stopPropagation()}>
             <div className="p-4">
               {/* Close + title */}
               <div className="flex items-start gap-2 mb-4">
@@ -1776,18 +1819,20 @@ function TasksContent() {
                       </button>
                     ))}
                   </div>
-                  <div className="flex gap-2 items-end">
+                  <div className="flex flex-col">
                     <div ref={commentRef} contentEditable suppressContentEditableWarning
-                      className="text-base sm:text-sm rounded-b-lg border px-3 py-2 min-h-[60px] flex-1 focus:outline-none"
+                      className="text-base sm:text-sm rounded-b-lg border px-3 py-2 min-h-[80px] focus:outline-none"
                       style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
                       data-placeholder="Napsat komentář..."
                       onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); const html = commentRef.current?.innerHTML ?? ''; if (html.replace(/<[^>]*>/g, '').trim()) { setNewComment(html); setTimeout(() => addComment(), 0); } } }}
                     />
-                    <button onClick={() => { const html = commentRef.current?.innerHTML ?? ''; if (html.replace(/<[^>]*>/g, '').trim()) { setNewComment(html); setTimeout(() => { addComment(); if (commentRef.current) commentRef.current.innerHTML = ''; }, 0); } }}
-                      className="px-3 py-2 rounded-lg text-sm font-medium transition-colors self-end mb-px"
-                      style={{ background: 'var(--primary)', color: '#fff' }}>
-                      Odeslat
-                    </button>
+                    <div className="flex justify-end mt-2">
+                      <button onClick={() => { const html = commentRef.current?.innerHTML ?? ''; if (html.replace(/<[^>]*>/g, '').trim()) { setNewComment(html); setTimeout(() => { addComment(); if (commentRef.current) commentRef.current.innerHTML = ''; }, 0); } }}
+                        className="px-4 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                        style={{ background: 'var(--primary)', color: '#fff' }}>
+                        Odeslat
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1845,6 +1890,54 @@ function TasksContent() {
                   {sortedColumns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
                 <SelectChevron />
+              </div>
+            </div>
+
+            {/* Column order */}
+            <div className="mb-4">
+              <label className="text-sm font-medium mb-1 block" style={{ color: 'var(--text-primary)' }}>Pořadí sloupců</label>
+              <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>Změňte pořadí sloupců pomocí šipek</p>
+              <div className="space-y-1">
+                {sortedColumns.map((col, idx) => (
+                  <div key={col.id} className="flex items-center gap-2 p-2 rounded-lg border" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
+                    <div className="w-2.5 h-2.5 rounded flex-shrink-0" style={{ background: col.color ?? '#9ca3af' }} />
+                    <span className="text-sm flex-1 min-w-0 truncate" style={{ color: 'var(--text-primary)' }}>{col.name}</span>
+                    <div className="flex gap-0.5">
+                      <button disabled={idx === 0}
+                        className="p-1 rounded transition-colors disabled:opacity-20"
+                        style={{ color: 'var(--text-muted)' }}
+                        onMouseEnter={e => { if (idx > 0) e.currentTarget.style.background = 'var(--bg-card)'; }}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                        onClick={async () => {
+                          if (idx === 0) return;
+                          const prev = sortedColumns[idx - 1];
+                          const prevOrder = prev.sort_order;
+                          const curOrder = col.sort_order;
+                          setColumns(old => old.map(c => c.id === col.id ? { ...c, sort_order: prevOrder } : c.id === prev.id ? { ...c, sort_order: curOrder } : c));
+                          await supabase.from('trackino_task_columns').update({ sort_order: prevOrder }).eq('id', col.id);
+                          await supabase.from('trackino_task_columns').update({ sort_order: curOrder }).eq('id', prev.id);
+                        }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="18 15 12 9 6 15"/></svg>
+                      </button>
+                      <button disabled={idx === sortedColumns.length - 1}
+                        className="p-1 rounded transition-colors disabled:opacity-20"
+                        style={{ color: 'var(--text-muted)' }}
+                        onMouseEnter={e => { if (idx < sortedColumns.length - 1) e.currentTarget.style.background = 'var(--bg-card)'; }}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                        onClick={async () => {
+                          if (idx === sortedColumns.length - 1) return;
+                          const next = sortedColumns[idx + 1];
+                          const nextOrder = next.sort_order;
+                          const curOrder = col.sort_order;
+                          setColumns(old => old.map(c => c.id === col.id ? { ...c, sort_order: nextOrder } : c.id === next.id ? { ...c, sort_order: curOrder } : c));
+                          await supabase.from('trackino_task_columns').update({ sort_order: nextOrder }).eq('id', col.id);
+                          await supabase.from('trackino_task_columns').update({ sort_order: curOrder }).eq('id', next.id);
+                        }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -1935,6 +2028,96 @@ function TasksContent() {
             <div className="flex gap-2 justify-end">
               <button onClick={() => setShowShareModal(false)} className="px-4 py-2 rounded-lg text-sm font-medium" style={{ color: 'var(--text-muted)' }}>Zrušit</button>
               <button onClick={saveBoardSharing} className="px-4 py-2 rounded-lg text-sm font-medium" style={{ background: 'var(--primary)', color: '#fff' }}>Uložit</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════ */}
+      {/* ██  BOARD EDIT MODAL             */}
+      {/* ══════════════════════════════════ */}
+      {showBoardModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.4)' }}
+          onClick={() => { setShowBoardModal(false); setBoardModalEditId(null); }}>
+          <div className="rounded-xl border p-6 max-w-md w-full mx-4" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}
+            onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{boardModalEditId ? 'Upravit projekt' : 'Nový projekt'}</h3>
+              <button onClick={() => { setShowBoardModal(false); setBoardModalEditId(null); }} className="p-1.5 rounded" style={{ color: 'var(--text-muted)' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm font-medium mb-1 block" style={{ color: 'var(--text-primary)' }}>Název</label>
+                <input value={boardModalName} onChange={e => setBoardModalName(e.target.value)}
+                  className="text-base sm:text-sm rounded-lg border px-3 py-2 w-full" autoFocus
+                  style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+                  placeholder="Název projektu..." />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block" style={{ color: 'var(--text-primary)' }}>Barva</label>
+                <div className="flex gap-2">
+                  {['#6366f1', '#3b82f6', '#22c55e', '#f97316', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6'].map(c => (
+                    <button key={c} className="w-7 h-7 rounded-full border-2 transition-colors"
+                      style={{ background: c, borderColor: boardModalColor === c ? 'var(--text-primary)' : 'transparent' }}
+                      onClick={() => setBoardModalColor(c)} />
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block" style={{ color: 'var(--text-primary)' }}>Popis</label>
+                <textarea value={boardModalDesc} onChange={e => setBoardModalDesc(e.target.value)}
+                  className="text-base sm:text-sm rounded-lg border px-3 py-2 w-full min-h-[60px] resize-none"
+                  style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+                  placeholder="Volitelný popis..." />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block" style={{ color: 'var(--text-primary)' }}>Složka</label>
+                <div className="relative">
+                  <select value={boardModalFolderId ?? ''} onChange={e => setBoardModalFolderId(e.target.value || null)}
+                    className={selectCls} style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}>
+                    <option value="">Bez složky</option>
+                    {folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                  </select>
+                  <SelectChevron />
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-2 justify-between mt-5">
+              <div>
+                {boardModalEditId && (
+                  <button onClick={() => {
+                    if (confirm('Smazat tento projekt a všechny jeho úkoly?')) {
+                      deleteBoard(boardModalEditId);
+                      setShowBoardModal(false);
+                      setBoardModalEditId(null);
+                    }
+                  }} className="px-3 py-2 rounded-lg text-sm font-medium transition-colors" style={{ color: '#ef4444' }}>
+                    Smazat
+                  </button>
+                )}
+              </div>
+              <div className="flex gap-2">
+                {boardModalEditId && (
+                  <button onClick={() => { setShowBoardModal(false); setBoardModalEditId(null); setShowShareModal(true); }}
+                    className="px-4 py-2 rounded-lg text-sm font-medium border" style={{ color: 'var(--text-primary)', borderColor: 'var(--border)' }}>
+                    Sdílení
+                  </button>
+                )}
+                <button onClick={async () => {
+                  if (!boardModalName.trim()) return;
+                  if (boardModalEditId) {
+                    await updateBoard(boardModalEditId, { name: boardModalName.trim(), color: boardModalColor, description: boardModalDesc, folder_id: boardModalFolderId });
+                  } else {
+                    await createBoard(boardModalName.trim(), boardModalFolderId, boardModalColor, boardModalDesc);
+                  }
+                  setShowBoardModal(false);
+                  setBoardModalEditId(null);
+                }} className="px-4 py-2 rounded-lg text-sm font-medium" style={{ background: 'var(--primary)', color: '#fff' }}>
+                  {boardModalEditId ? 'Uložit' : 'Vytvořit'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

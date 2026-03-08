@@ -171,12 +171,11 @@ export default function Sidebar({ open, onClose, collapsed = false, onCollapseDe
     pendingInvoiceApproval: 0,
     pendingRequest: 0,
     unresolvedFeedback: 0,
-    myOpenTasks: 0,
   });
 
   useEffect(() => {
     if (!user || !currentWorkspace) {
-      setBadgeCounts({ pendingVacation: 0, returnedInvoice: 0, pendingInvoiceApproval: 0, pendingRequest: 0, unresolvedFeedback: 0, myOpenTasks: 0 });
+      setBadgeCounts({ pendingVacation: 0, returnedInvoice: 0, pendingInvoiceApproval: 0, pendingRequest: 0, unresolvedFeedback: 0 });
       return;
     }
 
@@ -199,24 +198,7 @@ export default function Sidebar({ open, onClose, collapsed = false, onCollapseDe
       canViewFeedbackSidebar
         ? supabase.from('trackino_feedback').select('id').eq('workspace_id', wsId).eq('is_resolved', false)
         : Promise.resolve({ data: null }),
-      // Úkoly přiřazené aktuálnímu uživateli (ne ve sloupci "Hotovo")
-      hasModule('tasks')
-        ? (async () => {
-            // Najdi boards a jejich "done" sloupce
-            const { data: boards } = await supabase.from('trackino_task_boards').select('id').eq('workspace_id', wsId);
-            if (!boards || boards.length === 0) return { data: [] };
-            const boardIds = boards.map(b => b.id);
-            const { data: doneCols } = await supabase.from('trackino_task_columns').select('id').in('board_id', boardIds).ilike('name', '%hotovo%');
-            const doneIds = (doneCols ?? []).map(c => c.id);
-            let q = supabase.from('trackino_task_items').select('id').eq('workspace_id', wsId).eq('assigned_to', uid);
-            if (doneIds.length > 0) {
-              // Filter out tasks in "done" columns
-              for (const did of doneIds) q = q.neq('column_id', did);
-            }
-            return q;
-          })()
-        : Promise.resolve({ data: null }),
-    ]).then(([vacRes, invUserRes, invPendRes, reqRes, fbRes, taskRes]) => {
+    ]).then(([vacRes, invUserRes, invPendRes, reqRes, fbRes]) => {
       let returnedCount = 0;
       if (invUserRes.data) {
         const list = invUserRes.data as Array<{ id: string; billing_period_year: number; billing_period_month: number; status: string }>;
@@ -237,7 +219,6 @@ export default function Sidebar({ open, onClose, collapsed = false, onCollapseDe
         pendingInvoiceApproval: (invPendRes.data ?? []).length,
         pendingRequest: (reqRes.data ?? []).length,
         unresolvedFeedback: (fbRes.data ?? []).length,
-        myOpenTasks: (taskRes.data ?? []).length,
       });
     });
   }, [user, currentWorkspace, isAdminOrManager, canProcessRequestsSidebar, canViewFeedbackSidebar, canInvoiceSidebar]);
@@ -470,7 +451,6 @@ export default function Sidebar({ open, onClose, collapsed = false, onCollapseDe
     else if (item.href === '/invoices') badgeCount = badgeCounts.returnedInvoice + badgeCounts.pendingInvoiceApproval;
     else if (item.href === '/requests') badgeCount = badgeCounts.pendingRequest;
     else if (item.href === '/feedback') badgeCount = badgeCounts.unresolvedFeedback;
-    else if (item.href === '/tasks') badgeCount = badgeCounts.myOpenTasks;
 
     return (
       <div key={item.href} className="relative group/nav">
