@@ -36,7 +36,8 @@ export type ModuleId =
   | 'ai_assistant'
   | 'automation'
   | 'subscriptions'
-  | 'domains';
+  | 'domains'
+  | 'tasks';
 
 /** Per-uživatelský override modulu (nad rámec tarifu nebo zakázání) */
 export interface UserModuleOverride {
@@ -184,6 +185,7 @@ export interface WorkspaceMember {
   ai_allowed_models: string[] | null; // null = všechny modely; jinak jen uvedené model IDs
   can_manage_subscriptions: boolean; // může spravovat evidenci předplatných
   can_manage_domains: boolean; // může spravovat evidenci domén
+  can_manage_tasks: boolean; // může spravovat úkoly (vytvářet, editovat, mazat, přesouvat)
 }
 
 export interface ManagerAssignment {
@@ -1022,4 +1024,80 @@ export interface DomainRegistrar {
   created_by: string;
   created_at: string;
   updated_at: string;
+}
+
+// ── Úkolník (Tasks) ──
+
+export type TaskPriority = 'urgent' | 'high' | 'medium' | 'low' | 'none';
+
+export interface TaskBoard {
+  id: string;
+  workspace_id: string;
+  name: string;
+  created_by: string;
+  created_at: string;
+}
+
+export interface TaskColumn {
+  id: string;
+  board_id: string;
+  name: string;
+  color: string;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface TaskItem {
+  id: string;
+  workspace_id: string;
+  board_id: string;
+  column_id: string | null;
+  title: string;
+  description: string;
+  priority: TaskPriority;
+  deadline: string | null;
+  sort_order: number;
+  created_by: string;
+  assigned_to: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TaskSubtask {
+  id: string;
+  task_id: string;
+  title: string;
+  is_done: boolean;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface TaskComment {
+  id: string;
+  task_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TaskAttachment {
+  id: string;
+  task_id: string;
+  file_path: string;
+  file_name: string;
+  file_size: number;
+  file_mime: string;
+  uploaded_by: string;
+  created_at: string;
+}
+
+export interface TaskHistory {
+  id: string;
+  task_id: string;
+  user_id: string;
+  action: string;
+  old_value: string | null;
+  new_value: string | null;
+  created_at: string;
 }

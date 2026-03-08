@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 8. 3. 2026 (v2.49.1)
+> Aktualizováno: 8. 3. 2026 (v2.50.0)
 
 ---
 
@@ -39,6 +39,7 @@ src/
       clients/        – Správa klientů
       tags/           – Správa štítků
       team/           – Správa týmu
+      tasks/          – Úkoly a kanban nástěnka (tarif Pro a Max)
       settings/       – Nastavení workspace
       audit/          – Audit log (jen tarif Max)
       text-converter/ – Převodník textu (tarif Pro a Max)
@@ -142,6 +143,16 @@ Výchozí policy: `CREATE POLICY "Auth full" ... FOR ALL TO authenticated USING 
 | `trackino_exchange_rates` | id, date (text YYYY-MM-DD), currency, rate (numeric), fetched_at | Globální cache kurzů ČNB (bez workspace_id); UNIQUE (date, currency) |
 | `trackino_domain_registrars` | id, workspace_id, name, website_url, notes, created_by, created_at, updated_at | Registrátoři domén (entita pro select ve formuláři domény) |
 | `trackino_domains` | id, workspace_id, name, registrar, subscription_id (FK nullable), registration_date, expiration_date, status (active/expired/transferred/cancelled), notes, target_url, project_name, company_name, created_by, created_at, updated_at | Evidence firemních domén; computed status „expiring" na klientu (active + ≤30 dní) |
+| `trackino_task_boards` | id, workspace_id, name, created_by, created_at | Nástěnky úkolů |
+| `trackino_task_columns` | id, board_id, name, color, sort_order, created_at | Sloupce/stavy nástěnky (K řešení, Rozpracováno, ...) |
+| `trackino_task_items` | id, workspace_id, board_id, column_id, title, description, priority, deadline, sort_order, created_by, assigned_to, created_at, updated_at | Úkoly |
+| `trackino_task_subtasks` | id, task_id, title, is_done, sort_order, created_at | Podúkoly (checklist) |
+| `trackino_task_comments` | id, task_id, user_id, content, created_at, updated_at | Komentáře k úkolům |
+| `trackino_task_attachments` | id, task_id, file_path, file_name, file_size, file_mime, uploaded_by, created_at | Přílohy úkolů (Supabase Storage) |
+| `trackino_task_history` | id, task_id, user_id, action, old_value, new_value, created_at | Historie změn úkolů |
+
+### Nové sloupce (v2.50.0)
+- `trackino_workspace_members.can_manage_tasks boolean NOT NULL DEFAULT false` – oprávnění spravovat úkoly
 
 ### Nové sloupce (v2.48.0)
 - `trackino_workspace_members.can_manage_domains boolean NOT NULL DEFAULT false` – oprávnění spravovat domény
@@ -169,7 +180,7 @@ type ModuleId = 'time_tracker' | 'planner' | 'calendar' | 'vacation' | 'invoices
   'attendance' | 'category_report' | 'subordinates' | 'notes' | 'projects' |
   'clients' | 'tags' | 'team' | 'settings' | 'audit' | 'text_converter' | 'important_days' |
   'requests' | 'feedback' | 'knowledge_base' | 'documents' | 'company_rules' | 'office_rules' |
-  'subscriptions' | 'domains';
+  'subscriptions' | 'domains' | 'tasks';
 ```
 
 ### Výchozí moduly dle tarifu (hardcoded TARIFF_MODULES)
@@ -201,6 +212,7 @@ type ModuleId = 'time_tracker' | 'planner' | 'calendar' | 'vacation' | 'invoices
 | Kalendář (calendar) | – | – | ✓ |
 | Předplatná (subscriptions) | – | ✓ | ✓ |
 | Evidence domén (domains) | – | ✓ | ✓ |
+| Úkoly (tasks) | – | ✓ | ✓ |
 
 ### computeEnabledModules()
 ```
@@ -213,7 +225,7 @@ Základ = TARIFF_MODULES[tariff]
 ### Skupina modulů (pro App Settings)
 - `'Sledování'`: time_tracker, planner, calendar, vacation, invoices
 - `'Analýza'`: reports, attendance, category_report, subordinates, notes
-- `'Správa'`: projects, clients, tags, team, settings, audit
+- `'Správa'`: projects, clients, tags, team, settings, audit, tasks
 - `'Nástroje'`: text_converter, important_days, requests, feedback, subscriptions, domains
 - `'Společnost'`: knowledge_base, documents, company_rules, office_rules
 
@@ -318,6 +330,7 @@ SPRÁVA
   Klienti (/clients)
   Štítky (/tags)
   Tým (/team)
+  Úkoly (/tasks)
   Nastavení (/settings)
   Audit log (/audit)
 NÁSTROJE
@@ -346,6 +359,7 @@ NÁSTROJE
 | Žádosti (`/requests`) | `pendingRequestCount` – čekající žádosti ke schválení | admin, manager, masterAdmin, can_process_requests |
 | Fakturace (`/invoices`) | `returnedInvoiceCount + pendingInvoiceApprovalCount` – vrácené + čekající ke schválení | returned: can_invoice; approval: admin, manager |
 | Připomínky (`/feedback`) | `unresolvedFeedbackCount` – nevyřízené připomínky | masterAdmin, admin, can_receive_feedback |
+| Úkoly (`/tasks`) | `myOpenTasks` – otevřené úkoly přiřazené uživateli (mimo sloupce „Hotovo") | všichni |
 
 ---
 
@@ -459,6 +473,7 @@ TARIFF_MODULES: Record<Tariff, ModuleId[]>
 | &nbsp;&nbsp;Pravidla v kanceláři (rich text editor) | – | ✓ | ✓ |
 | **Předplatná** | – | ✓ | ✓ |
 | **Evidence domén** | – | ✓ | ✓ |
+| **Úkoly** | – | ✓ | ✓ |
 
 ---
 
@@ -515,6 +530,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.50.0 | 8. 3. 2026 | Nový modul Úkoly (tasks, SPRÁVA, Pro+Max) – kompletní správa úkolů s Kanban nástěnkou; 3 pohledy (Seznam/Kanban/Tabulka); drag & drop přesouvání (@dnd-kit); detail panel s editovatelným názvem, statusem, prioritou, deadline, přiřazením; podúkoly s progress barem; přílohy (Supabase Storage); komentáře; historie změn; filtrování (fulltext/priorita/deadline/assignee/jen moje/skrytí hotových); auto-vytvoření nástěnky se 4 sloupci; badge otevřených úkolů v sidebar; oprávnění can_manage_tasks v Týmu; 7 nových DB tabulek + 1 ALTER |
 | v2.49.1 | 8. 3. 2026 | Znalostní báze – Publikování stránky (veřejná URL s bezpečnostním tokenem); Kalendář – SVG ikonka opakující se události ve všech pohledech; nová veřejná route /kb/[slug]/[token]; API route /api/kb-public; 1 nový sloupec (public_token na trackino_kb_pages) |
 | v2.49.0 | 8. 3. 2026 | Evidence domén – Registrátoři jako entita: nová záložka Registrátoři s CRUD (název, web, poznámky), select registrátora ve formuláři domény (místo volného textu), tlačítko + pro rychlé přidání, filtr dle registrátora; nový status Dobíhá (winding_down, fialový); dashboard rozšířen na 5 karet; Kalendář – nový pohled 3 dny: 3sloupcová mřížka (předchozí/dnešek/další den) s časovou osou, navigace po 1 dni, nastavení časového rozsahu, celodenní události; 1 nová DB tabulka (trackino_domain_registrars) |
 | v2.48.0 | 8. 3. 2026 | Nový modul Evidence domén (domains, NÁSTROJE, Pro+Max) – evidence firemních domén; dashboard (celkem/aktivní/expirující/expirované); computed status „Expirující" (active + ≤30 dní do expirace, oranžové zvýraznění); spárování s předplatným (volitelné FK); tabulka s řazením (název/expirace/registrátor/status) + filtrování (status/firma/fulltext); detail modal; mobilní karty; oprávnění can_manage_domains v Týmu; 1 nová DB tabulka (trackino_domains) |
@@ -2108,6 +2124,184 @@ CREATE POLICY "Auth full" ON trackino_domains FOR ALL TO authenticated USING (tr
 
 ALTER TABLE trackino_workspace_members
   ADD COLUMN IF NOT EXISTS can_manage_domains boolean NOT NULL DEFAULT false;
+```
+
+---
+
+## 34. Úkoly – architektura (tasks/page.tsx)
+
+### Soubory
+| Soubor | Popis |
+|--------|-------|
+| `src/app/(dashboard)/tasks/page.tsx` | Hlavní stránka modulu – 3 pohledy (Seznam/Kanban/Tabulka), detail panel, CRUD, drag & drop |
+
+### DB tabulky (7 nových)
+| Tabulka | Popis |
+|---------|-------|
+| `trackino_task_boards` | Nástěnky (workspace_id, name, created_by) |
+| `trackino_task_columns` | Sloupce/stavy nástěnky (board_id, name, color, sort_order) |
+| `trackino_task_items` | Úkoly (board_id, column_id, title, description, priority, deadline, assigned_to, sort_order) |
+| `trackino_task_subtasks` | Podúkoly (task_id, title, is_done, sort_order) |
+| `trackino_task_comments` | Komentáře k úkolu (task_id, user_id, content) |
+| `trackino_task_attachments` | Přílohy (task_id, file_path, file_name, file_size, file_mime, uploaded_by) |
+| `trackino_task_history` | Historie změn (task_id, user_id, action, old_value, new_value) |
+
+### Typy (database.ts)
+```typescript
+export type TaskPriority = 'urgent' | 'high' | 'medium' | 'low' | 'none';
+export interface TaskBoard { id, workspace_id, name, created_by, created_at }
+export interface TaskColumn { id, board_id, name, color, sort_order, created_at }
+export interface TaskItem { id, workspace_id, board_id, column_id, title, description, priority: TaskPriority, deadline, sort_order, created_by, assigned_to, created_at, updated_at }
+export interface TaskSubtask { id, task_id, title, is_done, sort_order, created_at }
+export interface TaskComment { id, task_id, user_id, content, created_at, updated_at }
+export interface TaskAttachment { id, task_id, file_path, file_name, file_size, file_mime, uploaded_by, created_at }
+export interface TaskHistory { id, task_id, user_id, action, old_value, new_value, created_at }
+```
+
+### Pohledy
+- `'list'` – jednoduchý vertikální výpis úkolů s ikonami priority, deadline, assignee
+- `'kanban'` – sloupcový přehled s drag & drop přes @dnd-kit; `SortableCard` komponenta; `closestCorners` collision detection
+- `'table'` – kompaktní tabulka s řazením (title, priority, deadline, created_at, assigned_to)
+
+### Oprávnění
+```typescript
+const canManage = isMasterAdmin || isAdmin || (currentMembership?.can_manage_tasks ?? false);
+```
+
+### Auto-vytvoření nástěnky
+Při prvním načtení, pokud `boards.length === 0 && canManage`:
+- Vytvoří se „Hlavní board" s 4 výchozími sloupci:
+  1. K řešení (#9ca3af, šedá)
+  2. Rozpracováno (#3b82f6, modrá)
+  3. Ve schvalování (#f97316, oranžová)
+  4. Hotovo (#22c55e, zelená)
+
+### Detail panel (slide-in, 480px)
+- Editovatelný název (kliknutí → input)
+- Grid 2×2: Status (select sloupce), Priorita, Přiřazení, Deadline
+- Popis: contentEditable div s auto-save po 1s
+- Podúkoly: checklist s progress barem, přidávání přes input
+- Přílohy: upload do Supabase Storage bucket `trackino-task-attachments`, download přes signedUrl, mazání
+- Komentáře: input + odeslání, seznam s avatarem autora
+- Historie: collapsible, log změn (vytvoření, přesun, změna priority/deadline/přiřazení)
+
+### Drag & Drop (Kanban)
+- `@dnd-kit/core` + `@dnd-kit/sortable`
+- `PointerSensor` s `activationConstraint: { distance: 5 }`
+- `handleDragEnd`: přesun mezi sloupci → UPDATE column_id + INSERT history záznam
+- `DragOverlay` pro vizuální zpětnou vazbu při tažení
+
+### Filtrování
+- `search` – fulltextové hledání v názvu a popisu
+- `filterAssignee` – select člena workspace
+- `filterPriority` – select priority
+- `filterDeadline` – all, overdue, today, this_week, this_month, no_deadline
+- `onlyMine` – toggle „Jen moje"
+- `hideCompleted` – skryje úkoly ve sloupci „Hotovo"
+
+### Badge v sidebar
+```typescript
+// Sidebar.tsx – badge count pro tasks
+// Najde sloupce s názvem obsahujícím 'hotovo', spočítá úkoly přiřazené uživateli MIMO tyto sloupce
+myOpenTasks: number
+```
+
+### Supabase Storage
+- Bucket: `trackino-task-attachments` (private)
+- Cesta souboru: `{workspace_id}/{uuid}.{ext}`
+- Max velikost: 20 MB
+- Signed URL pro stahování (60s)
+
+### SQL migrace
+```sql
+CREATE TABLE IF NOT EXISTS trackino_task_boards (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES trackino_workspaces(id) ON DELETE CASCADE,
+  name text NOT NULL DEFAULT '',
+  created_by uuid NOT NULL REFERENCES auth.users(id),
+  created_at timestamptz DEFAULT now()
+);
+ALTER TABLE trackino_task_boards ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Auth full" ON trackino_task_boards FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+CREATE TABLE IF NOT EXISTS trackino_task_columns (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  board_id uuid NOT NULL REFERENCES trackino_task_boards(id) ON DELETE CASCADE,
+  name text NOT NULL DEFAULT '',
+  color text NOT NULL DEFAULT '#6366f1',
+  sort_order integer NOT NULL DEFAULT 0,
+  created_at timestamptz DEFAULT now()
+);
+ALTER TABLE trackino_task_columns ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Auth full" ON trackino_task_columns FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+CREATE TABLE IF NOT EXISTS trackino_task_items (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES trackino_workspaces(id) ON DELETE CASCADE,
+  board_id uuid NOT NULL REFERENCES trackino_task_boards(id) ON DELETE CASCADE,
+  column_id uuid REFERENCES trackino_task_columns(id) ON DELETE SET NULL,
+  title text NOT NULL DEFAULT '',
+  description text NOT NULL DEFAULT '',
+  priority text NOT NULL DEFAULT 'none' CHECK (priority IN ('urgent','high','medium','low','none')),
+  deadline text,
+  sort_order integer NOT NULL DEFAULT 0,
+  created_by uuid NOT NULL REFERENCES auth.users(id),
+  assigned_to uuid REFERENCES auth.users(id),
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+ALTER TABLE trackino_task_items ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Auth full" ON trackino_task_items FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+CREATE TABLE IF NOT EXISTS trackino_task_subtasks (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  task_id uuid NOT NULL REFERENCES trackino_task_items(id) ON DELETE CASCADE,
+  title text NOT NULL DEFAULT '',
+  is_done boolean NOT NULL DEFAULT false,
+  sort_order integer NOT NULL DEFAULT 0,
+  created_at timestamptz DEFAULT now()
+);
+ALTER TABLE trackino_task_subtasks ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Auth full" ON trackino_task_subtasks FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+CREATE TABLE IF NOT EXISTS trackino_task_comments (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  task_id uuid NOT NULL REFERENCES trackino_task_items(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES auth.users(id),
+  content text NOT NULL DEFAULT '',
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+ALTER TABLE trackino_task_comments ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Auth full" ON trackino_task_comments FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+CREATE TABLE IF NOT EXISTS trackino_task_attachments (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  task_id uuid NOT NULL REFERENCES trackino_task_items(id) ON DELETE CASCADE,
+  file_path text NOT NULL,
+  file_name text NOT NULL DEFAULT '',
+  file_size bigint NOT NULL DEFAULT 0,
+  file_mime text NOT NULL DEFAULT '',
+  uploaded_by uuid NOT NULL REFERENCES auth.users(id),
+  created_at timestamptz DEFAULT now()
+);
+ALTER TABLE trackino_task_attachments ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Auth full" ON trackino_task_attachments FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+CREATE TABLE IF NOT EXISTS trackino_task_history (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  task_id uuid NOT NULL REFERENCES trackino_task_items(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES auth.users(id),
+  action text NOT NULL DEFAULT '',
+  old_value text,
+  new_value text,
+  created_at timestamptz DEFAULT now()
+);
+ALTER TABLE trackino_task_history ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Auth full" ON trackino_task_history FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+ALTER TABLE trackino_workspace_members
+  ADD COLUMN IF NOT EXISTS can_manage_tasks boolean NOT NULL DEFAULT false;
 ```
 
 ---

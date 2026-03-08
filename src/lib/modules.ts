@@ -35,6 +35,7 @@ export const ALL_MODULES: { id: ModuleId; label: string; description: string; gr
   { id: 'office_rules',   label: 'Pravidla v kanceláři', description: 'Textová stránka s pravidly provozu kanceláře',    group: 'Společnost' },
   { id: 'subscriptions', label: 'Předplatná',           description: 'Evidence a správa firemních předplatných a SaaS služeb', group: 'Nástroje' },
   { id: 'domains',       label: 'Evidence domén',        description: 'Evidence a správa firemních domén',                      group: 'Nástroje' },
+  { id: 'tasks',         label: 'Úkoly',                 description: 'Správa úkolů a kanban nástěnka pro tým',                   group: 'Správa' },
 ];
 
 /**
@@ -78,6 +79,7 @@ export const TARIFF_MODULES: Record<Tariff, ModuleId[]> = {
     'notebook',
     'subscriptions',
     'domains',
+    'tasks',
   ],
   max: [
     'time_tracker',
@@ -111,6 +113,7 @@ export const TARIFF_MODULES: Record<Tariff, ModuleId[]> = {
     'automation',
     'subscriptions',
     'domains',
+    'tasks',
   ],
 };
 

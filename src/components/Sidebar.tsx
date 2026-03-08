@@ -68,6 +68,7 @@ const ICONS = {
   aiAssistant: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a8 8 0 0 1 8 8c0 3.5-2 6.5-5 7.7V20h-6v-2.3C6 16.5 4 13.5 4 10a8 8 0 0 1 8-8z"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="9" y1="23" x2="15" y2="23"/><circle cx="9" cy="10" r="1" fill="currentColor"/><circle cx="15" cy="10" r="1" fill="currentColor"/></svg>,
   subscriptions: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>,
   domains: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>,
+  tasks: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>,
 };
 
 // Ikonka hvězdičky pro tlačítko oblíbených (inline SVG pro různé stavy)
@@ -170,11 +171,12 @@ export default function Sidebar({ open, onClose, collapsed = false, onCollapseDe
     pendingInvoiceApproval: 0,
     pendingRequest: 0,
     unresolvedFeedback: 0,
+    myOpenTasks: 0,
   });
 
   useEffect(() => {
     if (!user || !currentWorkspace) {
-      setBadgeCounts({ pendingVacation: 0, returnedInvoice: 0, pendingInvoiceApproval: 0, pendingRequest: 0, unresolvedFeedback: 0 });
+      setBadgeCounts({ pendingVacation: 0, returnedInvoice: 0, pendingInvoiceApproval: 0, pendingRequest: 0, unresolvedFeedback: 0, myOpenTasks: 0 });
       return;
     }
 
@@ -197,7 +199,24 @@ export default function Sidebar({ open, onClose, collapsed = false, onCollapseDe
       canViewFeedbackSidebar
         ? supabase.from('trackino_feedback').select('id').eq('workspace_id', wsId).eq('is_resolved', false)
         : Promise.resolve({ data: null }),
-    ]).then(([vacRes, invUserRes, invPendRes, reqRes, fbRes]) => {
+      // Úkoly přiřazené aktuálnímu uživateli (ne ve sloupci "Hotovo")
+      hasModule('tasks')
+        ? (async () => {
+            // Najdi boards a jejich "done" sloupce
+            const { data: boards } = await supabase.from('trackino_task_boards').select('id').eq('workspace_id', wsId);
+            if (!boards || boards.length === 0) return { data: [] };
+            const boardIds = boards.map(b => b.id);
+            const { data: doneCols } = await supabase.from('trackino_task_columns').select('id').in('board_id', boardIds).ilike('name', '%hotovo%');
+            const doneIds = (doneCols ?? []).map(c => c.id);
+            let q = supabase.from('trackino_task_items').select('id').eq('workspace_id', wsId).eq('assigned_to', uid);
+            if (doneIds.length > 0) {
+              // Filter out tasks in "done" columns
+              for (const did of doneIds) q = q.neq('column_id', did);
+            }
+            return q;
+          })()
+        : Promise.resolve({ data: null }),
+    ]).then(([vacRes, invUserRes, invPendRes, reqRes, fbRes, taskRes]) => {
       let returnedCount = 0;
       if (invUserRes.data) {
         const list = invUserRes.data as Array<{ id: string; billing_period_year: number; billing_period_month: number; status: string }>;
@@ -218,6 +237,7 @@ export default function Sidebar({ open, onClose, collapsed = false, onCollapseDe
         pendingInvoiceApproval: (invPendRes.data ?? []).length,
         pendingRequest: (reqRes.data ?? []).length,
         unresolvedFeedback: (fbRes.data ?? []).length,
+        myOpenTasks: (taskRes.data ?? []).length,
       });
     });
   }, [user, currentWorkspace, isAdminOrManager, canProcessRequestsSidebar, canViewFeedbackSidebar, canInvoiceSidebar]);
@@ -334,6 +354,10 @@ export default function Sidebar({ open, onClose, collapsed = false, onCollapseDe
       spravaManagedItems.push({ label: 'Tým', href: '/team', icon: ICONS.team });
     }
 
+    if (hasModule('tasks')) {
+      spravaManagedItems.push({ label: 'Úkoly', href: '/tasks', icon: ICONS.tasks });
+    }
+
     // Nastavení – pouze pro admin/owner
     if (hasModule('settings') && isAdmin) {
       spravaManagedItems.push({ label: 'Nastavení', href: '/settings', icon: ICONS.settings });
@@ -447,6 +471,7 @@ export default function Sidebar({ open, onClose, collapsed = false, onCollapseDe
     else if (item.href === '/invoices') badgeCount = badgeCounts.returnedInvoice + badgeCounts.pendingInvoiceApproval;
     else if (item.href === '/requests') badgeCount = badgeCounts.pendingRequest;
     else if (item.href === '/feedback') badgeCount = badgeCounts.unresolvedFeedback;
+    else if (item.href === '/tasks') badgeCount = badgeCounts.myOpenTasks;
 
     return (
       <div key={item.href} className="relative group/nav">

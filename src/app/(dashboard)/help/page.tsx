@@ -300,6 +300,22 @@ const DEFAULT_HELP_CONTENT = `
   <li><strong>Oprávnění</strong> – přidávat, upravovat a mazat domény mohou admini, vlastník workspace a členové s oprávněním „Spravuje domény" (nastavitelné v sekci Tým)</li>
 </ul>
 
+<h3>Úkoly</h3>
+<p>Modul <strong>Úkoly</strong> (sekce <strong>SPRÁVA</strong>, tarif Pro a Max) poskytuje kompletní správu úkolů s kanban nástěnkou inspirovanou Asanou a ClickUp.</p>
+<ul>
+  <li><strong>3 pohledy</strong> – Seznam (jednoduchý výpis), Kanban (sloupcový přehled s drag & drop přesouváním), Tabulka (kompaktní řádkový výpis s řazením)</li>
+  <li><strong>Kanban nástěnka</strong> – sloupce (stavy) s barevným kódováním; přesouvání úkolů mezi sloupci tažením; rychlé přidání úkolu tlačítkem + na konci sloupce; přidání nového sloupce</li>
+  <li><strong>Úkol</strong> – název, popis (editovatelný rich text), priorita (Urgentní/Vysoká/Střední/Nízká/Žádná), deadline, přiřazený člen, stav (sloupec)</li>
+  <li><strong>Detail panel</strong> – vysouvá se zprava; editovatelný název, status/priorita/osoba/deadline; popis; podúkoly s progress barem; přílohy (nahrávání souborů do Supabase Storage); komentáře; sbalitelná historie změn</li>
+  <li><strong>Podúkoly</strong> – checklist s progress barem; přidávání nových podúkolů inputem; zaškrtnutí/odškrtnutí</li>
+  <li><strong>Přílohy</strong> – nahrávání souborů (max 20 MB); stahování podepsaným URL; mazání</li>
+  <li><strong>Komentáře</strong> – textové komentáře s avatarem autora a časem</li>
+  <li><strong>Historie</strong> – automatický log změn (vytvoření, přesun, změna priority/deadline/přiřazení)</li>
+  <li><strong>Filtrování</strong> – fulltextové hledání, filtr dle přiřazeného člena, priority, deadline; přepínač „Jen moje úkoly"; skrytí dokončených</li>
+  <li><strong>Oprávnění</strong> – úkoly mohou spravovat admini, vlastník workspace a členové s oprávněním „Spravuje úkoly" (nastavitelné v sekci Tým)</li>
+  <li><strong>Badge</strong> – v levém menu se zobrazuje červený odznak s počtem otevřených úkolů přiřazených aktuálnímu uživateli</li>
+</ul>
+
 <h3>Oblíbené v levém menu</h3>
 <p>Funkce <strong>Oblíbené</strong> je dostupná pro tarify <strong>Pro a Max</strong>. Umožňuje přidat libovolnou položku z levého menu do sekce <strong>OBLÍBENÉ</strong>, která se zobrazuje úplně nahoře v navigaci.</p>
 <ul>
@@ -328,7 +344,7 @@ const DEFAULT_HELP_CONTENT = `
 <p>Aplikace je rozdělena do <strong>modulů</strong>, které lze zapnout nebo vypnout. Výchozí sada modulů závisí na tarifu workspace:</p>
 <ul>
   <li><strong>Free</strong> – Měřič, Reporty, Projekty, Klienti, Štítky, Tým</li>
-  <li><strong>Pro</strong> – Free + Plánovač, Dovolená, Fakturace, Přehled hodin, Analýza kategorií, Podřízení, Poznámky manažera, Nastavení, Převodník textu, Důležité dny, Žádosti, <strong>Prompty</strong>, <strong>Záložky</strong>, <strong>Předplatná</strong>, <strong>Evidence domén</strong>, sekce Společnost (Znalostní báze, Dokumenty, Firemní pravidla, Pravidla v kanceláři, Připomínky) + funkce <strong>Oblíbené</strong> v levém menu</li>
+  <li><strong>Pro</strong> – Free + Plánovač, Dovolená, Fakturace, Přehled hodin, Analýza kategorií, Podřízení, Poznámky manažera, Nastavení, Převodník textu, Důležité dny, Žádosti, <strong>Prompty</strong>, <strong>Záložky</strong>, <strong>Předplatná</strong>, <strong>Evidence domén</strong>, <strong>Úkoly</strong>, sekce Společnost (Znalostní báze, Dokumenty, Firemní pravidla, Pravidla v kanceláři, Připomínky) + funkce <strong>Oblíbené</strong> v levém menu</li>
   <li><strong>Max</strong> – Pro + Audit log + Kalendář + <strong>AI asistent</strong></li>
 </ul>
 <p>Admin může v <strong>Nastavení → Moduly</strong> nastavit výjimky pro jednotlivé uživatele – přidat modul, který není v tarifu, nebo zakázat modul, který v tarifu je. Výjimky mají vždy přednost před výchozím tarifem. Moduly, které uživatel nemá povoleny, se nezobrazují v levém menu.</p>

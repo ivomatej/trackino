@@ -92,6 +92,7 @@ function TeamContent() {
   const [editCanManageDocuments, setEditCanManageDocuments] = useState(false);
   const [editCanManageSubscriptions, setEditCanManageSubscriptions] = useState(false);
   const [editCanManageDomains, setEditCanManageDomains] = useState(false);
+  const [editCanManageTasks, setEditCanManageTasks] = useState(false);
   const [editCanViewBirthdays, setEditCanViewBirthdays] = useState(false);
   const [editBirthDate, setEditBirthDate] = useState('');
   const [editCooperationTypeId, setEditCooperationTypeId] = useState<string>('');
@@ -315,6 +316,7 @@ function TeamContent() {
     setEditCanManageDocuments(member.can_manage_documents ?? false);
     setEditCanManageSubscriptions(member.can_manage_subscriptions ?? false);
     setEditCanManageDomains(member.can_manage_domains ?? false);
+    setEditCanManageTasks(member.can_manage_tasks ?? false);
     setEditCanViewBirthdays(member.can_view_birthdays ?? false);
     setEditBirthDate(member.profile?.birth_date ?? '');
     setEditCooperationTypeId(member.cooperation_type_id ?? '');
@@ -357,6 +359,7 @@ function TeamContent() {
         can_manage_documents: editCanManageDocuments,
         can_manage_subscriptions: editCanManageSubscriptions,
         can_manage_domains: editCanManageDomains,
+        can_manage_tasks: editCanManageTasks,
         can_view_birthdays: editCanViewBirthdays,
         cooperation_type_id: editCooperationTypeId || null,
         billing_profile_id: editBillingProfileId || null,
@@ -1296,6 +1299,24 @@ function TeamContent() {
                   <div>
                     <span className="text-sm block" style={{ color: 'var(--text-primary)' }}>Spravuje domény</span>
                     <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Může přidávat, upravovat a mazat firemní domény</span>
+                  </div>
+                </label>
+                <label
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors"
+                  style={{ background: editCanManageTasks ? 'var(--bg-active)' : 'var(--bg-hover)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = editCanManageTasks ? 'var(--bg-active)' : 'var(--bg-hover)'}
+                >
+                  <input
+                    type="checkbox"
+                    checked={editCanManageTasks}
+                    onChange={(e) => setEditCanManageTasks(e.target.checked)}
+                    className="w-4 h-4 rounded flex-shrink-0"
+                    style={{ accentColor: 'var(--primary)' }}
+                  />
+                  <div>
+                    <span className="text-sm block" style={{ color: 'var(--text-primary)' }}>Spravuje úkoly</span>
+                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Může vytvářet, editovat, mazat a přesouvat úkoly</span>
                   </div>
                 </label>
                 <label

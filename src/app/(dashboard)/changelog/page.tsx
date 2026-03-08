@@ -11,6 +11,26 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.50.0 – 8. 3. 2026</h3>
+<ul>
+  <li><strong>Nový modul Úkoly</strong> (sekce SPRÁVA, tarif Pro a Max):
+    <ul>
+      <li>Kompletní správa úkolů s <strong>Kanban nástěnkou</strong>, seznamem a tabulkovým pohledem</li>
+      <li><strong>Drag & drop</strong> přesouvání úkolů mezi sloupci (stavy) v Kanban pohledu pomocí @dnd-kit</li>
+      <li>Detail panel (vysouvá se zprava): editovatelný název, status, priorita (Urgentní/Vysoká/Střední/Nízká/Žádná), přiřazený člen, deadline</li>
+      <li><strong>Podúkoly</strong> – checklist s progress barem</li>
+      <li><strong>Přílohy</strong> – nahrávání souborů do Supabase Storage (bucket trackino-task-attachments, max 20 MB)</li>
+      <li><strong>Komentáře</strong> k úkolům s avatarem autora</li>
+      <li><strong>Historie změn</strong> – automatický log (vytvoření, přesun, změna priority/deadline/přiřazení)</li>
+      <li>Filtrování: fulltextové hledání, přiřazený člen, priorita, deadline, „Jen moje", skrytí dokončených</li>
+      <li>Automatické vytvoření výchozí nástěnky se 4 sloupci: K řešení, Rozpracováno, Ve schvalování, Hotovo</li>
+      <li>Badge v sidebar s počtem otevřených úkolů přiřazených uživateli</li>
+      <li>Oprávnění: <code>can_manage_tasks</code> toggle v Týmu</li>
+    </ul>
+  </li>
+  <li><strong>DB migrace</strong> – 7 nových tabulek (<code>trackino_task_boards</code>, <code>trackino_task_columns</code>, <code>trackino_task_items</code>, <code>trackino_task_subtasks</code>, <code>trackino_task_comments</code>, <code>trackino_task_attachments</code>, <code>trackino_task_history</code>) + ALTER <code>trackino_workspace_members ADD can_manage_tasks</code></li>
+</ul>
+
 <h3>v2.49.1 – 8. 3. 2026</h3>
 <ul>
   <li><strong>Znalostní báze – Publikování stránky</strong>:
