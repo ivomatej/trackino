@@ -102,6 +102,7 @@ const DEFAULT_HELP_CONTENT = `
   <li><strong>Název</strong> – povinné pole</li>
   <li><strong>Kalendář</strong> – vyberte, do kterého vašeho kalendáře se událost uloží</li>
   <li><strong>Od / Do</strong> + přepínač <em>Celý den</em> (nebo zadejte čas)</li>
+  <li><strong>Opakování</strong> – typ opakování události: Neopakuje se, Denně, Každý týden, Každý měsíc, Každý rok, nebo speciální vzory (1./poslední den v týdnu/měsíci/kvartálu/roce, konkrétní den v měsíci). Opakující se události se automaticky zobrazují ve všech pohledech s ikonkou cyklu. Editace mění pravidlo pro všechny výskyty.</li>
   <li><strong>Místo</strong> – volitelná adresa nebo popis místa konání</li>
   <li><strong>Účastníci</strong> – vyberte členy workspace; vybraní uživatelé uvidí událost ve svém kalendáři a obdrží pozvánku k potvrzení (RSVP). Tag-style výběr s vyhledáváním jmen.</li>
   <li><strong>URL</strong> – volitelný odkaz (webová stránka, videohovor apod.)</li>

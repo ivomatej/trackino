@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 8. 3. 2026 (v2.50.0)
+> Aktualizováno: 8. 3. 2026 (v2.50.1)
 
 ---
 
@@ -124,7 +124,7 @@ Výchozí policy: `CREATE POLICY "Auth full" ... FOR ALL TO authenticated USING 
 | `trackino_important_days` | id, workspace_id, user_id, title, start_date, end_date, color, is_recurring, recurring_type ('none'\|'weekly'\|'monthly'\|'yearly'), note, created_at, updated_at | Osobní důležité dny a opakující se události |
 | `trackino_system_notifications` | id, title, message, color, is_active, show_from (timestamptz\|null), show_until (timestamptz\|null), created_at, updated_at | Systémová oznámení zobrazená všem uživatelům jako banner (jen Master Admin spravuje) |
 | `trackino_calendars` | id, workspace_id, owner_user_id, name, color, is_default, created_at, updated_at | Osobní kalendáře uživatele (výchozí se vytvoří automaticky) |
-| `trackino_calendar_events` | id, calendar_id, workspace_id, user_id, title, description, start_date (text YYYY-MM-DD), end_date (text), is_all_day, start_time (text\|null), end_time (text\|null), color (text\|null), source ('manual'\|'vacation'\|'important_day'), source_id (uuid\|null), created_at, updated_at | Ruční události v kalendáři; dovolená a důležité dny se čtou přímo z jejich tabulek |
+| `trackino_calendar_events` | id, calendar_id, workspace_id, user_id, title, description, start_date (text YYYY-MM-DD), end_date (text), is_all_day, start_time (text\|null), end_time (text\|null), color (text\|null), source ('manual'\|'vacation'\|'important_day'), source_id (uuid\|null), recurrence_type (text, DEFAULT 'none'), recurrence_day (integer\|null), created_at, updated_at | Ruční události v kalendáři; dovolená a důležité dny se čtou přímo z jejich tabulek; opakující se události expandovány přes expandRecurringEvent() |
 | `trackino_requests` | id, workspace_id, user_id, type ('hardware'\|'software'\|'access'\|'office'\|'financial'\|'hr'\|'education'\|'travel'\|'benefits'\|'recruitment'\|'security'\|'it_support'\|'legal'), title, note, status ('pending'\|'approved'\|'rejected'), reviewed_by (uuid\|null), reviewed_at (timestamptz\|null), reviewer_note, vacation_start_date (text\|null), vacation_end_date (text\|null), vacation_days (int\|null), vacation_entry_id (uuid\|null), created_at, updated_at | Žádosti zaměstnanců ke schválení – 13 kategorií |
 | `trackino_feedback` | id, workspace_id, message, is_resolved (bool), created_at | Anonymní připomínky – bez user_id záměrně (plná anonymita) |
 | `trackino_calendar_shares` | id, calendar_id, shared_with_user_id (uuid\|null), share_with_workspace (bool), show_details (bool), can_edit, created_at | Sdílení kalendáře: shared_with_user_id=null + share_with_workspace=true = sdílení celému workspace |
@@ -530,6 +530,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.50.1 | 8. 3. 2026 | Kalendář – Opakující se události: 14 typů opakování (denně/týdně/měsíčně/ročně + speciální vzory: 1./poslední den v týdnu/měsíci/kvartálu/roce + konkrétní den v měsíci); expandRecurringEvent() funkce; UI select v event modalu; info o opakování v detail modalu; podpora pro sdílené i účastnické události; 2 nové sloupce (recurrence_type, recurrence_day na trackino_calendar_events) |
 | v2.50.0 | 8. 3. 2026 | Nový modul Úkoly (tasks, SPRÁVA, Pro+Max) – kompletní správa úkolů s Kanban nástěnkou; 3 pohledy (Seznam/Kanban/Tabulka); drag & drop přesouvání (@dnd-kit); detail panel s editovatelným názvem, statusem, prioritou, deadline, přiřazením; podúkoly s progress barem; přílohy (Supabase Storage); komentáře; historie změn; filtrování (fulltext/priorita/deadline/assignee/jen moje/skrytí hotových); auto-vytvoření nástěnky se 4 sloupci; badge otevřených úkolů v sidebar; oprávnění can_manage_tasks v Týmu; 7 nových DB tabulek + 1 ALTER |
 | v2.49.1 | 8. 3. 2026 | Znalostní báze – Publikování stránky (veřejná URL s bezpečnostním tokenem); Kalendář – SVG ikonka opakující se události ve všech pohledech; nová veřejná route /kb/[slug]/[token]; API route /api/kb-public; 1 nový sloupec (public_token na trackino_kb_pages) |
 | v2.49.0 | 8. 3. 2026 | Evidence domén – Registrátoři jako entita: nová záložka Registrátoři s CRUD (název, web, poznámky), select registrátora ve formuláři domény (místo volného textu), tlačítko + pro rychlé přidání, filtr dle registrátora; nový status Dobíhá (winding_down, fialový); dashboard rozšířen na 5 karet; Kalendář – nový pohled 3 dny: 3sloupcová mřížka (předchozí/dnešek/další den) s časovou osou, navigace po 1 dni, nastavení časového rozsahu, celodenní události; 1 nová DB tabulka (trackino_domain_registrars) |
@@ -744,6 +745,9 @@ interface DisplayEvent {
   shared_owner_name?: string;
   attendee_status?: 'pending' | 'accepted' | 'declined' | 'maybe';
   event_owner_id?: string;
+  // Opakování (v2.50.1)
+  recurrence_type?: string;
+  recurrence_day?: number | null;
 }
 ```
 
@@ -770,6 +774,8 @@ interface SharedCalendarInfo {
 ### Klíčové funkce
 - `fetchData()` – načte calendars, events, vacation, important days; auto-vytvoří výchozí kalendář pokud žádný neexistuje; volá fetchWorkspaceMembers, fetchCalendarShares, fetchSharedWithMe, fetchAttendeeEvents
 - `getImportantDayOccurrences(day, rangeStart, rangeEnd)` – vrátí seznam výskytů v daném rozsahu (zpracovává weekly/monthly/yearly recurrence)
+- `expandRecurringEvent(ev, rangeStart, rangeEnd)` – vrátí pole `{ start_date, end_date }[]` výskytů opakující se události v daném rozsahu; podporuje 14 typů: none, daily, weekly, monthly, yearly, first/last_day_month/week/quarter/year, monthly_on_day; safety counter MAX_ITER=2000
+- `getRecurrenceLabel(type)` – vrátí český label pro typ opakování
 - `eventsOnDay(day)` – filtruje displayEvents pro konkrétní den (multiday overlap)
 - `openNewEvent(date?)` – otevře formulář s předvyplněným datem
 - `openEditEvent(event)` – otevře formulář pro editaci (včetně načtení attendees pro daný event)
@@ -787,6 +793,16 @@ interface SharedCalendarInfo {
 - `openShareModal(cal?, sub?)` – otevře share modal pro daný kalendář nebo ICS subscripci
 - `saveShare()` – DELETE + INSERT do trackino_calendar_shares dle shareModalState
 - `updateSharePref(calendarId, field, value)` – UPDATE v trackino_calendar_share_prefs
+
+### Opakující se události (v2.50.1)
+- **DB sloupce**: `recurrence_type` (text, 14 typů, DEFAULT 'none'), `recurrence_day` (integer, nullable, 1–31 jen pro monthly_on_day)
+- **Typy**: `none`, `daily`, `weekly`, `monthly`, `yearly`, `first_day_month`, `last_day_month`, `first_day_week`, `last_day_week`, `first_day_quarter`, `last_day_quarter`, `first_day_year`, `last_day_year`, `monthly_on_day`
+- **expandRecurringEvent()**: generuje výskyty v rozsahu `[rangeStart, rangeEnd]`; MAX_ITER=2000 safety counter
+- **ID výskytů**: `{originalEventId}__rec__{YYYY-MM-DD}` – kliknutí na výskyt → `source_id` obsahuje originální ID → `events.find()` → editace původní události
+- **displayEvents useMemo**: vlastní, sdílené i účastnické události s `recurrence_type !== 'none'` se expandují přes `expandRecurringEvent()`
+- **UI**: select „Opakování" v event modalu + podmíněný input „Den v měsíci" (1–31) pro monthly_on_day
+- **Detail modal**: řádek s SVG ikonou cyklu + label typu opakování
+- **RECURRENCE_OPTIONS**: pole `{ value, label, separator? }` pro select s oddělovači
 
 ### ICS odběry – formát ID událostí (v2.17.3)
 ```

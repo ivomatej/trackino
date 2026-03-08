@@ -45,6 +45,8 @@ interface DisplayEvent {
   attendee_prev_description?: string | null;
   // Opakující se událost
   is_recurring?: boolean;
+  recurrence_type?: string;
+  recurrence_day?: number | null;
 }
 
 /** Sdílený kalendář (přijatý od jiného uživatele) */
@@ -133,6 +135,180 @@ const DEFAULT_COLORS = [
   '#a855f7', '#ec4899', '#f43f5e', '#78716c',
   '#6b7280', '#92400e', '#a16207', '#1e3a5f',
 ];
+
+// ─── Opakování událostí ──────────────────────────────────────────────────────
+
+const RECURRENCE_OPTIONS: { value: string; label: string; separator?: boolean }[] = [
+  { value: 'none', label: 'Neopakuje se' },
+  { value: 'daily', label: 'Denně' },
+  { value: 'weekly', label: 'Každý týden' },
+  { value: 'monthly', label: 'Každý měsíc (stejný den)' },
+  { value: 'yearly', label: 'Každý rok' },
+  { value: '', label: '', separator: true },
+  { value: 'first_day_week', label: 'Každé pondělí (1. den v týdnu)' },
+  { value: 'last_day_week', label: 'Každou neděli (poslední den v týdnu)' },
+  { value: 'first_day_month', label: '1. den v měsíci' },
+  { value: 'last_day_month', label: 'Poslední den v měsíci' },
+  { value: 'monthly_on_day', label: 'Konkrétní den v měsíci...' },
+  { value: '', label: '', separator: true },
+  { value: 'first_day_quarter', label: '1. den v kvartálu' },
+  { value: 'last_day_quarter', label: 'Poslední den v kvartálu' },
+  { value: 'first_day_year', label: '1. den v roce' },
+  { value: 'last_day_year', label: 'Poslední den v roce' },
+];
+
+function getRecurrenceLabel(type: string, day?: number | null): string {
+  if (type === 'monthly_on_day' && day) return `Každého ${day}. v měsíci`;
+  return RECURRENCE_OPTIONS.find(o => o.value === type)?.label ?? 'Neopakuje se';
+}
+
+/** Kvartální začátky měsíců (0-indexed) */
+const QUARTER_START_MONTHS = [0, 3, 6, 9]; // Jan, Apr, Jul, Oct
+/** Kvartální konce: Mar 31, Jun 30, Sep 30, Dec 31 */
+const QUARTER_END = [
+  { month: 2, day: 31 }, { month: 5, day: 30 },
+  { month: 8, day: 30 }, { month: 11, day: 31 },
+];
+
+function expandRecurringEvent(
+  ev: { recurrence_type: string; recurrence_day?: number | null; start_date: string; end_date: string },
+  rangeStart: Date,
+  rangeEnd: Date,
+): { start_date: string; end_date: string }[] {
+  const rt = ev.recurrence_type;
+  if (!rt || rt === 'none') {
+    const s = parseDate(ev.start_date);
+    const e = parseDate(ev.end_date);
+    if (s <= rangeEnd && e >= rangeStart) return [{ start_date: ev.start_date, end_date: ev.end_date }];
+    return [];
+  }
+
+  const origStart = parseDate(ev.start_date);
+  const origEnd = parseDate(ev.end_date);
+  const durationDays = Math.round((origEnd.getTime() - origStart.getTime()) / 86400000);
+  const result: { start_date: string; end_date: string }[] = [];
+
+  // Pomocná funkce: přidá výskyt, pokud je v rozsahu
+  function pushOcc(d: Date) {
+    const occEnd = addDays(d, durationDays);
+    if (d <= rangeEnd && occEnd >= rangeStart) {
+      result.push({ start_date: toDateStr(d), end_date: toDateStr(occEnd) });
+    }
+  }
+
+  // Poslední den měsíce
+  function lastDayOfMonth(year: number, month: number): number {
+    return new Date(year, month + 1, 0).getDate();
+  }
+
+  let counter = 0;
+  const MAX_ITER = 2000;
+
+  if (rt === 'daily') {
+    const cur = new Date(Math.max(rangeStart.getTime(), origStart.getTime()));
+    cur.setHours(0, 0, 0, 0);
+    while (cur <= rangeEnd && counter++ < MAX_ITER) {
+      pushOcc(new Date(cur));
+      cur.setDate(cur.getDate() + 1);
+    }
+  } else if (rt === 'weekly') {
+    const targetDay = origStart.getDay();
+    const cur = new Date(rangeStart);
+    cur.setHours(0, 0, 0, 0);
+    // Posunout na nejbližší targetDay
+    while (cur.getDay() !== targetDay && counter++ < 7) cur.setDate(cur.getDate() + 1);
+    while (cur <= rangeEnd && counter++ < MAX_ITER) {
+      if (cur >= origStart) pushOcc(new Date(cur));
+      cur.setDate(cur.getDate() + 7);
+    }
+  } else if (rt === 'monthly') {
+    const targetDay = origStart.getDate();
+    const cur = new Date(rangeStart.getFullYear(), rangeStart.getMonth(), 1);
+    while (cur <= rangeEnd && counter++ < MAX_ITER) {
+      const ld = lastDayOfMonth(cur.getFullYear(), cur.getMonth());
+      const d = new Date(cur.getFullYear(), cur.getMonth(), Math.min(targetDay, ld));
+      if (d >= origStart) pushOcc(d);
+      cur.setMonth(cur.getMonth() + 1);
+    }
+  } else if (rt === 'yearly') {
+    const targetMonth = origStart.getMonth();
+    const targetDay = origStart.getDate();
+    for (let y = rangeStart.getFullYear(); y <= rangeEnd.getFullYear() && counter++ < MAX_ITER; y++) {
+      const ld = lastDayOfMonth(y, targetMonth);
+      const d = new Date(y, targetMonth, Math.min(targetDay, ld));
+      if (d >= origStart) pushOcc(d);
+    }
+  } else if (rt === 'first_day_week') {
+    // Každé pondělí
+    const cur = new Date(rangeStart);
+    cur.setHours(0, 0, 0, 0);
+    while (cur.getDay() !== 1 && counter++ < 7) cur.setDate(cur.getDate() + 1);
+    while (cur <= rangeEnd && counter++ < MAX_ITER) {
+      if (cur >= origStart) pushOcc(new Date(cur));
+      cur.setDate(cur.getDate() + 7);
+    }
+  } else if (rt === 'last_day_week') {
+    // Každá neděle
+    const cur = new Date(rangeStart);
+    cur.setHours(0, 0, 0, 0);
+    while (cur.getDay() !== 0 && counter++ < 7) cur.setDate(cur.getDate() + 1);
+    while (cur <= rangeEnd && counter++ < MAX_ITER) {
+      if (cur >= origStart) pushOcc(new Date(cur));
+      cur.setDate(cur.getDate() + 7);
+    }
+  } else if (rt === 'first_day_month') {
+    const cur = new Date(rangeStart.getFullYear(), rangeStart.getMonth(), 1);
+    while (cur <= rangeEnd && counter++ < MAX_ITER) {
+      if (cur >= origStart) pushOcc(new Date(cur));
+      cur.setMonth(cur.getMonth() + 1);
+    }
+  } else if (rt === 'last_day_month') {
+    const cur = new Date(rangeStart.getFullYear(), rangeStart.getMonth(), 1);
+    while (cur <= rangeEnd && counter++ < MAX_ITER) {
+      const ld = lastDayOfMonth(cur.getFullYear(), cur.getMonth());
+      const d = new Date(cur.getFullYear(), cur.getMonth(), ld);
+      if (d >= origStart) pushOcc(d);
+      cur.setMonth(cur.getMonth() + 1);
+    }
+  } else if (rt === 'monthly_on_day') {
+    const targetDay = ev.recurrence_day ?? origStart.getDate();
+    const cur = new Date(rangeStart.getFullYear(), rangeStart.getMonth(), 1);
+    while (cur <= rangeEnd && counter++ < MAX_ITER) {
+      const ld = lastDayOfMonth(cur.getFullYear(), cur.getMonth());
+      const d = new Date(cur.getFullYear(), cur.getMonth(), Math.min(targetDay, ld));
+      if (d >= origStart) pushOcc(d);
+      cur.setMonth(cur.getMonth() + 1);
+    }
+  } else if (rt === 'first_day_quarter') {
+    for (let y = rangeStart.getFullYear(); y <= rangeEnd.getFullYear() + 1 && counter++ < MAX_ITER; y++) {
+      for (const m of QUARTER_START_MONTHS) {
+        const d = new Date(y, m, 1);
+        if (d > rangeEnd) break;
+        if (d >= origStart) pushOcc(d);
+      }
+    }
+  } else if (rt === 'last_day_quarter') {
+    for (let y = rangeStart.getFullYear(); y <= rangeEnd.getFullYear() + 1 && counter++ < MAX_ITER; y++) {
+      for (const qe of QUARTER_END) {
+        const d = new Date(y, qe.month, qe.day);
+        if (d > rangeEnd) break;
+        if (d >= origStart) pushOcc(d);
+      }
+    }
+  } else if (rt === 'first_day_year') {
+    for (let y = rangeStart.getFullYear(); y <= rangeEnd.getFullYear() && counter++ < MAX_ITER; y++) {
+      const d = new Date(y, 0, 1);
+      if (d >= origStart) pushOcc(d);
+    }
+  } else if (rt === 'last_day_year') {
+    for (let y = rangeStart.getFullYear(); y <= rangeEnd.getFullYear() && counter++ < MAX_ITER; y++) {
+      const d = new Date(y, 11, 31);
+      if (d >= origStart) pushOcc(d);
+    }
+  }
+
+  return result;
+}
 
 // ─── Timed-event overlap layout ──────────────────────────────────────────────
 
@@ -813,6 +989,8 @@ function CalendarContent() {
     end_time: '',
     color: '',
     calendar_id: '',
+    recurrence_type: 'none' as string,
+    recurrence_day: null as number | null,
   });
   const [attendeeSearch, setAttendeeSearch] = useState('');
   const [showAttendeeDropdown, setShowAttendeeDropdown] = useState(false);
@@ -1343,6 +1521,8 @@ function CalendarContent() {
           show_details: info.show_details,
           shared_owner_name: info.owner_name,
           shared_calendar_name: info.name,
+          recurrence_type: ev.recurrence_type ?? 'none',
+          recurrence_day: ev.recurrence_day ?? null,
         });
       }
     }
@@ -1443,6 +1623,8 @@ function CalendarContent() {
         attendee_prev_end_time: (att?.prev_end_time as string | null) ?? null,
         attendee_prev_location: (att?.prev_location as string | null) ?? null,
         attendee_prev_description: (att?.prev_description as string | null) ?? null,
+        recurrence_type: ev.recurrence_type ?? 'none',
+        recurrence_day: ev.recurrence_day ?? null,
       });
     }
     setAttendeeEvents(result);
@@ -1574,6 +1756,8 @@ function CalendarContent() {
       end_time: hasTime ? `${String(endHour).padStart(2, '0')}:00` : '',
       color: '',
       calendar_id: defaultCalId,
+      recurrence_type: 'none',
+      recurrence_day: null,
     });
     setAttendeeSearch('');
     setShowAttendeeDropdown(false);
@@ -1598,6 +1782,8 @@ function CalendarContent() {
       end_time: ev.end_time ?? '',
       color: ev.color ?? '',
       calendar_id: ev.calendar_id,
+      recurrence_type: ev.recurrence_type ?? 'none',
+      recurrence_day: ev.recurrence_day ?? null,
     });
     setAttendeeSearch('');
     setShowAttendeeDropdown(false);
@@ -1625,6 +1811,8 @@ function CalendarContent() {
         color: eventForm.color || null,
         source: 'manual' as const,
         source_id: null,
+        recurrence_type: eventForm.recurrence_type || 'none',
+        recurrence_day: eventForm.recurrence_type === 'monthly_on_day' ? (eventForm.recurrence_day ?? null) : null,
       };
       let savedEventId: string;
       if (editingEvent) {
@@ -2278,20 +2466,46 @@ function CalendarContent() {
     for (const ev of events) {
       if (!selectedCalendarIds.has(ev.calendar_id)) continue;
       const cal = calendars.find(c => c.id === ev.calendar_id);
-      result.push({
-        id: ev.id,
-        title: ev.title,
-        start_date: ev.start_date,
-        end_date: ev.end_date,
-        color: ev.color ?? cal?.color ?? '#3b82f6',
-        source: 'manual',
-        source_id: ev.id,
-        calendar_id: ev.calendar_id,
-        description: ev.description,
-        is_all_day: ev.is_all_day,
-        start_time: ev.start_time,
-        end_time: ev.end_time,
-      });
+      const baseColor = ev.color ?? cal?.color ?? '#3b82f6';
+      const isRec = ev.recurrence_type && ev.recurrence_type !== 'none';
+
+      if (isRec) {
+        const occs = expandRecurringEvent(ev, visibleRange.start, visibleRange.end);
+        for (const occ of occs) {
+          result.push({
+            id: `${ev.id}__rec__${occ.start_date}`,
+            title: ev.title,
+            start_date: occ.start_date,
+            end_date: occ.end_date,
+            color: baseColor,
+            source: 'manual',
+            source_id: ev.id,
+            calendar_id: ev.calendar_id,
+            description: ev.description,
+            is_all_day: ev.is_all_day,
+            start_time: ev.start_time,
+            end_time: ev.end_time,
+            is_recurring: true,
+            recurrence_type: ev.recurrence_type,
+            recurrence_day: ev.recurrence_day,
+          });
+        }
+      } else {
+        result.push({
+          id: ev.id,
+          title: ev.title,
+          start_date: ev.start_date,
+          end_date: ev.end_date,
+          color: baseColor,
+          source: 'manual',
+          source_id: ev.id,
+          calendar_id: ev.calendar_id,
+          description: ev.description,
+          is_all_day: ev.is_all_day,
+          start_time: ev.start_time,
+          end_time: ev.end_time,
+        });
+      }
     }
 
     if (showVacation) {
@@ -2341,19 +2555,41 @@ function CalendarContent() {
 
     // Sdílené kalendáře (od ostatních uživatelů)
     for (const ev of sharedEvents) {
-      const evStart = parseDate(ev.start_date);
-      const evEnd = parseDate(ev.end_date);
-      if (evStart <= visibleRange.end && evEnd >= visibleRange.start) {
-        result.push(ev);
+      const isRecShared = ev.recurrence_type && ev.recurrence_type !== 'none';
+      if (isRecShared) {
+        const occs = expandRecurringEvent(
+          { recurrence_type: ev.recurrence_type!, recurrence_day: ev.recurrence_day, start_date: ev.start_date, end_date: ev.end_date },
+          visibleRange.start, visibleRange.end,
+        );
+        for (const occ of occs) {
+          result.push({ ...ev, id: `${ev.id}__rec__${occ.start_date}`, start_date: occ.start_date, end_date: occ.end_date, is_recurring: true });
+        }
+      } else {
+        const evStart = parseDate(ev.start_date);
+        const evEnd = parseDate(ev.end_date);
+        if (evStart <= visibleRange.end && evEnd >= visibleRange.start) {
+          result.push(ev);
+        }
       }
     }
 
     // Účastnické události (kde jsem pozván)
     for (const ev of attendeeEvents) {
-      const evStart = parseDate(ev.start_date);
-      const evEnd = parseDate(ev.end_date);
-      if (evStart <= visibleRange.end && evEnd >= visibleRange.start) {
-        result.push(ev);
+      const isRecAtt = ev.recurrence_type && ev.recurrence_type !== 'none';
+      if (isRecAtt) {
+        const occs = expandRecurringEvent(
+          { recurrence_type: ev.recurrence_type!, recurrence_day: ev.recurrence_day, start_date: ev.start_date, end_date: ev.end_date },
+          visibleRange.start, visibleRange.end,
+        );
+        for (const occ of occs) {
+          result.push({ ...ev, id: `${ev.id}__rec__${occ.start_date}`, start_date: occ.start_date, end_date: occ.end_date, is_recurring: true });
+        }
+      } else {
+        const evStart = parseDate(ev.start_date);
+        const evEnd = parseDate(ev.end_date);
+        if (evStart <= visibleRange.end && evEnd >= visibleRange.start) {
+          result.push(ev);
+        }
       }
     }
 
@@ -4832,6 +5068,40 @@ function CalendarContent() {
                   </div>
                 )}
 
+                {/* Opakování */}
+                <div>
+                  <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Opakování</label>
+                  <div className="relative">
+                    <select
+                      value={eventForm.recurrence_type}
+                      onChange={e => setEventForm(f => ({ ...f, recurrence_type: e.target.value, recurrence_day: e.target.value === 'monthly_on_day' ? (f.recurrence_day ?? 1) : null }))}
+                      className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm appearance-none pr-8"
+                      style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
+                    >
+                      {RECURRENCE_OPTIONS.map((opt, i) =>
+                        opt.separator
+                          ? <option key={`sep-${i}`} disabled>──────────</option>
+                          : <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      )}
+                    </select>
+                    <svg className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)' }}><polyline points="6 9 12 15 18 9" /></svg>
+                  </div>
+                  {eventForm.recurrence_type === 'monthly_on_day' && (
+                    <div className="mt-2">
+                      <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Den v měsíci</label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={31}
+                        value={eventForm.recurrence_day ?? 1}
+                        onChange={e => setEventForm(f => ({ ...f, recurrence_day: Math.max(1, Math.min(31, parseInt(e.target.value) || 1)) }))}
+                        className="w-24 px-3 py-2 rounded-lg border text-base sm:text-sm"
+                        style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}
+                      />
+                    </div>
+                  )}
+                </div>
+
                 {/* Místo */}
                 <div>
                   <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Místo</label>
@@ -5627,6 +5897,14 @@ function CalendarContent() {
                     <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{timeStr}</div>
                   </div>
                 </div>
+
+                {/* Opakování */}
+                {ev.recurrence_type && ev.recurrence_type !== 'none' && (
+                  <div className="flex items-start gap-2.5">
+                    <svg className="flex-shrink-0 mt-0.5" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                    <span>{getRecurrenceLabel(ev.recurrence_type)}{ev.recurrence_type === 'monthly_on_day' && ev.recurrence_day ? ` (${ev.recurrence_day}.)` : ''}</span>
+                  </div>
+                )}
 
                 {/* Místo */}
                 {ev.location && (

@@ -11,6 +11,22 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.50.1 – 8. 3. 2026</h3>
+<ul>
+  <li><strong>Kalendář – Opakující se události</strong>:
+    <ul>
+      <li>Nové pole <strong>Opakování</strong> ve formuláři události s 14 typy: Denně, Týdně, Měsíčně, Ročně, 1. den v týdnu/měsíci/kvartálu/roce, Poslední den v týdnu/měsíci/kvartálu/roce, Konkrétní den v měsíci</li>
+      <li>Typ <strong>Konkrétní den v měsíci</strong> umožňuje zadat číslo dne (1–31)</li>
+      <li>Opakující se události se automaticky <strong>expandují</strong> do viditelného rozsahu ve všech pohledech (Den, 3 dny, Týden, Měsíc, Rok, Seznam)</li>
+      <li><strong>SVG ikonka opakování</strong> u opakujících se událostí ve všech pohledech</li>
+      <li>Detail modal zobrazuje <strong>typ opakování</strong> s ikonou cyklu</li>
+      <li>Editace opakující se události mění pravidlo pro <strong>všechny výskyty</strong></li>
+      <li>Podpora opakování i pro <strong>sdílené</strong> a <strong>účastnické</strong> (pozvané) události</li>
+    </ul>
+  </li>
+  <li><strong>DB migrace</strong> – 2 nové sloupce na <code>trackino_calendar_events</code>: <code>recurrence_type</code> (text, 14 typů), <code>recurrence_day</code> (integer, 1–31)</li>
+</ul>
+
 <h3>v2.50.0 – 8. 3. 2026</h3>
 <ul>
   <li><strong>Nový modul Úkoly</strong> (sekce SPRÁVA, tarif Pro a Max):

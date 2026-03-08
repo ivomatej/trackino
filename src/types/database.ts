@@ -473,6 +473,14 @@ export interface Calendar {
 
 export type CalendarEventSource = 'manual' | 'vacation' | 'important_day' | 'subscription';
 
+export type CalendarEventRecurrence =
+  | 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly'
+  | 'first_day_month' | 'last_day_month'
+  | 'first_day_week' | 'last_day_week'
+  | 'first_day_quarter' | 'last_day_quarter'
+  | 'first_day_year' | 'last_day_year'
+  | 'monthly_on_day';
+
 export interface CalendarEvent {
   id: string;
   calendar_id: string;
@@ -491,6 +499,8 @@ export interface CalendarEvent {
   color: string | null;
   source: CalendarEventSource;
   source_id: string | null;
+  recurrence_type: CalendarEventRecurrence; // typ opakování
+  recurrence_day: number | null;             // den v měsíci (1–31), jen pro monthly_on_day
   created_at: string;
   updated_at: string;
 }
