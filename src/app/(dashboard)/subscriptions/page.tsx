@@ -474,7 +474,7 @@ function SubscriptionsContent() {
       </div>
 
       {/* ── Záložky ── */}
-      <div className="flex items-center gap-1 mb-4 border-b" style={{ borderColor: 'var(--border)' }}>
+      <div className="flex items-center gap-1 border-b" style={{ borderColor: 'var(--border)' }}>
         {([
           { id: 'subscriptions' as Tab, label: 'Předplatná' },
           { id: 'tips' as Tab, label: 'Tipy' },
@@ -497,39 +497,30 @@ function SubscriptionsContent() {
             )}
           </button>
         ))}
-
-        <div className="flex-1" />
-
-        {canManage && activeTab !== 'categories' && (
-          <button
-            className={`${btnPrimary} flex items-center gap-1.5`}
-            style={{ background: 'var(--primary)' }}
-            onClick={() => openNew(activeTab === 'tips')}
-          >
-            {ICONS.plus}
-            <span className="hidden sm:inline">{activeTab === 'tips' ? 'Přidat tip' : 'Přidat předplatné'}</span>
-            <span className="sm:hidden">Přidat</span>
-          </button>
-        )}
-        {canManage && activeTab === 'categories' && (
-          <button
-            className={`${btnPrimary} flex items-center gap-1.5`}
-            style={{ background: 'var(--primary)' }}
-            onClick={openNewCat}
-          >
-            {ICONS.plus}
-            <span className="hidden sm:inline">Přidat kategorii</span>
-            <span className="sm:hidden">Přidat</span>
-          </button>
-        )}
       </div>
+
+      {canManage ? (
+        <div className="flex justify-end mt-3 mb-4">
+          <button
+            className={`${btnPrimary} flex items-center gap-1.5`}
+            style={{ background: 'var(--primary)' }}
+            onClick={() => activeTab === 'categories' ? openNewCat() : openNew(activeTab === 'tips')}
+          >
+            {ICONS.plus}
+            <span className="hidden sm:inline">
+              {activeTab === 'categories' ? 'Přidat kategorii' : activeTab === 'tips' ? 'Přidat tip' : 'Přidat předplatné'}
+            </span>
+            <span className="sm:hidden">Přidat</span>
+          </button>
+        </div>
+      ) : (<div className="mb-4" />)}
 
       {/* ── TAB: Předplatná / Tipy ── */}
       {(activeTab === 'subscriptions' || activeTab === 'tips') && (
         <>
           {/* Filtry */}
           <div className="flex flex-wrap gap-2 mb-4">
-            <div className="relative flex-1 min-w-[180px]">
+            <div className="relative flex-1 min-w-0 sm:min-w-[180px]">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-muted)' }}>{ICONS.search}</span>
               <input
                 type="text"
@@ -545,7 +536,7 @@ function SubscriptionsContent() {
                 value={filterStatus}
                 onChange={e => setFilterStatus(e.target.value as SubscriptionStatus | '')}
                 className={`${inputCls} appearance-none pr-8`}
-                style={{ ...inputStyle, minWidth: 130 }}
+                style={inputStyle}
               >
                 <option value="">Všechny stavy</option>
                 {Object.entries(STATUS_CONFIG).map(([k, v]) => (
@@ -559,7 +550,7 @@ function SubscriptionsContent() {
                 value={filterType}
                 onChange={e => setFilterType(e.target.value as SubscriptionType | '')}
                 className={`${inputCls} appearance-none pr-8`}
-                style={{ ...inputStyle, minWidth: 110 }}
+                style={inputStyle}
               >
                 <option value="">Všechny typy</option>
                 {Object.entries(TYPE_LABELS).map(([k, v]) => (
@@ -574,7 +565,7 @@ function SubscriptionsContent() {
                   value={filterCategory}
                   onChange={e => setFilterCategory(e.target.value)}
                   className={`${inputCls} appearance-none pr-8`}
-                  style={{ ...inputStyle, minWidth: 130 }}
+                  style={inputStyle}
                 >
                   <option value="">Všechny kategorie</option>
                   {categories.map(c => (
@@ -749,7 +740,7 @@ function SubscriptionsContent() {
                   <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{count} předplatn{count === 1 ? 'é' : count >= 2 && count <= 4 ? 'á' : 'ých'}</p>
                 </div>
                 {canManage && (
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                     <button
                       className="p-1.5 rounded-lg"
                       style={{ color: 'var(--text-muted)' }}
@@ -964,7 +955,7 @@ function SubscriptionsContent() {
                 </div>
 
                 {/* Cena + Měna + Frekvence */}
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   <div>
                     <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--text-muted)' }}>Cena</label>
                     <input type="number" className={inputCls} style={inputStyle} value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="0" min="0" step="0.01" />
