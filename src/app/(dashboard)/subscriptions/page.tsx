@@ -82,6 +82,10 @@ function toYearly(price: number, freq: SubscriptionFrequency): number {
   }
 }
 
+function getFaviconUrl(url: string) {
+  try { return `https://www.google.com/s2/favicons?domain=${new URL(url).hostname}&sz=32`; } catch { return ''; }
+}
+
 function fmtPrice(n: number, currency: string): string {
   const display = currency === 'CZK' ? 'Kč' : currency;
   return n.toLocaleString('cs-CZ', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' ' + display;
@@ -799,9 +803,20 @@ function SubscriptionsContent() {
                     >
                       <td className="px-3 py-2.5">
                         <div className="flex items-center gap-2">
-                          {cat && (
-                            <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: cat.color }} />
-                          )}
+                          {(() => {
+                            const favicon = s.website_url ? getFaviconUrl(s.website_url.startsWith('http') ? s.website_url : `https://${s.website_url}`) : '';
+                            return (
+                              <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 border overflow-hidden" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
+                                {favicon ? (
+                                  <img src={favicon} alt="" width={18} height={18} onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                                ) : cat ? (
+                                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: cat.color }} />
+                                ) : (
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)' }}><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                                )}
+                              </div>
+                            );
+                          })()}
                           <div className="min-w-0">
                             <p className="font-medium truncate">{s.name}</p>
                             <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
@@ -1000,8 +1015,21 @@ function SubscriptionsContent() {
                     return (
                       <div key={s.id} className="rounded-xl border p-4" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
                         <div className="flex items-start justify-between mb-3">
-                          <div className="flex items-center gap-2 min-w-0">
-                            {s.category_id && <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: getCatColor(s.category_id) }} />}
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            {(() => {
+                              const fav = s.website_url ? getFaviconUrl(s.website_url.startsWith('http') ? s.website_url : `https://${s.website_url}`) : '';
+                              return (
+                                <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 border overflow-hidden" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
+                                  {fav ? (
+                                    <img src={fav} alt="" width={18} height={18} onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                                  ) : s.category_id ? (
+                                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: getCatColor(s.category_id) }} />
+                                  ) : (
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)' }}><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                                  )}
+                                </div>
+                              );
+                            })()}
                             <div className="min-w-0">
                               <p className="font-medium text-sm truncate" style={{ color: 'var(--text-primary)' }}>{s.name}</p>
                               <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
@@ -1139,7 +1167,14 @@ function SubscriptionsContent() {
                             const sub = subs.find(ss => ss.id === a.subscription_id);
                             return sub ? (
                               <div key={a.id} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-sm group" style={{ background: 'var(--bg-hover)' }}>
-                                {sub.category_id && <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: getCatColor(sub.category_id) }} />}
+                                {(() => {
+                                  const fv = sub.website_url ? getFaviconUrl(sub.website_url.startsWith('http') ? sub.website_url : `https://${sub.website_url}`) : '';
+                                  return fv ? (
+                                    <img src={fv} alt="" width={16} height={16} className="flex-shrink-0 rounded" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                                  ) : sub.category_id ? (
+                                    <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: getCatColor(sub.category_id) }} />
+                                  ) : null;
+                                })()}
                                 <span className="flex-1 truncate" style={{ color: 'var(--text-primary)' }}>{sub.name}</span>
                                 {a.role && <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'var(--bg-main)', color: 'var(--text-muted)' }}>{a.role}</span>}
                                 {canManage && (
@@ -1201,7 +1236,14 @@ function SubscriptionsContent() {
                             const sub = subs.find(ss => ss.id === a.subscription_id);
                             return sub ? (
                               <div key={a.id} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-sm group/item" style={{ background: 'var(--bg-hover)' }}>
-                                {sub.category_id && <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: getCatColor(sub.category_id) }} />}
+                                {(() => {
+                                  const fv = sub.website_url ? getFaviconUrl(sub.website_url.startsWith('http') ? sub.website_url : `https://${sub.website_url}`) : '';
+                                  return fv ? (
+                                    <img src={fv} alt="" width={16} height={16} className="flex-shrink-0 rounded" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                                  ) : sub.category_id ? (
+                                    <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: getCatColor(sub.category_id) }} />
+                                  ) : null;
+                                })()}
                                 <span className="flex-1 truncate" style={{ color: 'var(--text-primary)' }}>{sub.name}</span>
                                 {a.role && <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'var(--bg-main)', color: 'var(--text-muted)' }}>{a.role}</span>}
                                 {canManage && (
@@ -1354,7 +1396,20 @@ function SubscriptionsContent() {
           <div className="rounded-xl shadow-xl border w-full max-w-lg max-h-[85vh] overflow-y-auto" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }} onClick={e => e.stopPropagation()}>
             <div className="p-5">
               <div className="flex items-start justify-between mb-4">
-                <div className="flex-1 min-w-0">
+                <div className="flex items-start gap-3 flex-1 min-w-0">
+                  {(() => {
+                    const fav = detailSub.website_url ? getFaviconUrl(detailSub.website_url.startsWith('http') ? detailSub.website_url : `https://${detailSub.website_url}`) : '';
+                    return (
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 border overflow-hidden mt-0.5" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
+                        {fav ? (
+                          <img src={fav} alt="" width={22} height={22} onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                        ) : (
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)' }}><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                        )}
+                      </div>
+                    );
+                  })()}
+                <div className="min-w-0">
                   <h2 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{detailSub.name}</h2>
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
                     <span className="px-2 py-0.5 rounded-full text-xs font-medium" style={{ background: STATUS_CONFIG[detailSub.status].color + '20', color: STATUS_CONFIG[detailSub.status].color }}>
@@ -1366,7 +1421,8 @@ function SubscriptionsContent() {
                     </span>
                   </div>
                 </div>
-                <button onClick={() => setDetailSub(null)} className="p-1 rounded-lg ml-2" style={{ color: 'var(--text-muted)' }}>
+                </div>
+                <button onClick={() => setDetailSub(null)} className="p-1 rounded-lg ml-2 flex-shrink-0" style={{ color: 'var(--text-muted)' }}>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
               </div>
