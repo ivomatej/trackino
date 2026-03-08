@@ -69,7 +69,7 @@ function getInitials(name: string) {
 }
 
 function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'long', year: 'numeric' });
+  return new Date(iso).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'numeric', year: 'numeric' });
 }
 
 function fmtDateTime(iso: string) {
@@ -1526,21 +1526,22 @@ function KnowledgeBaseContent() {
           {/* Page selected */}
           {selectedPage && (
             <div className="flex-1 flex flex-col overflow-y-auto">
-              <div className="flex-1 p-4 lg:p-8 max-w-4xl w-full mx-auto">
+              <div className="flex-1 px-5 py-4 md:px-4 lg:px-8 lg:py-8 max-w-4xl w-full mx-auto">
 
-                {/* Page header */}
-                <div className="flex items-start gap-3 mb-6">
+                {/* Page header – actions row */}
+                <div className="flex flex-col-reverse md:flex-row md:items-start gap-2 md:gap-3 mb-4 md:mb-6">
+                  {/* Title – full width on mobile (below actions) */}
                   <div className="flex-1 min-w-0">
                     {editing ? (
                       <input value={editTitle} onChange={e => setEditTitle(e.target.value)}
-                        className="w-full text-2xl font-bold bg-transparent border-0 border-b-2 focus:outline-none pb-1 text-base sm:text-sm"
-                        style={{ borderColor: 'var(--primary)', color: 'var(--text-primary)', fontSize: '1.6rem' }}
+                        className="w-full text-2xl font-bold bg-transparent border-0 border-b-2 focus:outline-none pb-1 text-base sm:text-2xl"
+                        style={{ borderColor: 'var(--primary)', color: 'var(--text-primary)' }}
                         placeholder="Název stránky" />
                     ) : (
-                      <h1 className="text-2xl font-bold break-words" style={{ color: 'var(--text-primary)' }}>{selectedPage.title}</h1>
+                      <h1 className="text-xl md:text-2xl font-bold break-words" style={{ color: 'var(--text-primary)' }}>{selectedPage.title}</h1>
                     )}
                   </div>
-                  {/* Actions */}
+                  {/* Actions – top row on mobile */}
                   <div className="flex items-center gap-1.5 flex-shrink-0">
                     {/* Back to list */}
                     {(listFilter !== null || search.trim()) && !selectedPage.id.startsWith('__new__') && (
@@ -1739,7 +1740,7 @@ function KnowledgeBaseContent() {
                 {/* Tabs (only for saved pages) */}
                 {!editing && !selectedPage.id.startsWith('__new__') && (
                   <div className="border-t pt-6" style={{ borderColor: 'var(--border)' }}>
-                    <div className="flex gap-1 mb-4 border-b" style={{ borderColor: 'var(--border)' }}>
+                    <div className="flex gap-1 mb-4 border-b overflow-x-auto" style={{ borderColor: 'var(--border)', WebkitOverflowScrolling: 'touch' }}>
                       {((() => {
                         const backlinksCount = pages.filter(p => p.id !== selectedPage.id && p.content.includes(`data-page-id="${selectedPage.id}"`)).length;
                         const pendingReviews = reviews.filter(r => !r.is_done).length;
@@ -1752,7 +1753,7 @@ function KnowledgeBaseContent() {
                         ].filter(Boolean) as { id: string; label: string }[];
                       })()).map(tab => (
                         <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id as PageTab)}
-                          className="px-4 py-2 text-xs font-medium border-b-2 -mb-px transition-colors"
+                          className="px-3 md:px-4 py-2 text-xs font-medium border-b-2 -mb-px transition-colors whitespace-nowrap flex-shrink-0"
                           style={{ borderColor: activeTab === tab.id ? 'var(--primary)' : 'transparent', color: activeTab === tab.id ? 'var(--primary)' : 'var(--text-muted)', background: 'transparent' }}>
                           {tab.label}
                         </button>
@@ -1775,7 +1776,7 @@ function KnowledgeBaseContent() {
                               {editingComment?.id === c.id ? (
                                 <div className="flex gap-2">
                                   <input value={editingComment.content} onChange={e => setEditingComment(prev => prev ? { ...prev, content: e.target.value } : null)}
-                                    className="flex-1 px-3 py-1.5 rounded-lg border text-sm text-base sm:text-sm" style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)' }} />
+                                    className="flex-1 px-3 py-1.5 rounded-lg border text-base md:text-sm" style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)' }} />
                                   <button type="button" onClick={updateComment} className="px-3 py-1.5 rounded-lg text-xs font-medium" style={{ background: 'var(--primary)', color: '#fff' }}>Uložit</button>
                                   <button type="button" onClick={() => setEditingComment(null)} className="px-3 py-1.5 rounded-lg text-xs border" style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>Zrušit</button>
                                 </div>
@@ -1796,14 +1797,14 @@ function KnowledgeBaseContent() {
                           </div>
                         ))}
                         {/* New comment */}
-                        <div className="flex gap-3 mt-3">
+                        <div className="flex gap-3 mt-3 pb-8 md:pb-0">
                           <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold text-white" style={{ background: members.find(m => m.user_id === user?.id)?.avatar_color ?? '#6366f1' }}>
                             {getInitials(profile?.display_name ?? '?')}
                           </div>
                           <div className="flex-1 flex gap-2">
                             <input value={newComment} onChange={e => setNewComment(e.target.value)}
                               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addComment(); } }}
-                              placeholder="Přidat komentář…" className="flex-1 px-3 py-2 rounded-xl border text-sm text-base sm:text-sm"
+                              placeholder="Přidat komentář…" className="flex-1 px-3 py-2 rounded-xl border text-base md:text-sm"
                               style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)' }} />
                             <button type="button" onClick={addComment} disabled={!newComment.trim() || savingComment}
                               className="px-4 py-2 rounded-xl text-xs font-medium" style={{ background: 'var(--primary)', color: '#fff', opacity: (!newComment.trim() || savingComment) ? 0.5 : 1 }}>
