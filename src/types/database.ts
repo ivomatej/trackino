@@ -907,6 +907,7 @@ export interface SubscriptionCategory {
   name: string;
   color: string;
   sort_order: number;
+  parent_id: string | null;
   created_at: string;
 }
 

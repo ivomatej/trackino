@@ -11,6 +11,20 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.47.1 – 8. 3. 2026</h3>
+<ul>
+  <li><strong>Předplatná – Podkategorie</strong> – kategorie předplatných nyní podporují hierarchickou strukturu (nadřazená/podkategorie):
+    <ul>
+      <li>Možnost přiřadit kategorii nadřazenou kategorii (např. Marketing → SEO, PPC)</li>
+      <li>Stromové zobrazení v záložce Kategorie s počty předplatných</li>
+      <li>Tlačítko + u každé kategorie pro rychlé přidání podkategorie</li>
+      <li>Filtr zahrnuje i podkategorie při výběru nadřazené kategorie</li>
+      <li>Seskupený výběr kategorií ve formuláři předplatného</li>
+      <li>Smazání nadřazené kategorie smaže i všechny podkategorie</li>
+    </ul>
+  </li>
+</ul>
+
 <h3>v2.47.0 – 8. 3. 2026</h3>
 <ul>
   <li><strong>Předplatná – Evidence přístupů</strong> – nová 4. záložka „Přístupy" v modulu Předplatná umožňuje evidovat, kteří uživatelé mají přístup ke kterým službám:

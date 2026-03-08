@@ -197,7 +197,7 @@ function SubscriptionsContent() {
   // Category modal
   const [catModal, setCatModal] = useState(false);
   const [editingCat, setEditingCat] = useState<SubscriptionCategory | null>(null);
-  const [catForm, setCatForm] = useState({ name: '', color: CATEGORY_COLORS[0] });
+  const [catForm, setCatForm] = useState({ name: '', color: CATEGORY_COLORS[0], parent_id: null as string | null });
 
   // Detail modal
   const [detailSub, setDetailSub] = useState<Subscription | null>(null);
@@ -313,7 +313,11 @@ function SubscriptionsContent() {
       );
     }
     if (filterStatus) list = list.filter(s => s.status === filterStatus);
-    if (filterCategory) list = list.filter(s => s.category_id === filterCategory);
+    if (filterCategory) {
+      const subCatIds = categories.filter(c => c.parent_id === filterCategory).map(c => c.id);
+      const matchIds = new Set([filterCategory, ...subCatIds]);
+      list = list.filter(s => s.category_id && matchIds.has(s.category_id));
+    }
     if (filterType) list = list.filter(s => s.type === filterType);
 
     list.sort((a, b) => {
@@ -437,31 +441,57 @@ function SubscriptionsContent() {
   };
 
   /* ── Categories CRUD ── */
-  const openNewCat = () => { setEditingCat(null); setCatForm({ name: '', color: CATEGORY_COLORS[0] }); setCatModal(true); };
-  const openEditCat = (c: SubscriptionCategory) => { setEditingCat(c); setCatForm({ name: c.name, color: c.color }); setCatModal(true); };
+  const openNewCat = (parentId?: string) => { setEditingCat(null); setCatForm({ name: '', color: CATEGORY_COLORS[0], parent_id: parentId ?? null }); setCatModal(true); };
+  const openEditCat = (c: SubscriptionCategory) => { setEditingCat(c); setCatForm({ name: c.name, color: c.color, parent_id: c.parent_id ?? null }); setCatModal(true); };
 
   const saveCat = async () => {
     if (!catForm.name.trim() || !wsId) return;
     if (editingCat) {
-      await supabase.from('trackino_subscription_categories').update({ name: catForm.name.trim(), color: catForm.color }).eq('id', editingCat.id);
+      await supabase.from('trackino_subscription_categories').update({ name: catForm.name.trim(), color: catForm.color, parent_id: catForm.parent_id || null }).eq('id', editingCat.id);
     } else {
-      await supabase.from('trackino_subscription_categories').insert({ workspace_id: wsId, name: catForm.name.trim(), color: catForm.color, sort_order: categories.length });
+      await supabase.from('trackino_subscription_categories').insert({ workspace_id: wsId, name: catForm.name.trim(), color: catForm.color, sort_order: categories.length, parent_id: catForm.parent_id || null });
     }
     setCatModal(false);
     fetchAll();
   };
 
   const deleteCat = async (c: SubscriptionCategory) => {
-    if (!confirm(`Smazat kategorii „${c.name}"?`)) return;
+    const subCats = categories.filter(sc => sc.parent_id === c.id);
+    const msg = subCats.length > 0
+      ? `Smazat kategorii „${c.name}" a ${subCats.length} podkategori${subCats.length === 1 ? 'i' : subCats.length <= 4 ? 'e' : 'í'}? Předplatná budou ponechána bez kategorie.`
+      : `Smazat kategorii „${c.name}"?`;
+    if (!confirm(msg)) return;
+    // Odpojit předplatná od této kategorie i podkategorií
     await supabase.from('trackino_subscriptions').update({ category_id: null }).eq('category_id', c.id);
+    for (const sc of subCats) {
+      await supabase.from('trackino_subscriptions').update({ category_id: null }).eq('category_id', sc.id);
+      await supabase.from('trackino_subscription_categories').delete().eq('id', sc.id);
+    }
     await supabase.from('trackino_subscription_categories').delete().eq('id', c.id);
     fetchAll();
   };
 
   /* ── Helpers ── */
-  const getCatName = (id: string | null) => categories.find(c => c.id === id)?.name ?? '';
+  const getCatName = (id: string | null): string => {
+    const cat = categories.find(c => c.id === id);
+    if (!cat) return '';
+    if (cat.parent_id) {
+      const parent = categories.find(c => c.id === cat.parent_id);
+      return parent ? `${parent.name} / ${cat.name}` : cat.name;
+    }
+    return cat.name;
+  };
   const getCatColor = (id: string | null) => categories.find(c => c.id === id)?.color ?? 'var(--text-muted)';
   const getMemberName = (id: string | null) => members.find(m => m.user_id === id)?.display_name ?? '';
+
+  /* ── Stromová struktura kategorií ── */
+  const rootCategories = useMemo(() => categories.filter(c => !c.parent_id), [categories]);
+  const getSubcategories = useCallback((parentId: string) => categories.filter(c => c.parent_id === parentId), [categories]);
+  const getCatCountWithSubs = useCallback((catId: string): number => {
+    const direct = subs.filter(s => s.category_id === catId).length;
+    const subCats = categories.filter(c => c.parent_id === catId);
+    return direct + subCats.reduce((sum, sc) => sum + subs.filter(s => s.category_id === sc.id).length, 0);
+  }, [subs, categories]);
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -741,9 +771,17 @@ function SubscriptionsContent() {
                   style={inputStyle}
                 >
                   <option value="">Všechny kategorie</option>
-                  {categories.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
+                  {rootCategories.map(c => {
+                    const subs2 = getSubcategories(c.id);
+                    return (
+                      <React.Fragment key={c.id}>
+                        <option value={c.id}>{c.name}</option>
+                        {subs2.map(sc => (
+                          <option key={sc.id} value={sc.id}>{'\u00A0\u00A0\u00A0\u00A0' + sc.name}</option>
+                        ))}
+                      </React.Fragment>
+                    );
+                  })}
                 </select>
                 <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}>{ICONS.chevronDown}</span>
               </div>
@@ -910,35 +948,89 @@ function SubscriptionsContent() {
               Zatím žádné kategorie
             </p>
           )}
-          {categories.map(c => {
-            const count = subs.filter(s => s.category_id === c.id).length;
+          {rootCategories.map(c => {
+            const subCats = getSubcategories(c.id);
+            const totalCount = getCatCountWithSubs(c.id);
+            const directCount = subs.filter(s => s.category_id === c.id).length;
             return (
-              <div
-                key={c.id}
-                className="rounded-xl border p-4 flex items-center gap-3 group"
-                style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}
-              >
-                <span className="w-4 h-4 rounded-full flex-shrink-0" style={{ background: c.color }} />
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm truncate" style={{ color: 'var(--text-primary)' }}>{c.name}</p>
-                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{count} předplatn{count === 1 ? 'é' : count >= 2 && count <= 4 ? 'á' : 'ých'}</p>
+              <div key={c.id} className="col-span-1">
+                {/* Nadřazená kategorie */}
+                <div
+                  className="rounded-xl border p-4 flex items-center gap-3 group"
+                  style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}
+                >
+                  <span className="w-4 h-4 rounded-full flex-shrink-0" style={{ background: c.color }} />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate" style={{ color: 'var(--text-primary)' }}>{c.name}</p>
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                      {totalCount} předplatn{totalCount === 1 ? 'é' : totalCount >= 2 && totalCount <= 4 ? 'á' : 'ých'}
+                      {subCats.length > 0 && ` · ${subCats.length} podkategori${subCats.length === 1 ? 'e' : subCats.length >= 2 && subCats.length <= 4 ? 'e' : 'í'}`}
+                    </p>
+                  </div>
+                  {canManage && (
+                    <div className="flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                      <button
+                        className="p-1.5 rounded-lg"
+                        title="Přidat podkategorii"
+                        style={{ color: 'var(--text-muted)' }}
+                        onClick={() => openNewCat(c.id)}
+                        onMouseEnter={e => (e.currentTarget.style.color = 'var(--primary)')}
+                        onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+                      >{ICONS.plus}</button>
+                      <button
+                        className="p-1.5 rounded-lg"
+                        style={{ color: 'var(--text-muted)' }}
+                        onClick={() => openEditCat(c)}
+                        onMouseEnter={e => (e.currentTarget.style.color = 'var(--primary)')}
+                        onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+                      >{ICONS.edit}</button>
+                      <button
+                        className="p-1.5 rounded-lg"
+                        style={{ color: 'var(--text-muted)' }}
+                        onClick={() => deleteCat(c)}
+                        onMouseEnter={e => (e.currentTarget.style.color = '#ef4444')}
+                        onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+                      >{ICONS.trash}</button>
+                    </div>
+                  )}
                 </div>
-                {canManage && (
-                  <div className="flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                    <button
-                      className="p-1.5 rounded-lg"
-                      style={{ color: 'var(--text-muted)' }}
-                      onClick={() => openEditCat(c)}
-                      onMouseEnter={e => (e.currentTarget.style.color = 'var(--primary)')}
-                      onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
-                    >{ICONS.edit}</button>
-                    <button
-                      className="p-1.5 rounded-lg"
-                      style={{ color: 'var(--text-muted)' }}
-                      onClick={() => deleteCat(c)}
-                      onMouseEnter={e => (e.currentTarget.style.color = '#ef4444')}
-                      onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
-                    >{ICONS.trash}</button>
+                {/* Podkategorie */}
+                {subCats.length > 0 && (
+                  <div className="ml-5 mt-1 space-y-1">
+                    {subCats.map(sc => {
+                      const scCount = subs.filter(s => s.category_id === sc.id).length;
+                      return (
+                        <div
+                          key={sc.id}
+                          className="rounded-lg border px-3 py-2.5 flex items-center gap-2.5 group/sub"
+                          style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}
+                        >
+                          <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: sc.color }} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm truncate" style={{ color: 'var(--text-primary)' }}>{sc.name}</p>
+                            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{scCount} předplatn{scCount === 1 ? 'é' : scCount >= 2 && scCount <= 4 ? 'á' : 'ých'}</p>
+                          </div>
+                          {canManage && (
+                            <div className="flex gap-1 opacity-100 md:opacity-0 md:group-hover/sub:opacity-100 transition-opacity">
+                              <button
+                                className="p-1.5 rounded-lg"
+                                style={{ color: 'var(--text-muted)' }}
+                                onClick={() => openEditCat(sc)}
+                                onMouseEnter={e => (e.currentTarget.style.color = 'var(--primary)')}
+                                onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+                              >{ICONS.edit}</button>
+                              <button
+                                className="p-1.5 rounded-lg"
+                                style={{ color: 'var(--text-muted)' }}
+                                onClick={() => deleteCat(sc)}
+                                onMouseEnter={e => (e.currentTarget.style.color = '#ef4444')}
+                                onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+                              >{ICONS.trash}</button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -1725,7 +1817,17 @@ function SubscriptionsContent() {
                     <div className="relative">
                       <select className={`${inputCls} appearance-none pr-8`} style={inputStyle} value={form.category_id ?? ''} onChange={e => setForm(f => ({ ...f, category_id: e.target.value || null }))}>
                         <option value="">Bez kategorie</option>
-                        {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        {rootCategories.map(c => {
+                          const subs2 = getSubcategories(c.id);
+                          return (
+                            <React.Fragment key={c.id}>
+                              <option value={c.id}>{c.name}</option>
+                              {subs2.map(sc => (
+                                <option key={sc.id} value={sc.id}>{'\u00A0\u00A0\u00A0\u00A0' + sc.name}</option>
+                              ))}
+                            </React.Fragment>
+                          );
+                        })}
                       </select>
                       <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}>{ICONS.chevronDown}</span>
                     </div>
@@ -1951,6 +2053,23 @@ function SubscriptionsContent() {
                 <div>
                   <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--text-muted)' }}>Název</label>
                   <input className={inputCls} style={inputStyle} value={catForm.name} onChange={e => setCatForm(f => ({ ...f, name: e.target.value }))} placeholder="Název kategorie" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--text-muted)' }}>Nadřazená kategorie</label>
+                  <div className="relative">
+                    <select
+                      className={`${inputCls} appearance-none pr-8`}
+                      style={inputStyle}
+                      value={catForm.parent_id ?? ''}
+                      onChange={e => setCatForm(f => ({ ...f, parent_id: e.target.value || null }))}
+                    >
+                      <option value="">Žádná (hlavní kategorie)</option>
+                      {rootCategories.filter(c => c.id !== editingCat?.id).map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                    <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}>{ICONS.chevronDown}</span>
+                  </div>
                 </div>
                 <div>
                   <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--text-muted)' }}>Barva</label>

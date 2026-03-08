@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 8. 3. 2026 (v2.47.0)
+> Aktualizováno: 8. 3. 2026 (v2.47.1)
 
 ---
 
@@ -133,7 +133,7 @@ Výchozí policy: `CREATE POLICY "Auth full" ... FOR ALL TO authenticated USING 
 | `trackino_document_folders` | id, workspace_id, name, color, sort_order, created_by, created_at, updated_at | Složky pro organizaci dokumentů |
 | `trackino_documents` | id, workspace_id, folder_id (uuid\|null), name, type ('file'\|'link'), file_path (text\|null), file_size (int\|null), file_mime (text\|null), url (text\|null), description, created_by, created_at, updated_at | Firemní dokumenty a odkazy; soubory uloženy v Supabase Storage bucket `trackino-documents` |
 | `trackino_calendar_event_notes` | id, workspace_id, user_id, event_ref (text – ID události), content (HTML), tasks (jsonb – TaskItem[]), is_important (bool), is_done (bool), is_favorite (bool), created_at, updated_at | Poznámky k událostem v kalendáři – per-user, UNIQUE (workspace_id, user_id, event_ref) |
-| `trackino_subscription_categories` | id, workspace_id, name, color, sort_order, created_at | Kategorie předplatných (barva, řazení) |
+| `trackino_subscription_categories` | id, workspace_id, name, color, sort_order, parent_id (uuid\|null, self-ref), created_at | Kategorie předplatných (barva, řazení, hierarchie) |
 | `trackino_subscriptions` | id, workspace_id, name, type, website_url, login_url, registration_email, company_name, registered_by, description, notes, priority, status, renewal_type, price, currency, frequency, next_payment_date, registration_date, category_id, is_tip, created_by, created_at, updated_at | Evidence firemních předplatných a SaaS služeb |
 | `trackino_subscription_ratings` | id, subscription_id, workspace_id, user_id, rating (1-5), created_at, updated_at | Hvězdičkové hodnocení předplatných (per-user, UNIQUE subscription_id+user_id) |
 | `trackino_subscription_access_users` | id, workspace_id, name, email, note, created_by, created_at, updated_at | Externí uživatelé pro evidenci přístupů (mimo workspace) |
@@ -507,6 +507,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.47.1 | 8. 3. 2026 | Předplatná – Podkategorie: hierarchická struktura kategorií (parent_id na trackino_subscription_categories), stromové zobrazení v záložce Kategorie, tlačítko + pro rychlé přidání podkategorie, seskupený select ve formuláři předplatného, filtr zahrnuje podkategorie, kaskádové mazání |
 | v2.47.0 | 8. 3. 2026 | Předplatná – Evidence přístupů: 4. záložka „Přístupy" s 3 pohledy (Podle služby/Podle uživatele/Souhrnný přehled); interní i externí uživatelé; náklad na uživatele = měsíční_CZK / počet_přístupů; CRUD přístupů + externích uživatelů (modály); sekce Přístupy v detail modalu; ČNB kurzy – lazy DB cache (1× denně); 3 nové DB tabulky (trackino_subscription_access_users, trackino_subscription_accesses, trackino_exchange_rates přepis na globální cache) |
 | v2.46.0 | 8. 3. 2026 | Nový modul Předplatná (subscriptions, NÁSTROJE, Pro+Max) – evidence firemních předplatných a SaaS služeb; dashboard statistiky (aktivní/měsíčně/ročně/blížící se platby); 3 záložky (Předplatná/Tipy/Kategorie); CRUD s modálním formulářem (název, typ, stav, cena, měna, frekvence, priorita, obnova, URLs, společnost, registrační email, poznámky); hvězdičkové hodnocení (1-5, per-user); ČNB kurzovní lístek (/api/cnb-rates) pro přepočet EUR/USD→CZK; filtrování (stav/typ/kategorie) + fulltextové hledání + řazení; detail modal; kategorie s barvami; oprávnění can_manage_subscriptions v Týmu; 4 nové DB tabulky (trackino_subscription_categories/subscriptions/subscription_ratings/exchange_rates) |
 | v2.45.2 | 8. 3. 2026 | KB: task box ve stylu Poznámek – tlačítko Úkol v toolbaru přidává panel s úkoly pod editor (checkboxy, text inputy, Enter=nový, Backspace=smazat), read-only zobrazení při prohlížení; AI asistent: scroll v info panelu (overflow-y-auto, max 60vh), model pills seskupeny po řádcích dle providera (GPT/Gemini); Nastavení: přesun „Skrýt štítky" z Obecné do Povinná pole s lepším popisem |
@@ -1838,7 +1839,7 @@ Existující cron joby mají URL `https://trackino.vercel.app/api/cron/...`. Po 
 ### DB tabulky
 | Tabulka | Popis |
 |---------|-------|
-| `trackino_subscription_categories` | Kategorie předplatných (name, color, sort_order) |
+| `trackino_subscription_categories` | Kategorie předplatných (name, color, sort_order, parent_id – hierarchie podkategorií) |
 | `trackino_subscriptions` | Záznamy předplatných (profil, cena, stav, URLs, poznámky, is_tip) |
 | `trackino_subscription_ratings` | Hvězdičkové hodnocení (per-user, 1-5, UNIQUE subscription_id+user_id) |
 | `trackino_subscription_access_users` | Externí uživatelé (name, email, note) pro evidenci přístupů |
@@ -1895,6 +1896,7 @@ CREATE TABLE IF NOT EXISTS trackino_subscription_categories (
   name text NOT NULL,
   color text NOT NULL DEFAULT '#6366f1',
   sort_order integer NOT NULL DEFAULT 0,
+  parent_id uuid REFERENCES trackino_subscription_categories(id) ON DELETE SET NULL,
   created_at timestamptz DEFAULT now()
 );
 ALTER TABLE trackino_subscription_categories ENABLE ROW LEVEL SECURITY;
