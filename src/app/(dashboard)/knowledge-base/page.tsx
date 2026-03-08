@@ -93,8 +93,8 @@ function nanoid() {
 
 // ── Rich Editor ───────────────────────────────────────────────────────────────
 
-function RichEditor({ value, onChange, members, pages, onAddTask }: {
-  value: string; onChange: (v: string) => void; members: KbMember[]; pages: KbPage[]; onAddTask?: () => void;
+function RichEditor({ value, onChange, members, pages, onAddTask, taskPanel }: {
+  value: string; onChange: (v: string) => void; members: KbMember[]; pages: KbPage[]; onAddTask?: () => void; taskPanel?: React.ReactNode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const savedRange = useRef<Range | null>(null);
@@ -389,6 +389,7 @@ function RichEditor({ value, onChange, members, pages, onAddTask }: {
         className="min-h-[280px] p-4 focus:outline-none prose-kb"
         style={{ color: 'var(--text-primary)', background: 'var(--bg-card)' }}
       />
+      {taskPanel}
       <style>{`
         .prose-kb h1{font-size:1.6em;font-weight:800;margin:28px 0 10px;line-height:1.2}
         .prose-kb h2{font-size:1.25em;font-weight:700;margin:24px 0 8px}
@@ -1669,11 +1670,8 @@ function KnowledgeBaseContent() {
                 {/* Content */}
                 <div className="mb-8">
                   {editing ? (
-                    <>
-                    <RichEditor value={editContent} onChange={setEditContent} members={members} pages={pages} onAddTask={addKbTask} />
-                    {/* Task box – styl z Poznámek */}
-                    {editTasks.length > 0 && (
-                      <div className="mx-4 md:mx-6 my-3 border rounded-xl px-3 md:px-3 py-3 md:py-2.5" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
+                    <RichEditor value={editContent} onChange={setEditContent} members={members} pages={pages} onAddTask={addKbTask} taskPanel={editTasks.length > 0 ? (
+                      <div className="border-t px-3 md:px-4 py-3 md:py-2.5" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
                         <div className="text-[10px] font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>Úkoly</div>
                         <div className="space-y-2 md:space-y-1">
                           {editTasks.map(task => (
@@ -1711,8 +1709,7 @@ function KnowledgeBaseContent() {
                           Přidat úkol
                         </button>
                       </div>
-                    )}
-                    </>
+                    ) : undefined} />
                   ) : (
                     <>
                     {selectedPage.content
@@ -1720,7 +1717,7 @@ function KnowledgeBaseContent() {
                       : <p className="text-sm italic" style={{ color: 'var(--text-muted)' }}>Stránka je prázdná. Klikněte Upravit a začněte psát.</p>
                     }
                     {Array.isArray(selectedPage.tasks) && selectedPage.tasks.length > 0 && (
-                      <div className="mx-4 md:mx-6 my-3 border rounded-xl px-3 md:px-3 py-3 md:py-2.5" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
+                      <div className="mt-4 border rounded-xl px-3 md:px-4 py-3 md:py-2.5" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
                         <div className="text-[10px] font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>Úkoly</div>
                         <div className="space-y-2 md:space-y-1">
                           {selectedPage.tasks.map((task: { id: string; text: string; checked: boolean }) => (
