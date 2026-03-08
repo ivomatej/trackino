@@ -1703,7 +1703,7 @@ function KnowledgeBaseContent() {
                 {/* Tabs (only for saved pages) */}
                 {!editing && !selectedPage.id.startsWith('__new__') && (
                   <div className="border-t pt-6" style={{ borderColor: 'var(--border)' }}>
-                    <div className="flex gap-1 mb-4 border-b overflow-x-auto" style={{ borderColor: 'var(--border)', WebkitOverflowScrolling: 'touch', touchAction: 'pan-x', overscrollBehavior: 'contain' }}>
+                    <div className="flex flex-wrap gap-1 mb-4 border-b" style={{ borderColor: 'var(--border)' }}>
                       {((() => {
                         const backlinksCount = pages.filter(p => p.id !== selectedPage.id && p.content.includes(`data-page-id="${selectedPage.id}"`)).length;
                         const pendingReviews = reviews.filter(r => !r.is_done).length;
@@ -1716,7 +1716,7 @@ function KnowledgeBaseContent() {
                         ].filter(Boolean) as { id: string; label: string }[];
                       })()).map(tab => (
                         <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id as PageTab)}
-                          className="px-3 md:px-4 py-2 text-xs font-medium border-b-2 -mb-px transition-colors whitespace-nowrap flex-shrink-0"
+                          className="px-3 md:px-4 py-2 text-xs font-medium border-b-2 -mb-px transition-colors"
                           style={{ borderColor: activeTab === tab.id ? 'var(--primary)' : 'transparent', color: activeTab === tab.id ? 'var(--primary)' : 'var(--text-muted)', background: 'transparent' }}>
                           {tab.label}
                         </button>
