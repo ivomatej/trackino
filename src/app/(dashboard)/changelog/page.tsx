@@ -11,6 +11,13 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.45.2 – 8. 3. 2026</h3>
+<ul>
+  <li><strong>Znalostní báze – task box ve stylu Poznámek</strong> – tlačítko „Úkol" v toolbaru nyní přidá úkol do panelu pod editorem (stejný design jako v modulu Poznámky: checkboxy, textové inputy, Enter = nový úkol, Backspace na prázdném = smazat). Úkoly se ukládají do DB a zobrazují v read-only pohledu.</li>
+  <li><strong>AI asistent – scroll v info panelu</strong> – panel „Dostupné AI modely" je nyní scrollovatelný (max 60% výšky viewportu). Modely GPT a Gemini na oddělených řádcích.</li>
+  <li><strong>Nastavení – přesun skrytí štítků</strong> – volba „Skrýt štítky pro všechny" přesunuta z karty Obecné do karty Povinná pole s lepším popisem.</li>
+</ul>
+
 <h3>v2.45.1 – 8. 3. 2026</h3>
 <ul>
   <li><strong>Fakturace – přehlednější výpis faktur</strong> – na desktopu se nyní faktura zobrazuje ve 4 řádcích: název měsíce, VS + vystaveno + splatnost, částka s hodinami v závorce, Schváleno a Proplaceno.</li>
