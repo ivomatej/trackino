@@ -266,6 +266,50 @@ function NoteEditor({
     triggerSave(title, c, tasks, isFavorite, isImportant);
   }
 
+  function handleEditorKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (e.key !== ' ' && e.key !== 'Enter') return;
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+    if (!range.collapsed) return;
+    const node = range.startContainer;
+    if (node.nodeType !== Node.TEXT_NODE) return;
+    if ((node.parentElement)?.closest('a')) return;
+    const text = node.textContent ?? '';
+    const cursorPos = range.startOffset;
+    const urlMatch = text.slice(0, cursorPos).match(/(https?:\/\/[^\s<>"'\]]+)$/);
+    if (!urlMatch) return;
+    e.preventDefault();
+    const url = urlMatch[1];
+    const urlStart = cursorPos - url.length;
+    const beforeText = text.slice(0, urlStart);
+    const afterText = text.slice(cursorPos);
+    const parent = node.parentNode!;
+    const refNode = node.nextSibling;
+    parent.removeChild(node);
+    const ins = (n: Node) => parent.insertBefore(n, refNode ?? null);
+    if (beforeText) ins(document.createTextNode(beforeText));
+    const a = document.createElement('a');
+    a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+    a.style.cssText = 'color:var(--primary);text-decoration:underline';
+    a.textContent = url;
+    ins(a);
+    let cursorNode: Text;
+    let cursorOffset: number;
+    if (e.key === 'Enter') {
+      ins(document.createElement('br'));
+      cursorNode = document.createTextNode(afterText); ins(cursorNode); cursorOffset = 0;
+    } else {
+      cursorNode = document.createTextNode(' ' + afterText); ins(cursorNode); cursorOffset = 1;
+    }
+    const nr = document.createRange();
+    nr.setStart(cursorNode, cursorOffset); nr.collapse(true);
+    sel.removeAllRanges(); sel.addRange(nr);
+    const c = editorRef.current?.innerHTML ?? '';
+    setContent(c);
+    triggerSave(title, c, tasks, isFavorite, isImportant);
+  }
+
   function handleEditorClick(e: React.MouseEvent<HTMLDivElement>) {
     const anchor = (e.target as HTMLElement).closest('a');
     if (anchor) {
@@ -415,6 +459,7 @@ function NoteEditor({
           suppressContentEditableWarning
           onInput={handleEditorInput}
           onBlur={handleEditorBlur}
+          onKeyDown={handleEditorKeyDown}
           onClick={handleEditorClick}
           className="px-6 py-2 min-h-[120px] outline-none text-sm leading-relaxed"
           style={{ color: 'var(--text-primary)' }}
@@ -513,6 +558,50 @@ function CalEventNoteEditor({
     triggerSave(linked, tasks, isFavorite, isImportant);
   }
 
+  function handleKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (e.key !== ' ' && e.key !== 'Enter') return;
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+    if (!range.collapsed) return;
+    const node = range.startContainer;
+    if (node.nodeType !== Node.TEXT_NODE) return;
+    if ((node.parentElement)?.closest('a')) return;
+    const text = node.textContent ?? '';
+    const cursorPos = range.startOffset;
+    const urlMatch = text.slice(0, cursorPos).match(/(https?:\/\/[^\s<>"'\]]+)$/);
+    if (!urlMatch) return;
+    e.preventDefault();
+    const url = urlMatch[1];
+    const urlStart = cursorPos - url.length;
+    const beforeText = text.slice(0, urlStart);
+    const afterText = text.slice(cursorPos);
+    const parent = node.parentNode!;
+    const refNode = node.nextSibling;
+    parent.removeChild(node);
+    const ins = (n: Node) => parent.insertBefore(n, refNode ?? null);
+    if (beforeText) ins(document.createTextNode(beforeText));
+    const a = document.createElement('a');
+    a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+    a.style.cssText = 'color:var(--primary);text-decoration:underline';
+    a.textContent = url;
+    ins(a);
+    let cursorNode: Text;
+    let cursorOffset: number;
+    if (e.key === 'Enter') {
+      ins(document.createElement('br'));
+      cursorNode = document.createTextNode(afterText); ins(cursorNode); cursorOffset = 0;
+    } else {
+      cursorNode = document.createTextNode(' ' + afterText); ins(cursorNode); cursorOffset = 1;
+    }
+    const nr = document.createRange();
+    nr.setStart(cursorNode, cursorOffset); nr.collapse(true);
+    sel.removeAllRanges(); sel.addRange(nr);
+    const c = editorRef.current?.innerHTML ?? '';
+    setContent(c);
+    triggerSave(c, tasks, isFavorite, isImportant);
+  }
+
   function handleEditorClick(e: React.MouseEvent<HTMLDivElement>) {
     const anchor = (e.target as HTMLElement).closest('a');
     if (anchor) {
@@ -607,6 +696,7 @@ function CalEventNoteEditor({
         <div ref={editorRef} contentEditable suppressContentEditableWarning
           onInput={handleInput}
           onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
           onClick={handleEditorClick}
           className="px-6 py-2 min-h-[120px] outline-none text-sm leading-relaxed"
           style={{ color: 'var(--text-primary)' }} data-placeholder="Obsah poznámky…" />
