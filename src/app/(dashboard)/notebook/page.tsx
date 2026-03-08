@@ -1145,7 +1145,7 @@ function NotebookContent() {
                     style={{ borderColor: 'var(--border)' }}
                     onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                    onClick={() => setSelectedCalNote(note)}>
+                    onClick={() => { setSelectedCalNote(note); setShowLeftPanel(false); }}>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{note.title}</span>
@@ -1183,7 +1183,7 @@ function NotebookContent() {
                         className="w-3.5 h-3.5 flex-shrink-0 cursor-pointer" onClick={e => e.stopPropagation()} />
                     )}
                     {/* Main clickable area */}
-                    <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setSelectedNote(note)}>
+                    <div className="flex-1 min-w-0 cursor-pointer" onClick={() => { setSelectedNote(note); setShowLeftPanel(false); }}>
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{note.title || 'Bez názvu'}</span>
                         {note.is_favorite && <svg width="10" height="10" viewBox="0 0 24 24" fill="#f59e0b" stroke="#f59e0b" strokeWidth="1" className="flex-shrink-0"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>}

@@ -52,7 +52,7 @@ interface MemberModuleInfo {
 }
 
 function SettingsContent() {
-  const { currentWorkspace, currentMembership, loading, refreshWorkspace } = useWorkspace();
+  const { currentWorkspace, currentMembership, loading, refreshWorkspace, hasModule } = useWorkspace();
   const { canAccessSettings, isMasterAdmin } = usePermissions();
   const router = useRouter();
 
@@ -952,7 +952,7 @@ function SettingsContent() {
     { id: 'cooperation' as const, label: 'Spolupráce' },
     { id: 'modules' as const, label: 'Moduly' },
     { id: 'ai' as const, label: 'AI asistent' },
-    { id: 'automation' as const, label: 'Automatizace' },
+    ...(hasModule('automation') ? [{ id: 'automation' as const, label: 'Automatizace' }] : []),
   ];
 
   const inputCls = "w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent";
