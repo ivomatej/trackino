@@ -44,6 +44,7 @@ interface Member {
   user_id: string;
   display_name: string;
   avatar_color: string;
+  email: string;
 }
 
 // ── Inline Avatar ──
@@ -174,7 +175,7 @@ function TasksContent() {
   const [folders, setFolders] = useState<TaskFolder[]>([]);
   const [folderShares, setFolderShares] = useState<TaskFolderShare[]>([]);
   const [boardMembers, setBoardMembers] = useState<TaskBoardMember[]>([]);
-  const [activeBoardId, setActiveBoardId] = useState<string | null>(null);
+  const [activeBoardId, setActiveBoardId] = useState<string | null | undefined>(undefined);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [leftOpen, setLeftOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
@@ -251,11 +252,36 @@ function TasksContent() {
   const [addingColumn, setAddingColumn] = useState(false);
   const [newColumnName, setNewColumnName] = useState('');
 
-  // Sort for table
+  // Sort for table & list
   const [sortBy, setSortBy] = useState<'title' | 'priority' | 'deadline' | 'created_at' | 'assigned_to'>('created_at');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [listSortBy, setListSortBy] = useState<'default' | 'created_at' | 'updated_at' | 'deadline' | 'priority' | 'title'>('default');
+  const [myTasksMode, setMyTasksMode] = useState(false);
 
   const wsId = currentWorkspace?.id;
+
+  // ── Favorite boards (localStorage) ──
+  const [favoriteBoards, setFavoriteBoards] = useState<Set<string>>(() => {
+    if (typeof window === 'undefined' || !currentWorkspace?.id) return new Set();
+    try { return new Set(JSON.parse(localStorage.getItem(`trackino_task_favorites_${currentWorkspace.id}`) || '[]')); } catch { return new Set(); }
+  });
+  const toggleFavoriteBoard = useCallback((boardId: string) => {
+    setFavoriteBoards(prev => {
+      const next = new Set(prev);
+      next.has(boardId) ? next.delete(boardId) : next.add(boardId);
+      if (typeof window !== 'undefined' && wsId) localStorage.setItem(`trackino_task_favorites_${wsId}`, JSON.stringify([...next]));
+      return next;
+    });
+  }, [wsId]);
+
+  // Mobile detection (disable DnD on mobile)
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   // DnD sensors
   const sensors = useSensors(
@@ -348,8 +374,8 @@ function TasksContent() {
         const { data: wm } = await supabase.from('trackino_workspace_members').select('user_id').eq('workspace_id', wsId);
         if (!wm || wm.length === 0) return [];
         const uids = wm.map(m => m.user_id);
-        const { data: profiles } = await supabase.from('trackino_profiles').select('id, display_name, avatar_color').in('id', uids);
-        return (profiles ?? []).map(p => ({ user_id: p.id, display_name: p.display_name ?? '', avatar_color: p.avatar_color ?? '#6366f1' }));
+        const { data: profiles } = await supabase.from('trackino_profiles').select('id, display_name, avatar_color, email').in('id', uids);
+        return (profiles ?? []).map(p => ({ user_id: p.id, display_name: p.display_name ?? '', avatar_color: p.avatar_color ?? '#6366f1', email: p.email ?? '' }));
       })(),
       supabase.from('trackino_task_folders').select('*').eq('workspace_id', wsId).order('sort_order'),
       supabase.from('trackino_task_folder_shares').select('*').eq('workspace_id', wsId),
@@ -381,15 +407,28 @@ function TasksContent() {
       }
     }
 
-    // Set active board
-    if (board && !activeBoardId) setActiveBoardId(board.id);
+    // Set active board (not when in myTasksMode with activeBoardId=null)
+    if (board && activeBoardId === undefined) setActiveBoardId(board.id);
 
-    if (board) {
-      const targetBoardId = activeBoardId || board.id;
-      const [colRes, taskRes] = await Promise.all([
-        supabase.from('trackino_task_columns').select('*').eq('board_id', targetBoardId).order('sort_order'),
-        supabase.from('trackino_task_items').select('*').eq('board_id', targetBoardId).order('sort_order'),
-      ]);
+    if (board || boardList.length > 0) {
+      // If activeBoardId is null (myTasksMode) → load ALL boards
+      const allBoardIds = boardList.map(b => b.id);
+      const targetBoardId = activeBoardId;
+      let colRes, taskRes;
+      if (targetBoardId) {
+        [colRes, taskRes] = await Promise.all([
+          supabase.from('trackino_task_columns').select('*').eq('board_id', targetBoardId).order('sort_order'),
+          supabase.from('trackino_task_items').select('*').eq('board_id', targetBoardId).order('sort_order'),
+        ]);
+      } else if (allBoardIds.length > 0) {
+        // My tasks mode or initial: load all
+        [colRes, taskRes] = await Promise.all([
+          supabase.from('trackino_task_columns').select('*').in('board_id', allBoardIds).order('sort_order'),
+          supabase.from('trackino_task_items').select('*').in('board_id', allBoardIds).order('sort_order'),
+        ]);
+      } else {
+        colRes = { data: [] }; taskRes = { data: [] };
+      }
       setColumns((colRes.data ?? []) as TaskColumn[]);
       const tList = (taskRes.data ?? []) as TaskItem[];
       setTasks(tList);
@@ -863,6 +902,7 @@ function TasksContent() {
   // ── Left panel folder tree (hooks must be before early returns) ──
   const rootFolders = useMemo(() => folders.filter(f => !f.parent_id).sort((a, b) => a.sort_order - b.sort_order), [folders]);
   const unfiledBoards = useMemo(() => visibleBoards.filter(b => !b.folder_id), [visibleBoards]);
+  const favBoards = useMemo(() => visibleBoards.filter(b => favoriteBoards.has(b.id)), [visibleBoards, favoriteBoards]);
   const getFolderChildren = useCallback((parentId: string) => folders.filter(f => f.parent_id === parentId).sort((a, b) => a.sort_order - b.sort_order), [folders]);
   const getBoardsInFolder = useCallback((folderId: string) => visibleBoards.filter(b => b.folder_id === folderId), [visibleBoards]);
 
@@ -928,8 +968,8 @@ function TasksContent() {
                   {canManage && (
                     <>
                       <button onClick={e => { e.stopPropagation(); setFolderShareTargetId(folder.id); setFolderShareMode(folder.is_shared ? 'workspace' : 'none'); setShowFolderShareModal(true); }}
-                        className="p-0.5 rounded" title="Sdílet" style={{ color: 'var(--text-muted)' }}>
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                        className="p-0.5 rounded" title="Sdílet" style={{ color: folder.is_shared ? 'var(--primary)' : 'var(--text-muted)' }}>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
                       </button>
                       <button onClick={e => { e.stopPropagation(); const n = prompt('Přejmenovat složku:', folder.name); if (n?.trim()) renameFolder(folder.id, n.trim()); }}
                         className="p-0.5 rounded" title="Přejmenovat" style={{ color: 'var(--text-muted)' }}>
@@ -951,9 +991,16 @@ function TasksContent() {
                       style={{ paddingLeft: (depth + 1) * 12 + 8, background: activeBoardId === b.id ? 'var(--bg-hover)' : 'transparent' }}
                       onMouseEnter={e => { if (activeBoardId !== b.id) e.currentTarget.style.background = 'var(--bg-hover)'; }}
                       onMouseLeave={e => { if (activeBoardId !== b.id) e.currentTarget.style.background = 'transparent'; }}
-                      onClick={() => { setActiveBoardId(b.id); setLeftOpen(false); }}>
+                      onClick={() => { setMyTasksMode(false); setOnlyMine(false); setActiveBoardId(b.id); setLeftOpen(false); }}>
                       <div className="w-2.5 h-2.5 rounded flex-shrink-0" style={{ background: b.color ?? '#6366f1' }} />
                       <span className="text-sm flex-1 min-w-0 truncate" style={{ color: activeBoardId === b.id ? 'var(--text-primary)' : 'var(--text-muted)' }}>{b.name}</span>
+                      {/* Favorite star */}
+                      <button onClick={e => { e.stopPropagation(); toggleFavoriteBoard(b.id); }}
+                        className={`p-0.5 rounded transition-opacity flex-shrink-0 ${favoriteBoards.has(b.id) ? 'opacity-80' : 'opacity-0 group-hover/board:opacity-100'}`}
+                        title={favoriteBoards.has(b.id) ? 'Odebrat z oblíbených' : 'Přidat do oblíbených'}
+                        style={{ color: favoriteBoards.has(b.id) ? '#f59e0b' : 'var(--text-muted)' }}>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill={favoriteBoards.has(b.id) ? '#f59e0b' : 'none'} stroke="currentColor" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                      </button>
                       {b.is_shared && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="flex-shrink-0" style={{ color: 'var(--text-muted)' }}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>}
                       {canManage && (
                         <span className="opacity-0 group-hover/board:opacity-100 flex gap-0.5 flex-shrink-0 transition-opacity">
@@ -975,13 +1022,20 @@ function TasksContent() {
           );
         })}
         {parentId && childBoards.map(b => (
-          <div key={b.id} className="flex items-center gap-2 py-1 px-2 rounded-lg cursor-pointer transition-colors"
+          <div key={b.id} className="flex items-center gap-2 py-1 px-2 rounded-lg cursor-pointer transition-colors group/board"
             style={{ paddingLeft: depth * 12 + 8, background: activeBoardId === b.id ? 'var(--bg-hover)' : 'transparent' }}
             onMouseEnter={e => { if (activeBoardId !== b.id) e.currentTarget.style.background = 'var(--bg-hover)'; }}
             onMouseLeave={e => { if (activeBoardId !== b.id) e.currentTarget.style.background = 'transparent'; }}
-            onClick={() => { setActiveBoardId(b.id); setLeftOpen(false); }}>
+            onClick={() => { setMyTasksMode(false); setOnlyMine(false); setActiveBoardId(b.id); setLeftOpen(false); }}>
             <div className="w-2.5 h-2.5 rounded flex-shrink-0" style={{ background: b.color ?? '#6366f1' }} />
             <span className="text-sm flex-1 min-w-0 truncate" style={{ color: activeBoardId === b.id ? 'var(--text-primary)' : 'var(--text-muted)' }}>{b.name}</span>
+            {/* Favorite star */}
+            <button onClick={e => { e.stopPropagation(); toggleFavoriteBoard(b.id); }}
+              className={`p-0.5 rounded transition-opacity flex-shrink-0 ${favoriteBoards.has(b.id) ? 'opacity-80' : 'opacity-0 group-hover/board:opacity-100'}`}
+              title={favoriteBoards.has(b.id) ? 'Odebrat z oblíbených' : 'Přidat do oblíbených'}
+              style={{ color: favoriteBoards.has(b.id) ? '#f59e0b' : 'var(--text-muted)' }}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill={favoriteBoards.has(b.id) ? '#f59e0b' : 'none'} stroke="currentColor" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            </button>
           </div>
         ))}
       </>
@@ -1062,43 +1116,70 @@ function TasksContent() {
           {/* All tasks / My tasks nav */}
           <div className="mb-2 space-y-0.5">
             <button className="flex items-center gap-2 w-full py-1.5 px-2 rounded-lg text-sm transition-colors"
-              style={{ color: 'var(--text-primary)' }}
-              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-              onClick={() => { setOnlyMine(false); }}>
+              style={{ color: !myTasksMode && !activeBoardId ? 'var(--primary)' : 'var(--text-primary)', background: !myTasksMode && !activeBoardId ? 'var(--primary)' + '08' : 'transparent' }}
+              onMouseEnter={e => { if (myTasksMode || activeBoardId) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+              onMouseLeave={e => { if (myTasksMode || activeBoardId) e.currentTarget.style.background = 'transparent'; }}
+              onClick={() => { setMyTasksMode(false); setOnlyMine(false); setActiveBoardId(boards[0]?.id ?? null); setLeftOpen(false); }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)' }}><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
               Všechny úkoly
             </button>
             <button className="flex items-center gap-2 w-full py-1.5 px-2 rounded-lg text-sm transition-colors"
-              style={{ color: onlyMine ? 'var(--primary)' : 'var(--text-primary)', background: onlyMine ? 'var(--primary)' + '08' : 'transparent' }}
-              onMouseEnter={e => { if (!onlyMine) e.currentTarget.style.background = 'var(--bg-hover)'; }}
-              onMouseLeave={e => { if (!onlyMine) e.currentTarget.style.background = 'transparent'; }}
-              onClick={() => setOnlyMine(true)}>
+              style={{ color: myTasksMode ? 'var(--primary)' : 'var(--text-primary)', background: myTasksMode ? 'var(--primary)' + '08' : 'transparent' }}
+              onMouseEnter={e => { if (!myTasksMode) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+              onMouseLeave={e => { if (!myTasksMode) e.currentTarget.style.background = 'transparent'; }}
+              onClick={() => { setMyTasksMode(true); setOnlyMine(true); setView('list'); setListSortBy('updated_at'); setActiveBoardId(null); setLeftOpen(false); }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)' }}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               Moje úkoly
             </button>
           </div>
 
-          {/* Folders section label */}
+          {/* ── OBLÍBENÉ ── */}
+          {favBoards.length > 0 && (
+            <>
+              <div className="text-[10px] font-semibold uppercase tracking-wider px-2 py-1 mt-1" style={{ color: 'var(--text-muted)' }}>Oblíbené</div>
+              {favBoards.map(b => (
+                <div key={b.id} className="flex items-center gap-2 py-1 px-2 rounded-lg cursor-pointer transition-colors group/board"
+                  style={{ background: activeBoardId === b.id ? 'var(--bg-hover)' : 'transparent' }}
+                  onMouseEnter={e => { if (activeBoardId !== b.id) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                  onMouseLeave={e => { if (activeBoardId !== b.id) e.currentTarget.style.background = 'transparent'; }}
+                  onClick={() => { setMyTasksMode(false); setOnlyMine(false); setActiveBoardId(b.id); setLeftOpen(false); }}>
+                  <div className="w-2.5 h-2.5 rounded flex-shrink-0" style={{ background: b.color ?? '#6366f1' }} />
+                  <span className="text-sm flex-1 min-w-0 truncate" style={{ color: activeBoardId === b.id ? 'var(--text-primary)' : 'var(--text-muted)' }}>{b.name}</span>
+                  <button onClick={e => { e.stopPropagation(); toggleFavoriteBoard(b.id); }} className="opacity-0 group-hover/board:opacity-100 p-0.5 rounded transition-opacity flex-shrink-0" title="Odebrat z oblíbených" style={{ color: '#f59e0b' }}>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                </div>
+              ))}
+            </>
+          )}
+
+          {/* ── SLOŽKY ── */}
           {rootFolders.length > 0 && (
-            <div className="text-[10px] font-semibold uppercase tracking-wider px-2 py-1" style={{ color: 'var(--text-muted)' }}>Složky</div>
+            <div className="text-[10px] font-semibold uppercase tracking-wider px-2 py-1 mt-1" style={{ color: 'var(--text-muted)' }}>Složky</div>
           )}
 
           {/* Folder tree */}
           {renderFolderTree(null, 0)}
 
-          {/* Unfiled boards */}
+          {/* ── NEZAŘAZENÉ ── */}
           {unfiledBoards.length > 0 && (
             <>
-              <div className="text-[10px] font-semibold uppercase tracking-wider px-2 py-1 mt-2" style={{ color: 'var(--text-muted)' }}>Projekty</div>
+              <div className="text-[10px] font-semibold uppercase tracking-wider px-2 py-1 mt-2" style={{ color: 'var(--text-muted)' }}>Nezařazené</div>
               {unfiledBoards.map(b => (
                 <div key={b.id} className="flex items-center gap-2 py-1 px-2 rounded-lg cursor-pointer transition-colors group/board"
                   style={{ background: activeBoardId === b.id ? 'var(--bg-hover)' : 'transparent' }}
                   onMouseEnter={e => { if (activeBoardId !== b.id) e.currentTarget.style.background = 'var(--bg-hover)'; }}
                   onMouseLeave={e => { if (activeBoardId !== b.id) e.currentTarget.style.background = 'transparent'; }}
-                  onClick={() => { setActiveBoardId(b.id); setLeftOpen(false); }}>
+                  onClick={() => { setMyTasksMode(false); setOnlyMine(false); setActiveBoardId(b.id); setLeftOpen(false); }}>
                   <div className="w-2.5 h-2.5 rounded flex-shrink-0" style={{ background: b.color ?? '#6366f1' }} />
                   <span className="text-sm flex-1 min-w-0 truncate" style={{ color: activeBoardId === b.id ? 'var(--text-primary)' : 'var(--text-muted)' }}>{b.name}</span>
+                  {/* Favorite star */}
+                  <button onClick={e => { e.stopPropagation(); toggleFavoriteBoard(b.id); }}
+                    className={`p-0.5 rounded transition-opacity flex-shrink-0 ${favoriteBoards.has(b.id) ? 'opacity-80' : 'opacity-0 group-hover/board:opacity-100'}`}
+                    title={favoriteBoards.has(b.id) ? 'Odebrat z oblíbených' : 'Přidat do oblíbených'}
+                    style={{ color: favoriteBoards.has(b.id) ? '#f59e0b' : 'var(--text-muted)' }}>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill={favoriteBoards.has(b.id) ? '#f59e0b' : 'none'} stroke="currentColor" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                  </button>
                   {b.is_shared && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="flex-shrink-0" style={{ color: 'var(--text-muted)' }}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>}
                   {canManage && (
                     <span className="opacity-0 group-hover/board:opacity-100 flex gap-0.5 flex-shrink-0 transition-opacity">
@@ -1137,7 +1218,7 @@ function TasksContent() {
     <div className="flex flex-col flex-1 min-h-0">
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
-        <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{activeBoard?.name ?? 'Úkoly'}</h1>
+        <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{myTasksMode ? 'Moje úkoly' : (activeBoard?.name ?? 'Úkoly')}</h1>
         <div className="flex items-center gap-2 flex-wrap flex-1">
           {/* View switcher */}
           <div className="flex rounded-lg overflow-hidden border" style={{ borderColor: 'var(--border)' }}>
@@ -1149,6 +1230,22 @@ function TasksContent() {
               </button>
             ))}
           </div>
+
+          {/* List sort selector */}
+          {view === 'list' && (
+            <div className="relative">
+              <select value={listSortBy} onChange={e => setListSortBy(e.target.value as typeof listSortBy)}
+                className={selectCls} style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-primary)', minWidth: 140 }}>
+                <option value="default">Dle sloupce</option>
+                <option value="updated_at">Naposledy přiřazené</option>
+                <option value="created_at">Nejnovější</option>
+                <option value="deadline">Dle termínu</option>
+                <option value="priority">Dle priority</option>
+                <option value="title">Dle názvu</option>
+              </select>
+              <SelectChevron />
+            </div>
+          )}
 
           <div className="flex-1" />
 
@@ -1187,7 +1284,7 @@ function TasksContent() {
               style={{ color: 'var(--text-muted)' }}
               onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
             </button>
           )}
 
@@ -1260,62 +1357,87 @@ function TasksContent() {
         <div className="flex-1 min-w-0 overflow-auto">
 
           {/* ── LIST VIEW ── */}
-          {view === 'list' && (
-            <div className="space-y-4">
-              {sortedColumns.map(col => {
-                const colTasks = filteredTasks.filter(t => t.column_id === col.id).sort((a, b) => a.sort_order - b.sort_order);
-                if (hideCompleted && col.id === doneColumnId && colTasks.length === 0) return null;
-                return (
-                  <div key={col.id}>
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{col.name}</span>
-                      <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>{colTasks.length}</span>
+          {view === 'list' && (() => {
+            // Sort helper for flat list mode
+            const sortTasksList = (list: TaskItem[]) => {
+              if (listSortBy === 'default') return list;
+              return [...list].sort((a, b) => {
+                if (listSortBy === 'updated_at') return (b.updated_at ?? b.created_at).localeCompare(a.updated_at ?? a.created_at);
+                if (listSortBy === 'created_at') return b.created_at.localeCompare(a.created_at);
+                if (listSortBy === 'deadline') return (a.deadline ?? '9999').localeCompare(b.deadline ?? '9999');
+                if (listSortBy === 'priority') {
+                  const order = { urgent: 0, high: 1, medium: 2, low: 3, none: 4 };
+                  return order[a.priority] - order[b.priority];
+                }
+                if (listSortBy === 'title') return a.title.localeCompare(b.title, 'cs');
+                return 0;
+              });
+            };
+            const renderListRow = (task: TaskItem) => {
+              const assignee = members.find(m => m.user_id === task.assigned_to);
+              const subs = subtaskMap.get(task.id) ?? [];
+              const doneSubs = subs.filter(s => s.is_done).length;
+              const pc = PRIORITY_CONFIG[task.priority];
+              const isOverdue = task.deadline && new Date(task.deadline + 'T23:59:59') < new Date();
+              const boardName = myTasksMode ? boards.find(b => b.id === task.board_id)?.name : null;
+              return (
+                <div key={task.id} className="flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 cursor-pointer transition-colors"
+                  onClick={() => openDetail(task)} role="button" tabIndex={0}
+                  onKeyDown={e => { if (e.key === 'Enter') openDetail(task); }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  style={{ background: 'transparent' }}>
+                  <button className="flex-shrink-0" onClick={e => { e.stopPropagation(); toggleComplete(task); }}>
+                    <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors" style={{ borderColor: task.is_completed ? '#22c55e' : 'var(--border)', background: task.is_completed ? '#22c55e' : 'transparent' }}>
+                      {task.is_completed && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><path d="M20 6L9 17l-5-5"/></svg>}
                     </div>
-                    {colTasks.map(task => {
-                      const assignee = members.find(m => m.user_id === task.assigned_to);
-                      const subs = subtaskMap.get(task.id) ?? [];
-                      const doneSubs = subs.filter(s => s.is_done).length;
-                      const pc = PRIORITY_CONFIG[task.priority];
-                      const isOverdue = task.deadline && new Date(task.deadline + 'T23:59:59') < new Date();
-                      return (
-                        <div key={task.id} className="flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 cursor-pointer transition-colors"
-                          onClick={() => openDetail(task)} role="button" tabIndex={0}
-                          onKeyDown={e => { if (e.key === 'Enter') openDetail(task); }}
-                          onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
-                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                          style={{ background: 'transparent' }}>
-                          {/* Completion checkbox */}
-                          {canManage && (
-                            <button className="flex-shrink-0" onClick={e => { e.stopPropagation(); toggleComplete(task); }}>
-                              <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors" style={{ borderColor: task.is_completed ? '#22c55e' : 'var(--border)', background: task.is_completed ? '#22c55e' : 'transparent' }}>
-                                {task.is_completed && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><path d="M20 6L9 17l-5-5"/></svg>}
-                              </div>
-                            </button>
-                          )}
-                          <span className="text-sm flex-1 min-w-0 truncate" style={{ color: 'var(--text-primary)', textDecoration: task.is_completed ? 'line-through' : 'none', opacity: task.is_completed ? 0.5 : 1 }}>{task.title}</span>
-                          {task.priority !== 'none' && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded font-medium flex-shrink-0" style={{ background: pc.color + '18', color: pc.color }}>{pc.label}</span>
-                          )}
-                          {subs.length > 0 && (
-                            <span className="text-xs flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{doneSubs}/{subs.length}</span>
-                          )}
-                          {task.deadline && (
-                            <span className="text-xs flex-shrink-0" style={{ color: isOverdue ? '#ef4444' : 'var(--text-muted)' }}>
-                              {new Date(task.deadline).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'numeric' })}
-                            </span>
-                          )}
-                          {assignee ? <Avatar name={assignee.display_name} color={assignee.avatar_color} size={22} /> : <span className="text-xs" style={{ color: 'var(--text-muted)' }}>–</span>}
-                        </div>
-                      );
-                    })}
-                    {colTasks.length === 0 && (
-                      <div className="text-xs py-2 px-3" style={{ color: 'var(--text-muted)' }}>Žádné úkoly</div>
-                    )}
-                  </div>
-                );
-              })}
+                  </button>
+                  <span className="text-sm flex-1 min-w-0 truncate" style={{ color: 'var(--text-primary)', textDecoration: task.is_completed ? 'line-through' : 'none', opacity: task.is_completed ? 0.5 : 1 }}>{task.title}</span>
+                  {boardName && <span className="text-[10px] px-1.5 py-0.5 rounded flex-shrink-0" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>{boardName}</span>}
+                  {task.priority !== 'none' && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded font-medium flex-shrink-0" style={{ background: pc.color + '18', color: pc.color }}>{pc.label}</span>
+                  )}
+                  {subs.length > 0 && (
+                    <span className="text-xs flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{doneSubs}/{subs.length}</span>
+                  )}
+                  {task.deadline && (
+                    <span className="text-xs flex-shrink-0" style={{ color: isOverdue ? '#ef4444' : 'var(--text-muted)' }}>
+                      {new Date(task.deadline).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'numeric' })}
+                    </span>
+                  )}
+                  {assignee ? <Avatar name={assignee.display_name} color={assignee.avatar_color} size={22} /> : <span className="text-xs" style={{ color: 'var(--text-muted)' }}>–</span>}
+                </div>
+              );
+            };
+
+            return (
+            <div className="space-y-4">
+              {listSortBy !== 'default' ? (
+                // Flat sorted list
+                <>
+                  {sortTasksList(filteredTasks).map(renderListRow)}
+                  {filteredTasks.length === 0 && <div className="text-xs py-2 px-3" style={{ color: 'var(--text-muted)' }}>Žádné úkoly</div>}
+                </>
+              ) : (
+                // Grouped by column
+                sortedColumns.map(col => {
+                  const colTasks = filteredTasks.filter(t => t.column_id === col.id).sort((a, b) => a.sort_order - b.sort_order);
+                  if (hideCompleted && col.id === doneColumnId && colTasks.length === 0) return null;
+                  return (
+                    <div key={col.id}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{col.name}</span>
+                        <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>{colTasks.length}</span>
+                      </div>
+                      {colTasks.map(renderListRow)}
+                      {colTasks.length === 0 && <div className="text-xs py-2 px-3" style={{ color: 'var(--text-muted)' }}>Žádné úkoly</div>}
+                    </div>
+                  );
+                })
+              )}
             </div>
-          )}
+            );
+          })()}
 
           {/* ── KANBAN VIEW ── */}
           {view === 'kanban' && (
@@ -1328,7 +1450,7 @@ function TasksContent() {
                   const boardSettings = activeBoard?.settings ?? {};
                   const colBg = boardSettings.column_colors_enabled && col.color ? col.color + '0d' : 'var(--bg-hover)';
                   return (
-                    <SortableColumnWrapper key={col.id} id={col.id} canDrag={canManage} render={(dragListeners: Record<string, unknown>) => (
+                    <SortableColumnWrapper key={col.id} id={col.id} canDrag={canManage && !isMobile} render={(dragListeners: Record<string, unknown>) => (
                     <div className="rounded-xl p-3" style={{ background: colBg }}>
                       {/* Column header */}
                       <div className="flex items-center gap-2 mb-3 group/colheader" {...(canManage ? dragListeners : {})}>
@@ -1346,10 +1468,9 @@ function TasksContent() {
                         ) : (
                           <span className="text-sm font-semibold flex-1 min-w-0 truncate cursor-pointer" style={{ color: 'var(--text-primary)' }}
                             onDoubleClick={e => { e.stopPropagation(); if (canManage) { setEditingColumnId(col.id); setEditColumnName(col.name); } }}>
-                            {col.name}
+                            {col.name} <span className="text-xs font-normal" style={{ color: 'var(--text-muted)' }}>{colTasks.length}</span>
                           </span>
                         )}
-                        <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: 'var(--bg-card)', color: 'var(--text-muted)' }}>{colTasks.length}</span>
                         {canManage && (
                           <>
                             <button onClick={e => { e.stopPropagation(); setQuickAddCol(col.id); setQuickAddTitle(''); }} className="p-1 rounded transition-colors opacity-0 group-hover/colheader:opacity-100" title="Přidat úkol"
@@ -1374,7 +1495,7 @@ function TasksContent() {
                           {colTasks.map(task => (
                             <SortableCard key={task.id} task={task} members={members} subtaskMap={subtaskMap}
                               commentCountMap={commentCountMap} attachCountMap={attachCountMap}
-                              onOpen={openDetail} canDrag={canManage} onToggleComplete={canManage ? toggleComplete : undefined} />
+                              onOpen={openDetail} canDrag={canManage && !isMobile} onToggleComplete={canManage ? toggleComplete : undefined} />
                           ))}
                           {colTasks.length === 0 && <div className="text-xs py-4 text-center" style={{ color: 'var(--text-muted)' }}>Přetáhněte sem úkol</div>}
                         </SortableContext>
@@ -1584,6 +1705,23 @@ function TasksContent() {
                 </button>
               </div>
 
+              {/* Completion toggle */}
+              <button className="flex items-center gap-3 mb-4 px-3 py-2.5 rounded-lg border w-full transition-colors"
+                style={{
+                  borderColor: selectedTask.is_completed ? '#22c55e44' : 'var(--border)',
+                  background: selectedTask.is_completed ? '#22c55e0d' : 'var(--bg-card)',
+                  cursor: canManage ? 'pointer' : 'default',
+                }}
+                onClick={() => { if (canManage) toggleComplete(selectedTask); }}>
+                <div className="w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors flex-shrink-0"
+                  style={{ borderColor: selectedTask.is_completed ? '#22c55e' : 'var(--border)', background: selectedTask.is_completed ? '#22c55e' : 'transparent' }}>
+                  {selectedTask.is_completed && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><path d="M20 6L9 17l-5-5"/></svg>}
+                </div>
+                <span className="text-sm font-medium" style={{ color: selectedTask.is_completed ? '#22c55e' : 'var(--text-primary)' }}>
+                  {selectedTask.is_completed ? 'Dokončeno' : 'Označit jako dokončené'}
+                </span>
+              </button>
+
               {/* Status / Priority / Assignee / Deadline grid */}
               <div className="grid grid-cols-2 gap-3 mb-4">
                 {/* Status */}
@@ -1592,7 +1730,7 @@ function TasksContent() {
                   <div className="relative">
                     <select value={selectedTask.column_id ?? ''} disabled={!canManage}
                       onChange={e => { const cid = e.target.value; moveTaskTo(selectedTask, cid); setSelectedTask(prev => prev ? { ...prev, column_id: cid } : null); }}
-                      className={selectCls} style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}>
+                      className={selectCls} style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}>
                       {sortedColumns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                     <SelectChevron />
@@ -1609,7 +1747,7 @@ function TasksContent() {
                         updateTask(selectedTask.id, { priority: p }, 'priority_changed', PRIORITY_CONFIG[selectedTask.priority].label, PRIORITY_CONFIG[p].label);
                         setSelectedTask(prev => prev ? { ...prev, priority: p } : null);
                       }}
-                      className={selectCls} style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}>
+                      className={selectCls} style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}>
                       {Object.entries(PRIORITY_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                     </select>
                     <SelectChevron />
@@ -1627,7 +1765,7 @@ function TasksContent() {
                         updateTask(selectedTask.id, { assigned_to: uid }, 'assigned', members.find(m => m.user_id === selectedTask.assigned_to)?.display_name ?? 'Nepřiřazen', name);
                         setSelectedTask(prev => prev ? { ...prev, assigned_to: uid } : null);
                       }}
-                      className={selectCls} style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}>
+                      className={selectCls} style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}>
                       <option value="">Nepřiřazen</option>
                       {members.map(m => <option key={m.user_id} value={m.user_id}>{m.display_name}</option>)}
                     </select>
@@ -1645,7 +1783,7 @@ function TasksContent() {
                       setSelectedTask(prev => prev ? { ...prev, deadline: d } : null);
                     }}
                     className="text-base sm:text-sm rounded-lg border px-3 py-2 w-full"
-                    style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
                   />
                 </div>
               </div>
@@ -1656,7 +1794,7 @@ function TasksContent() {
                 {canManage ? (
                   <>
                     {/* Rich text toolbar */}
-                    <div className="flex items-center gap-0.5 mb-1 rounded-t-lg border border-b-0 px-1 py-1" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
+                    <div className="flex items-center gap-0.5 mb-1 rounded-t-lg border border-b-0 px-1 py-1" style={{ borderColor: 'var(--border)', background: 'var(--bg-card)' }}>
                       {[
                         { cmd: 'bold', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/></svg>, title: 'Tučně' },
                         { cmd: 'italic', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/></svg>, title: 'Kurzíva' },
@@ -1667,7 +1805,7 @@ function TasksContent() {
                         <button key={btn.cmd} title={btn.title} className="p-1.5 rounded transition-colors"
                           style={{ color: 'var(--text-muted)' }}
                           onMouseDown={e => e.preventDefault()}
-                          onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-card)'}
+                          onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
                           onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                           onClick={() => document.execCommand(btn.cmd)}>
                           {btn.icon}
@@ -1676,7 +1814,7 @@ function TasksContent() {
                     </div>
                     <div ref={descRef} contentEditable suppressContentEditableWarning
                       className="text-base sm:text-sm rounded-b-lg border px-3 py-2 min-h-[120px] focus:outline-none"
-                      style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+                      style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
                       dangerouslySetInnerHTML={{ __html: selectedTask.description }}
                       onBlur={saveDescription}
                     />
@@ -1804,7 +1942,7 @@ function TasksContent() {
                 </div>
                 <div className="mt-2">
                   {/* Comment toolbar */}
-                  <div className="flex items-center gap-0.5 rounded-t-lg border border-b-0 px-1 py-0.5" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
+                  <div className="flex items-center gap-0.5 rounded-t-lg border border-b-0 px-1 py-0.5" style={{ borderColor: 'var(--border)', background: 'var(--bg-card)' }}>
                     {[
                       { cmd: 'bold', icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/></svg> },
                       { cmd: 'italic', icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/></svg> },
@@ -1812,7 +1950,7 @@ function TasksContent() {
                     ].map(btn => (
                       <button key={btn.cmd} className="p-1 rounded transition-colors" style={{ color: 'var(--text-muted)' }}
                         onMouseDown={e => e.preventDefault()}
-                        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-card)'}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                         onClick={() => document.execCommand(btn.cmd)}>
                         {btn.icon}
@@ -1822,7 +1960,7 @@ function TasksContent() {
                   <div className="flex flex-col">
                     <div ref={commentRef} contentEditable suppressContentEditableWarning
                       className="text-base sm:text-sm rounded-b-lg border px-3 py-2 min-h-[80px] focus:outline-none"
-                      style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+                      style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
                       data-placeholder="Napsat komentář..."
                       onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); const html = commentRef.current?.innerHTML ?? ''; if (html.replace(/<[^>]*>/g, '').trim()) { setNewComment(html); setTimeout(() => addComment(), 0); } } }}
                     />
@@ -1983,51 +2121,61 @@ function TasksContent() {
       {/* ██  SHARE MODAL                  */}
       {/* ══════════════════════════════════ */}
       {showShareModal && activeBoard && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.4)' }}
-          onClick={() => setShowShareModal(false)}>
-          <div className="rounded-xl border p-6 max-w-md w-full mx-4" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowShareModal(false)}>
+          <div className="w-96 p-5 rounded-2xl border shadow-xl mx-4" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}
             onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-bold mb-4" style={{ color: 'var(--text-primary)' }}>Sdílení projektu</h3>
-            <div className="space-y-3 mb-4">
-              {[
-                { mode: 'none' as const, label: 'Nesdílet', desc: 'Viditelné všem ve workspace' },
-                { mode: 'workspace' as const, label: 'Celý workspace', desc: 'Viditelné všem členům' },
-                { mode: 'users' as const, label: 'Konkrétní uživatelé', desc: 'Jen vybraní členové' },
-              ].map(opt => (
-                <button key={opt.mode} className="flex items-start gap-3 w-full p-3 rounded-lg border transition-colors text-left"
-                  style={{ borderColor: shareMode === opt.mode ? 'var(--primary)' : 'var(--border)', background: shareMode === opt.mode ? 'var(--primary)' + '08' : 'transparent' }}
-                  onClick={() => setShareMode(opt.mode)}>
-                  <div className="w-4 h-4 rounded-full border-2 flex-shrink-0 mt-0.5 flex items-center justify-center"
-                    style={{ borderColor: shareMode === opt.mode ? 'var(--primary)' : 'var(--border)' }}>
-                    {shareMode === opt.mode && <div className="w-2 h-2 rounded-full" style={{ background: 'var(--primary)' }} />}
-                  </div>
+            <h2 className="font-semibold mb-1 text-sm" style={{ color: 'var(--text-primary)' }}>Sdílet projekt „{activeBoard.name}"</h2>
+            <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>Určete, kdo může projekt a jeho úkoly vidět</p>
+            <div className="space-y-2 mb-4">
+              {([
+                { id: 'none' as const, label: 'Nesdílet s nikým', desc: 'Projekt zůstane soukromý' },
+                { id: 'workspace' as const, label: 'Celý workspace', desc: 'Vidí všichni členové' },
+                { id: 'users' as const, label: 'Konkrétní uživatelé', desc: 'Vybraní členové' },
+              ]).map(opt => (
+                <label key={opt.id} className="flex items-center gap-3 p-3 rounded-xl border cursor-pointer"
+                  style={{ borderColor: shareMode === opt.id ? 'var(--primary)' : 'var(--border)', background: shareMode === opt.id ? 'var(--bg-active, var(--bg-hover))' : 'transparent' }}>
+                  <input type="radio" checked={shareMode === opt.id} onChange={() => setShareMode(opt.id)} className="accent-[var(--primary)]" />
                   <div>
                     <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{opt.label}</div>
                     <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{opt.desc}</div>
                   </div>
-                </button>
+                </label>
               ))}
             </div>
             {shareMode === 'users' && (
-              <div className="space-y-1 mb-4 max-h-[200px] overflow-y-auto">
-                {members.map(m => (
-                  <button key={m.user_id} className="flex items-center gap-2 w-full p-2 rounded-lg transition-colors"
-                    style={{ background: shareSelectedUsers.has(m.user_id) ? 'var(--primary)' + '12' : 'transparent' }}
-                    onClick={() => setShareSelectedUsers(prev => {
-                      const next = new Set(prev);
-                      next.has(m.user_id) ? next.delete(m.user_id) : next.add(m.user_id);
-                      return next;
-                    })}>
-                    <Avatar name={m.display_name} color={m.avatar_color} size={24} />
-                    <span className="text-sm" style={{ color: 'var(--text-primary)' }}>{m.display_name}</span>
-                    {shareSelectedUsers.has(m.user_id) && <svg className="ml-auto" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2.5"><path d="M20 6L9 17l-5-5"/></svg>}
-                  </button>
-                ))}
+              <div className="mb-4 max-h-48 overflow-y-auto space-y-1 rounded-xl border p-2" style={{ borderColor: 'var(--border)' }}>
+                {members.filter(m => m.user_id !== user?.id).length === 0 && (
+                  <p className="text-xs px-2 py-1" style={{ color: 'var(--text-muted)' }}>Žádní další členové workspace</p>
+                )}
+                {members.filter(m => m.user_id !== user?.id).map(m => {
+                  const isChecked = shareSelectedUsers.has(m.user_id);
+                  return (
+                    <label key={m.user_id}
+                      className="flex items-center gap-3 px-2 py-2 rounded-lg cursor-pointer transition-colors"
+                      style={{ background: isChecked ? 'var(--bg-active, var(--bg-hover))' : 'transparent' }}
+                      onMouseEnter={e => { if (!isChecked) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = isChecked ? 'var(--bg-active, var(--bg-hover))' : 'transparent'; }}
+                    >
+                      <input type="checkbox" checked={isChecked}
+                        onChange={() => setShareSelectedUsers(prev => {
+                          const next = new Set(prev);
+                          next.has(m.user_id) ? next.delete(m.user_id) : next.add(m.user_id);
+                          return next;
+                        })}
+                        className="accent-[var(--primary)] flex-shrink-0" />
+                      <Avatar name={m.display_name} color={m.avatar_color} size={28} />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm truncate" style={{ color: 'var(--text-primary)' }}>{m.display_name}</div>
+                        {m.email && <div className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{m.email}</div>}
+                      </div>
+                    </label>
+                  );
+                })}
               </div>
             )}
-            <div className="flex gap-2 justify-end">
-              <button onClick={() => setShowShareModal(false)} className="px-4 py-2 rounded-lg text-sm font-medium" style={{ color: 'var(--text-muted)' }}>Zrušit</button>
-              <button onClick={saveBoardSharing} className="px-4 py-2 rounded-lg text-sm font-medium" style={{ background: 'var(--primary)', color: '#fff' }}>Uložit</button>
+            <div className="flex gap-2">
+              <button onClick={() => setShowShareModal(false)} className="flex-1 py-2 rounded-lg text-sm font-medium border" style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>Zrušit</button>
+              <button onClick={saveBoardSharing} className="flex-1 py-2 rounded-lg text-sm font-medium text-white" style={{ background: 'var(--primary)' }}>Uložit</button>
             </div>
           </div>
         </div>
