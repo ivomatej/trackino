@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 8. 3. 2026 (v2.51.1)
+> Aktualizováno: 9. 3. 2026 (v2.51.2)
 
 ---
 
@@ -540,6 +540,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.51.2 | 9. 3. 2026 | Úkoly – 7 oprav: výrazné tlačítko dokončení v detailu; „Moje úkoly" řazení „Naposledy přiřazené" (updated_at); share modal oprava pořadí tlačítek + email pod jménem; DnD deaktivován na mobilu; odstraněno šedé pozadí z detail panel polí |
 | v2.51.1 | 8. 3. 2026 | Úkoly – 8 vylepšení: odstraněn badge ze sidebaru; detail úkolu jako fixní overlay z pravé strany (celý viewport); pořadí sloupců v nastavení boardu (šipky ↑↓); editace projektů v levém panelu (hover akce tužka/křížek + modal); oprava priority strip zaoblení (overflow-hidden); redesign komentářového pole; zasouvací/vysouvací levý sidebar na desktopu (localStorage persist); Kalendář – SVG ikonka opakující se události přesunuta do pravého horního rohu (Týden/3 dny/Den/Měsíc) |
 | v2.51.0 | 8. 3. 2026 | Úkoly – kompletní refaktoring modulu: přesun do NÁSTROJE v sidebaru; DnD přesouvání úkolů mezi sloupci (useDroppable fix); DnD přesouvání celých sloupců (horizontalListSortingStrategy); editace/mazání sloupců (double-click přejmenování); checkbox dokončení úkolu (is_completed, line-through + opacity); nastavení nástěnky (auto-přesun dokončených, barvy sloupců); rich text editor v popisu a komentářích (B/I/U, seznamy); přiřazení řešitele podúkolů; klik mimo detail panel = zavření; levý sidebar se složkami a projekty (rekurzivní strom, max 5 úrovní); sdílení projektů (nesdílet/workspace/konkrétní uživatelé); auto-hide horizontální scrollbar (kanban-scroll CSS); 3 nové DB tabulky + 7 ALTER |
 | v2.50.1 | 8. 3. 2026 | Kalendář – Opakující se události: 14 typů opakování (denně/týdně/měsíčně/ročně + speciální vzory: 1./poslední den v týdnu/měsíci/kvartálu/roce + konkrétní den v měsíci); expandRecurringEvent() funkce; UI select v event modalu; info o opakování v detail modalu; podpora pro sdílené i účastnické události; 2 nové sloupce (recurrence_type, recurrence_day na trackino_calendar_events) |

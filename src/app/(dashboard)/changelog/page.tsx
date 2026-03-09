@@ -11,6 +11,19 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.51.2 – 9. 3. 2026</h3>
+<ul>
+  <li><strong>Úkoly – 7 oprav</strong>:
+    <ul>
+      <li><strong>Dokončení v detailu úkolu</strong> – výrazné tlačítko „Označit jako dokončené" s orámováním a zeleným pozadím po dokončení</li>
+      <li><strong>Moje úkoly – nové řazení</strong> – kliknutí na „Moje úkoly" nyní přepne do Seznamu s řazením „Naposledy přiřazené" (dle data poslední změny); přibyla nová volba v rozbalovací nabídce</li>
+      <li><strong>Share modal</strong> – opraveno pořadí tlačítek (Zrušit vlevo, Uložit vpravo); u konkrétních uživatelů se nyní zobrazuje email pod jménem</li>
+      <li><strong>Drag & drop deaktivován na mobilu</strong> – DnD přesouvání úkolů a sloupců je nyní k dispozici jen na desktopu</li>
+      <li><strong>Detail panel</strong> – odstraněno šedé pozadí z polí Status/Priorita/Řešitel/Termín (nyní bílé jako zbytek panelu)</li>
+    </ul>
+  </li>
+</ul>
+
 <h3>v2.51.1 – 8. 3. 2026</h3>
 <ul>
   <li><strong>Úkoly – 8 vylepšení</strong>:

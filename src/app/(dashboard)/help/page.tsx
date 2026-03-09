@@ -315,7 +315,10 @@ const DEFAULT_HELP_CONTENT = `
   <li><strong>Podúkoly</strong> – checklist s progress barem; přiřazení řešitele ke každému podúkolu</li>
   <li><strong>Komentáře</strong> – rich text (tučné/kurzíva/podtržení) s avatarem autora; větší vstupní pole s tlačítkem pod inputem</li>
   <li><strong>Sdílení projektů</strong> – 3 režimy: Nesdílet / Celý workspace / Konkrétní uživatelé; nesdílené projekty vidí jen vlastník a admini</li>
-  <li><strong>Filtrování</strong> – fulltextové hledání, filtr dle přiřazeného člena, priority, deadline; přepínač „Jen moje úkoly"; skrytí dokončených</li>
+  <li><strong>Filtrování</strong> – fulltextové hledání, filtr dle přiřazeného člena, priority, deadline; přepínač „Jen moje úkoly"; skrytí dokončených; řazení dle data, priority, názvu, termínu a „Naposledy přiřazené"</li>
+  <li><strong>Moje úkoly</strong> – kliknutí na „Moje úkoly" v levém panelu přepne do Seznamu, zobrazí pouze úkoly přiřazené vám a seřadí je dle posledního přiřazení. Řazení lze kdykoli změnit přes rozbalovací nabídku.</li>
+  <li><strong>Dokončení v detailu</strong> – v detailu úkolu je výrazné tlačítko „Označit jako dokončené" se zeleným orámováním po dokončení</li>
+  <li><strong>Drag & drop jen na desktopu</strong> – přesouvání úkolů tažením je k dispozici pouze na desktopu; na mobilních zařízeních je deaktivováno pro pohodlnější ovládání</li>
   <li><strong>Oprávnění</strong> – úkoly mohou spravovat admini, vlastník workspace a členové s oprávněním „Spravuje úkoly" (nastavitelné v sekci Tým)</li>
 </ul>
 
