@@ -26,6 +26,9 @@ export default function NotePanel({
   const taskInputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
   const [focusLastTask, setFocusLastTask] = useState(false);
   const [copied, setCopied] = useState(false);
+  const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // Ref na aktuální tasks aby triggerAutoSave měl přístup k čerstvé hodnotě
+  const localTasksRef = useRef<TaskItem[]>(note.tasks);
 
   // Meta flagy (local state + ref pro closure)
   const [isImportant, setIsImportant] = useState(note.is_important ?? false);
@@ -56,24 +59,45 @@ export default function NotePanel({
     document.execCommand(cmd, false);
   }
 
+  function triggerAutoSave(tasksOverride?: TaskItem[]) {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    setIsDirty(true);
+    saveTimerRef.current = setTimeout(() => {
+      const html = editorRef.current?.innerHTML ?? '';
+      const empty = !html || html === '<br>';
+      const content = empty ? '' : html;
+      const currentTasks = tasksOverride ?? localTasksRef.current;
+      savedContentRef.current = content;
+      savedTasksRef.current = currentTasks;
+      onSave(eventRef, content, currentTasks, metaRef.current);
+      setIsDirty(false);
+    }, 1000);
+  }
+
   function handleInput() {
     const html = editorRef.current?.innerHTML ?? '';
     const empty = !html || html === '<br>';
     setIsEmpty(empty);
-    setIsDirty(true);
+    triggerAutoSave();
   }
 
-  function handleBlur() {
-    // Auto-linkify URLs při opuštění editoru (bez auto-save)
+  function handleBlur(e: React.FocusEvent<HTMLDivElement>) {
+    // Přeskočit pokud focus zůstává uvnitř panelu (např. v nb-tb-txt task bloku)
+    if (e.relatedTarget && editorRef.current?.contains(e.relatedTarget as Node)) return;
     if (!editorRef.current) return;
     const html = editorRef.current.innerHTML;
     const linked = linkifyHtml(html);
     if (linked !== html) {
       editorRef.current.innerHTML = linked;
-      const empty = !linked || linked === '<br>';
-      setIsEmpty(empty);
-      setIsDirty(true);
+      setIsEmpty(!linked || linked === '<br>');
     }
+    // Okamžitě uložit při opuštění editoru
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    const content = !linked || linked === '<br>' ? '' : linked;
+    savedContentRef.current = content;
+    savedTasksRef.current = localTasksRef.current;
+    onSave(eventRef, content, localTasksRef.current, metaRef.current);
+    setIsDirty(false);
   }
 
   function handleEditorClick(e: React.MouseEvent<HTMLDivElement>) {
@@ -87,20 +111,23 @@ export default function NotePanel({
   }
 
   function save() {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     const html = editorRef.current?.innerHTML ?? '';
     const empty = !html || html === '<br>';
     const content = empty ? '' : html;
     savedContentRef.current = content;
-    savedTasksRef.current = localTasks;
-    onSave(eventRef, content, localTasks, metaRef.current);
+    savedTasksRef.current = localTasksRef.current;
+    onSave(eventRef, content, localTasksRef.current, metaRef.current);
     setIsDirty(false);
   }
 
   function cancel() {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     if (editorRef.current) {
       editorRef.current.innerHTML = savedContentRef.current;
       setIsEmpty(!savedContentRef.current || savedContentRef.current === '<br>');
     }
+    localTasksRef.current = savedTasksRef.current;
     setLocalTasks(savedTasksRef.current);
     setIsDirty(false);
   }
@@ -150,27 +177,31 @@ export default function NotePanel({
 
   function toggleTask(id: string) {
     const next = localTasks.map(t => t.id === id ? { ...t, checked: !t.checked } : t);
+    localTasksRef.current = next;
     setLocalTasks(next);
-    setIsDirty(true);
+    triggerAutoSave(next);
   }
 
   function updateTaskText(id: string, text: string) {
     const next = localTasks.map(t => t.id === id ? { ...t, text } : t);
+    localTasksRef.current = next;
     setLocalTasks(next);
-    setIsDirty(true);
+    triggerAutoSave(next);
   }
 
   function addTask() {
     const next = [...localTasks, { id: crypto.randomUUID(), text: '', checked: false }];
+    localTasksRef.current = next;
     setLocalTasks(next);
     setFocusLastTask(true);
-    setIsDirty(true);
+    triggerAutoSave(next);
   }
 
   function removeTask(id: string) {
     const next = localTasks.filter(t => t.id !== id);
+    localTasksRef.current = next;
     setLocalTasks(next);
-    setIsDirty(true);
+    triggerAutoSave(next);
   }
 
   const btnStyle = {

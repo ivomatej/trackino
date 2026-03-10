@@ -56,7 +56,23 @@ function stripHtml(html: string) {
 }
 
 function htmlToPlainText(html: string, tasks?: TaskItem[]): string {
-  let text = html;
+  // Inline task bloky – extrahuj přes DOM před string manipulation
+  let baseHtml = html;
+  const inlineTaskLines: string[] = [];
+  if (typeof document !== 'undefined' && html.includes('nb-task-block')) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    tmp.querySelectorAll('.nb-task-block').forEach(block => {
+      block.querySelectorAll('.nb-tb-item').forEach(item => {
+        const checked = item.getAttribute('data-checked') === 'true';
+        const txt = (item.querySelector('.nb-tb-txt') as HTMLElement | null)?.textContent?.trim() ?? '';
+        if (txt) inlineTaskLines.push(`${checked ? '☑' : '☐'} ${txt}`);
+      });
+      block.remove();
+    });
+    baseHtml = tmp.innerHTML;
+  }
+  let text = baseHtml;
   // Kód bloky – extrahuj text před odstraněním tagů
   text = text.replace(/<pre[^>]*>[\s\S]*?<code[^>]*>([\s\S]*?)<\/code>[\s\S]*?<\/pre>/gi, (_, code) => {
     const plain = code
@@ -82,7 +98,12 @@ function htmlToPlainText(html: string, tasks?: TaskItem[]): string {
   // Max 2 prázdné řádky za sebou
   text = text.replace(/\n{3,}/g, '\n\n');
   text = text.trim();
-  // Přidej úkoly jako text
+  // Přidej inline task bloky jako text
+  if (inlineTaskLines.length > 0) {
+    if (text) text += '\n\n';
+    text += inlineTaskLines.join('\n');
+  }
+  // Přidej úkoly z panelu úkolů jako text
   if (tasks && tasks.length > 0) {
     const taskLines = tasks.map(t => `${t.checked ? '☑' : '☐'} ${t.text}`).join('\n');
     if (text) text += '\n\n';
@@ -95,6 +116,17 @@ function linkifyHtml(html: string): string {
   return html.replace(/(?<!["'>])(https?:\/\/[^\s<>"'\]]+)/g, url =>
     `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color:var(--primary);text-decoration:underline">${url}</a>`
   );
+}
+
+// ─── Inline task blok helpers ─────────────────────────────────────────────────
+function createTaskItemHtml(id: string): string {
+  return `<div class="nb-tb-item" data-checked="false" data-tb-taskid="${id}" style="display:flex;align-items:center;gap:6px;padding:2px 0"><span class="nb-tb-chk" style="flex-shrink:0;cursor:pointer;font-size:14px;user-select:none;width:16px;line-height:1;text-align:center">☐</span><span class="nb-tb-txt" contenteditable="true" data-placeholder="Úkol…" style="flex:1;outline:none;font-size:13px;min-width:0;color:var(--text-primary);line-height:1.5"></span><span class="nb-tb-del" style="cursor:pointer;font-size:14px;color:var(--text-muted);user-select:none;padding:0 4px">×</span></div>`;
+}
+
+function createTaskBlockHtml(): string {
+  const blockId = nanoid();
+  const itemId = nanoid();
+  return `<div class="nb-task-block" contenteditable="false" data-nb-tb="${blockId}" style="border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin:6px 0;background:var(--bg-hover);display:block"><div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:6px;user-select:none">Úkoly</div><div class="nb-tb-items">${createTaskItemHtml(itemId)}</div><div class="nb-tb-add" style="font-size:11px;cursor:pointer;padding:3px 0;margin-top:4px;user-select:none">+ Přidat úkol</div></div><br>`;
 }
 
 function fmtDate(iso: string) {
@@ -385,7 +417,9 @@ function NoteEditor({
     triggerSave(title, c, tasks, isFavorite, isImportant);
   }
 
-  function handleEditorBlur() {
+  function handleEditorBlur(e: React.FocusEvent<HTMLDivElement>) {
+    // Přeskočit linkify + save pokud focus zůstává uvnitř editoru (např. v nb-tb-txt)
+    if (e.relatedTarget && editorRef.current?.contains(e.relatedTarget as Node)) return;
     const linked = linkifyHtml(editorRef.current?.innerHTML ?? '');
     if (editorRef.current) editorRef.current.innerHTML = linked;
     const c = linked;
@@ -394,6 +428,45 @@ function NoteEditor({
   }
 
   function handleEditorKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    // Klávesy v inline task bloku (.nb-tb-txt)
+    if (e.key === 'Enter' || e.key === 'Backspace') {
+      const sel0 = window.getSelection();
+      if (sel0 && sel0.rangeCount > 0) {
+        const range0 = sel0.getRangeAt(0);
+        const node0 = range0.startContainer;
+        const tbTxt = (node0.nodeType === Node.TEXT_NODE ? node0.parentElement : node0 as Element)?.closest?.('.nb-tb-txt') as HTMLElement | null;
+        if (tbTxt) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            const item = tbTxt.closest('.nb-tb-item') as HTMLElement | null;
+            const itemsContainer = item?.closest('.nb-task-block')?.querySelector('.nb-tb-items') as HTMLElement | null;
+            if (itemsContainer && item) {
+              const newId = nanoid();
+              const tmp = document.createElement('div');
+              tmp.innerHTML = createTaskItemHtml(newId);
+              const newItem = tmp.firstChild as HTMLElement | null;
+              if (newItem) { item.after(newItem); (newItem.querySelector('.nb-tb-txt') as HTMLElement | null)?.focus(); }
+              const c = editorRef.current?.innerHTML ?? '';
+              setContent(c); triggerSave(title, c, tasks, isFavorite, isImportant);
+            }
+            return;
+          }
+          if (e.key === 'Backspace' && range0.collapsed && range0.startOffset === 0 && tbTxt.textContent === '') {
+            e.preventDefault();
+            const item = tbTxt.closest('.nb-tb-item') as HTMLElement | null;
+            const itemsContainer = item?.closest('.nb-task-block')?.querySelector('.nb-tb-items') as HTMLElement | null;
+            if (itemsContainer && item && itemsContainer.children.length > 1) {
+              const prev = item.previousElementSibling as HTMLElement | null;
+              item.remove();
+              prev?.querySelector<HTMLElement>('.nb-tb-txt')?.focus();
+              const c = editorRef.current?.innerHTML ?? '';
+              setContent(c); triggerSave(title, c, tasks, isFavorite, isImportant);
+            }
+            return;
+          }
+        }
+      }
+    }
     // Enter uvnitř kód bloku → vloží \n místo nového bloku
     if (e.key === 'Enter') {
       const sel0 = window.getSelection();
@@ -418,6 +491,7 @@ function NoteEditor({
     const node = range.startContainer;
     if (node.nodeType !== Node.TEXT_NODE) return;
     if ((node.parentElement)?.closest('a')) return;
+    if ((node.parentElement)?.closest('.nb-task-block')) return;
     const text = node.textContent ?? '';
     const cursorPos = range.startOffset;
     const urlMatch = text.slice(0, cursorPos).match(/(https?:\/\/[^\s<>"'\]]+)$/);
@@ -460,6 +534,37 @@ function NoteEditor({
       const href = anchor.getAttribute('href');
       if (href) window.open(href, '_blank', 'noopener,noreferrer');
       return;
+    }
+    // Inline task blok – zaškrtnutí, přidání, smazání položky
+    const tbChk = (e.target as HTMLElement).closest('.nb-tb-chk');
+    if (tbChk) {
+      const item = tbChk.closest('.nb-tb-item') as HTMLElement | null;
+      if (item) {
+        const checked = item.getAttribute('data-checked') === 'true';
+        item.setAttribute('data-checked', String(!checked));
+        (tbChk as HTMLElement).textContent = checked ? '☐' : '☑';
+        const txt = item.querySelector('.nb-tb-txt') as HTMLElement | null;
+        if (txt) { txt.style.textDecoration = checked ? 'none' : 'line-through'; txt.style.color = checked ? 'var(--text-primary)' : 'var(--text-muted)'; }
+      }
+      const c = editorRef.current?.innerHTML ?? ''; setContent(c); triggerSave(title, c, tasks, isFavorite, isImportant); return;
+    }
+    const tbAdd = (e.target as HTMLElement).closest('.nb-tb-add');
+    if (tbAdd) {
+      const itemsContainer = tbAdd.closest('.nb-task-block')?.querySelector('.nb-tb-items') as HTMLElement | null;
+      if (itemsContainer) {
+        const newId = nanoid();
+        const tmp = document.createElement('div');
+        tmp.innerHTML = createTaskItemHtml(newId);
+        const newItem = tmp.firstChild as HTMLElement | null;
+        if (newItem) { itemsContainer.appendChild(newItem); (newItem.querySelector('.nb-tb-txt') as HTMLElement | null)?.focus(); }
+      }
+      const c = editorRef.current?.innerHTML ?? ''; setContent(c); triggerSave(title, c, tasks, isFavorite, isImportant); return;
+    }
+    const tbDel = (e.target as HTMLElement).closest('.nb-tb-del');
+    if (tbDel) {
+      const item = tbDel.closest('.nb-tb-item') as HTMLElement | null;
+      if (item) { const items = item.closest('.nb-task-block')?.querySelector('.nb-tb-items'); if (items && items.children.length > 1) item.remove(); }
+      const c = editorRef.current?.innerHTML ?? ''; setContent(c); triggerSave(title, c, tasks, isFavorite, isImportant); return;
     }
     const pre = (e.target as HTMLElement).closest('pre[data-nb-code]') as HTMLElement | null;
     if (pre) {
@@ -672,12 +777,32 @@ function NoteEditor({
         </button>
         <button onMouseDown={e => {
           e.preventDefault();
-          document.execCommand('insertHTML', false, '<pre data-nb-code="1" style="background:var(--bg-hover);border:1px solid var(--border);border-radius:6px;padding:10px 36px 10px 12px;overflow-x:auto;position:relative;font-family:monospace;font-size:12px;color:var(--text-primary);margin:4px 0"><code>Kód…</code></pre><br>');
+          document.execCommand('insertHTML', false, '<pre data-nb-code="1" style="background:var(--bg-hover);border:1px solid var(--border);border-radius:6px;padding:10px 36px 10px 12px;overflow-x:auto;position:relative;font-family:monospace;font-size:12px;color:var(--text-primary);margin:4px 0;min-height:2.5em"><code>Kód…</code></pre><br>');
           editorRef.current?.focus();
         }} style={btnStyle} title="Kódový blok"
           onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+          </svg>
+        </button>
+        <button onMouseDown={e => {
+          e.preventDefault();
+          const html = createTaskBlockHtml();
+          const sel = window.getSelection();
+          if (sel && sel.rangeCount > 0) {
+            const node = sel.getRangeAt(0).startContainer;
+            const inBlock = (node.nodeType === Node.TEXT_NODE ? node.parentElement : node as Element)?.closest?.('.nb-task-block') as HTMLElement | null;
+            if (inBlock) {
+              const tmp = document.createElement('div'); tmp.innerHTML = html;
+              inBlock.after(...Array.from(tmp.childNodes));
+            } else { editorRef.current?.focus(); document.execCommand('insertHTML', false, html); }
+          } else { editorRef.current?.focus(); document.execCommand('insertHTML', false, html); }
+          const c = editorRef.current?.innerHTML ?? ''; setContent(c); triggerSave(title, c, tasks, isFavorite, isImportant);
+        }} style={btnStyle} title="Blok úkolů"
+          onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/>
+            <polyline points="6 9 7 10 8 9"/>
           </svg>
         </button>
         <div style={{ width: 1, height: 12, background: 'var(--border)', margin: '0 2px', flexShrink: 0 }} />
@@ -801,7 +926,9 @@ function CalEventNoteEditor({
     triggerSave(c, tasks, isFavorite, isImportant);
   }
 
-  function handleBlur() {
+  function handleBlur(e: React.FocusEvent<HTMLDivElement>) {
+    // Přeskočit linkify + save pokud focus zůstává uvnitř editoru (např. v nb-tb-txt)
+    if (e.relatedTarget && editorRef.current?.contains(e.relatedTarget as Node)) return;
     const linked = linkifyHtml(editorRef.current?.innerHTML ?? '');
     if (editorRef.current) editorRef.current.innerHTML = linked;
     setContent(linked);
@@ -809,6 +936,45 @@ function CalEventNoteEditor({
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    // Klávesy v inline task bloku (.nb-tb-txt)
+    if (e.key === 'Enter' || e.key === 'Backspace') {
+      const sel0 = window.getSelection();
+      if (sel0 && sel0.rangeCount > 0) {
+        const range0 = sel0.getRangeAt(0);
+        const node0 = range0.startContainer;
+        const tbTxt = (node0.nodeType === Node.TEXT_NODE ? node0.parentElement : node0 as Element)?.closest?.('.nb-tb-txt') as HTMLElement | null;
+        if (tbTxt) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            const item = tbTxt.closest('.nb-tb-item') as HTMLElement | null;
+            const itemsContainer = item?.closest('.nb-task-block')?.querySelector('.nb-tb-items') as HTMLElement | null;
+            if (itemsContainer && item) {
+              const newId = nanoid();
+              const tmp = document.createElement('div');
+              tmp.innerHTML = createTaskItemHtml(newId);
+              const newItem = tmp.firstChild as HTMLElement | null;
+              if (newItem) { item.after(newItem); (newItem.querySelector('.nb-tb-txt') as HTMLElement | null)?.focus(); }
+              const c = editorRef.current?.innerHTML ?? '';
+              setContent(c); triggerSave(c, tasks, isFavorite, isImportant);
+            }
+            return;
+          }
+          if (e.key === 'Backspace' && range0.collapsed && range0.startOffset === 0 && tbTxt.textContent === '') {
+            e.preventDefault();
+            const item = tbTxt.closest('.nb-tb-item') as HTMLElement | null;
+            const itemsContainer = item?.closest('.nb-task-block')?.querySelector('.nb-tb-items') as HTMLElement | null;
+            if (itemsContainer && item && itemsContainer.children.length > 1) {
+              const prev = item.previousElementSibling as HTMLElement | null;
+              item.remove();
+              prev?.querySelector<HTMLElement>('.nb-tb-txt')?.focus();
+              const c = editorRef.current?.innerHTML ?? '';
+              setContent(c); triggerSave(c, tasks, isFavorite, isImportant);
+            }
+            return;
+          }
+        }
+      }
+    }
     // Enter uvnitř kód bloku → vloží \n místo nového bloku
     if (e.key === 'Enter') {
       const sel0 = window.getSelection();
@@ -833,6 +999,7 @@ function CalEventNoteEditor({
     const node = range.startContainer;
     if (node.nodeType !== Node.TEXT_NODE) return;
     if ((node.parentElement)?.closest('a')) return;
+    if ((node.parentElement)?.closest('.nb-task-block')) return;
     const text = node.textContent ?? '';
     const cursorPos = range.startOffset;
     const urlMatch = text.slice(0, cursorPos).match(/(https?:\/\/[^\s<>"'\]]+)$/);
@@ -875,6 +1042,37 @@ function CalEventNoteEditor({
       const href = anchor.getAttribute('href');
       if (href) window.open(href, '_blank', 'noopener,noreferrer');
       return;
+    }
+    // Inline task blok – zaškrtnutí, přidání, smazání položky
+    const tbChk = (e.target as HTMLElement).closest('.nb-tb-chk');
+    if (tbChk) {
+      const item = tbChk.closest('.nb-tb-item') as HTMLElement | null;
+      if (item) {
+        const checked = item.getAttribute('data-checked') === 'true';
+        item.setAttribute('data-checked', String(!checked));
+        (tbChk as HTMLElement).textContent = checked ? '☐' : '☑';
+        const txt = item.querySelector('.nb-tb-txt') as HTMLElement | null;
+        if (txt) { txt.style.textDecoration = checked ? 'none' : 'line-through'; txt.style.color = checked ? 'var(--text-primary)' : 'var(--text-muted)'; }
+      }
+      const c = editorRef.current?.innerHTML ?? ''; setContent(c); triggerSave(c, tasks, isFavorite, isImportant); return;
+    }
+    const tbAdd = (e.target as HTMLElement).closest('.nb-tb-add');
+    if (tbAdd) {
+      const itemsContainer = tbAdd.closest('.nb-task-block')?.querySelector('.nb-tb-items') as HTMLElement | null;
+      if (itemsContainer) {
+        const newId = nanoid();
+        const tmp = document.createElement('div');
+        tmp.innerHTML = createTaskItemHtml(newId);
+        const newItem = tmp.firstChild as HTMLElement | null;
+        if (newItem) { itemsContainer.appendChild(newItem); (newItem.querySelector('.nb-tb-txt') as HTMLElement | null)?.focus(); }
+      }
+      const c = editorRef.current?.innerHTML ?? ''; setContent(c); triggerSave(c, tasks, isFavorite, isImportant); return;
+    }
+    const tbDel = (e.target as HTMLElement).closest('.nb-tb-del');
+    if (tbDel) {
+      const item = tbDel.closest('.nb-tb-item') as HTMLElement | null;
+      if (item) { const items = item.closest('.nb-task-block')?.querySelector('.nb-tb-items'); if (items && items.children.length > 1) item.remove(); }
+      const c = editorRef.current?.innerHTML ?? ''; setContent(c); triggerSave(c, tasks, isFavorite, isImportant); return;
     }
     const pre = (e.target as HTMLElement).closest('pre[data-nb-code]') as HTMLElement | null;
     if (pre) {
@@ -971,12 +1169,32 @@ function CalEventNoteEditor({
         </button>
         <button onMouseDown={e => {
           e.preventDefault();
-          document.execCommand('insertHTML', false, '<pre data-nb-code="1" style="background:var(--bg-hover);border:1px solid var(--border);border-radius:6px;padding:10px 36px 10px 12px;overflow-x:auto;position:relative;font-family:monospace;font-size:12px;color:var(--text-primary);margin:4px 0"><code>Kód…</code></pre><br>');
+          document.execCommand('insertHTML', false, '<pre data-nb-code="1" style="background:var(--bg-hover);border:1px solid var(--border);border-radius:6px;padding:10px 36px 10px 12px;overflow-x:auto;position:relative;font-family:monospace;font-size:12px;color:var(--text-primary);margin:4px 0;min-height:2.5em"><code>Kód…</code></pre><br>');
           editorRef.current?.focus();
         }} style={btnStyle} title="Kódový blok"
           onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+          </svg>
+        </button>
+        <button onMouseDown={e => {
+          e.preventDefault();
+          const html = createTaskBlockHtml();
+          const sel = window.getSelection();
+          if (sel && sel.rangeCount > 0) {
+            const node = sel.getRangeAt(0).startContainer;
+            const inBlock = (node.nodeType === Node.TEXT_NODE ? node.parentElement : node as Element)?.closest?.('.nb-task-block') as HTMLElement | null;
+            if (inBlock) {
+              const tmp = document.createElement('div'); tmp.innerHTML = html;
+              inBlock.after(...Array.from(tmp.childNodes));
+            } else { editorRef.current?.focus(); document.execCommand('insertHTML', false, html); }
+          } else { editorRef.current?.focus(); document.execCommand('insertHTML', false, html); }
+          const c = editorRef.current?.innerHTML ?? ''; setContent(c); triggerSave(c, tasks, isFavorite, isImportant);
+        }} style={btnStyle} title="Blok úkolů"
+          onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/>
+            <polyline points="6 9 7 10 8 9"/>
           </svg>
         </button>
         <div style={{ width: 1, height: 12, background: 'var(--border)', margin: '0 2px' }} />
@@ -2052,6 +2270,12 @@ const editorStyles = `
     opacity: 1 !important;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2322c55e' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
   }
+  .nb-tb-del { opacity: 0; transition: opacity 0.1s; }
+  .nb-task-block .nb-tb-item:hover .nb-tb-del { opacity: 0.5; }
+  .nb-task-block .nb-tb-item:hover .nb-tb-del:hover { opacity: 1; }
+  .nb-tb-txt:empty::before { content: attr(data-placeholder); color: var(--text-muted); pointer-events: none; }
+  .nb-tb-add { color: var(--text-muted); }
+  .nb-tb-add:hover { color: var(--text-secondary); }
 `;
 
 // ─── Page export ──────────────────────────────────────────────────────────────
