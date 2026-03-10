@@ -11,6 +11,18 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.51.8 – 10. 3. 2026</h3>
+<ul>
+  <li><strong>Notebook – 5 oprav levého panelu</strong>:
+    <ul>
+      <li><strong>Počty složek bez archivovaných</strong> – čísla u složek v levém panelu nyní nezapočítávají archivované poznámky; archivování nebo přesun poznámky do Archivu se okamžitě projeví snížením počtu ve zdrojové složce</li>
+      <li><strong>Přejmenování „Doručené" → „Inbox"</strong> – v obou nabídkách pro přesun poznámky (v detailu i v hoveru na kartičce) je nyní konzistentní název „Inbox"</li>
+      <li><strong>Oprava hover posunu</strong> – při najetí myší na složku se řádek již nepohybuje dolů; akční tlačítka jsou absolutně pozicována přes počet a nevytlačují obsah</li>
+      <li><strong>Vizuálně konzistentní počty</strong> – počty u složek fade-out opacity přechodem (místo display:none), stejný vzor jako u horních navigačních tlačítek</li>
+    </ul>
+  </li>
+</ul>
+
 <h3>v2.51.4 – 10. 3. 2026</h3>
 <ul>
   <li><strong>Globální scrollbar auto-hide</strong> – scrollbar v prohlížeči je nyní skrytý v klidu; zobrazí se pouze při aktivním scrollování a zmizí 1 sekundu po zastavení. Funguje na všech scrollovatelných plochách v celé aplikaci automaticky.</li>
