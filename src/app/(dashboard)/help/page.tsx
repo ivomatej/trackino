@@ -306,19 +306,20 @@ const DEFAULT_HELP_CONTENT = `
 <ul>
   <li><strong>Levý sidebar</strong> – strom složek a projektů (nástěnek); složky lze vnořovat do 5 úrovní; projekty se zobrazují uvnitř složek nebo jako nezařazené; na mobilu se sidebar skrývá a otevírá toggle tlačítkem; na desktopu lze panel skrýt/zobrazit ikonou (stav se ukládá)</li>
   <li><strong>3 pohledy</strong> – Seznam (výpis s checkboxy dokončení), Kanban (sloupcový přehled s drag & drop), Tabulka (kompaktní řádkový výpis s řazením)</li>
-  <li><strong>Kanban nástěnka</strong> – přesouvání úkolů mezi sloupci tažením; editace/mazání sloupců (double-click přejmenuje, koš smaže); přidání nového sloupce</li>
-  <li><strong>Dokončení úkolu</strong> – checkbox před názvem; po zaškrtnutí karta zesvětlí (opacity + přeškrtnutý text); lze opakovaně zapínat/vypínat</li>
-  <li><strong>Nastavení nástěnky</strong> – pořadí sloupců (šipky nahoru/dolů); auto-přesun dokončených úkolů do zvoleného sloupce; barevné podbarvení sloupců (toggle + color picker)</li>
+  <li><strong>Kanban nástěnka</strong> – přesouvání úkolů mezi sloupci tažením (drag & drop jen na desktopu, na mobilu deaktivováno); editace/mazání sloupců (double-click přejmenuje, koš smaže); přidání nového sloupce; sloupce jako celek nelze přetahovat – drag & drop funguje pouze pro jednotlivé úkoly</li>
+  <li><strong>Zvýraznění vybraného úkolu</strong> – v Kanban pohledu je aktuálně otevřený úkol ohraničen modrou barvou, takže je na první pohled jasné, který úkol je právě zobrazen v detailu</li>
+  <li><strong>Dokončení úkolu</strong> – kroužkové tlačítko dokončení je umístěno vedle názvu úkolu v detailu; kliknutím se úkol označí jako hotový (kroužek zezeleně, název se přeškrtne); v kartičkách (Kanban/Seznam) je checkbox přímo u názvu; lze opakovaně zapínat/vypínat</li>
+  <li><strong>Nastavení nástěnky</strong> – pořadí sloupců (šipky nahoru/dolů); auto-přesun dokončených úkolů do zvoleného sloupce; barevné podbarvení sloupců (toggle + color picker); <strong>šířka detailu úkolu</strong> – volba Úzký (400 px), Střední (520 px) nebo Široký (680 px) pro detail panel</li>
   <li><strong>Editace projektů</strong> – hover akce na projektech v levém panelu (tužka pro úpravu, křížek pro smazání); modal pro úpravu názvu, barvy, popisu, složky a sdílení</li>
-  <li><strong>Úkol</strong> – název, popis (rich text: tučné/kurzíva/podtržení/seznamy), priorita, deadline, přiřazený člen, stav</li>
-  <li><strong>Detail panel</strong> – fixní overlay z pravé strany přes celý viewport; klik na backdrop ho zavře; editovatelný název, status/priorita/osoba/deadline; rich text popis; podúkoly s přiřazením řešitele; přílohy; komentáře (rich text); historie</li>
+  <li><strong>Úkol</strong> – název, popis (rich text: tučné/kurzíva/podtržení/seznamy), priorita, deadline, přiřazený řešitel, kontrolor/zadavatel, stav, časový odhad</li>
+  <li><strong>Detail panel</strong> – fixní overlay z pravé strany přes celý viewport; klik na backdrop ho zavře; záhlaví s breadcrumbem (projekt / stav); editovatelný název s inline tlačítkem dokončení; pole: Status, Priorita, Řešitel, Zadavatel/Kontrolor, Termín, Časový odhad; zobrazení data vytvoření; rich text popis; podúkoly; přílohy; komentáře; historie</li>
+  <li><strong>Zadavatel / Kontrolor</strong> – pole v detailu úkolu pro určení osoby, která úkol zadala nebo bude kontrolovat výsledek; vybírá se ze členů workspace</li>
+  <li><strong>Časový odhad</strong> – pole pro zadání odhadované doby splnění úkolu v minutách; zobrazuje se v detailu jako „Xh Ymin"</li>
   <li><strong>Podúkoly</strong> – checklist s progress barem; přiřazení řešitele ke každému podúkolu</li>
   <li><strong>Komentáře</strong> – rich text (tučné/kurzíva/podtržení) s avatarem autora; větší vstupní pole s tlačítkem pod inputem</li>
   <li><strong>Sdílení projektů</strong> – 3 režimy: Nesdílet / Celý workspace / Konkrétní uživatelé; nesdílené projekty vidí jen vlastník a admini</li>
-  <li><strong>Filtrování</strong> – fulltextové hledání, filtr dle přiřazeného člena, priority, deadline; přepínač „Jen moje úkoly"; skrytí dokončených; řazení dle data, priority, názvu, termínu a „Naposledy přiřazené"</li>
+  <li><strong>Filtrování</strong> – fulltextové hledání, filtr dle přiřazeného člena, priority, deadline; přepínač „Jen moje úkoly"; přepínač „Skrýt hotové" (skryje veškeré dokončené úkoly bez ohledu na sloupec); řazení dle data, priority, názvu, termínu a „Naposledy přiřazené"</li>
   <li><strong>Moje úkoly</strong> – kliknutí na „Moje úkoly" v levém panelu přepne do Seznamu, zobrazí pouze úkoly přiřazené vám a seřadí je dle posledního přiřazení. Řazení lze kdykoli změnit přes rozbalovací nabídku.</li>
-  <li><strong>Dokončení v detailu</strong> – v detailu úkolu je výrazné tlačítko „Označit jako dokončené" se zeleným orámováním po dokončení</li>
-  <li><strong>Drag & drop jen na desktopu</strong> – přesouvání úkolů tažením je k dispozici pouze na desktopu; na mobilních zařízeních je deaktivováno pro pohodlnější ovládání</li>
   <li><strong>Oprávnění</strong> – úkoly mohou spravovat admini, vlastník workspace a členové s oprávněním „Spravuje úkoly" (nastavitelné v sekci Tým)</li>
 </ul>
 

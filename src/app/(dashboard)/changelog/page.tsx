@@ -11,6 +11,24 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.51.3 – 10. 3. 2026</h3>
+<ul>
+  <li><strong>Úkoly – 6 vylepšení</strong>:
+    <ul>
+      <li><strong>Oprava „Skrýt hotové"</strong> – přepínač nyní správně skryje všechny dokončené úkoly (is_completed=true) bez ohledu na to, ve kterém sloupci se nacházejí</li>
+      <li><strong>Zakázán drag sloupců</strong> – v Kanban pohledu lze přetahovat pouze jednotlivé úkoly; celé sloupce nelze přemísťovat tažením</li>
+      <li><strong>Zvýraznění vybraného úkolu</strong> – otevřený úkol v Kanban pohledu je ohraničen modrou barvou, takže je okamžitě vidět, který detail je právě zobrazen</li>
+      <li><strong>Redesign detailu úkolu (Asana styl)</strong> – kroužkové tlačítko dokončení vedle názvu; kompaktní grid polí (Status, Priorita, Řešitel, Zadavatel/Kontrolor, Termín, Časový odhad); datum vytvoření; šířka detailu nastavitelná v Nastavení nástěnky (Úzký 400 px / Střední 520 px / Široký 680 px)</li>
+      <li><strong>Nové pole Zadavatel / Kontrolor</strong> – v detailu úkolu lze určit osobu, která úkol zadala nebo bude kontrolovat výsledek; výběr ze členů workspace</li>
+      <li><strong>Posun headeru výše</strong> – název projektu, přepínač pohledů a filtrace jsou umístěny výše, čímž vznikl větší prostor pro samotný obsah (sloupce / seznam úkolů)</li>
+    </ul>
+  </li>
+</ul>
+<p><em>SQL migrace (spustit v Supabase → SQL editor):</em></p>
+<pre><code>ALTER TABLE trackino_task_items
+  ADD COLUMN IF NOT EXISTS reviewer_id uuid REFERENCES auth.users(id),
+  ADD COLUMN IF NOT EXISTS time_estimate integer;</code></pre>
+
 <h3>v2.51.2 – 9. 3. 2026</h3>
 <ul>
   <li><strong>Úkoly – 7 oprav</strong>:

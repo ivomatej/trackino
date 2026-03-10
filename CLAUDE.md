@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 9. 3. 2026 (v2.51.2)
+> Aktualizováno: 10. 3. 2026 (v2.51.3)
 
 ---
 
@@ -154,9 +154,13 @@ Výchozí policy: `CREATE POLICY "Auth full" ... FOR ALL TO authenticated USING 
 | `trackino_task_folder_shares` | id, folder_id, workspace_id, user_id (nullable), shared_by, created_at | Sdílení složek úkolů (user_id=null = celý workspace) |
 | `trackino_task_board_members` | id, board_id, workspace_id, user_id, can_edit (bool), created_at | Sdílení nástěnky s konkrétními členy (UNIQUE board_id+user_id) |
 
+### Nové sloupce (v2.51.3)
+- `trackino_task_items.reviewer_id uuid REFERENCES auth.users(id)` – Zadavatel/Kontrolor úkolu (nullable)
+- `trackino_task_items.time_estimate integer` – časový odhad v minutách (nullable)
+
 ### Nové sloupce (v2.51.0)
 - `trackino_task_items.is_completed boolean NOT NULL DEFAULT false` – checkbox dokončení úkolu
-- `trackino_task_boards.settings jsonb NOT NULL DEFAULT '{}'` – nastavení nástěnky (auto_complete_column_id, column_colors_enabled)
+- `trackino_task_boards.settings jsonb NOT NULL DEFAULT '{}'` – nastavení nástěnky (auto_complete_column_id, column_colors_enabled, detail_size)
 - `trackino_task_boards.folder_id uuid REFERENCES trackino_task_folders(id) ON DELETE SET NULL` – zařazení do složky
 - `trackino_task_boards.color text NOT NULL DEFAULT '#6366f1'` – barva projektu
 - `trackino_task_boards.description text NOT NULL DEFAULT ''` – popis projektu
@@ -540,6 +544,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.51.3 | 10. 3. 2026 | Úkoly – 6 vylepšení: oprava „Skrýt hotové" (filtruje is_completed bez závislosti na sloupci); zakázán drag sloupců v Kanban; zvýraznění vybraného úkolu (modrý border); redesign detailu (Asana styl – kroužkové tlačítko, kompaktní pole, Zadavatel/Kontrolor, Časový odhad, Datum vytvoření, volba šířky panelu); přidána pole reviewer_id a time_estimate do DB; posun headeru výše |
 | v2.51.2 | 9. 3. 2026 | Úkoly – 7 oprav: výrazné tlačítko dokončení v detailu; „Moje úkoly" řazení „Naposledy přiřazené" (updated_at); share modal oprava pořadí tlačítek + email pod jménem; DnD deaktivován na mobilu; odstraněno šedé pozadí z detail panel polí |
 | v2.51.1 | 8. 3. 2026 | Úkoly – 8 vylepšení: odstraněn badge ze sidebaru; detail úkolu jako fixní overlay z pravé strany (celý viewport); pořadí sloupců v nastavení boardu (šipky ↑↓); editace projektů v levém panelu (hover akce tužka/křížek + modal); oprava priority strip zaoblení (overflow-hidden); redesign komentářového pole; zasouvací/vysouvací levý sidebar na desktopu (localStorage persist); Kalendář – SVG ikonka opakující se události přesunuta do pravého horního rohu (Týden/3 dny/Den/Měsíc) |
 | v2.51.0 | 8. 3. 2026 | Úkoly – kompletní refaktoring modulu: přesun do NÁSTROJE v sidebaru; DnD přesouvání úkolů mezi sloupci (useDroppable fix); DnD přesouvání celých sloupců (horizontalListSortingStrategy); editace/mazání sloupců (double-click přejmenování); checkbox dokončení úkolu (is_completed, line-through + opacity); nastavení nástěnky (auto-přesun dokončených, barvy sloupců); rich text editor v popisu a komentářích (B/I/U, seznamy); přiřazení řešitele podúkolů; klik mimo detail panel = zavření; levý sidebar se složkami a projekty (rekurzivní strom, max 5 úrovní); sdílení projektů (nesdílet/workspace/konkrétní uživatelé); auto-hide horizontální scrollbar (kanban-scroll CSS); 3 nové DB tabulky + 7 ALTER |

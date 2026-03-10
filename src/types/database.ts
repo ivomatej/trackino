@@ -1043,6 +1043,7 @@ export type TaskPriority = 'urgent' | 'high' | 'medium' | 'low' | 'none';
 export interface TaskBoardSettings {
   auto_complete_column_id?: string | null;
   column_colors_enabled?: boolean;
+  detail_size?: 'compact' | 'normal' | 'large';
 }
 
 export interface TaskBoard {
@@ -1079,6 +1080,8 @@ export interface TaskItem {
   sort_order: number;
   created_by: string;
   assigned_to: string | null;
+  reviewer_id?: string | null;
+  time_estimate?: number | null;
   is_completed: boolean;
   created_at: string;
   updated_at: string;

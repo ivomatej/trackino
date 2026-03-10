@@ -81,9 +81,9 @@ function SortableColumnWrapper({ id, render, canDrag }: { id: string; render: (l
 }
 
 // ── Sortable Kanban Card ──
-function SortableCard({ task, members, subtaskMap, commentCountMap, attachCountMap, onOpen, canDrag, onToggleComplete }: {
+function SortableCard({ task, members, subtaskMap, commentCountMap, attachCountMap, onOpen, canDrag, onToggleComplete, isSelected }: {
   task: TaskItem; members: Member[]; subtaskMap: Map<string, TaskSubtask[]>; commentCountMap: Map<string, number>;
-  attachCountMap: Map<string, number>; onOpen: (t: TaskItem) => void; canDrag: boolean; onToggleComplete?: (t: TaskItem) => void;
+  attachCountMap: Map<string, number>; onOpen: (t: TaskItem) => void; canDrag: boolean; onToggleComplete?: (t: TaskItem) => void; isSelected?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id, disabled: !canDrag,
@@ -103,7 +103,7 @@ function SortableCard({ task, members, subtaskMap, commentCountMap, attachCountM
       onClick={() => onOpen(task)}
       role="button" tabIndex={0}
       onKeyDown={e => { if (e.key === 'Enter') onOpen(task); }}
-      style={{ ...style, background: 'var(--bg-card)', borderColor: 'var(--border)', textDecoration: task.is_completed ? 'line-through' : 'none' }}
+      style={{ ...style, background: 'var(--bg-card)', borderColor: isSelected ? 'var(--primary)' : 'var(--border)', boxShadow: isSelected ? '0 0 0 2px var(--primary)' : undefined, textDecoration: task.is_completed ? 'line-through' : 'none' }}
     >
       {/* Priority strip */}
       {task.priority !== 'none' && <div className="rounded-t-lg -mx-3 -mt-3 mb-2" style={{ height: 3, background: pc.color }} />}
@@ -347,7 +347,7 @@ function TasksContent() {
     if (filterAssignee === 'unassigned') list = list.filter(t => !t.assigned_to);
     else if (filterAssignee !== 'all') list = list.filter(t => t.assigned_to === filterAssignee);
     if (filterPriority !== 'all') list = list.filter(t => t.priority === filterPriority);
-    if (hideCompleted && doneColumnId) list = list.filter(t => t.column_id !== doneColumnId);
+    if (hideCompleted) list = list.filter(t => !t.is_completed && (doneColumnId ? t.column_id !== doneColumnId : true));
     if (filterDeadline !== 'all') {
       const now = new Date();
       const today = now.toISOString().slice(0, 10);
@@ -1202,22 +1202,24 @@ function TasksContent() {
 
       {/* ── MAIN CONTENT ── */}
       <div className="flex-1 min-w-0 flex flex-col overflow-hidden p-4 lg:p-6">
-      {/* Left panel toggle (mobile: overlay, desktop: collapse/expand) */}
-      <button className={`mb-3 flex items-center gap-2 text-sm ${sidebarCollapsed ? '' : 'md:hidden'}`} style={{ color: 'var(--text-muted)' }}
-        onClick={() => {
-          if (typeof window !== 'undefined' && window.innerWidth >= 768) {
-            setSidebarCollapsed(prev => { const next = !prev; localStorage.setItem('trackino_tasks_sidebar_collapsed', next ? '1' : '0'); return next; });
-          } else {
-            setLeftOpen(true);
-          }
-        }}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-        <span className="md:hidden">Projekty</span>
-      </button>
 
     <div className="flex flex-col flex-1 min-h-0">
       {/* ── Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+        {/* Left panel toggle (inline with header) */}
+        <button className="flex-shrink-0 p-1.5 rounded-lg transition-colors" style={{ color: 'var(--text-muted)' }}
+          title={sidebarCollapsed ? 'Zobrazit projekty' : 'Skrýt projekty'}
+          onClick={() => {
+            if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+              setSidebarCollapsed(prev => { const next = !prev; localStorage.setItem('trackino_tasks_sidebar_collapsed', next ? '1' : '0'); return next; });
+            } else {
+              setLeftOpen(true);
+            }
+          }}
+          onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
         <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{myTasksMode ? 'Moje úkoly' : (activeBoard?.name ?? 'Úkoly')}</h1>
         <div className="flex items-center gap-2 flex-wrap flex-1">
           {/* View switcher */}
@@ -1305,7 +1307,7 @@ function TasksContent() {
       </div>
 
       {/* ── Filters row ── */}
-      <div className="flex items-center gap-2 mb-4 flex-wrap">
+      <div className="flex items-center gap-2 mb-2 flex-wrap">
         {/* Search */}
         <div className="relative flex-1 min-w-[180px] max-w-xs">
           <svg className="absolute left-2.5 top-1/2 -translate-y-1/2" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)' }}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -1450,7 +1452,7 @@ function TasksContent() {
                   const boardSettings = activeBoard?.settings ?? {};
                   const colBg = boardSettings.column_colors_enabled && col.color ? col.color + '0d' : 'var(--bg-hover)';
                   return (
-                    <SortableColumnWrapper key={col.id} id={col.id} canDrag={canManage && !isMobile} render={(dragListeners: Record<string, unknown>) => (
+                    <SortableColumnWrapper key={col.id} id={col.id} canDrag={false} render={(dragListeners: Record<string, unknown>) => (
                     <div className="rounded-xl p-3" style={{ background: colBg }}>
                       {/* Column header */}
                       <div className="flex items-center gap-2 mb-3 group/colheader" {...(canManage ? dragListeners : {})}>
@@ -1495,7 +1497,8 @@ function TasksContent() {
                           {colTasks.map(task => (
                             <SortableCard key={task.id} task={task} members={members} subtaskMap={subtaskMap}
                               commentCountMap={commentCountMap} attachCountMap={attachCountMap}
-                              onOpen={openDetail} canDrag={canManage && !isMobile} onToggleComplete={canManage ? toggleComplete : undefined} />
+                              onOpen={openDetail} canDrag={canManage && !isMobile} onToggleComplete={canManage ? toggleComplete : undefined}
+                              isSelected={selectedTask?.id === task.id} />
                           ))}
                           {colTasks.length === 0 && <div className="text-xs py-4 text-center" style={{ color: 'var(--text-muted)' }}>Přetáhněte sem úkol</div>}
                         </SortableContext>
@@ -1668,65 +1671,69 @@ function TasksContent() {
         {selectedTask && (
           <div className="fixed inset-0 z-50" onClick={e => { if (e.target === e.currentTarget) setSelectedTask(null); }}
             style={{ background: 'rgba(0,0,0,0.2)' }}>
-          <div className="w-full md:w-[520px] flex-shrink-0 border-l overflow-y-auto fixed right-0 top-0 bottom-0"
-            style={{ borderColor: 'var(--border)', background: 'var(--bg-card)', transition: 'transform 0.2s ease-out' }} onClick={e => e.stopPropagation()}>
+          <div className="w-full flex-shrink-0 border-l overflow-y-auto fixed right-0 top-0 bottom-0"
+            style={{ borderColor: 'var(--border)', background: 'var(--bg-card)', transition: 'transform 0.2s ease-out', maxWidth: ({ compact: '400px', normal: '520px', large: '680px' }[activeBoard?.settings?.detail_size ?? 'normal'] ?? '520px') }} onClick={e => e.stopPropagation()}>
             <div className="p-4">
-              {/* Close + title */}
-              <div className="flex items-start gap-2 mb-4">
+              {/* ── Top bar: breadcrumb + actions ── */}
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                  {boards.find(b => b.id === selectedTask.board_id)?.name ?? ''}
+                  {(() => { const col = sortedColumns.find(c => c.id === selectedTask.column_id); return col ? ` / ${col.name}` : ''; })()}
+                </span>
+                <div className="flex items-center gap-0.5">
+                  {canManage && (
+                    <button onClick={() => { if (confirm('Smazat úkol?')) deleteTask(selectedTask.id); }}
+                      className="p-1.5 rounded transition-colors"
+                      onMouseEnter={e => { e.currentTarget.style.background = '#ef444418'; e.currentTarget.style.color = '#ef4444'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+                      title="Smazat úkol"
+                      style={{ color: 'var(--text-muted)' }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                    </button>
+                  )}
+                  <button onClick={() => setSelectedTask(null)} className="p-1.5 rounded transition-colors"
+                    style={{ color: 'var(--text-muted)' }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                </div>
+              </div>
+
+              {/* ── Completion circle + Title ── */}
+              <div className="flex items-start gap-2.5 mb-3">
+                <button
+                  className="mt-1 flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all"
+                  style={{ borderColor: selectedTask.is_completed ? '#22c55e' : 'var(--border)', background: selectedTask.is_completed ? '#22c55e' : 'transparent', cursor: canManage ? 'pointer' : 'default' }}
+                  onClick={() => { if (canManage) toggleComplete(selectedTask); }}
+                  title={selectedTask.is_completed ? 'Znovu otevřít' : 'Označit jako dokončené'}>
+                  {selectedTask.is_completed && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><path d="M20 6L9 17l-5-5"/></svg>}
+                </button>
                 <div className="flex-1 min-w-0">
                   {editingTitle ? (
                     <input value={editTitle} onChange={e => setEditTitle(e.target.value)} autoFocus
-                      className="text-base sm:text-sm font-bold w-full rounded-lg border px-2 py-1"
+                      className="text-base font-bold w-full rounded-lg border px-2 py-1"
                       style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
                       onKeyDown={e => { if (e.key === 'Enter') saveTitle(); if (e.key === 'Escape') { setEditingTitle(false); setEditTitle(selectedTask.title); } }}
                       onBlur={saveTitle}
                     />
                   ) : (
-                    <h2 className="text-lg font-bold cursor-pointer" style={{ color: 'var(--text-primary)' }}
+                    <h2 className="text-lg font-bold leading-snug" style={{ color: 'var(--text-primary)', textDecoration: selectedTask.is_completed ? 'line-through' : 'none', opacity: selectedTask.is_completed ? 0.6 : 1, cursor: canManage ? 'text' : 'default' }}
                       onClick={() => { if (canManage) { setEditingTitle(true); setEditTitle(selectedTask.title); } }}>
                       {selectedTask.title}
                     </h2>
                   )}
+                  {selectedTask.is_completed && (
+                    <span className="text-xs font-medium" style={{ color: '#22c55e' }}>Dokončeno</span>
+                  )}
                 </div>
-                {canManage && (
-                  <button onClick={() => { if (confirm('Smazat úkol?')) deleteTask(selectedTask.id); }}
-                    className="p-1.5 rounded transition-colors flex-shrink-0"
-                    onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
-                    onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
-                    style={{ color: 'var(--text-muted)' }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-                  </button>
-                )}
-                <button onClick={() => setSelectedTask(null)} className="p-1.5 rounded transition-colors flex-shrink-0"
-                  style={{ color: 'var(--text-muted)' }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
               </div>
 
-              {/* Completion toggle */}
-              <button className="flex items-center gap-3 mb-4 px-3 py-2.5 rounded-lg border w-full transition-colors"
-                style={{
-                  borderColor: selectedTask.is_completed ? '#22c55e44' : 'var(--border)',
-                  background: selectedTask.is_completed ? '#22c55e0d' : 'var(--bg-card)',
-                  cursor: canManage ? 'pointer' : 'default',
-                }}
-                onClick={() => { if (canManage) toggleComplete(selectedTask); }}>
-                <div className="w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors flex-shrink-0"
-                  style={{ borderColor: selectedTask.is_completed ? '#22c55e' : 'var(--border)', background: selectedTask.is_completed ? '#22c55e' : 'transparent' }}>
-                  {selectedTask.is_completed && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><path d="M20 6L9 17l-5-5"/></svg>}
-                </div>
-                <span className="text-sm font-medium" style={{ color: selectedTask.is_completed ? '#22c55e' : 'var(--text-primary)' }}>
-                  {selectedTask.is_completed ? 'Dokončeno' : 'Označit jako dokončené'}
-                </span>
-              </button>
-
-              {/* Status / Priority / Assignee / Deadline grid */}
-              <div className="grid grid-cols-2 gap-3 mb-4">
+              {/* ── Fields grid (3×2) ── */}
+              <div className="grid grid-cols-2 gap-x-3 gap-y-2 mb-2">
                 {/* Status */}
                 <div>
-                  <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--text-muted)' }}>Status</label>
+                  <label className="text-[11px] font-medium mb-0.5 block uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Status</label>
                   <div className="relative">
                     <select value={selectedTask.column_id ?? ''} disabled={!canManage}
                       onChange={e => { const cid = e.target.value; moveTaskTo(selectedTask, cid); setSelectedTask(prev => prev ? { ...prev, column_id: cid } : null); }}
@@ -1739,7 +1746,7 @@ function TasksContent() {
 
                 {/* Priority */}
                 <div>
-                  <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--text-muted)' }}>Priorita</label>
+                  <label className="text-[11px] font-medium mb-0.5 block uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Priorita</label>
                   <div className="relative">
                     <select value={selectedTask.priority} disabled={!canManage}
                       onChange={e => {
@@ -1756,7 +1763,7 @@ function TasksContent() {
 
                 {/* Assignee */}
                 <div>
-                  <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--text-muted)' }}>Řešitel</label>
+                  <label className="text-[11px] font-medium mb-0.5 block uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Řešitel</label>
                   <div className="relative">
                     <select value={selectedTask.assigned_to ?? ''} disabled={!canManage}
                       onChange={e => {
@@ -1773,9 +1780,27 @@ function TasksContent() {
                   </div>
                 </div>
 
+                {/* Reviewer */}
+                <div>
+                  <label className="text-[11px] font-medium mb-0.5 block uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Zadavatel / Kontrolor</label>
+                  <div className="relative">
+                    <select value={selectedTask.reviewer_id ?? ''} disabled={!canManage}
+                      onChange={e => {
+                        const uid = e.target.value || null;
+                        updateTask(selectedTask.id, { reviewer_id: uid } as Partial<TaskItem>);
+                        setSelectedTask(prev => prev ? { ...prev, reviewer_id: uid } : null);
+                      }}
+                      className={selectCls} style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}>
+                      <option value="">–</option>
+                      {members.map(m => <option key={m.user_id} value={m.user_id}>{m.display_name}</option>)}
+                    </select>
+                    <SelectChevron />
+                  </div>
+                </div>
+
                 {/* Deadline */}
                 <div>
-                  <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--text-muted)' }}>Termín</label>
+                  <label className="text-[11px] font-medium mb-0.5 block uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Termín</label>
                   <input type="date" value={selectedTask.deadline ?? ''} disabled={!canManage}
                     onChange={e => {
                       const d = e.target.value || null;
@@ -1786,6 +1811,33 @@ function TasksContent() {
                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
                   />
                 </div>
+
+                {/* Time estimate */}
+                <div>
+                  <label className="text-[11px] font-medium mb-0.5 block uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Časový odhad (min)</label>
+                  <input type="number" min="0" step="15" value={selectedTask.time_estimate ?? ''} disabled={!canManage}
+                    placeholder="–"
+                    onChange={e => {
+                      const val = e.target.value ? parseInt(e.target.value) : null;
+                      updateTask(selectedTask.id, { time_estimate: val } as Partial<TaskItem>);
+                      setSelectedTask(prev => prev ? { ...prev, time_estimate: val } : null);
+                    }}
+                    className="text-base sm:text-sm rounded-lg border px-3 py-2 w-full"
+                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+                  />
+                </div>
+              </div>
+
+              {/* Created date */}
+              <div className="mb-3 text-xs flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Vytvořeno: {new Date(selectedTask.created_at).toLocaleString('cs-CZ', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                {selectedTask.time_estimate != null && selectedTask.time_estimate > 0 && (
+                  <span className="ml-3">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="inline mr-0.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    Odhad: {selectedTask.time_estimate >= 60 ? `${Math.floor(selectedTask.time_estimate / 60)}h ${selectedTask.time_estimate % 60 > 0 ? `${selectedTask.time_estimate % 60}min` : ''}`.trim() : `${selectedTask.time_estimate}min`}
+                  </span>
+                )}
               </div>
 
               {/* Description with rich text toolbar */}
@@ -2097,7 +2149,7 @@ function TasksContent() {
 
             {/* Column color pickers */}
             {activeBoard.settings?.column_colors_enabled && (
-              <div className="space-y-2">
+              <div className="space-y-2 mb-4">
                 <label className="text-sm font-medium block" style={{ color: 'var(--text-primary)' }}>Barvy sloupců</label>
                 {sortedColumns.map(col => (
                   <div key={col.id} className="flex items-center gap-3">
@@ -2113,6 +2165,29 @@ function TasksContent() {
                 ))}
               </div>
             )}
+
+            {/* Detail panel size */}
+            <div className="mb-2">
+              <label className="text-sm font-medium mb-1 block" style={{ color: 'var(--text-primary)' }}>Šířka detailu úkolu</label>
+              <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>Nastavte šířku pravého panelu s detailem úkolu</p>
+              <div className="flex gap-2">
+                {([
+                  { value: 'compact' as const, label: 'Úzký', width: '400px' },
+                  { value: 'normal' as const, label: 'Střední', width: '520px' },
+                  { value: 'large' as const, label: 'Široký', width: '680px' },
+                ]).map(opt => {
+                  const cur = activeBoard.settings?.detail_size ?? 'normal';
+                  return (
+                    <button key={opt.value}
+                      className="flex-1 px-3 py-2 rounded-lg border text-sm font-medium transition-colors"
+                      style={{ background: cur === opt.value ? 'var(--primary)' : 'var(--bg-hover)', color: cur === opt.value ? '#fff' : 'var(--text-muted)', borderColor: cur === opt.value ? 'var(--primary)' : 'var(--border)' }}
+                      onClick={() => saveBoardSettings({ ...activeBoard.settings, detail_size: opt.value })}>
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
       )}
