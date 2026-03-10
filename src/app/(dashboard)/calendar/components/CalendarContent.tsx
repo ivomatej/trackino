@@ -86,6 +86,12 @@ export default function CalendarContent() {
     if (data) state.setSubscriptions(data);
   }, [dataHook.fetchSubscriptions, state.setSubscriptions]);
 
+  // Initial load subscriptions (chybělo po refactoringu – subscriptions se načítaly
+  // jen přes saveSubscription/deleteSubscription, ne při prvním načtení stránky)
+  useEffect(() => {
+    fetchSubscriptions();
+  }, [fetchSubscriptions]);
+
   // ── 3. Odvozené vypočítané hodnoty ─────────────────────────────────────────
 
   const sortedCalendars = useMemo(() => {
