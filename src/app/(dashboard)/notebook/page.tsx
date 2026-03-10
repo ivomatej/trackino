@@ -1367,11 +1367,12 @@ function NotebookContent() {
 
   const fetchCalEventNotes = useCallback(async () => {
     if (!wsId) return;
-    const { data: noteData } = await supabase
+    const { data: noteData, error: noteErr } = await supabase
       .from('trackino_calendar_event_notes')
       .select('*')
       .eq('workspace_id', wsId)
       .eq('user_id', userId);
+    if (noteErr) { console.error('[Trackino] fetchCalEventNotes – dotaz selhal:', noteErr.message, noteErr.code); setCalEventNotes([]); return; }
     if (!noteData || noteData.length === 0) { setCalEventNotes([]); return; }
 
     const result: CalEventNote[] = [];
@@ -1380,10 +1381,11 @@ function NotebookContent() {
     const uuidNotes = noteData.filter(n => UUID_RE.test(n.event_ref));
     if (uuidNotes.length > 0) {
       const eventIds = uuidNotes.map(n => n.event_ref);
-      const { data: evData } = await supabase
+      const { data: evData, error: evErr } = await supabase
         .from('trackino_calendar_events')
         .select('id, title, start_date, start_time, end_time, is_all_day')
         .in('id', eventIds);
+      if (evErr) console.error('[Trackino] fetchCalEventNotes – calendar_events selhal:', evErr.message);
       if (evData) {
         const evMap: Record<string, { title: string; start_date: string; start_time: string | null; end_time: string | null; is_all_day: boolean }> = {};
         for (const e of evData) evMap[e.id] = { title: e.title, start_date: e.start_date, start_time: e.start_time ?? null, end_time: e.end_time ?? null, is_all_day: e.is_all_day ?? true };
@@ -1410,10 +1412,11 @@ function NotebookContent() {
       }
       if (parsedRec.length > 0) {
         const origIds = [...new Set(parsedRec.map(p => p.origId))];
-        const { data: recEvData } = await supabase
+        const { data: recEvData, error: recErr } = await supabase
           .from('trackino_calendar_events')
           .select('id, title, start_time, end_time, is_all_day')
           .in('id', origIds);
+        if (recErr) console.error('[Trackino] fetchCalEventNotes – rec events selhal:', recErr.message);
         if (recEvData) {
           const recEvMap: Record<string, { title: string; start_time: string | null; end_time: string | null; is_all_day: boolean }> = {};
           for (const e of recEvData) recEvMap[e.id] = { title: e.title, start_time: e.start_time ?? null, end_time: e.end_time ?? null, is_all_day: e.is_all_day ?? true };
@@ -1442,11 +1445,12 @@ function NotebookContent() {
       if (parsed.length > 0) {
         const subIds = [...new Set(parsed.map(p => p.subId))];
         const startDates = [...new Set(parsed.map(p => p.startDate))];
-        const { data: icsEvData } = await supabase
+        const { data: icsEvData, error: icsErr } = await supabase
           .from('trackino_ics_event_cache')
           .select('subscription_id, uid, title, start_date, start_time, end_time, is_all_day')
           .in('subscription_id', subIds)
           .in('start_date', startDates);
+        if (icsErr) console.error('[Trackino] fetchCalEventNotes – ics_event_cache selhal:', icsErr.message);
         if (icsEvData) {
           for (const p of parsed) {
             const ev = icsEvData.find(e => e.subscription_id === p.subId && e.start_date === p.startDate && (e.uid ?? '').slice(0, 40) === p.uidFrag);
@@ -1456,6 +1460,56 @@ function NotebookContent() {
             const title = timeStr ? `${ev.title} – ${dateStr} ${timeStr}` : `${ev.title} – ${dateStr}`;
             result.push({ event_ref: p.note.event_ref, event_id: p.note.event_ref, title, date: ev.start_date, start_time: ev.start_time ?? null, end_time: ev.end_time ?? null, is_all_day: ev.is_all_day ?? true, content: p.note.content ?? '', tasks: Array.isArray(p.note.tasks) ? p.note.tasks : [], is_favorite: p.note.is_favorite ?? false, is_important: p.note.is_important ?? false });
           }
+        }
+      }
+    }
+
+    // ── Dovolená (vacation-UUID) ──────────────────────────────────────────
+    const VACATION_RE = /^vacation-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+    const vacNotes = noteData.filter(n => VACATION_RE.test(n.event_ref));
+    if (vacNotes.length > 0) {
+      const vacIds = [...new Set(vacNotes.map(n => n.event_ref.match(VACATION_RE)![1]))];
+      const { data: vacData, error: vacErr } = await supabase
+        .from('trackino_vacation_entries')
+        .select('id, start_date, end_date')
+        .in('id', vacIds);
+      if (vacErr) console.error('[Trackino] fetchCalEventNotes – vacation_entries selhal:', vacErr.message);
+      if (vacData) {
+        const vacMap: Record<string, { start_date: string; end_date: string }> = {};
+        for (const v of vacData) vacMap[v.id] = { start_date: v.start_date, end_date: v.end_date };
+        for (const n of vacNotes) {
+          const m = n.event_ref.match(VACATION_RE);
+          if (!m) continue;
+          const vac = vacMap[m[1]];
+          if (!vac) continue;
+          const dateStr = fmtEventDate(vac.start_date);
+          const endStr = vac.start_date !== vac.end_date ? ` – ${fmtEventDate(vac.end_date)}` : '';
+          const title = `Dovolená – ${dateStr}${endStr}`;
+          result.push({ event_ref: n.event_ref, event_id: n.event_ref, title, date: vac.start_date, start_time: null, end_time: null, is_all_day: true, content: n.content ?? '', tasks: Array.isArray(n.tasks) ? n.tasks : [], is_favorite: n.is_favorite ?? false, is_important: n.is_important ?? false });
+        }
+      }
+    }
+
+    // ── Důležité dny (importantday-UUID-YYYY-MM-DD) ───────────────────────
+    const IMPORTANTDAY_RE = /^importantday-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})-(\d{4}-\d{2}-\d{2})$/i;
+    const impDayNotes = noteData.filter(n => IMPORTANTDAY_RE.test(n.event_ref));
+    if (impDayNotes.length > 0) {
+      const dayIds = [...new Set(impDayNotes.map(n => n.event_ref.match(IMPORTANTDAY_RE)![1]))];
+      const { data: dayData, error: dayErr } = await supabase
+        .from('trackino_important_days')
+        .select('id, title')
+        .in('id', dayIds);
+      if (dayErr) console.error('[Trackino] fetchCalEventNotes – important_days selhal:', dayErr.message);
+      if (dayData) {
+        const dayMap: Record<string, { title: string }> = {};
+        for (const d of dayData) dayMap[d.id] = { title: d.title };
+        for (const n of impDayNotes) {
+          const m = n.event_ref.match(IMPORTANTDAY_RE);
+          if (!m) continue;
+          const day = dayMap[m[1]];
+          if (!day) continue;
+          const title = `${day.title} – ${fmtEventDate(m[2])}`;
+          result.push({ event_ref: n.event_ref, event_id: n.event_ref, title, date: m[2], start_time: null, end_time: null, is_all_day: true, content: n.content ?? '', tasks: Array.isArray(n.tasks) ? n.tasks : [], is_favorite: n.is_favorite ?? false, is_important: n.is_important ?? false });
         }
       }
     }
