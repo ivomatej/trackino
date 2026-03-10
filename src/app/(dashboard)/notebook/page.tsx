@@ -112,7 +112,7 @@ function FolderTree({
                 {folder.name}
               </span>
               {itemCount > 0 && (
-                <span className="text-[10px] px-1.5 py-0 rounded-full flex-shrink-0 sm:group-hover/folder:hidden" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>{itemCount}</span>
+                <span className="text-[10px] flex-shrink-0 sm:group-hover/folder:hidden" style={{ color: 'var(--text-muted)' }}>{itemCount}</span>
               )}
               <div className="sm:hidden flex-shrink-0" onClick={e => e.stopPropagation()}>
                 <button type="button"
@@ -165,7 +165,7 @@ function FolderTree({
                   </div>
                 )}
               </div>
-              <div className="hidden sm:flex sm:opacity-0 sm:group-hover/folder:opacity-100 items-center gap-0.5 flex-shrink-0 transition-opacity">
+              <div className="hidden sm:group-hover/folder:flex items-center gap-0.5 flex-shrink-0">
                 {depth < MAX_DEPTH - 1 && (
                   <button type="button" title="Přidat podsložku" onClick={e => { e.stopPropagation(); onAddSub(folder.id, depth + 1); }}
                     className="w-5 h-5 flex items-center justify-center rounded hover:bg-[var(--bg-hover)]" style={{ color: 'var(--text-muted)' }}>
@@ -832,7 +832,7 @@ function NotebookContent() {
   const [archiveSelected, setArchiveSelected] = useState<Set<string>>(new Set());
 
   // Move note dropdown
-  const [moveDropdown, setMoveDropdown] = useState<{ noteId: string; top: number; right: number } | null>(null);
+  const [moveDropdown, setMoveDropdown] = useState<{ noteId: string; top?: number; bottom?: number; right: number } | null>(null);
 
   // Folder modal
   const [folderModal, setFolderModal] = useState<{ open: boolean; parentId: string | null; editing: NoteFolder | null }>({ open: false, parentId: null, editing: null });
@@ -1395,7 +1395,12 @@ function NotebookContent() {
                         <button onClick={e => {
                           e.stopPropagation();
                           const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                          setMoveDropdown({ noteId: note.id, top: rect.bottom + 4, right: window.innerWidth - rect.right });
+                          const spaceBelow = window.innerHeight - rect.bottom;
+                          if (spaceBelow >= 248) {
+                            setMoveDropdown({ noteId: note.id, top: rect.bottom + 4, right: window.innerWidth - rect.right });
+                          } else {
+                            setMoveDropdown({ noteId: note.id, bottom: window.innerHeight - rect.top + 4, right: window.innerWidth - rect.right });
+                          }
                         }}
                           className="w-9 h-9 md:w-7 md:h-7 flex items-center justify-center rounded-lg" title="Přesunout do složky"
                           style={{ color: 'var(--text-muted)' }}
@@ -1431,19 +1436,19 @@ function NotebookContent() {
       {moveDropdown && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setMoveDropdown(null)} />
-          <div className="fixed z-50 rounded-lg border shadow-lg py-1 min-w-[200px] max-h-60 overflow-y-auto"
-            style={{ top: moveDropdown.top, right: moveDropdown.right, background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+          <div className="fixed z-50 rounded-xl border shadow-lg py-1 w-48 max-h-60 overflow-y-auto"
+            style={{ top: moveDropdown.top, bottom: moveDropdown.bottom, right: moveDropdown.right, background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
             <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Přesunout do</div>
-            <button className="w-full text-left px-3 py-2 text-sm hover:bg-[var(--bg-hover)] flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}
+            <button className="w-full text-left px-3 py-1.5 text-xs hover:bg-[var(--bg-hover)] flex items-center gap-2 transition-colors" style={{ color: 'var(--text-secondary)' }}
               onClick={() => moveNote(moveDropdown.noteId, null)}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
-              Inbox (nezařazené)
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+              Doručené
             </button>
             {buildFolderFlat(folders).map(({ folder, depth }) => (
-              <button key={folder.id} className="w-full text-left py-2 text-sm hover:bg-[var(--bg-hover)] flex items-center gap-2"
-                style={{ paddingLeft: depth * 14 + 12, paddingRight: 12, color: depth > 0 ? 'var(--text-muted)' : 'var(--text-secondary)' }}
+              <button key={folder.id} className="w-full text-left py-1.5 text-xs hover:bg-[var(--bg-hover)] flex items-center gap-2 transition-colors"
+                style={{ paddingLeft: depth * 14 + 12, paddingRight: 12, color: depth > 0 ? 'var(--text-secondary)' : 'var(--text-primary)' }}
                 onClick={() => moveNote(moveDropdown.noteId, folder.id)}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
                 {folder.name}
               </button>
             ))}
