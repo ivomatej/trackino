@@ -112,7 +112,7 @@ function FolderTree({
                 {folder.name}
               </span>
               {itemCount > 0 && (
-                <span className="text-[10px] px-1.5 py-0 rounded-full flex-shrink-0 mr-1" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>{itemCount}</span>
+                <span className="text-[10px] px-1.5 py-0 rounded-full flex-shrink-0 sm:group-hover/folder:hidden" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>{itemCount}</span>
               )}
               <div className="sm:hidden flex-shrink-0" onClick={e => e.stopPropagation()}>
                 <button type="button"
@@ -1439,10 +1439,11 @@ function NotebookContent() {
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
               Inbox (nezařazené)
             </button>
-            {folders.filter(f => !f.parent_id).map(folder => (
-              <button key={folder.id} className="w-full text-left px-3 py-2 text-sm hover:bg-[var(--bg-hover)] flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}
+            {buildFolderFlat(folders).map(({ folder, depth }) => (
+              <button key={folder.id} className="w-full text-left py-2 text-sm hover:bg-[var(--bg-hover)] flex items-center gap-2"
+                style={{ paddingLeft: depth * 14 + 12, paddingRight: 12, color: depth > 0 ? 'var(--text-muted)' : 'var(--text-secondary)' }}
                 onClick={() => moveNote(moveDropdown.noteId, folder.id)}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
                 {folder.name}
               </button>
             ))}
