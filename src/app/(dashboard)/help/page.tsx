@@ -240,7 +240,10 @@ const DEFAULT_HELP_CONTENT = `
   <li><strong>Přesunout do složky</strong> – v detailu poznámky je v záhlaví ikonka složky; kliknutím se otevře rychlé menu pro přesun do jiné složky nebo do Inboxu</li>
   <li><strong>Nová poznámka</strong> – po vytvoření se automaticky zobrazí kurzor v poli názvu; stiskem Enter přejde kurzor do editoru obsahu</li>
   <li><strong>Archiv</strong> – archivované poznámky jsou v samostatné sekci; archivovat/obnovit lze přes kebab menu (⋮)</li>
-  <li><strong>Poznámky k událostem</strong> – samostatná sekce pro poznámky přidané ke kalendářním událostem</li>
+  <li><strong>Kopírovat obsah</strong> – ikonka schránky ve výpisu i v záhlaví editoru zkopíruje text poznámky (bez formátování) do schránky; zelená fajfka potvrdí zkopírování po dobu 2 s</li>
+  <li><strong>Duplikovat poznámku</strong> – ikonka duplikátu ve výpisu i v záhlaví editoru vytvoří kopii se suffixem „– kopie" (při dalším duplikování „– kopie 2" atd.)</li>
+  <li><strong>Řazení Nejstarší</strong> – dropdown řazení obsahuje novou volbu „Nejstarší" (řadí dle data vytvoření vzestupně)</li>
+  <li><strong>Poznámky k událostem</strong> – samostatná sekce pro poznámky přidané ke kalendářním událostem; titulek v levém panelu obsahuje datum a čas události (např. „Porada – 10.3.2026 10:00–11:00"); tlačítkem <em>Otevřít v Kalendáři</em> se přejde do pohledu Seznam v Kalendáři a automaticky se otevře inline panel poznámky pro danou událost</li>
 </ul>
 
 <h3>Úpravy aplikace</h3>
