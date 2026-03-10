@@ -1432,34 +1432,27 @@ function NotebookContent() {
       }
     }
 
-    // ── ICS události (sub-UUID-uidFrag-YYYY-MM-DD) ────────────────────────
-    const ICS_REF_RE = /^sub-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})-(.+)-(\d{4}-\d{2}-\d{2})$/;
-    const icsNotes = noteData.filter(n => !UUID_RE.test(n.event_ref) && n.event_ref.startsWith('sub-'));
+    // ── ICS události (sub-...) ────────────────────────────────────────────
+    // Poznámka: trackino_ics_event_cache.uid = celý ev.id (= event_ref),
+    // nikoli originální ICS UID. Stačí přímý lookup uid IN (event_refs).
+    const icsNotes = noteData.filter(n => n.event_ref.startsWith('sub-'));
     if (icsNotes.length > 0) {
-      type Parsed = { note: typeof icsNotes[0]; subId: string; uidFrag: string; startDate: string };
-      const parsed: Parsed[] = [];
-      for (const n of icsNotes) {
-        const m = n.event_ref.match(ICS_REF_RE);
-        if (m) parsed.push({ note: n, subId: m[1], uidFrag: m[2], startDate: m[3] });
-      }
-      if (parsed.length > 0) {
-        const subIds = [...new Set(parsed.map(p => p.subId))];
-        const startDates = [...new Set(parsed.map(p => p.startDate))];
-        const { data: icsEvData, error: icsErr } = await supabase
-          .from('trackino_ics_event_cache')
-          .select('subscription_id, uid, title, start_date, start_time, end_time, is_all_day')
-          .in('subscription_id', subIds)
-          .in('start_date', startDates);
-        if (icsErr) console.error('[Trackino] fetchCalEventNotes – ics_event_cache selhal:', icsErr.message);
-        if (icsEvData) {
-          for (const p of parsed) {
-            const ev = icsEvData.find(e => e.subscription_id === p.subId && e.start_date === p.startDate && (e.uid ?? '').slice(0, 40) === p.uidFrag);
-            if (!ev) continue;
-            const dateStr = fmtEventDate(ev.start_date);
-            const timeStr = ev.is_all_day ? '' : fmtEventTime(ev.start_time ?? null, ev.end_time ?? null);
-            const title = timeStr ? `${ev.title} – ${dateStr} ${timeStr}` : `${ev.title} – ${dateStr}`;
-            result.push({ event_ref: p.note.event_ref, event_id: p.note.event_ref, title, date: ev.start_date, start_time: ev.start_time ?? null, end_time: ev.end_time ?? null, is_all_day: ev.is_all_day ?? true, content: p.note.content ?? '', tasks: Array.isArray(p.note.tasks) ? p.note.tasks : [], is_favorite: p.note.is_favorite ?? false, is_important: p.note.is_important ?? false });
-          }
+      const icsRefs = icsNotes.map(n => n.event_ref);
+      const { data: icsEvData, error: icsErr } = await supabase
+        .from('trackino_ics_event_cache')
+        .select('uid, title, start_date, start_time, end_time, is_all_day')
+        .in('uid', icsRefs);
+      if (icsErr) console.error('[Trackino] fetchCalEventNotes – ics_event_cache selhal:', icsErr.message);
+      if (icsEvData) {
+        const evMap: Record<string, typeof icsEvData[0]> = {};
+        for (const e of icsEvData) evMap[e.uid] = e;
+        for (const n of icsNotes) {
+          const ev = evMap[n.event_ref];
+          if (!ev) continue;
+          const dateStr = fmtEventDate(ev.start_date);
+          const timeStr = ev.is_all_day ? '' : fmtEventTime(ev.start_time ?? null, ev.end_time ?? null);
+          const title = timeStr ? `${ev.title} – ${dateStr} ${timeStr}` : `${ev.title} – ${dateStr}`;
+          result.push({ event_ref: n.event_ref, event_id: n.event_ref, title, date: ev.start_date, start_time: ev.start_time ?? null, end_time: ev.end_time ?? null, is_all_day: ev.is_all_day ?? true, content: n.content ?? '', tasks: Array.isArray(n.tasks) ? n.tasks : [], is_favorite: n.is_favorite ?? false, is_important: n.is_important ?? false });
         }
       }
     }

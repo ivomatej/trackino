@@ -324,8 +324,7 @@ export function useCalendarState(
             const text = await res.text();
             const parsed = parseICS(text, sub.id, sub.color);
             if (!cancelled) allEvents.push(...parsed);
-            const isShared = calendarShares.some(sh => sh.calendar_id === sub.id);
-            if (isShared && currentWorkspace && parsed.length > 0) {
+            if (currentWorkspace && parsed.length > 0) {
               const cacheRows = parsed.map(ev => ({
                 subscription_id: sub.id,
                 workspace_id: currentWorkspace.id,
