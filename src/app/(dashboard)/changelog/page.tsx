@@ -11,6 +11,20 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.51.16 – 10. 3. 2026</h3>
+<ul>
+  <li><strong>Notebook – 6 vylepšení</strong>:
+    <ul>
+      <li><strong>Uložit filtraci pro složku</strong> – nový toggle v Nastavení; pokud zapnut, zobrazí se v toolbaru tlačítko „Uložit filtraci", které uloží aktuální řazení pro danou složku do localStorage; při přepnutí na složku se předvolí uložené řazení</li>
+      <li><strong>Oprava odrážkových a číslovaných seznamů</strong> – přidána třída <code>nb-editor</code> na contenteditable div + CSS pravidla pro <code>ul/ol/li</code> v editorStyles; tlačítka výčtu nyní správně zobrazují odrážky a čísla</li>
+      <li><strong>Větší kód blok</strong> – min-height kódového bloku zvětšen z 2.5em na 5em (platí pro NoteEditor i CalEventNoteEditor)</li>
+      <li><strong>× tlačítko pro smazání task bloku</strong> – v pravém horním rohu každého task bloku se při hoveru zobrazí × pro smazání celého bloku; prázdná sekce Úkoly je skryta (zobrazí se malé tlačítko „+ Přidat úkoly")</li>
+      <li><strong>Širší zobrazení názvu složky</strong> – název aktivní složky v toolbaru se nyní nevyřeže zbytečně brzy (max-w 160px → 480px)</li>
+      <li><strong>Stav „Hotovo"</strong> – nový volitelný toggle v Nastavení; aktivuje pill tlačítko Hotovo v editoru, zelená fajfka + přeškrtnutí + ztlumení v listu poznámek, tlačítko Hotovo v action buttons listu</li>
+    </ul>
+  </li>
+</ul>
+
 <h3>v2.51.12 – 10. 3. 2026</h3>
 <ul>
   <li><strong>Kalendář + Notebook – 4 opravy poznámek k událostem</strong>:

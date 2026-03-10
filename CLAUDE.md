@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 10. 3. 2026 (v2.51.15)
+> Aktualizováno: 10. 3. 2026 (v2.51.16)
 
 ---
 
@@ -544,6 +544,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.51.16 | 10. 3. 2026 | Notebook – 6 vylepšení: (a) Uložit filtraci pro složku (toggle v Nastavení, folderSortCache v localStorage trackino_notebook_folder_sort_{wsId}); (b) Fix odrážek/číslování v editoru (nb-editor class + CSS ul/ol/li v editorStyles); (c) Kódový blok výška 5em; (d) × tlačítko pro odstranění task bloku + conditional tasks section (prázdný stav = „+ Přidat úkoly"); (e) Název složky max-w 160px→480px; (f) Stav Hotovo (is_done v DB, toggle v Nastavení, pill button v toolbaru, line-through+opacity v listě) |
 | v2.51.15 | 10. 3. 2026 | ICS poznámky – 2 opravy: Notebook ICS sekce přepsána (uid v cache = celý ev.id → přímý lookup uid=event_ref místo chybné regex+uidFrag logiky); ICS cache plněna vždy (nejen sdílené odběry) aby fungovaly i osobní ICS události |
 | v2.51.14 | 10. 3. 2026 | Notebook – Sync Poznámky k událostem: fetchCalEventNotes rozšířeno o handlery vacation (vacation-UUID → trackino_vacation_entries) a important_day (importantday-UUID-datum → trackino_important_days); error logování pro všechny Supabase dotazy |
 | v2.51.13 | 10. 3. 2026 | Notebook – Sync Poznámky k událostem: selectFilter volá fetchCalEventNotes při přepnutí na složku; Kalendář – upsert poznámek bez neexistujících sloupců event_title/event_date |
