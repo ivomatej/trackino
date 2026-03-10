@@ -47,6 +47,19 @@ interface Member {
   email: string;
 }
 
+// ── Cross-workspace types ──
+interface UserWorkspace { id: string; name: string; color: string | null; }
+interface CwsBoardInfo { id: string; name: string; workspace_id: string; color: string; }
+interface CwsColumnInfo { id: string; name: string; color: string; board_id: string; sort_order: number; }
+
+const WORKSPACE_COLORS = ['#6366f1', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#0ea5e9'];
+const getWsColor = (wsId: string, ws?: UserWorkspace | null): string => {
+  if (ws?.color) return ws.color;
+  let hash = 0;
+  for (let i = 0; i < wsId.length; i++) hash = wsId.charCodeAt(i) + ((hash << 5) - hash);
+  return WORKSPACE_COLORS[Math.abs(hash) % WORKSPACE_COLORS.length];
+};
+
 // ── Inline Avatar ──
 function Avatar({ name, color, size = 24 }: { name: string; color: string; size?: number }) {
   const initials = name.split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2);
@@ -260,6 +273,40 @@ function TasksContent() {
 
   const wsId = currentWorkspace?.id;
 
+  // ── Cross-workspace state ──
+  const [crossWsMode, setCrossWsMode] = useState(false);
+  const [userWorkspaces, setUserWorkspaces] = useState<UserWorkspace[]>([]);
+  const [cwsTab, setCwsTab] = useState<string>('all');
+  const [cwsLoading, setCwsLoading] = useState(false);
+  const [cwsTasks, setCwsTasks] = useState<TaskItem[]>([]);
+  const [cwsBoardsMap, setCwsBoardsMap] = useState<Map<string, CwsBoardInfo>>(new Map());
+  const [cwsColsMap, setCwsColsMap] = useState<Map<string, CwsColumnInfo>>(new Map());
+  const [cwsAllMembers, setCwsAllMembers] = useState<Map<string, Member>>(new Map());
+  const [cwsDataLoaded, setCwsDataLoaded] = useState(false);
+  // Cross-workspace filters
+  const [showCwsFilters, setShowCwsFilters] = useState(false);
+  const [cwsSearch, setCwsSearch] = useState('');
+  const [cwsFilterPriority, setCwsFilterPriority] = useState<TaskPriority | 'all'>('all');
+  const [cwsFilterDeadline, setCwsFilterDeadline] = useState<DeadlineFilter>('all');
+  const [cwsFilterBoard, setCwsFilterBoard] = useState<string>('all');
+  const [cwsFilterAssignee, setCwsFilterAssignee] = useState<string>('all');
+  const [cwsHideCompleted, setCwsHideCompleted] = useState(true);
+  const [cwsSortBy, setCwsSortBy] = useState<'deadline' | 'priority' | 'title' | 'created_at'>('deadline');
+  const [cwsSortDir, setCwsSortDir] = useState<'asc' | 'desc'>('asc');
+  // Cross-workspace new task modal
+  const [showCwsNewTask, setShowCwsNewTask] = useState(false);
+  const [cwsNewWsId, setCwsNewWsId] = useState('');
+  const [cwsNewBoardId, setCwsNewBoardId] = useState('');
+  const [cwsNewColId, setCwsNewColId] = useState('');
+  const [cwsNewTitle, setCwsNewTitle] = useState('');
+  const [cwsNewPriority, setCwsNewPriority] = useState<TaskPriority>('none');
+  const [cwsNewDeadline, setCwsNewDeadline] = useState('');
+  const [cwsNewAssignee, setCwsNewAssignee] = useState('');
+  const [cwsNewTaskBoards, setCwsNewTaskBoards] = useState<CwsBoardInfo[]>([]);
+  const [cwsNewTaskCols, setCwsNewTaskCols] = useState<CwsColumnInfo[]>([]);
+  const [cwsNewTaskMembers, setCwsNewTaskMembers] = useState<Member[]>([]);
+  const [cwsNewSaving, setCwsNewSaving] = useState(false);
+
   // ── Favorite boards (localStorage) ──
   const [favoriteBoards, setFavoriteBoards] = useState<Set<string>>(() => {
     if (typeof window === 'undefined' || !currentWorkspace?.id) return new Set();
@@ -364,6 +411,80 @@ function TasksContent() {
     return list;
   }, [tasks, search, onlyMine, filterAssignee, filterPriority, filterDeadline, hideCompleted, doneColumnId, user]);
 
+  // ── Cross-workspace filtered tasks ──
+  const cwsFilteredTasks = useMemo(() => {
+    if (!crossWsMode) return [];
+    let list = cwsTasks;
+
+    // Tab filter: show only tasks from selected workspace
+    if (cwsTab !== 'all') {
+      const tabBoardIds = [...cwsBoardsMap.entries()]
+        .filter(([, b]) => b.workspace_id === cwsTab)
+        .map(([id]) => id);
+      list = list.filter(t => tabBoardIds.includes(t.board_id));
+    }
+
+    // Search
+    if (cwsSearch.trim()) {
+      const q = cwsSearch.toLowerCase();
+      list = list.filter(t =>
+        t.title.toLowerCase().includes(q) ||
+        (t.description ?? '').toLowerCase().includes(q) ||
+        (cwsBoardsMap.get(t.board_id)?.name ?? '').toLowerCase().includes(q)
+      );
+    }
+
+    // Priority
+    if (cwsFilterPriority !== 'all') list = list.filter(t => t.priority === cwsFilterPriority);
+
+    // Board
+    if (cwsFilterBoard !== 'all') list = list.filter(t => t.board_id === cwsFilterBoard);
+
+    // Assignee
+    if (cwsFilterAssignee === 'mine' && user) list = list.filter(t => t.assigned_to === user.id);
+    else if (cwsFilterAssignee !== 'all') list = list.filter(t => t.assigned_to === cwsFilterAssignee);
+
+    // Deadline
+    if (cwsFilterDeadline !== 'all') {
+      const today = new Date().toISOString().slice(0, 10);
+      const now = new Date();
+      if (cwsFilterDeadline === 'overdue') list = list.filter(t => t.deadline && t.deadline < today);
+      else if (cwsFilterDeadline === 'today') list = list.filter(t => t.deadline === today);
+      else if (cwsFilterDeadline === 'this_week') {
+        const weekEnd = new Date(now); weekEnd.setDate(weekEnd.getDate() + (7 - weekEnd.getDay()));
+        list = list.filter(t => t.deadline && t.deadline >= today && t.deadline <= weekEnd.toISOString().slice(0, 10));
+      } else if (cwsFilterDeadline === 'this_month') {
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
+        list = list.filter(t => t.deadline && t.deadline >= today && t.deadline <= monthEnd);
+      } else if (cwsFilterDeadline === 'no_deadline') list = list.filter(t => !t.deadline);
+    }
+
+    // Hide completed
+    if (cwsHideCompleted) list = list.filter(t => !t.is_completed);
+
+    // Sort
+    return [...list].sort((a, b) => {
+      let cmp = 0;
+      if (cwsSortBy === 'deadline') cmp = (a.deadline ?? '9999').localeCompare(b.deadline ?? '9999');
+      else if (cwsSortBy === 'priority') {
+        const order: Record<TaskPriority, number> = { urgent: 0, high: 1, medium: 2, low: 3, none: 4 };
+        cmp = order[a.priority] - order[b.priority];
+      } else if (cwsSortBy === 'title') cmp = a.title.localeCompare(b.title, 'cs');
+      else if (cwsSortBy === 'created_at') cmp = b.created_at.localeCompare(a.created_at);
+      return cwsSortDir === 'asc' ? cmp : -cmp;
+    });
+  }, [crossWsMode, cwsTasks, cwsTab, cwsSearch, cwsFilterPriority, cwsFilterBoard, cwsFilterAssignee, cwsFilterDeadline, cwsHideCompleted, cwsBoardsMap, cwsSortBy, cwsSortDir, user]);
+
+  // ── Active filter count (cross-ws) ──
+  const cwsActiveFilterCount = useMemo(() => {
+    let n = 0;
+    if (cwsFilterPriority !== 'all') n++;
+    if (cwsFilterDeadline !== 'all') n++;
+    if (cwsFilterBoard !== 'all') n++;
+    if (cwsFilterAssignee !== 'all') n++;
+    return n;
+  }, [cwsFilterPriority, cwsFilterDeadline, cwsFilterBoard, cwsFilterAssignee]);
+
   // ── Fetch data ──
   const fetchData = useCallback(async () => {
     if (!wsId || !user) return;
@@ -454,6 +575,124 @@ function TasksContent() {
   }, [wsId, user, canManage, activeBoardId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // ── Cross-workspace fetch ──
+  const fetchCrossWsData = useCallback(async (forceReload = false) => {
+    if (!user) return;
+    if (cwsDataLoaded && !forceReload) return;
+    setCwsLoading(true);
+
+    // 1. Get workspace IDs user belongs to
+    const { data: memberships } = await supabase
+      .from('trackino_workspace_members')
+      .select('workspace_id')
+      .eq('user_id', user.id);
+    const wsIds = (memberships ?? []).map((m: { workspace_id: string }) => m.workspace_id);
+    if (!wsIds.length) { setCwsLoading(false); setCwsDataLoaded(true); return; }
+
+    // 2. Get workspace names
+    const { data: wsData } = await supabase
+      .from('trackino_workspaces')
+      .select('id, name, color')
+      .in('id', wsIds);
+    setUserWorkspaces((wsData ?? []) as UserWorkspace[]);
+
+    // 3. Fetch ALL tasks (RLS handles cross-workspace access automatically)
+    const { data: allTaskData } = await supabase
+      .from('trackino_task_items')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(1000);
+    const taskList = (allTaskData ?? []) as TaskItem[];
+    setCwsTasks(taskList);
+
+    if (taskList.length > 0) {
+      // 4. Boards for all tasks
+      const boardIds = [...new Set(taskList.map(t => t.board_id).filter(Boolean))];
+      const { data: boardData } = await supabase
+        .from('trackino_task_boards')
+        .select('id, name, workspace_id, color')
+        .in('id', boardIds);
+      const newBoardsMap = new Map<string, CwsBoardInfo>();
+      (boardData ?? []).forEach((b: CwsBoardInfo) => newBoardsMap.set(b.id, b));
+      setCwsBoardsMap(newBoardsMap);
+
+      // 5. Columns
+      const { data: colData } = await supabase
+        .from('trackino_task_columns')
+        .select('id, name, color, board_id, sort_order')
+        .in('board_id', boardIds);
+      const newColsMap = new Map<string, CwsColumnInfo>();
+      (colData ?? []).forEach((c: CwsColumnInfo) => newColsMap.set(c.id, c));
+      setCwsColsMap(newColsMap);
+    }
+
+    // 6. Members from all workspaces
+    const { data: allWsMembers } = await supabase
+      .from('trackino_workspace_members')
+      .select('user_id')
+      .in('workspace_id', wsIds);
+    const memberUids = [...new Set((allWsMembers ?? []).map((m: { user_id: string }) => m.user_id))];
+    if (memberUids.length > 0) {
+      const { data: profiles } = await supabase
+        .from('trackino_profiles')
+        .select('id, display_name, avatar_color, email')
+        .in('id', memberUids);
+      const membersMap = new Map<string, Member>();
+      (profiles ?? []).forEach((p: { id: string; display_name: string | null; avatar_color: string | null; email: string | null }) =>
+        membersMap.set(p.id, { user_id: p.id, display_name: p.display_name ?? '', avatar_color: p.avatar_color ?? '#6366f1', email: p.email ?? '' })
+      );
+      setCwsAllMembers(membersMap);
+    }
+
+    setCwsDataLoaded(true);
+    setCwsLoading(false);
+  }, [user, cwsDataLoaded]);
+
+  // Load boards+members when cwsNewWsId changes (for new task modal)
+  useEffect(() => {
+    if (!cwsNewWsId || !showCwsNewTask) { setCwsNewTaskBoards([]); setCwsNewTaskCols([]); setCwsNewTaskMembers([]); return; }
+    (async () => {
+      const { data: bData } = await supabase.from('trackino_task_boards').select('id, name, workspace_id, color').eq('workspace_id', cwsNewWsId);
+      const bList: CwsBoardInfo[] = (bData ?? []) as CwsBoardInfo[];
+      setCwsNewTaskBoards(bList);
+      setCwsNewBoardId(bList[0]?.id ?? '');
+      const { data: wm } = await supabase.from('trackino_workspace_members').select('user_id').eq('workspace_id', cwsNewWsId);
+      const uids = (wm ?? []).map((m: { user_id: string }) => m.user_id);
+      if (uids.length > 0) {
+        const { data: profiles } = await supabase.from('trackino_profiles').select('id, display_name, avatar_color, email').in('id', uids);
+        setCwsNewTaskMembers((profiles ?? []).map((p: { id: string; display_name: string | null; avatar_color: string | null; email: string | null }) => ({ user_id: p.id, display_name: p.display_name ?? '', avatar_color: p.avatar_color ?? '#6366f1', email: p.email ?? '' })));
+      } else { setCwsNewTaskMembers([]); }
+    })();
+  }, [cwsNewWsId, showCwsNewTask]);
+
+  useEffect(() => {
+    if (!cwsNewBoardId) { setCwsNewTaskCols([]); setCwsNewColId(''); return; }
+    (async () => {
+      const { data: colData } = await supabase.from('trackino_task_columns').select('id, name, color, board_id, sort_order').eq('board_id', cwsNewBoardId).order('sort_order');
+      const cList: CwsColumnInfo[] = (colData ?? []) as CwsColumnInfo[];
+      setCwsNewTaskCols(cList);
+      setCwsNewColId(cList[0]?.id ?? '');
+    })();
+  }, [cwsNewBoardId]);
+
+  const handleCreateCwsTask = useCallback(async () => {
+    if (!cwsNewWsId || !cwsNewBoardId || !cwsNewColId || !cwsNewTitle.trim() || !user) return;
+    setCwsNewSaving(true);
+    const { data } = await supabase.from('trackino_task_items').insert({
+      workspace_id: cwsNewWsId, board_id: cwsNewBoardId, column_id: cwsNewColId,
+      title: cwsNewTitle.trim(), priority: cwsNewPriority,
+      deadline: cwsNewDeadline || null, assigned_to: cwsNewAssignee || null,
+      sort_order: 0, created_by: user.id,
+    }).select().single();
+    if (data) {
+      setCwsTasks(prev => [data as TaskItem, ...prev]);
+      await supabase.from('trackino_task_history').insert({ task_id: (data as TaskItem).id, user_id: user.id, action: 'created' });
+    }
+    setCwsNewSaving(false);
+    setShowCwsNewTask(false);
+    setCwsNewTitle(''); setCwsNewPriority('none'); setCwsNewDeadline(''); setCwsNewAssignee('');
+  }, [cwsNewWsId, cwsNewBoardId, cwsNewColId, cwsNewTitle, cwsNewPriority, cwsNewDeadline, cwsNewAssignee, user]);
 
   // Save view preference
   useEffect(() => {
@@ -1113,23 +1352,31 @@ function TasksContent() {
             </div>
           )}
 
-          {/* All tasks / My tasks nav */}
+          {/* All tasks / My tasks / Cross-workspace nav */}
           <div className="mb-2 space-y-0.5">
             <button className="flex items-center gap-2 w-full py-1.5 px-2 rounded-lg text-sm transition-colors"
-              style={{ color: !myTasksMode && !activeBoardId ? 'var(--primary)' : 'var(--text-primary)', background: !myTasksMode && !activeBoardId ? 'var(--primary)' + '08' : 'transparent' }}
-              onMouseEnter={e => { if (myTasksMode || activeBoardId) e.currentTarget.style.background = 'var(--bg-hover)'; }}
-              onMouseLeave={e => { if (myTasksMode || activeBoardId) e.currentTarget.style.background = 'transparent'; }}
-              onClick={() => { setMyTasksMode(false); setOnlyMine(false); setActiveBoardId(boards[0]?.id ?? null); setLeftOpen(false); }}>
+              style={{ color: !crossWsMode && !myTasksMode && !activeBoardId ? 'var(--primary)' : 'var(--text-primary)', background: !crossWsMode && !myTasksMode && !activeBoardId ? 'var(--primary)' + '08' : 'transparent' }}
+              onMouseEnter={e => { if (crossWsMode || myTasksMode || activeBoardId) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+              onMouseLeave={e => { if (crossWsMode || myTasksMode || activeBoardId) e.currentTarget.style.background = 'transparent'; }}
+              onClick={() => { setCrossWsMode(false); setMyTasksMode(false); setOnlyMine(false); setActiveBoardId(boards[0]?.id ?? null); setLeftOpen(false); }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)' }}><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
               Všechny úkoly
             </button>
             <button className="flex items-center gap-2 w-full py-1.5 px-2 rounded-lg text-sm transition-colors"
-              style={{ color: myTasksMode ? 'var(--primary)' : 'var(--text-primary)', background: myTasksMode ? 'var(--primary)' + '08' : 'transparent' }}
-              onMouseEnter={e => { if (!myTasksMode) e.currentTarget.style.background = 'var(--bg-hover)'; }}
-              onMouseLeave={e => { if (!myTasksMode) e.currentTarget.style.background = 'transparent'; }}
-              onClick={() => { setMyTasksMode(true); setOnlyMine(true); setView('list'); setListSortBy('updated_at'); setActiveBoardId(null); setLeftOpen(false); }}>
+              style={{ color: !crossWsMode && myTasksMode ? 'var(--primary)' : 'var(--text-primary)', background: !crossWsMode && myTasksMode ? 'var(--primary)' + '08' : 'transparent' }}
+              onMouseEnter={e => { if (crossWsMode || !myTasksMode) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+              onMouseLeave={e => { if (crossWsMode || !myTasksMode) e.currentTarget.style.background = 'transparent'; }}
+              onClick={() => { setCrossWsMode(false); setMyTasksMode(true); setOnlyMine(true); setView('list'); setListSortBy('updated_at'); setActiveBoardId(null); setLeftOpen(false); }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)' }}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               Moje úkoly
+            </button>
+            <button className="flex items-center gap-2 w-full py-1.5 px-2 rounded-lg text-sm transition-colors"
+              style={{ color: crossWsMode ? 'var(--primary)' : 'var(--text-primary)', background: crossWsMode ? 'var(--primary)' + '08' : 'transparent' }}
+              onMouseEnter={e => { if (!crossWsMode) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+              onMouseLeave={e => { if (!crossWsMode) e.currentTarget.style.background = 'transparent'; }}
+              onClick={() => { setCrossWsMode(true); setMyTasksMode(false); setActiveBoardId(null); fetchCrossWsData(); setLeftOpen(false); }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)' }}><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+              Přehled workspace
             </button>
           </div>
 
@@ -1220,8 +1467,10 @@ function TasksContent() {
           onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         </button>
-        <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{myTasksMode ? 'Moje úkoly' : (activeBoard?.name ?? 'Úkoly')}</h1>
-        <div className="flex items-center gap-2 flex-wrap flex-1">
+        <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
+          {crossWsMode ? 'Přehled workspace' : (myTasksMode ? 'Moje úkoly' : (activeBoard?.name ?? 'Úkoly'))}
+        </h1>
+        {!crossWsMode && <div className="flex items-center gap-2 flex-wrap flex-1">
           {/* View switcher */}
           <div className="flex rounded-lg overflow-hidden border" style={{ borderColor: 'var(--border)' }}>
             {(['list', 'kanban', 'table'] as TaskView[]).map(v => (
@@ -1303,11 +1552,64 @@ function TasksContent() {
               + Nový úkol
             </button>
           )}
-        </div>
+        </div>}
+        {crossWsMode && (
+          <div className="flex items-center gap-2 flex-1 flex-wrap">
+            <div className="flex-1" />
+            {/* Reload */}
+            <button onClick={() => fetchCrossWsData(true)}
+              className="p-1.5 rounded-lg transition-colors" title="Obnovit data"
+              style={{ color: 'var(--text-muted)' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            </button>
+            {/* Filters toggle */}
+            <button onClick={() => setShowCwsFilters(!showCwsFilters)}
+              className="px-3 py-1.5 text-xs sm:text-sm rounded-lg border font-medium transition-colors flex items-center gap-1.5"
+              style={{ background: showCwsFilters ? 'var(--bg-hover)' : 'var(--bg-card)', color: 'var(--text-muted)', borderColor: 'var(--border)' }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="12" y1="18" x2="12" y2="18" strokeLinecap="round" strokeWidth="3"/></svg>
+              Filtry
+              {cwsActiveFilterCount > 0 && (
+                <span className="inline-flex items-center justify-center w-4 h-4 rounded-full text-xs font-bold text-white" style={{ background: 'var(--primary)' }}>{cwsActiveFilterCount}</span>
+              )}
+            </button>
+            {/* New task */}
+            <button onClick={() => { setCwsNewWsId(userWorkspaces[0]?.id ?? ''); setShowCwsNewTask(true); }}
+              className="px-3 py-1.5 text-xs sm:text-sm rounded-lg font-medium transition-colors"
+              style={{ background: 'var(--primary)', color: '#fff' }}>
+              + Nový úkol
+            </button>
+          </div>
+        )}
       </div>
 
+      {/* ── Cross-workspace workspace tabs ── */}
+      {crossWsMode && (
+        <div className="flex items-center gap-1 mb-2 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
+          <button onClick={() => setCwsTab('all')}
+            className="px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg whitespace-nowrap transition-colors flex-shrink-0"
+            style={{ background: cwsTab === 'all' ? 'var(--primary)' : 'var(--bg-hover)', color: cwsTab === 'all' ? '#fff' : 'var(--text-muted)' }}>
+            Vše ({cwsFilteredTasks.length})
+          </button>
+          {userWorkspaces.map(ws => {
+            const wsColor = getWsColor(ws.id, ws);
+            const wsTasks = cwsTasks.filter(t => cwsBoardsMap.get(t.board_id)?.workspace_id === ws.id);
+            return (
+              <button key={ws.id} onClick={() => setCwsTab(ws.id)}
+                className="px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg whitespace-nowrap flex items-center gap-1.5 transition-colors flex-shrink-0 border"
+                style={{ background: cwsTab === ws.id ? wsColor + '18' : 'var(--bg-hover)', color: cwsTab === ws.id ? wsColor : 'var(--text-muted)', borderColor: cwsTab === ws.id ? wsColor + '50' : 'transparent' }}>
+                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: wsColor }} />
+                {ws.name}
+                <span className="opacity-60">({wsTasks.length})</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* ── Filters row ── */}
-      <div className="flex items-center gap-2 mb-2 flex-wrap">
+      {!crossWsMode && <div className="flex items-center gap-2 mb-2 flex-wrap">
         {/* Search */}
         <div className="relative flex-1 min-w-[180px] max-w-xs">
           <svg className="absolute left-2.5 top-1/2 -translate-y-1/2" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)' }}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -1349,7 +1651,102 @@ function TasksContent() {
           </select>
           <SelectChevron />
         </div>
-      </div>
+      </div>}
+
+      {/* ── Cross-workspace search + filters ── */}
+      {crossWsMode && (
+        <div className="mb-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Search */}
+            <div className="relative flex-1 min-w-[180px] max-w-xs">
+              <svg className="absolute left-2.5 top-1/2 -translate-y-1/2" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)' }}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input value={cwsSearch} onChange={e => setCwsSearch(e.target.value)} placeholder="Hledat úkol..."
+                className="text-base sm:text-sm rounded-lg border pl-8 pr-3 py-2 w-full" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-primary)' }} />
+            </div>
+            {/* Sort */}
+            <div className="relative">
+              <select value={cwsSortBy} onChange={e => setCwsSortBy(e.target.value as typeof cwsSortBy)}
+                className={selectCls} style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-primary)', minWidth: 140 }}>
+                <option value="deadline">Dle termínu</option>
+                <option value="priority">Dle priority</option>
+                <option value="title">Dle názvu</option>
+                <option value="created_at">Nejnovější</option>
+              </select>
+              <SelectChevron />
+            </div>
+            {/* Sort direction */}
+            <button onClick={() => setCwsSortDir(d => d === 'asc' ? 'desc' : 'asc')}
+              className="p-1.5 rounded-lg border transition-colors" title={cwsSortDir === 'asc' ? 'Vzestupně' : 'Sestupně'}
+              style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
+              {cwsSortDir === 'asc' ? (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+              )}
+            </button>
+            {/* Hide completed */}
+            <button onClick={() => setCwsHideCompleted(!cwsHideCompleted)}
+              className="px-3 py-1.5 text-xs sm:text-sm rounded-lg border font-medium transition-colors"
+              style={{ background: cwsHideCompleted ? 'var(--bg-hover)' : 'var(--bg-card)', color: 'var(--text-muted)', borderColor: 'var(--border)' }}>
+              {cwsHideCompleted ? 'Skrýt hotové' : 'Zobrazit vše'}
+            </button>
+          </div>
+          {/* Collapsible filter panel */}
+          {showCwsFilters && (
+            <div className="flex items-center gap-2 flex-wrap mt-2 pt-2 border-t" style={{ borderColor: 'var(--border)' }}>
+              {/* Priority */}
+              <div className="relative">
+                <select value={cwsFilterPriority} onChange={e => setCwsFilterPriority(e.target.value as TaskPriority | 'all')}
+                  className={selectCls} style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-primary)', minWidth: 110 }}>
+                  <option value="all">Priorita</option>
+                  {Object.entries(PRIORITY_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                </select>
+                <SelectChevron />
+              </div>
+              {/* Deadline */}
+              <div className="relative">
+                <select value={cwsFilterDeadline} onChange={e => setCwsFilterDeadline(e.target.value as DeadlineFilter)}
+                  className={selectCls} style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-primary)', minWidth: 120 }}>
+                  <option value="all">Termín</option>
+                  <option value="overdue">Po termínu</option>
+                  <option value="today">Dnes</option>
+                  <option value="this_week">Tento týden</option>
+                  <option value="this_month">Tento měsíc</option>
+                  <option value="no_deadline">Bez termínu</option>
+                </select>
+                <SelectChevron />
+              </div>
+              {/* Board / project */}
+              <div className="relative">
+                <select value={cwsFilterBoard} onChange={e => setCwsFilterBoard(e.target.value)}
+                  className={selectCls} style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-primary)', minWidth: 140 }}>
+                  <option value="all">Projekt</option>
+                  {[...cwsBoardsMap.values()].map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                </select>
+                <SelectChevron />
+              </div>
+              {/* Assignee */}
+              <div className="relative">
+                <select value={cwsFilterAssignee} onChange={e => setCwsFilterAssignee(e.target.value)}
+                  className={selectCls} style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-primary)', minWidth: 130 }}>
+                  <option value="all">Řešitel</option>
+                  <option value="mine">Moje</option>
+                  {[...cwsAllMembers.values()].map(m => <option key={m.user_id} value={m.user_id}>{m.display_name}</option>)}
+                </select>
+                <SelectChevron />
+              </div>
+              {/* Reset */}
+              {cwsActiveFilterCount > 0 && (
+                <button onClick={() => { setCwsFilterPriority('all'); setCwsFilterDeadline('all'); setCwsFilterBoard('all'); setCwsFilterAssignee('all'); }}
+                  className="text-xs px-2.5 py-1.5 rounded-lg border transition-colors"
+                  style={{ color: '#ef4444', borderColor: '#ef444440', background: '#ef444408' }}>
+                  Vymazat filtry
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ══════════════════════════════════ */}
       {/* ██  VIEWS                         */}
@@ -1358,8 +1755,100 @@ function TasksContent() {
       <div className="flex-1 min-h-0 overflow-hidden flex">
         <div className="flex-1 min-w-0 overflow-auto">
 
+          {/* ── CROSS-WORKSPACE TABLE ── */}
+          {crossWsMode && (
+            <div className="rounded-xl border overflow-x-auto" style={{ borderColor: 'var(--border)' }}>
+              {cwsLoading ? (
+                <div className="flex items-center justify-center py-16 gap-2" style={{ color: 'var(--text-muted)' }}>
+                  <svg className="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                  Načítám data...
+                </div>
+              ) : cwsFilteredTasks.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 gap-2" style={{ color: 'var(--text-muted)' }}>
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                  <span className="text-sm">Žádné úkoly</span>
+                </div>
+              ) : (
+                <table className="w-full text-sm" style={{ color: 'var(--text-primary)' }}>
+                  <thead>
+                    <tr style={{ background: 'var(--bg-hover)' }}>
+                      <th className="text-left px-4 py-2.5 font-medium text-xs" style={{ color: 'var(--text-muted)' }}>Název</th>
+                      <th className="text-left px-3 py-2.5 font-medium text-xs hidden sm:table-cell" style={{ color: 'var(--text-muted)' }}>Projekt</th>
+                      <th className="text-left px-3 py-2.5 font-medium text-xs hidden md:table-cell" style={{ color: 'var(--text-muted)' }}>Workspace</th>
+                      <th className="text-left px-3 py-2.5 font-medium text-xs hidden sm:table-cell" style={{ color: 'var(--text-muted)' }}>Řešitel</th>
+                      <th className="text-left px-3 py-2.5 font-medium text-xs" style={{ color: 'var(--text-muted)' }}>Priorita</th>
+                      <th className="text-left px-3 py-2.5 font-medium text-xs hidden sm:table-cell" style={{ color: 'var(--text-muted)' }}>Status</th>
+                      <th className="text-left px-3 py-2.5 font-medium text-xs" style={{ color: 'var(--text-muted)' }}>Termín</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cwsFilteredTasks.map((task, idx) => {
+                      const board = cwsBoardsMap.get(task.board_id);
+                      const col = cwsColsMap.get(task.column_id ?? '');
+                      const ws = userWorkspaces.find(w => w.id === board?.workspace_id);
+                      const wsColor = ws ? getWsColor(ws.id, ws) : '#9ca3af';
+                      const assignee = cwsAllMembers.get(task.assigned_to ?? '');
+                      const pc = PRIORITY_CONFIG[task.priority] ?? PRIORITY_CONFIG['none'];
+                      const isOverdue = task.deadline && !task.is_completed && task.deadline < new Date().toISOString().slice(0, 10);
+                      return (
+                        <tr key={task.id}
+                          className="cursor-pointer transition-colors"
+                          style={{ borderTop: idx > 0 ? `1px solid var(--border)` : undefined }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                          onClick={() => openDetail(task)}>
+                          <td className="px-4 py-2.5 max-w-[200px]">
+                            <div className="flex items-center gap-2">
+                              <span className={`text-sm font-medium truncate${task.is_completed ? ' line-through opacity-50' : ''}`}>{task.title}</span>
+                            </div>
+                          </td>
+                          <td className="px-3 py-2.5 hidden sm:table-cell">
+                            {board && <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: board.color + '20', color: board.color }}>{board.name}</span>}
+                          </td>
+                          <td className="px-3 py-2.5 hidden md:table-cell">
+                            {ws && (
+                              <span className="flex items-center gap-1.5 text-xs whitespace-nowrap">
+                                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: wsColor }} />
+                                {ws.name}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2.5 hidden sm:table-cell">
+                            {assignee ? (
+                              <span className="flex items-center gap-1.5 text-xs">
+                                <span className="w-5 h-5 rounded-full flex items-center justify-center text-white text-xs flex-shrink-0" style={{ background: assignee.avatar_color }}>
+                                  {assignee.display_name.charAt(0).toUpperCase()}
+                                </span>
+                                <span className="truncate max-w-[80px]">{assignee.display_name}</span>
+                              </span>
+                            ) : <span className="text-xs" style={{ color: 'var(--text-muted)' }}>—</span>}
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: pc.color + '20', color: pc.color }}>
+                              {pc.label}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2.5 hidden sm:table-cell">
+                            {col && <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{col.name}</span>}
+                          </td>
+                          <td className="px-3 py-2.5">
+                            {task.deadline ? (
+                              <span className="text-xs whitespace-nowrap" style={{ color: isOverdue ? '#ef4444' : 'var(--text-muted)' }}>
+                                {task.deadline}
+                              </span>
+                            ) : <span className="text-xs" style={{ color: 'var(--text-muted)' }}>—</span>}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
+
           {/* ── LIST VIEW ── */}
-          {view === 'list' && (() => {
+          {!crossWsMode && view === 'list' && (() => {
             // Sort helper for flat list mode
             const sortTasksList = (list: TaskItem[]) => {
               if (listSortBy === 'default') return list;
@@ -1442,7 +1931,7 @@ function TasksContent() {
           })()}
 
           {/* ── KANBAN VIEW ── */}
-          {view === 'kanban' && (
+          {!crossWsMode && view === 'kanban' && (
             <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
               {/* Desktop: horizontal scroll with auto-hide scrollbar */}
               <div className="flex gap-4 pb-4 overflow-x-auto md:flex-row flex-col kanban-scroll" style={{ minHeight: 200 }}>
@@ -1585,7 +2074,7 @@ function TasksContent() {
           )}
 
           {/* ── TABLE VIEW ── */}
-          {view === 'table' && (
+          {!crossWsMode && view === 'table' && (
             <div className="rounded-xl border overflow-x-auto" style={{ borderColor: 'var(--border)' }}>
               <table className="w-full text-sm" style={{ color: 'var(--text-primary)' }}>
                 <thead>
@@ -1672,13 +2161,22 @@ function TasksContent() {
           <div className="fixed inset-0 z-50" onClick={e => { if (e.target === e.currentTarget) setSelectedTask(null); }}
             style={{ background: 'rgba(0,0,0,0.2)' }}>
           <div className="w-full flex-shrink-0 border-l overflow-y-auto fixed right-0 top-0 bottom-0"
-            style={{ borderColor: 'var(--border)', background: 'var(--bg-card)', transition: 'transform 0.2s ease-out', maxWidth: ({ compact: '400px', normal: '520px', large: '680px' }[activeBoard?.settings?.detail_size ?? 'normal'] ?? '520px') }} onClick={e => e.stopPropagation()}>
+            style={{ borderColor: 'var(--border)', background: 'var(--bg-card)', transition: 'transform 0.2s ease-out', maxWidth: ({ compact: '400px', normal: '520px', large: '680px' }[(crossWsMode ? 'normal' : (activeBoard?.settings?.detail_size ?? 'normal'))] ?? '520px') }} onClick={e => e.stopPropagation()}>
             <div className="p-4">
               {/* ── Top bar: breadcrumb + actions ── */}
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                  {boards.find(b => b.id === selectedTask.board_id)?.name ?? ''}
-                  {(() => { const col = sortedColumns.find(c => c.id === selectedTask.column_id); return col ? ` / ${col.name}` : ''; })()}
+                  {crossWsMode ? (() => {
+                    const board = cwsBoardsMap.get(selectedTask.board_id);
+                    const ws = userWorkspaces.find(w => w.id === board?.workspace_id);
+                    const col = cwsColsMap.get(selectedTask.column_id ?? '');
+                    return `${ws?.name ?? ''}${board ? ` / ${board.name}` : ''}${col ? ` / ${col.name}` : ''}`;
+                  })() : (
+                    <>
+                      {boards.find(b => b.id === selectedTask.board_id)?.name ?? ''}
+                      {(() => { const col = sortedColumns.find(c => c.id === selectedTask.column_id); return col ? ` / ${col.name}` : ''; })()}
+                    </>
+                  )}
                 </span>
                 <div className="flex items-center gap-0.5">
                   {canManage && (
@@ -2346,6 +2844,114 @@ function TasksContent() {
         </div>
       )}
     </div>
+      {/* ══════════════════════════════════ */}
+      {/* ██  CROSS-WS NEW TASK MODAL      */}
+      {/* ══════════════════════════════════ */}
+      {showCwsNewTask && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowCwsNewTask(false)}>
+          <div className="w-full max-w-md p-5 rounded-2xl border shadow-xl mx-4" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}
+            onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-semibold" style={{ color: 'var(--text-primary)' }}>Nový úkol</h2>
+              <button onClick={() => setShowCwsNewTask(false)} className="p-1.5 rounded" style={{ color: 'var(--text-muted)' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <div className="space-y-3">
+              {/* Workspace select */}
+              <div>
+                <label className="text-sm font-medium mb-1 block" style={{ color: 'var(--text-primary)' }}>Workspace</label>
+                <div className="relative">
+                  <select value={cwsNewWsId} onChange={e => setCwsNewWsId(e.target.value)}
+                    className={`${selectCls} w-full`} style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}>
+                    <option value="">Vyberte workspace...</option>
+                    {userWorkspaces.map(ws => <option key={ws.id} value={ws.id}>{ws.name}</option>)}
+                  </select>
+                  <SelectChevron />
+                </div>
+              </div>
+              {/* Board select */}
+              <div>
+                <label className="text-sm font-medium mb-1 block" style={{ color: 'var(--text-primary)' }}>Projekt</label>
+                <div className="relative">
+                  <select value={cwsNewBoardId} onChange={e => setCwsNewBoardId(e.target.value)}
+                    className={`${selectCls} w-full`} style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+                    disabled={!cwsNewWsId || cwsNewTaskBoards.length === 0}>
+                    <option value="">Vyberte projekt...</option>
+                    {cwsNewTaskBoards.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                  </select>
+                  <SelectChevron />
+                </div>
+              </div>
+              {/* Column select */}
+              <div>
+                <label className="text-sm font-medium mb-1 block" style={{ color: 'var(--text-primary)' }}>Sloupec</label>
+                <div className="relative">
+                  <select value={cwsNewColId} onChange={e => setCwsNewColId(e.target.value)}
+                    className={`${selectCls} w-full`} style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+                    disabled={!cwsNewBoardId || cwsNewTaskCols.length === 0}>
+                    <option value="">Vyberte sloupec...</option>
+                    {cwsNewTaskCols.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                  <SelectChevron />
+                </div>
+              </div>
+              {/* Title */}
+              <div>
+                <label className="text-sm font-medium mb-1 block" style={{ color: 'var(--text-primary)' }}>Název úkolu</label>
+                <input value={cwsNewTitle} onChange={e => setCwsNewTitle(e.target.value)}
+                  placeholder="Název úkolu..."
+                  className="text-base sm:text-sm rounded-lg border px-3 py-2 w-full"
+                  style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+                  onKeyDown={e => { if (e.key === 'Enter') handleCreateCwsTask(); }}
+                  autoFocus />
+              </div>
+              {/* Priority + Deadline row */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-medium mb-1 block" style={{ color: 'var(--text-primary)' }}>Priorita</label>
+                  <div className="relative">
+                    <select value={cwsNewPriority} onChange={e => setCwsNewPriority(e.target.value as TaskPriority)}
+                      className={`${selectCls} w-full`} style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}>
+                      {Object.entries(PRIORITY_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                    </select>
+                    <SelectChevron />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1 block" style={{ color: 'var(--text-primary)' }}>Termín</label>
+                  <input type="date" value={cwsNewDeadline} onChange={e => setCwsNewDeadline(e.target.value)}
+                    className="text-base sm:text-sm rounded-lg border px-3 py-2 w-full"
+                    style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)' }} />
+                </div>
+              </div>
+              {/* Assignee */}
+              {cwsNewTaskMembers.length > 0 && (
+                <div>
+                  <label className="text-sm font-medium mb-1 block" style={{ color: 'var(--text-primary)' }}>Řešitel</label>
+                  <div className="relative">
+                    <select value={cwsNewAssignee} onChange={e => setCwsNewAssignee(e.target.value)}
+                      className={`${selectCls} w-full`} style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}>
+                      <option value="">Nepřiřazeno</option>
+                      {cwsNewTaskMembers.map(m => <option key={m.user_id} value={m.user_id}>{m.display_name}</option>)}
+                    </select>
+                    <SelectChevron />
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2 mt-4">
+              <button onClick={() => setShowCwsNewTask(false)}
+                className="flex-1 py-2 rounded-lg text-sm font-medium border" style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>Zrušit</button>
+              <button onClick={handleCreateCwsTask} disabled={!cwsNewWsId || !cwsNewBoardId || !cwsNewColId || !cwsNewTitle.trim() || cwsNewSaving}
+                className="flex-1 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50" style={{ background: 'var(--primary)' }}>
+                {cwsNewSaving ? 'Ukládám...' : 'Vytvořit'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
     </div>
     </DashboardLayout>
