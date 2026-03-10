@@ -77,7 +77,7 @@ function FolderTree({
   onAddSub: (parentId: string, depth: number) => void;
   onEdit: (f: NoteFolder) => void; onDelete: (f: NoteFolder) => void;
   onShare: (f: NoteFolder) => void; userId: string;
-  items: { folder_id: string | null }[];
+  items: { folder_id: string | null; is_archived: boolean }[];
   depth?: number; parentId?: string | null;
 }) {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
@@ -91,10 +91,10 @@ function FolderTree({
         const isExpanded = expanded.has(folder.id);
         const isSelected = selectedId === folder.id;
         const isOwner = folder.owner_id === userId;
-        const itemCount = items.filter(b => b.folder_id === folder.id).length;
+        const itemCount = items.filter(b => b.folder_id === folder.id && !b.is_archived).length;
         return (
           <div key={folder.id}>
-            <div className="group/folder flex items-center gap-1 py-1 px-1 rounded-lg cursor-pointer transition-colors"
+            <div className="group/folder relative flex items-center gap-1 py-1 px-1 rounded-lg cursor-pointer transition-colors"
               style={{ paddingLeft: `${depth * 14 + 4}px`, background: isSelected ? 'var(--bg-active)' : 'transparent' }}
               onClick={() => onSelect(folder.id)}>
               <button type="button" onClick={e => { e.stopPropagation(); if (hasChildren) onToggle(folder.id); }}
@@ -112,7 +112,7 @@ function FolderTree({
                 {folder.name}
               </span>
               {itemCount > 0 && (
-                <span className="text-[10px] flex-shrink-0 sm:group-hover/folder:hidden" style={{ color: 'var(--text-muted)' }}>{itemCount}</span>
+                <span className="text-[10px] flex-shrink-0 sm:group-hover/folder:opacity-0 transition-opacity" style={{ color: 'var(--text-muted)' }}>{itemCount}</span>
               )}
               <div className="sm:hidden flex-shrink-0" onClick={e => e.stopPropagation()}>
                 <button type="button"
@@ -165,7 +165,7 @@ function FolderTree({
                   </div>
                 )}
               </div>
-              <div className="hidden sm:group-hover/folder:flex items-center gap-0.5 flex-shrink-0">
+              <div className="hidden sm:flex items-center gap-0.5 absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover/folder:opacity-100 transition-opacity">
                 {depth < MAX_DEPTH - 1 && (
                   <button type="button" title="Přidat podsložku" onClick={e => { e.stopPropagation(); onAddSub(folder.id, depth + 1); }}
                     className="w-5 h-5 flex items-center justify-center rounded hover:bg-[var(--bg-hover)]" style={{ color: 'var(--text-muted)' }}>
@@ -438,7 +438,7 @@ function NoteEditor({
                   onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
                   onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-                  Doručené
+                  Inbox
                 </button>
                 {buildFolderFlat(folders).map(({ folder: f, depth }) => (
                   <button key={f.id} onClick={async () => { await onMove(note!.id, f.id); setShowMoveMenu(false); }}
@@ -1442,7 +1442,7 @@ function NotebookContent() {
             <button className="w-full text-left px-3 py-1.5 text-xs hover:bg-[var(--bg-hover)] flex items-center gap-2 transition-colors" style={{ color: 'var(--text-secondary)' }}
               onClick={() => moveNote(moveDropdown.noteId, null)}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-              Doručené
+              Inbox
             </button>
             {buildFolderFlat(folders).map(({ folder, depth }) => (
               <button key={folder.id} className="w-full text-left py-1.5 text-xs hover:bg-[var(--bg-hover)] flex items-center gap-2 transition-colors"
