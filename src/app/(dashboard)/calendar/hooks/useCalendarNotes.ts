@@ -93,8 +93,6 @@ export function useCalendarNotes(deps: NotesDeps) {
           is_important: meta.is_important,
           is_done: meta.is_done,
           is_favorite: meta.is_favorite,
-          event_title: eventTitle,
-          event_date: eventDate,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'workspace_id,user_id,event_ref' }

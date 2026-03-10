@@ -1682,6 +1682,9 @@ function NotebookContent() {
     setSelectedCalNote(null);
     setArchiveSelected(new Set());
     setShowLeftPanel(false);
+    if (f.type === 'calendar_events' && wsId) {
+      fetchCalEventNotes();
+    }
   }
 
   const showCalEventNotes = listFilter?.type === 'calendar_events';
