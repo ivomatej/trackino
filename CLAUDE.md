@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 10. 3. 2026 (v2.51.14)
+> Aktualizováno: 10. 3. 2026 (v2.51.15)
 
 ---
 
@@ -544,6 +544,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.51.15 | 10. 3. 2026 | ICS poznámky – 2 opravy: Notebook ICS sekce přepsána (uid v cache = celý ev.id → přímý lookup uid=event_ref místo chybné regex+uidFrag logiky); ICS cache plněna vždy (nejen sdílené odběry) aby fungovaly i osobní ICS události |
 | v2.51.14 | 10. 3. 2026 | Notebook – Sync Poznámky k událostem: fetchCalEventNotes rozšířeno o handlery vacation (vacation-UUID → trackino_vacation_entries) a important_day (importantday-UUID-datum → trackino_important_days); error logování pro všechny Supabase dotazy |
 | v2.51.13 | 10. 3. 2026 | Notebook – Sync Poznámky k událostem: selectFilter volá fetchCalEventNotes při přepnutí na složku; Kalendář – upsert poznámek bez neexistujících sloupců event_title/event_date |
 | v2.51.12 | 10. 3. 2026 | Kalendář + Notebook – 4 opravy poznámek: fetchNotesBatch chunking (dávky 100) + filtr noteable zdrojů (oprava hlavní příčiny mizení poznámek); NotePanel currentHtmlRef + cleanup unmount save; Notebook fetchCalEventNotes – recurring eventy (UUID__rec__datum); fetchOrphanNotes – oprava detekce recurring refs |
