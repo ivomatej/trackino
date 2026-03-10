@@ -55,6 +55,42 @@ function stripHtml(html: string) {
   return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
+function htmlToPlainText(html: string, tasks?: TaskItem[]): string {
+  let text = html;
+  // Kód bloky – extrahuj text před odstraněním tagů
+  text = text.replace(/<pre[^>]*>[\s\S]*?<code[^>]*>([\s\S]*?)<\/code>[\s\S]*?<\/pre>/gi, (_, code) => {
+    const plain = code
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&nbsp;/g, ' ');
+    return '\n' + plain.trim() + '\n';
+  });
+  // Blokové elementy → nový řádek
+  text = text.replace(/<br\s*\/?>/gi, '\n');
+  text = text.replace(/<\/p>/gi, '\n');
+  text = text.replace(/<\/div>/gi, '\n');
+  text = text.replace(/<li[^>]*>/gi, '• ');
+  text = text.replace(/<\/li>/gi, '\n');
+  // Dekóduj HTML entity
+  text = text.replace(/&nbsp;/gi, ' ');
+  text = text.replace(/&lt;/gi, '<');
+  text = text.replace(/&gt;/gi, '>');
+  text = text.replace(/&amp;/gi, '&');
+  text = text.replace(/&quot;/gi, '"');
+  // Odstraň zbývající HTML tagy
+  text = text.replace(/<[^>]+>/g, '');
+  // Max 2 prázdné řádky za sebou
+  text = text.replace(/\n{3,}/g, '\n\n');
+  text = text.trim();
+  // Přidej úkoly jako text
+  if (tasks && tasks.length > 0) {
+    const taskLines = tasks.map(t => `${t.checked ? '☑' : '☐'} ${t.text}`).join('\n');
+    if (text) text += '\n\n';
+    text += taskLines;
+  }
+  return text;
+}
+
 function linkifyHtml(html: string): string {
   return html.replace(/(?<!["'>])(https?:\/\/[^\s<>"'\]]+)/g, url =>
     `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color:var(--primary);text-decoration:underline">${url}</a>`
@@ -139,7 +175,7 @@ function FolderTree({
                 {folder.name}
               </span>
               {itemCount > 0 && (
-                <span className="ml-auto mr-8 text-[10px] flex-shrink-0 sm:group-hover/folder:opacity-0 transition-opacity" style={{ color: 'var(--text-muted)' }}>{itemCount}</span>
+                <span className="ml-auto mr-1 text-[10px] flex-shrink-0 sm:group-hover/folder:opacity-0 transition-opacity" style={{ color: 'var(--text-muted)' }}>{itemCount}</span>
               )}
               <div className="sm:hidden flex-shrink-0" onClick={e => e.stopPropagation()}>
                 <button type="button"
@@ -358,6 +394,22 @@ function NoteEditor({
   }
 
   function handleEditorKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    // Enter uvnitř kód bloku → vloží \n místo nového bloku
+    if (e.key === 'Enter') {
+      const sel0 = window.getSelection();
+      if (sel0 && sel0.rangeCount > 0) {
+        const startNode = sel0.getRangeAt(0).startContainer;
+        const pre = (startNode.nodeType === Node.TEXT_NODE ? startNode.parentElement : startNode as Element)?.closest?.('pre[data-nb-code]');
+        if (pre) {
+          e.preventDefault();
+          document.execCommand('insertText', false, '\n');
+          const c = editorRef.current?.innerHTML ?? '';
+          setContent(c);
+          triggerSave(title, c, tasks, isFavorite, isImportant);
+          return;
+        }
+      }
+    }
     if (e.key !== ' ' && e.key !== 'Enter') return;
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return;
@@ -416,6 +468,20 @@ function NoteEditor({
         navigator.clipboard.writeText(pre.querySelector('code')?.textContent ?? '');
         pre.classList.add('nb-code-copied');
         setTimeout(() => pre.classList.remove('nb-code-copied'), 1500);
+      } else {
+        // Kliknutí do kód bloku – vymaž placeholder a dej kurzor na začátek
+        const codeEl = pre.querySelector('code');
+        if (codeEl && codeEl.textContent?.trim() === 'Kód…') {
+          codeEl.textContent = '';
+          const range = document.createRange();
+          range.setStart(codeEl, 0);
+          range.collapse(true);
+          const sel = window.getSelection();
+          if (sel) { sel.removeAllRanges(); sel.addRange(range); }
+          const c = editorRef.current?.innerHTML ?? '';
+          setContent(c);
+          triggerSave(title, c, tasks, isFavorite, isImportant);
+        }
       }
     }
   }
@@ -529,7 +595,7 @@ function NoteEditor({
         )}
         {/* Copy content */}
         <button onClick={() => {
-          navigator.clipboard.writeText(stripHtml(content));
+          navigator.clipboard.writeText(htmlToPlainText(content, tasks));
           setCopyDone(true);
           setTimeout(() => setCopyDone(false), 2000);
         }}
@@ -743,6 +809,22 @@ function CalEventNoteEditor({
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    // Enter uvnitř kód bloku → vloží \n místo nového bloku
+    if (e.key === 'Enter') {
+      const sel0 = window.getSelection();
+      if (sel0 && sel0.rangeCount > 0) {
+        const startNode = sel0.getRangeAt(0).startContainer;
+        const pre = (startNode.nodeType === Node.TEXT_NODE ? startNode.parentElement : startNode as Element)?.closest?.('pre[data-nb-code]');
+        if (pre) {
+          e.preventDefault();
+          document.execCommand('insertText', false, '\n');
+          const c = editorRef.current?.innerHTML ?? '';
+          setContent(c);
+          triggerSave(c, tasks, isFavorite, isImportant);
+          return;
+        }
+      }
+    }
     if (e.key !== ' ' && e.key !== 'Enter') return;
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return;
@@ -801,6 +883,19 @@ function CalEventNoteEditor({
         navigator.clipboard.writeText(pre.querySelector('code')?.textContent ?? '');
         pre.classList.add('nb-code-copied');
         setTimeout(() => pre.classList.remove('nb-code-copied'), 1500);
+      } else {
+        const codeEl = pre.querySelector('code');
+        if (codeEl && codeEl.textContent?.trim() === 'Kód…') {
+          codeEl.textContent = '';
+          const range = document.createRange();
+          range.setStart(codeEl, 0);
+          range.collapse(true);
+          const sel = window.getSelection();
+          if (sel) { sel.removeAllRanges(); sel.addRange(range); }
+          const c = editorRef.current?.innerHTML ?? '';
+          setContent(c);
+          triggerSave(c, tasks, isFavorite, isImportant);
+        }
       }
     }
   }
@@ -1677,7 +1772,7 @@ function NotebookContent() {
                       {/* Copy content */}
                       <button onClick={e => {
                         e.stopPropagation();
-                        navigator.clipboard.writeText(stripHtml(note.content));
+                        navigator.clipboard.writeText(htmlToPlainText(note.content, note.tasks));
                         setCopyDoneNoteId(note.id);
                         setTimeout(() => setCopyDoneNoteId(null), 2000);
                       }}
