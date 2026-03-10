@@ -29,6 +29,9 @@ export default function NotePanel({
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
   // Ref na aktuální tasks aby triggerAutoSave měl přístup k čerstvé hodnotě
   const localTasksRef = useRef<TaskItem[]>(note.tasks);
+  // Ref sledující nejnovější HTML obsah editoru (aktualizovaný při každém onInput)
+  // Nutné pro save-on-unmount – editorRef.current je null po unmount
+  const currentHtmlRef = useRef(note.content);
 
   // Meta flagy (local state + ref pro closure)
   const [isImportant, setIsImportant] = useState(note.is_important ?? false);
@@ -44,6 +47,20 @@ export default function NotePanel({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Uložit neuložené změny při unmount (timer mohl čekat na spuštění)
+  // Používáme currentHtmlRef (aktualizovaný onInput) místo editorRef.current (null po unmount)
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      const html = currentHtmlRef.current;
+      const content = !html || html === '<br>' ? '' : html;
+      if (content !== savedContentRef.current) {
+        onSave(eventRef, content, localTasksRef.current, metaRef.current);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // prázdné deps – cleanup se spustí jen při unmount
 
   // Auto-focus nového úkolu po přidání přes Enter
   useEffect(() => {
@@ -76,6 +93,7 @@ export default function NotePanel({
 
   function handleInput() {
     const html = editorRef.current?.innerHTML ?? '';
+    currentHtmlRef.current = html;
     const empty = !html || html === '<br>';
     setIsEmpty(empty);
     triggerAutoSave();

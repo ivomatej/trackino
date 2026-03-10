@@ -278,9 +278,14 @@ export default function CalendarContent() {
   }, [displayEvents, state.notesLoadedRefs]);
 
   // Načtení poznámek pro seznam pohled
+  // Filtrujeme jen "noteable" zdroje – holiday/nameday/birthday jsou virtuální eventy
+  // bez možnosti poznámky a generují stovky ID → přetížení URL limitu Supabase .in()
   useEffect(() => {
     if (state.view === 'list' && !state.loading && displayEvents.length > 0) {
-      notesHook.fetchNotesBatch(displayEvents.map(ev => ev.id));
+      const noteableIds = displayEvents
+        .filter(ev => ev.source !== 'holiday' && ev.source !== 'nameday' && ev.source !== 'birthday')
+        .map(ev => ev.id);
+      notesHook.fetchNotesBatch(noteableIds);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.view, state.loading, displayEvents]);

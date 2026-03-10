@@ -1398,6 +1398,37 @@ function NotebookContent() {
       }
     }
 
+    // ── Opakující se ruční události (UUID__rec__YYYY-MM-DD) ───────────────
+    const RECURRING_RE = /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})__rec__(\d{4}-\d{2}-\d{2})$/i;
+    const recurringNotes = noteData.filter(n => RECURRING_RE.test(n.event_ref));
+    if (recurringNotes.length > 0) {
+      type RParsed = { note: typeof recurringNotes[0]; origId: string; occDate: string };
+      const parsedRec: RParsed[] = [];
+      for (const n of recurringNotes) {
+        const m = n.event_ref.match(RECURRING_RE);
+        if (m) parsedRec.push({ note: n, origId: m[1], occDate: m[2] });
+      }
+      if (parsedRec.length > 0) {
+        const origIds = [...new Set(parsedRec.map(p => p.origId))];
+        const { data: recEvData } = await supabase
+          .from('trackino_calendar_events')
+          .select('id, title, start_time, end_time, is_all_day')
+          .in('id', origIds);
+        if (recEvData) {
+          const recEvMap: Record<string, { title: string; start_time: string | null; end_time: string | null; is_all_day: boolean }> = {};
+          for (const e of recEvData) recEvMap[e.id] = { title: e.title, start_time: e.start_time ?? null, end_time: e.end_time ?? null, is_all_day: e.is_all_day ?? true };
+          for (const p of parsedRec) {
+            const ev = recEvMap[p.origId];
+            if (!ev) continue;
+            const dateStr = fmtEventDate(p.occDate);
+            const timeStr = ev.is_all_day ? '' : fmtEventTime(ev.start_time, ev.end_time);
+            const title = timeStr ? `${ev.title} – ${dateStr} ${timeStr}` : `${ev.title} – ${dateStr}`;
+            result.push({ event_ref: p.note.event_ref, event_id: p.note.event_ref, title, date: p.occDate, start_time: ev.start_time ?? null, end_time: ev.end_time ?? null, is_all_day: ev.is_all_day ?? true, content: p.note.content ?? '', tasks: Array.isArray(p.note.tasks) ? p.note.tasks : [], is_favorite: p.note.is_favorite ?? false, is_important: p.note.is_important ?? false });
+          }
+        }
+      }
+    }
+
     // ── ICS události (sub-UUID-uidFrag-YYYY-MM-DD) ────────────────────────
     const ICS_REF_RE = /^sub-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})-(.+)-(\d{4}-\d{2}-\d{2})$/;
     const icsNotes = noteData.filter(n => !UUID_RE.test(n.event_ref) && n.event_ref.startsWith('sub-'));

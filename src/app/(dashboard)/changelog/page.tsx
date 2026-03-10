@@ -11,6 +11,18 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.51.12 – 10. 3. 2026</h3>
+<ul>
+  <li><strong>Kalendář + Notebook – 4 opravy poznámek k událostem</strong>:
+    <ul>
+      <li><strong>Poznámky se správně načítají v pohledu Seznam</strong> – opravena hlavní příčina mizení poznámek: funkce fetchNotesBatch odesílala stovky ID (svátky, jmeniny) naráz → Supabase GET dotaz překročil limit URL → tichá chyba → poznámky se neobjevily; nyní se dotazy dělí do dávek po 100 a systémové virtuální události (holiday/nameday/birthday) se přeskočí</li>
+      <li><strong>Poznámky se neuloží prázdné při zavření</strong> – opravena záludná chyba: 1s auto-save timer mohl doběhnout po unmount komponenty, kdy editorRef.current=null → uložila se prázdná poznámka přes skutečný obsah; nový currentHtmlRef sleduje obsah při každém stisku klávesy a cleanup useEffect ho bezpečně uloží při zavření</li>
+      <li><strong>Opakující se události – sync s Notebookem</strong> – poznámky k opakujícím se událostem (formát ref: UUID__rec__datum) se nyní správně zobrazují v Notebooku v sekci Poznámky k událostem; dříve regex UUID nevyhovoval a poznámky se ztratily</li>
+      <li><strong>Orphan notes – oprava detekce</strong> – opakující se události se nesprávně hledaly v databázi jako plain UUID → vždy se jevily jako „osiřelé"; nyní se kontroluje viditelnost v aktuálním rozsahu stejně jako ICS události</li>
+    </ul>
+  </li>
+</ul>
+
 <h3>v2.51.11 – 10. 3. 2026</h3>
 <ul>
   <li><strong>Notebook – 4 opravy</strong>:

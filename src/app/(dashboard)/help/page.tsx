@@ -244,7 +244,7 @@ const DEFAULT_HELP_CONTENT = `
   <li><strong>Kopírovat obsah</strong> – ikonka schránky ve výpisu i v záhlaví editoru zkopíruje text poznámky (bez formátování); zelená fajfka potvrdí zkopírování</li>
   <li><strong>Duplikovat poznámku</strong> – ikonka duplikátu vytvoří kopii se suffixem „– kopie" (při dalším duplikování „– kopie 2" atd.)</li>
   <li><strong>Řazení poznámek</strong> – Nejnovější / Nejstarší / Název A–Z / Název Z–A; výchozí řazení lze nastavit v Nastavení poznámek</li>
-  <li><strong>Poznámky k událostem</strong> – samostatná sekce pro poznámky přidané ke kalendářním událostem (včetně ICS externích kalendářů); titulek obsahuje datum a čas události; tlačítkem <em>Otevřít v Kalendáři</em> se přejde přímo na událost; řazení Nejnovější / Nejstarší / Název A–Z / Název Z–A</li>
+  <li><strong>Poznámky k událostem</strong> – samostatná sekce pro poznámky přidané ke kalendářním událostem (včetně ICS externích kalendářů a opakujících se událostí); titulek obsahuje datum a čas události; tlačítkem <em>Otevřít v Kalendáři</em> se přejde přímo na událost; řazení Nejnovější / Nejstarší / Název A–Z / Název Z–A</li>
 </ul>
 
 <h3>Úpravy aplikace</h3>
