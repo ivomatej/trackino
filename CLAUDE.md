@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 10. 3. 2026 (v2.51.4)
+> Aktualizováno: 10. 3. 2026 (v2.51.8)
 
 ---
 
@@ -544,6 +544,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.51.8 | 10. 3. 2026 | Notebook – 5 oprav levého panelu: FolderTree počty složek nezahrnují archivované poznámky (a+e); přejmenování „Doručené" → „Inbox" v move menu (b); FolderTree počty fade místo hide (c); hover shift opraven – akční tlačítka absolutně pozicována (d) |
 | v2.51.4 | 10. 3. 2026 | Globální scrollbar auto-hide (is-scrolling class); Poznámky – move button v detailu, autofocus titulku, delší preview (2 řádky); Kanban – odstraněn text „Přetáhněte sem úkol", počet úkolů v šedém kroužku |
 | v2.51.3 | 10. 3. 2026 | Úkoly – 6 vylepšení: oprava „Skrýt hotové" (filtruje is_completed bez závislosti na sloupci); zakázán drag sloupců v Kanban; zvýraznění vybraného úkolu (modrý border); redesign detailu (Asana styl – kroužkové tlačítko, kompaktní pole, Zadavatel/Kontrolor, Časový odhad, Datum vytvoření, volba šířky panelu); přidána pole reviewer_id a time_estimate do DB; posun headeru výše |
 | v2.51.2 | 9. 3. 2026 | Úkoly – 7 oprav: výrazné tlačítko dokončení v detailu; „Moje úkoly" řazení „Naposledy přiřazené" (updated_at); share modal oprava pořadí tlačítek + email pod jménem; DnD deaktivován na mobilu; odstraněno šedé pozadí z detail panel polí |

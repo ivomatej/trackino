@@ -11,6 +11,19 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.51.9 – 10. 3. 2026</h3>
+<ul>
+  <li><strong>Notebook – 5 vylepšení výpisu a editoru</strong>:
+    <ul>
+      <li><strong>Kopírovat obsah</strong> – ikona clipboard ve výpisu (hover akce) i v headeru NoteEditoru; po kliknutí se na 2 s zobrazí zelená fajfka</li>
+      <li><strong>Duplikovat poznámku</strong> – ikona s plusem ve výpisu i headeru; kopie dostane suffix „– kopie", při existující kopii „– kopie 2" atd.</li>
+      <li><strong>Poznámky k událostem</strong> – titulek v levém výpisu obsahuje datum a čas události (formát: „Název – 9.3.2026 10:00–12:00"); tlačítko Otevřít v Kalendáři přepne do pohledu Seznam a automaticky otevře inline poznámku u dané události</li>
+      <li><strong>Řazení Nejstarší</strong> – nová možnost v dropdownu řazení vedle „Nejnovější" a „Název A–Z"</li>
+      <li><strong>Zarovnání počtů složek</strong> – čísla vedle názvů složek v levém panelu jsou nyní zarovnána vpravo jako počty u navigačních tlačítek</li>
+    </ul>
+  </li>
+</ul>
+
 <h3>v2.51.8 – 10. 3. 2026</h3>
 <ul>
   <li><strong>Notebook – 5 oprav levého panelu</strong>:
