@@ -285,6 +285,26 @@ export default function CalendarContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.view, state.loading, displayEvents]);
 
+  // ── Deep-link od Notebook: otevřít inline poznámku pro konkrétní událost ───
+  const pendingOpenNoteRef = useRef<string | null>(
+    typeof window !== 'undefined' ? localStorage.getItem('trackino_cal_open_note_ref') : null
+  );
+  useEffect(() => {
+    if (pendingOpenNoteRef.current) {
+      localStorage.removeItem('trackino_cal_open_note_ref');
+    }
+  }, []);
+  useEffect(() => {
+    const ref = pendingOpenNoteRef.current;
+    if (!ref || state.loading || displayEvents.length === 0) return;
+    const found = displayEvents.find(ev => ev.id === ref);
+    if (found) {
+      state.setOpenNoteEventIds(prev => new Set([...prev, found.id]));
+      pendingOpenNoteRef.current = null;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [displayEvents, state.loading]);
+
   // ── 5. CRUD operace ────────────────────────────────────────────────────────
   const crudHook = useCalendarCrud({
     user,

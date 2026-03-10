@@ -29,6 +29,7 @@ interface Member { user_id: string; display_name: string; avatar_color: string; 
 
 interface CalEventNote {
   event_ref: string; event_id: string; title: string; date: string;
+  start_time: string | null; end_time: string | null; is_all_day: boolean;
   content: string; tasks: TaskItem[]; is_favorite: boolean; is_important: boolean;
 }
 
@@ -62,6 +63,25 @@ function linkifyHtml(html: string): string {
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function fmtEventDate(date: string) {
+  const d = new Date(date + 'T00:00:00');
+  return `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`;
+}
+
+function fmtEventTime(startTime: string | null, endTime: string | null) {
+  if (!startTime) return '';
+  const s = startTime.slice(0, 5);
+  return endTime ? `${s}–${endTime.slice(0, 5)}` : s;
+}
+
+function getDuplicateTitle(title: string, existingTitles: string[]) {
+  const base = title.replace(/ - kopie( \d+)?$/, '');
+  if (!existingTitles.includes(base + ' - kopie')) return base + ' - kopie';
+  let n = 2;
+  while (existingTitles.includes(`${base} - kopie ${n}`)) n++;
+  return `${base} - kopie ${n}`;
 }
 
 function nanoid() {
@@ -112,7 +132,7 @@ function FolderTree({
                 {folder.name}
               </span>
               {itemCount > 0 && (
-                <span className="text-[10px] flex-shrink-0 sm:group-hover/folder:opacity-0 transition-opacity" style={{ color: 'var(--text-muted)' }}>{itemCount}</span>
+                <span className="ml-auto text-[10px] flex-shrink-0 sm:group-hover/folder:opacity-0 transition-opacity" style={{ color: 'var(--text-muted)' }}>{itemCount}</span>
               )}
               <div className="sm:hidden flex-shrink-0" onClick={e => e.stopPropagation()}>
                 <button type="button"
@@ -223,7 +243,7 @@ function buildFolderFlat(
 
 // ─── NoteEditor ──────────────────────────────────────────────────────────────
 function NoteEditor({
-  note, onSave, onBack, onDelete, folders, onMove,
+  note, onSave, onBack, onDelete, folders, onMove, onDuplicate,
 }: {
   note: Note | null;
   onSave: (title: string, content: string, tasks: TaskItem[], meta: { is_favorite: boolean; is_important: boolean }) => Promise<void>;
@@ -231,6 +251,7 @@ function NoteEditor({
   onDelete: (id: string) => void;
   folders?: NoteFolder[];
   onMove?: (noteId: string, folderId: string | null) => Promise<void>;
+  onDuplicate?: () => void;
 }) {
   const [title, setTitle] = useState(note?.title === 'Nová poznámka' ? '' : (note?.title ?? ''));
   const [content, setContent] = useState(note?.content ?? '');
@@ -240,6 +261,7 @@ function NoteEditor({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [showMoveMenu, setShowMoveMenu] = useState(false);
+  const [copyDone, setCopyDone] = useState(false);
   const editorRef = useRef<HTMLDivElement>(null);
   const taskRefs = useRef<Map<string, HTMLInputElement>>(new Map());
   const saveTimer = useRef<NodeJS.Timeout | null>(null);
@@ -457,6 +479,35 @@ function NoteEditor({
               </div>
             )}
           </div>
+        )}
+        {/* Copy content */}
+        <button onClick={() => {
+          navigator.clipboard.writeText(stripHtml(content));
+          setCopyDone(true);
+          setTimeout(() => setCopyDone(false), 2000);
+        }}
+          className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors"
+          style={{ color: copyDone ? '#22c55e' : 'var(--text-muted)' }} title="Kopírovat obsah"
+          onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+          {copyDone ? (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          ) : (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          )}
+        </button>
+        {/* Duplicate */}
+        {onDuplicate && (
+          <button onClick={onDuplicate}
+            className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors"
+            style={{ color: 'var(--text-muted)' }} title="Duplikovat poznámku"
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+              <line x1="18" y1="12" x2="18" y2="18"/><line x1="15" y1="15" x2="21" y2="15"/>
+            </svg>
+          </button>
         )}
         <button onClick={() => { if (confirm('Smazat tuto poznámku?')) onDelete(note!.id); }}
           className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors"
@@ -725,7 +776,11 @@ function CalEventNoteEditor({
           Zpět
         </button>
         <div className="flex-1 text-xs" style={{ color: 'var(--text-muted)' }}>{saving ? 'Ukládám…' : fmtDate(note.date)}</div>
-        <button onClick={() => router.push('/calendar')} className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border transition-colors"
+        <button onClick={() => {
+          localStorage.setItem('trackino_calendar_view', 'list');
+          localStorage.setItem('trackino_cal_open_note_ref', note.event_ref);
+          router.push('/calendar');
+        }} className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border transition-colors"
           style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
           onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
           onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
@@ -823,10 +878,13 @@ function NotebookContent() {
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [selectedCalNote, setSelectedCalNote] = useState<CalEventNote | null>(null);
   const [searchQ, setSearchQ] = useState('');
-  const [sortBy, setSortBy] = useState<'date' | 'title'>('date');
+  const [sortBy, setSortBy] = useState<'date' | 'title' | 'oldest'>('date');
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [authorExpanded, setAuthorExpanded] = useState(false);
   const [showLeftPanel, setShowLeftPanel] = useState(false);
+
+  // Copy done animation (note id, or null)
+  const [copyDoneNoteId, setCopyDoneNoteId] = useState<string | null>(null);
 
   // Archive multi-select
   const [archiveSelected, setArchiveSelected] = useState<Set<string>>(new Set());
@@ -892,23 +950,32 @@ function NotebookContent() {
     const eventIds = uuidNotes.map(n => n.event_ref);
     const { data: evData } = await supabase
       .from('trackino_calendar_events')
-      .select('id, title, start_date')
+      .select('id, title, start_date, start_time, end_time, is_all_day')
       .in('id', eventIds);
     if (!evData) return;
-    const evMap: Record<string, { title: string; start_date: string }> = {};
-    for (const e of evData) evMap[e.id] = { title: e.title, start_date: e.start_date };
+    const evMap: Record<string, { title: string; start_date: string; start_time: string | null; end_time: string | null; is_all_day: boolean }> = {};
+    for (const e of evData) evMap[e.id] = { title: e.title, start_date: e.start_date, start_time: e.start_time ?? null, end_time: e.end_time ?? null, is_all_day: e.is_all_day ?? true };
     const result: CalEventNote[] = uuidNotes
       .filter(n => evMap[n.event_ref])
-      .map(n => ({
-        event_ref: n.event_ref,
-        event_id: n.event_ref,
-        title: evMap[n.event_ref].title,
-        date: evMap[n.event_ref].start_date,
-        content: n.content ?? '',
-        tasks: Array.isArray(n.tasks) ? n.tasks : [],
-        is_favorite: n.is_favorite ?? false,
-        is_important: n.is_important ?? false,
-      }));
+      .map(n => {
+        const ev = evMap[n.event_ref];
+        const dateStr = fmtEventDate(ev.start_date);
+        const timeStr = ev.is_all_day ? '' : fmtEventTime(ev.start_time, ev.end_time);
+        const title = timeStr ? `${ev.title} – ${dateStr} ${timeStr}` : `${ev.title} – ${dateStr}`;
+        return {
+          event_ref: n.event_ref,
+          event_id: n.event_ref,
+          title,
+          date: ev.start_date,
+          start_time: ev.start_time,
+          end_time: ev.end_time,
+          is_all_day: ev.is_all_day,
+          content: n.content ?? '',
+          tasks: Array.isArray(n.tasks) ? n.tasks : [],
+          is_favorite: n.is_favorite ?? false,
+          is_important: n.is_important ?? false,
+        };
+      });
     setCalEventNotes(result);
   }, [wsId, userId]);
 
@@ -963,6 +1030,21 @@ function NotebookContent() {
     const val = !note[field];
     await supabase.from('trackino_notes').update({ [field]: val, updated_at: new Date().toISOString() }).eq('id', note.id);
     setNotes(prev => prev.map(n => n.id === note.id ? { ...n, [field]: val } : n));
+  }
+
+  async function duplicateNote(note: Note) {
+    if (!wsId) return;
+    const newTitle = getDuplicateTitle(note.title, notes.map(n => n.title));
+    const { data, error } = await supabase.from('trackino_notes').insert({
+      workspace_id: wsId, user_id: userId,
+      title: newTitle, content: note.content, tasks: note.tasks,
+      folder_id: note.folder_id, is_favorite: false, is_important: false, is_archived: false,
+    }).select().single();
+    if (!error && data) {
+      await fetchNotes();
+      setSelectedNote({ ...data, tasks: Array.isArray(data.tasks) ? data.tasks : [] });
+      setSelectedCalNote(null);
+    }
   }
 
   async function moveNote(noteId: string, folderId: string | null) {
@@ -1051,7 +1133,7 @@ function NotebookContent() {
 
     if (qLow) base = base.filter(n => n.title.toLowerCase().includes(qLow) || stripHtml(n.content).toLowerCase().includes(qLow));
     if (listFilter?.type !== 'recent') {
-      base = [...base].sort((a, b) => sortBy === 'title' ? a.title.localeCompare(b.title, 'cs') : new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+      base = [...base].sort((a, b) => sortBy === 'title' ? a.title.localeCompare(b.title, 'cs') : sortBy === 'oldest' ? new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime() : new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
     }
     return base;
   })();
@@ -1246,6 +1328,7 @@ function NotebookContent() {
             onDelete={async (id) => { await deleteNote(id); setSelectedNote(null); }}
             folders={folders}
             onMove={moveNote}
+            onDuplicate={() => duplicateNote(selectedNote)}
           />
         ) : selectedCalNote && showCalEventNotes ? (
           /* ── Editor view (calendar event note) ── */
@@ -1277,10 +1360,11 @@ function NotebookContent() {
               )}
               {!isRecent && !showCalEventNotes && (
                 <div className="relative flex-shrink-0">
-                  <select value={sortBy} onChange={e => setSortBy(e.target.value as 'date' | 'title')}
+                  <select value={sortBy} onChange={e => setSortBy(e.target.value as 'date' | 'title' | 'oldest')}
                     className="text-base sm:text-sm border rounded-lg pl-3 pr-8 py-1.5 appearance-none cursor-pointer"
                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-secondary)', outline: 'none' }}>
                     <option value="date">Nejnovější</option>
+                    <option value="oldest">Nejstarší</option>
                     <option value="title">Název A–Z</option>
                   </select>
                   <div className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}>
@@ -1390,7 +1474,35 @@ function NotebookContent() {
                           <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
                         </svg>
                       </button>
-                      {/* Move (only for non-archived) */}
+                      {/* Copy content */}
+                      <button onClick={e => {
+                        e.stopPropagation();
+                        navigator.clipboard.writeText(stripHtml(note.content));
+                        setCopyDoneNoteId(note.id);
+                        setTimeout(() => setCopyDoneNoteId(null), 2000);
+                      }}
+                        className="w-9 h-9 md:w-7 md:h-7 flex items-center justify-center rounded-lg" title="Kopírovat obsah"
+                        style={{ color: copyDoneNoteId === note.id ? '#22c55e' : 'var(--text-muted)' }}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                        {copyDoneNoteId === note.id ? (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="md:w-3 md:h-3"><polyline points="20 6 9 17 4 12"/></svg>
+                        ) : (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="md:w-3 md:h-3"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        )}
+                      </button>
+                    {/* Duplicate (only for non-archived) */}
+                      {!note.is_archived && (
+                        <button onClick={e => { e.stopPropagation(); duplicateNote(note); }}
+                          className="w-9 h-9 md:w-7 md:h-7 flex items-center justify-center rounded-lg" title="Duplikovat poznámku"
+                          style={{ color: 'var(--text-muted)' }}
+                          onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="md:w-3 md:h-3">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                            <line x1="18" y1="12" x2="18" y2="18"/><line x1="15" y1="15" x2="21" y2="15"/>
+                          </svg>
+                        </button>
+                      )}
+                    {/* Move (only for non-archived) */}
                       {!note.is_archived && (
                         <button onClick={e => {
                           e.stopPropagation();
