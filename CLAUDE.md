@@ -2178,6 +2178,23 @@ ALTER TABLE trackino_workspace_members
 
 ## 34. Úkoly – architektura (tasks/page.tsx)
 
+### Struktura souborů (od v2.51.21 – rozdělen z 2978 ř. na subsoubory)
+
+| Soubor | Popis |
+|--------|-------|
+| `tasks/page.tsx` | **Orchestrátor** – importuje subkomponenty, drží veškerý state a logiku, renderuje layout |
+| `tasks/types.tsx` | Shared typy a konstanty: `PRIORITY_CONFIG`, `TaskView`, `DeadlineFilter`, `Member`, `UserWorkspace`, `CwsBoardInfo`, `CwsColumnInfo`, `WORKSPACE_COLORS`, `getWsColor`, `selectCls`, `SelectChevron` |
+| `tasks/components/Avatar.tsx` | `Avatar` – kruhový avatar s iniciálou a barvou |
+| `tasks/components/DragComponents.tsx` | `DroppableColumn` (useDroppable), `SortableColumnWrapper` (useSortable) |
+| `tasks/components/SortableCard.tsx` | `SortableCard` – karta úkolu v Kanban pohledu (DnD, checkbox, priorita, assignee, deadline) |
+| `tasks/components/TaskLeftSidebar.tsx` | Levý panel: strom složek, projekty, navigace (Moje/Všechny/cross-ws), sdílení složek |
+| `tasks/components/TaskDetailPanel.tsx` | Pravý panel detailu úkolu: editace názvu/popisu, podúkoly, přílohy, komentáře, historie |
+| `tasks/components/TaskModals.tsx` | `BoardSettingsModal`, `ShareModal`, `BoardEditModal`, `CwsNewTaskModal` |
+| `tasks/views/ListView.tsx` | `ListView` – seznam úkolů s checkboxy, volitelné řazení |
+| `tasks/views/KanbanView.tsx` | `KanbanView` – DnD Kanban (DndContext, SortableContext, DragOverlay) |
+| `tasks/views/TableView.tsx` | `TableView` – tabulka s klikatelným řazením |
+| `tasks/views/CrossWorkspaceView.tsx` | `CrossWorkspaceView` – tabulka úkolů napříč workspace |
+
 ### Soubory
 | Soubor | Popis |
 |--------|-------|
@@ -2468,7 +2485,7 @@ CREATE POLICY "Auth full" ON trackino_task_board_members
 | `/clients` | `clients/page.tsx` | Správa klientů (Free+) |
 | `/tags` | `tags/page.tsx` | Správa štítků (Free+) |
 | `/team` | `team/page.tsx` | Správa týmu + sazby (Free+) |
-| `/tasks` | `tasks/page.tsx` | Úkoly + Kanban (Pro+) |
+| `/tasks` | `tasks/page.tsx` (orchestrátor) | Úkoly + Kanban (Pro+) – rozdělen na subsoubory od v2.51.21 |
 | `/subscriptions` | `subscriptions/page.tsx` | Evidence předplatných (Pro+) |
 | `/domains` | `domains/page.tsx` | Evidence domén (Pro+) |
 | `/important-days` | `important-days/page.tsx` | Důležité dny (Pro+) |
