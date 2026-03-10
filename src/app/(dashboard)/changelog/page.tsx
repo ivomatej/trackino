@@ -11,6 +11,22 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.51.10 – 10. 3. 2026</h3>
+<ul>
+  <li><strong>Notebook – 8 vylepšení</strong>:
+    <ul>
+      <li><strong>Řazení Název Z-A</strong> – dropdown řazení poznámek rozšířen o volbu „Název Z–A"</li>
+      <li><strong>Nastavení poznámek</strong> – ozubené kolo v záhlaví levého panelu; modal se 4 možnostmi: Zobrazit Inbox, Automaticky rozbalit složky, Výchozí řazení, Řazení složek (Ručně/Abecedně/Datum); persist localStorage</li>
+      <li><strong>Kódový blok</strong> – tlačítko &lt;/&gt; v NoteEditor i CalEventNoteEditor toolbaru vloží &lt;pre&gt; blok; copy ikonka vpravo nahoře (koordinátová detekce kliknutí, CSS ::after s fajfkou po zkopírování)</li>
+      <li><strong>Pohyb složek</strong> – šipky nahoru/dolů v hover akci na desktopu + Posunout nahoru/dolů v mobilním menu; dostupné jen při nastaveném ručním řazení; swapuje sort_order v DB</li>
+      <li><strong>Název složky v toolbaru</strong> – při aktivním filtru složky se zobrazí název složky v záhlaví pravého panelu</li>
+      <li><strong>Oprava ICS poznámek</strong> – poznámky k ICS (externím) událostem se správně načítají přes trackino_ics_event_cache (opravena regex filtrace event_ref)</li>
+      <li><strong>Řazení Poznámek k událostem</strong> – select Nejnovější / Nejstarší / Název A–Z / Název Z–A v toolbaru sekce Poznámky k událostem</li>
+      <li><strong>Zarovnání počtů složek</strong> – badge počtu poznámek ve složce je dále od akčních tlačítek (mr-8)</li>
+    </ul>
+  </li>
+</ul>
+
 <h3>v2.51.9 – 10. 3. 2026</h3>
 <ul>
   <li><strong>Notebook – 5 vylepšení výpisu a editoru</strong>:

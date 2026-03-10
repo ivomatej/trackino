@@ -232,18 +232,19 @@ const DEFAULT_HELP_CONTENT = `
 <h3>Poznámky</h3>
 <p>Modul <strong>Poznámky</strong> (sekce <strong>ANALÝZA</strong>, tarif Pro a Max) je osobní notes aplikace s úkoly, oblíbenými a sdílením složek.</p>
 <ul>
-  <li><strong>Navigace v levém panelu</strong> – v záhlaví je název „Poznámky"; pod ním jsou položky Inbox, Všechny poznámky (aktivní + nearchivované), Oblíbené, Důležité, Naposledy upravené, Poznámky k událostem, Archiv a stromová struktura složek; počty u složek zobrazují pouze nearchivované poznámky</li>
-  <li><strong>Složky a sdílení</strong> – až 5 úrovní podsložek; sdílení s celým workspacem nebo konkrétními uživateli (výběr ze seznamu s avatary a e-maily, karta-style modal se třemi volbami: Nesdílet / Celý workspace / Konkrétní uživatelé)</li>
-  <li><strong>Rich text editor</strong> – formátování B/I/U, odrážkový a číselný seznam, inline code; URL jsou automaticky klikatelné (otevírají se v novém okně)</li>
-  <li><strong>Panel s úkoly</strong> – pod editorem je seznam úkolů s checkboxy; Enter přidá nový, Backspace na prázdném odstraní; úkoly jsou uloženy spolu s poznámkou</li>
-  <li><strong>Příznaky</strong> – Oblíbená (hvězdička), Důležitá (červená, zvýrazní rámeček); lze nastavit přes toolbar nebo klávesové ikonky v záhlaví poznámky</li>
-  <li><strong>Přesunout do složky</strong> – v detailu poznámky je v záhlaví ikonka složky; kliknutím se otevře rychlé menu pro přesun do jiné složky nebo do Inboxu</li>
-  <li><strong>Nová poznámka</strong> – po vytvoření se automaticky zobrazí kurzor v poli názvu; stiskem Enter přejde kurzor do editoru obsahu</li>
-  <li><strong>Archiv</strong> – archivované poznámky jsou v samostatné sekci; archivovat/obnovit lze přes kebab menu (⋮)</li>
-  <li><strong>Kopírovat obsah</strong> – ikonka schránky ve výpisu i v záhlaví editoru zkopíruje text poznámky (bez formátování) do schránky; zelená fajfka potvrdí zkopírování po dobu 2 s</li>
-  <li><strong>Duplikovat poznámku</strong> – ikonka duplikátu ve výpisu i v záhlaví editoru vytvoří kopii se suffixem „– kopie" (při dalším duplikování „– kopie 2" atd.)</li>
-  <li><strong>Řazení Nejstarší</strong> – dropdown řazení obsahuje novou volbu „Nejstarší" (řadí dle data vytvoření vzestupně)</li>
-  <li><strong>Poznámky k událostem</strong> – samostatná sekce pro poznámky přidané ke kalendářním událostem; titulek v levém panelu obsahuje datum a čas události (např. „Porada – 10.3.2026 10:00–11:00"); tlačítkem <em>Otevřít v Kalendáři</em> se přejde do pohledu Seznam v Kalendáři a automaticky se otevře inline panel poznámky pro danou událost</li>
+  <li><strong>Navigace v levém panelu</strong> – v záhlaví je název „Poznámky" + ikonka ozubeného kola (Nastavení); pod ním jsou položky Inbox (lze skrýt v Nastavení), Všechny poznámky, Oblíbené, Důležité, Naposledy upravené, Poznámky k událostem, Archiv a stromová struktura složek; počty u složek zobrazují pouze nearchivované poznámky</li>
+  <li><strong>Nastavení poznámek</strong> – ozubené kolo v záhlaví levého panelu otevře modal s možnostmi: Zobrazit Inbox (toggle), Automaticky rozbalit složky (toggle), Výchozí řazení poznámek (select), Řazení složek (Ručně / Abecedně / Datum vytvoření); nastavení se ukládá v localStorage</li>
+  <li><strong>Složky a sdílení</strong> – až 5 úrovní podsložek; sdílení s celým workspacem nebo konkrétními uživateli; řazení složek šipkami nahoru/dolů (hover akce na desktopu, menu na mobilu) – dostupné při nastavení řazení „Ručně"; název aktivní složky se zobrazuje v záhlaví pravého panelu</li>
+  <li><strong>Rich text editor</strong> – formátování B/I/U, odrážkový a číselný seznam, kódový blok (tlačítko <code>&lt;/&gt;</code> vloží blok s copy ikonkou vpravo nahoře); URL jsou automaticky klikatelné</li>
+  <li><strong>Panel s úkoly</strong> – pod editorem je seznam úkolů s checkboxy; Enter přidá nový, Backspace na prázdném odstraní</li>
+  <li><strong>Příznaky</strong> – Oblíbená (hvězdička), Důležitá (červená); lze nastavit přes toolbar nebo ikonky v záhlaví poznámky</li>
+  <li><strong>Přesunout do složky</strong> – v detailu poznámky je v záhlaví ikonka složky pro přesun; ve výpisu je ikonka šipky dolů</li>
+  <li><strong>Nová poznámka</strong> – po vytvoření se automaticky zobrazí kurzor v poli názvu; stiskem Enter přejde kurzor do editoru</li>
+  <li><strong>Archiv</strong> – archivované poznámky jsou v samostatné sekci; archivovat/obnovit lze přes ikonky ve výpisu</li>
+  <li><strong>Kopírovat obsah</strong> – ikonka schránky ve výpisu i v záhlaví editoru zkopíruje text poznámky (bez formátování); zelená fajfka potvrdí zkopírování</li>
+  <li><strong>Duplikovat poznámku</strong> – ikonka duplikátu vytvoří kopii se suffixem „– kopie" (při dalším duplikování „– kopie 2" atd.)</li>
+  <li><strong>Řazení poznámek</strong> – Nejnovější / Nejstarší / Název A–Z / Název Z–A; výchozí řazení lze nastavit v Nastavení poznámek</li>
+  <li><strong>Poznámky k událostem</strong> – samostatná sekce pro poznámky přidané ke kalendářním událostem (včetně ICS externích kalendářů); titulek obsahuje datum a čas události; tlačítkem <em>Otevřít v Kalendáři</em> se přejde přímo na událost; řazení Nejnovější / Nejstarší / Název A–Z / Název Z–A</li>
 </ul>
 
 <h3>Úpravy aplikace</h3>
