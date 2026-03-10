@@ -14,7 +14,7 @@ interface Note {
   id: string; workspace_id: string; user_id: string;
   title: string; content: string; tasks: TaskItem[];
   folder_id: string | null; is_favorite: boolean; is_important: boolean;
-  is_archived: boolean; created_at: string; updated_at: string;
+  is_archived: boolean; is_done: boolean; created_at: string; updated_at: string;
 }
 
 interface NoteFolder {
@@ -126,7 +126,7 @@ function createTaskItemHtml(id: string): string {
 function createTaskBlockHtml(): string {
   const blockId = nanoid();
   const itemId = nanoid();
-  return `<div class="nb-task-block" contenteditable="false" data-nb-tb="${blockId}" style="border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin:6px 0;background:var(--bg-hover);display:block"><div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:6px;user-select:none">Úkoly</div><div class="nb-tb-items">${createTaskItemHtml(itemId)}</div><div class="nb-tb-add" style="font-size:11px;cursor:pointer;padding:3px 0;margin-top:4px;user-select:none">+ Přidat úkol</div></div><br>`;
+  return `<div class="nb-task-block" contenteditable="false" data-nb-tb="${blockId}" style="border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin:6px 0;background:var(--bg-hover);display:block;position:relative"><span class="nb-tb-remove-block" style="position:absolute;top:5px;right:8px;cursor:pointer;font-size:14px;line-height:1;color:var(--text-muted);user-select:none;padding:2px 4px;border-radius:4px" title="Smazat blok">×</span><div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:6px;user-select:none">Úkoly</div><div class="nb-tb-items">${createTaskItemHtml(itemId)}</div><div class="nb-tb-add" style="font-size:11px;cursor:pointer;padding:3px 0;margin-top:4px;user-select:none">+ Přidat úkol</div></div><br>`;
 }
 
 function fmtDate(iso: string) {
@@ -348,21 +348,23 @@ function buildFolderFlat(
 
 // ─── NoteEditor ──────────────────────────────────────────────────────────────
 function NoteEditor({
-  note, onSave, onBack, onDelete, folders, onMove, onDuplicate,
+  note, onSave, onBack, onDelete, folders, onMove, onDuplicate, showDoneFeature,
 }: {
   note: Note | null;
-  onSave: (title: string, content: string, tasks: TaskItem[], meta: { is_favorite: boolean; is_important: boolean }) => Promise<void>;
+  onSave: (title: string, content: string, tasks: TaskItem[], meta: { is_favorite: boolean; is_important: boolean; is_done: boolean }) => Promise<void>;
   onBack: () => void;
   onDelete: (id: string) => void;
   folders?: NoteFolder[];
   onMove?: (noteId: string, folderId: string | null) => Promise<void>;
   onDuplicate?: () => void;
+  showDoneFeature?: boolean;
 }) {
   const [title, setTitle] = useState(note?.title === 'Nová poznámka' ? '' : (note?.title ?? ''));
   const [content, setContent] = useState(note?.content ?? '');
   const [tasks, setTasks] = useState<TaskItem[]>(note?.tasks ?? []);
   const [isFavorite, setIsFavorite] = useState(note?.is_favorite ?? false);
   const [isImportant, setIsImportant] = useState(note?.is_important ?? false);
+  const [isDone, setIsDone] = useState(note?.is_done ?? false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [showMoveMenu, setShowMoveMenu] = useState(false);
@@ -392,14 +394,15 @@ function NoteEditor({
     setTasks(note?.tasks ?? []);
     setIsFavorite(note?.is_favorite ?? false);
     setIsImportant(note?.is_important ?? false);
+    setIsDone(note?.is_done ?? false);
     if (editorRef.current) editorRef.current.innerHTML = note?.content ?? '';
   }, [note?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const triggerSave = useCallback((t: string, c: string, tk: TaskItem[], fav: boolean, imp: boolean) => {
+  const triggerSave = useCallback((t: string, c: string, tk: TaskItem[], fav: boolean, imp: boolean, dn?: boolean) => {
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
       setSaving(true);
-      await onSave(t, c, tk, { is_favorite: fav, is_important: imp });
+      await onSave(t, c, tk, { is_favorite: fav, is_important: imp, is_done: dn ?? false });
       setSaving(false);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -414,7 +417,7 @@ function NoteEditor({
   function handleEditorInput() {
     const c = editorRef.current?.innerHTML ?? '';
     setContent(c);
-    triggerSave(title, c, tasks, isFavorite, isImportant);
+    triggerSave(title, c, tasks, isFavorite, isImportant, isDone);
   }
 
   function handleEditorBlur(e: React.FocusEvent<HTMLDivElement>) {
@@ -424,7 +427,7 @@ function NoteEditor({
     if (editorRef.current) editorRef.current.innerHTML = linked;
     const c = linked;
     setContent(c);
-    triggerSave(title, c, tasks, isFavorite, isImportant);
+    triggerSave(title, c, tasks, isFavorite, isImportant, isDone);
   }
 
   function handleEditorKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
@@ -447,7 +450,7 @@ function NoteEditor({
               const newItem = tmp.firstChild as HTMLElement | null;
               if (newItem) { item.after(newItem); (newItem.querySelector('.nb-tb-txt') as HTMLElement | null)?.focus(); }
               const c = editorRef.current?.innerHTML ?? '';
-              setContent(c); triggerSave(title, c, tasks, isFavorite, isImportant);
+              setContent(c); triggerSave(title, c, tasks, isFavorite, isImportant, isDone);
             }
             return;
           }
@@ -460,7 +463,7 @@ function NoteEditor({
               item.remove();
               prev?.querySelector<HTMLElement>('.nb-tb-txt')?.focus();
               const c = editorRef.current?.innerHTML ?? '';
-              setContent(c); triggerSave(title, c, tasks, isFavorite, isImportant);
+              setContent(c); triggerSave(title, c, tasks, isFavorite, isImportant, isDone);
             }
             return;
           }
@@ -478,7 +481,7 @@ function NoteEditor({
           document.execCommand('insertText', false, '\n');
           const c = editorRef.current?.innerHTML ?? '';
           setContent(c);
-          triggerSave(title, c, tasks, isFavorite, isImportant);
+          triggerSave(title, c, tasks, isFavorite, isImportant, isDone);
           return;
         }
       }
@@ -524,7 +527,7 @@ function NoteEditor({
     sel.removeAllRanges(); sel.addRange(nr);
     const c = editorRef.current?.innerHTML ?? '';
     setContent(c);
-    triggerSave(title, c, tasks, isFavorite, isImportant);
+    triggerSave(title, c, tasks, isFavorite, isImportant, isDone);
   }
 
   function handleEditorClick(e: React.MouseEvent<HTMLDivElement>) {
@@ -546,7 +549,7 @@ function NoteEditor({
         const txt = item.querySelector('.nb-tb-txt') as HTMLElement | null;
         if (txt) { txt.style.textDecoration = checked ? 'none' : 'line-through'; txt.style.color = checked ? 'var(--text-primary)' : 'var(--text-muted)'; }
       }
-      const c = editorRef.current?.innerHTML ?? ''; setContent(c); triggerSave(title, c, tasks, isFavorite, isImportant); return;
+      const c = editorRef.current?.innerHTML ?? ''; setContent(c); triggerSave(title, c, tasks, isFavorite, isImportant, isDone); return;
     }
     const tbAdd = (e.target as HTMLElement).closest('.nb-tb-add');
     if (tbAdd) {
@@ -558,13 +561,23 @@ function NoteEditor({
         const newItem = tmp.firstChild as HTMLElement | null;
         if (newItem) { itemsContainer.appendChild(newItem); (newItem.querySelector('.nb-tb-txt') as HTMLElement | null)?.focus(); }
       }
-      const c = editorRef.current?.innerHTML ?? ''; setContent(c); triggerSave(title, c, tasks, isFavorite, isImportant); return;
+      const c = editorRef.current?.innerHTML ?? ''; setContent(c); triggerSave(title, c, tasks, isFavorite, isImportant, isDone); return;
     }
     const tbDel = (e.target as HTMLElement).closest('.nb-tb-del');
     if (tbDel) {
       const item = tbDel.closest('.nb-tb-item') as HTMLElement | null;
       if (item) { const items = item.closest('.nb-task-block')?.querySelector('.nb-tb-items'); if (items && items.children.length > 1) item.remove(); }
-      const c = editorRef.current?.innerHTML ?? ''; setContent(c); triggerSave(title, c, tasks, isFavorite, isImportant); return;
+      const c = editorRef.current?.innerHTML ?? ''; setContent(c); triggerSave(title, c, tasks, isFavorite, isImportant, isDone); return;
+    }
+    const tbRemoveBlock = (e.target as HTMLElement).closest('.nb-tb-remove-block');
+    if (tbRemoveBlock) {
+      const block = tbRemoveBlock.closest('.nb-task-block') as HTMLElement | null;
+      if (block) {
+        const next = block.nextSibling;
+        block.remove();
+        if (next && next.nodeName === 'BR') next.parentNode?.removeChild(next);
+      }
+      const c = editorRef.current?.innerHTML ?? ''; setContent(c); triggerSave(title, c, tasks, isFavorite, isImportant, isDone); return;
     }
     const pre = (e.target as HTMLElement).closest('pre[data-nb-code]') as HTMLElement | null;
     if (pre) {
@@ -585,7 +598,7 @@ function NoteEditor({
           if (sel) { sel.removeAllRanges(); sel.addRange(range); }
           const c = editorRef.current?.innerHTML ?? '';
           setContent(c);
-          triggerSave(title, c, tasks, isFavorite, isImportant);
+          triggerSave(title, c, tasks, isFavorite, isImportant, isDone);
         }
       }
     }
@@ -593,45 +606,51 @@ function NoteEditor({
 
   function handleTitleChange(v: string) {
     setTitle(v);
-    triggerSave(v, content, tasks, isFavorite, isImportant);
+    triggerSave(v, content, tasks, isFavorite, isImportant, isDone);
   }
 
   function addTask() {
     const newTask: TaskItem = { id: nanoid(), text: '', checked: false };
     const next = [...tasks, newTask];
     setTasks(next);
-    triggerSave(title, content, next, isFavorite, isImportant);
+    triggerSave(title, content, next, isFavorite, isImportant, isDone);
     setTimeout(() => taskRefs.current.get(newTask.id)?.focus(), 50);
   }
 
   function toggleTask(id: string) {
     const next = tasks.map(t => t.id === id ? { ...t, checked: !t.checked } : t);
     setTasks(next);
-    triggerSave(title, content, next, isFavorite, isImportant);
+    triggerSave(title, content, next, isFavorite, isImportant, isDone);
   }
 
   function updateTaskText(id: string, text: string) {
     const next = tasks.map(t => t.id === id ? { ...t, text } : t);
     setTasks(next);
-    triggerSave(title, content, next, isFavorite, isImportant);
+    triggerSave(title, content, next, isFavorite, isImportant, isDone);
   }
 
   function removeTask(id: string) {
     const next = tasks.filter(t => t.id !== id);
     setTasks(next);
-    triggerSave(title, content, next, isFavorite, isImportant);
+    triggerSave(title, content, next, isFavorite, isImportant, isDone);
   }
 
   function toggleFavorite() {
     const next = !isFavorite;
     setIsFavorite(next);
-    triggerSave(title, content, tasks, next, isImportant);
+    triggerSave(title, content, tasks, next, isImportant, isDone);
   }
 
   function toggleImportant() {
     const next = !isImportant;
     setIsImportant(next);
-    triggerSave(title, content, tasks, isFavorite, next);
+    triggerSave(title, content, tasks, isFavorite, next, isDone);
+  }
+
+  function toggleDone() {
+    const next = !isDone;
+    setIsDone(next);
+    triggerSave(title, content, tasks, isFavorite, isImportant, next);
   }
 
   const btnStyle: React.CSSProperties = {
@@ -777,7 +796,7 @@ function NoteEditor({
         </button>
         <button onMouseDown={e => {
           e.preventDefault();
-          document.execCommand('insertHTML', false, '<pre data-nb-code="1" style="background:var(--bg-hover);border:1px solid var(--border);border-radius:6px;padding:10px 36px 10px 12px;overflow-x:auto;position:relative;font-family:monospace;font-size:12px;color:var(--text-primary);margin:4px 0;min-height:2.5em"><code>Kód…</code></pre><br>');
+          document.execCommand('insertHTML', false, '<pre data-nb-code="1" style="background:var(--bg-hover);border:1px solid var(--border);border-radius:6px;padding:10px 36px 10px 12px;overflow-x:auto;position:relative;font-family:monospace;font-size:12px;color:var(--text-primary);margin:4px 0;min-height:5em"><code>Kód…</code></pre><br>');
           editorRef.current?.focus();
         }} style={btnStyle} title="Kódový blok"
           onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
@@ -797,7 +816,7 @@ function NoteEditor({
               inBlock.after(...Array.from(tmp.childNodes));
             } else { editorRef.current?.focus(); document.execCommand('insertHTML', false, html); }
           } else { editorRef.current?.focus(); document.execCommand('insertHTML', false, html); }
-          const c = editorRef.current?.innerHTML ?? ''; setContent(c); triggerSave(title, c, tasks, isFavorite, isImportant);
+          const c = editorRef.current?.innerHTML ?? ''; setContent(c); triggerSave(title, c, tasks, isFavorite, isImportant, isDone);
         }} style={btnStyle} title="Blok úkolů"
           onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -823,6 +842,16 @@ function NoteEditor({
           </svg>
           Oblíbená
         </button>
+        {showDoneFeature && (
+          <button onMouseDown={e => { e.preventDefault(); toggleDone(); }}
+            className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium border transition-all"
+            style={{ background: isDone ? '#dcfce7' : 'transparent', color: isDone ? '#16a34a' : 'var(--text-muted)', borderColor: isDone ? '#86efac' : 'var(--border)' }}>
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            Hotovo
+          </button>
+        )}
       </div>
 
       {/* Scrollable content */}
@@ -836,51 +865,63 @@ function NoteEditor({
           onBlur={handleEditorBlur}
           onKeyDown={handleEditorKeyDown}
           onClick={handleEditorClick}
-          className="px-4 md:px-6 py-2 min-h-[120px] outline-none text-sm leading-relaxed"
+          className="px-4 md:px-6 py-2 min-h-[120px] outline-none text-sm leading-relaxed nb-editor"
           style={{ color: 'var(--text-primary)' }}
           data-placeholder="Začni psát…"
         />
 
         {/* Checklist */}
-        <div className="mx-4 md:mx-6 my-3 border rounded-xl px-3 md:px-3 py-3 md:py-2.5" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
-          <div className="text-[10px] font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>Úkoly</div>
-          <div className="space-y-2 md:space-y-1">
-            {tasks.map(task => (
-              <div key={task.id} className="flex items-center gap-2.5 md:gap-2 group/task">
-                <input type="checkbox" checked={task.checked} onChange={() => toggleTask(task.id)}
-                  className="w-5 h-5 md:w-3.5 md:h-3.5 flex-shrink-0 cursor-pointer rounded" style={{ accentColor: '#9ca3af' }} />
-                <input
-                  ref={el => { if (el) taskRefs.current.set(task.id, el); else taskRefs.current.delete(task.id); }}
-                  type="text" value={task.text}
-                  onChange={e => updateTaskText(task.id, e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') { e.preventDefault(); addTask(); }
-                    if (e.key === 'Backspace' && task.text === '') { e.preventDefault(); removeTask(task.id); }
-                  }}
-                  className="flex-1 bg-transparent outline-none min-w-0 text-base md:text-xs py-1 md:py-0"
-                  style={{ color: task.checked ? 'var(--text-muted)' : 'var(--text-primary)', textDecoration: task.checked ? 'line-through' : 'none' }}
-                  placeholder="Úkol…"
-                />
-                <button onClick={() => removeTask(task.id)}
-                  className="opacity-60 md:opacity-0 md:group-hover/task:opacity-60 hover:!opacity-100 flex-shrink-0 transition-opacity p-1.5 md:p-0"
-                  style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="md:w-[9px] md:h-[9px]">
-                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                  </svg>
-                </button>
-              </div>
-            ))}
+        {tasks.length > 0 ? (
+          <div className="mx-4 md:mx-6 my-3 border rounded-xl px-3 md:px-3 py-3 md:py-2.5" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
+            <div className="text-[10px] font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>Úkoly</div>
+            <div className="space-y-2 md:space-y-1">
+              {tasks.map(task => (
+                <div key={task.id} className="flex items-center gap-2.5 md:gap-2 group/task">
+                  <input type="checkbox" checked={task.checked} onChange={() => toggleTask(task.id)}
+                    className="w-5 h-5 md:w-3.5 md:h-3.5 flex-shrink-0 cursor-pointer rounded" style={{ accentColor: '#9ca3af' }} />
+                  <input
+                    ref={el => { if (el) taskRefs.current.set(task.id, el); else taskRefs.current.delete(task.id); }}
+                    type="text" value={task.text}
+                    onChange={e => updateTaskText(task.id, e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') { e.preventDefault(); addTask(); }
+                      if (e.key === 'Backspace' && task.text === '') { e.preventDefault(); removeTask(task.id); }
+                    }}
+                    className="flex-1 bg-transparent outline-none min-w-0 text-base md:text-xs py-1 md:py-0"
+                    style={{ color: task.checked ? 'var(--text-muted)' : 'var(--text-primary)', textDecoration: task.checked ? 'line-through' : 'none' }}
+                    placeholder="Úkol…"
+                  />
+                  <button onClick={() => removeTask(task.id)}
+                    className="opacity-60 md:opacity-0 md:group-hover/task:opacity-60 hover:!opacity-100 flex-shrink-0 transition-opacity p-1.5 md:p-0"
+                    style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="md:w-[9px] md:h-[9px]">
+                      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button onClick={addTask} className="flex items-center gap-1.5 md:gap-1 text-sm md:text-[11px] mt-2.5 md:mt-1.5 py-1 md:py-0 transition-colors"
+              style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
+              onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="md:w-2 md:h-2">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              Přidat úkol
+            </button>
           </div>
-          <button onClick={addTask} className="flex items-center gap-1.5 md:gap-1 text-sm md:text-[11px] mt-2.5 md:mt-1.5 py-1 md:py-0 transition-colors"
+        ) : (
+          <button onClick={addTask} className="mx-4 md:mx-6 my-2 flex items-center gap-1.5 text-xs transition-colors"
             style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
             onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
             onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}>
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="md:w-2 md:h-2">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
               <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
             </svg>
-            Přidat úkol
+            Přidat úkoly
           </button>
-        </div>
+        )}
       </div>
     </div>
   );
@@ -1074,6 +1115,16 @@ function CalEventNoteEditor({
       if (item) { const items = item.closest('.nb-task-block')?.querySelector('.nb-tb-items'); if (items && items.children.length > 1) item.remove(); }
       const c = editorRef.current?.innerHTML ?? ''; setContent(c); triggerSave(c, tasks, isFavorite, isImportant); return;
     }
+    const tbRemoveBlock = (e.target as HTMLElement).closest('.nb-tb-remove-block');
+    if (tbRemoveBlock) {
+      const block = tbRemoveBlock.closest('.nb-task-block') as HTMLElement | null;
+      if (block) {
+        const next = block.nextSibling;
+        block.remove();
+        if (next && next.nodeName === 'BR') next.parentNode?.removeChild(next);
+      }
+      const c = editorRef.current?.innerHTML ?? ''; setContent(c); triggerSave(c, tasks, isFavorite, isImportant); return;
+    }
     const pre = (e.target as HTMLElement).closest('pre[data-nb-code]') as HTMLElement | null;
     if (pre) {
       const rect = pre.getBoundingClientRect();
@@ -1169,7 +1220,7 @@ function CalEventNoteEditor({
         </button>
         <button onMouseDown={e => {
           e.preventDefault();
-          document.execCommand('insertHTML', false, '<pre data-nb-code="1" style="background:var(--bg-hover);border:1px solid var(--border);border-radius:6px;padding:10px 36px 10px 12px;overflow-x:auto;position:relative;font-family:monospace;font-size:12px;color:var(--text-primary);margin:4px 0;min-height:2.5em"><code>Kód…</code></pre><br>');
+          document.execCommand('insertHTML', false, '<pre data-nb-code="1" style="background:var(--bg-hover);border:1px solid var(--border);border-radius:6px;padding:10px 36px 10px 12px;overflow-x:auto;position:relative;font-family:monospace;font-size:12px;color:var(--text-primary);margin:4px 0;min-height:5em"><code>Kód…</code></pre><br>');
           editorRef.current?.focus();
         }} style={btnStyle} title="Kódový blok"
           onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
@@ -1219,34 +1270,46 @@ function CalEventNoteEditor({
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
           onClick={handleEditorClick}
-          className="px-4 md:px-6 py-2 min-h-[120px] outline-none text-sm leading-relaxed"
+          className="px-4 md:px-6 py-2 min-h-[120px] outline-none text-sm leading-relaxed nb-editor"
           style={{ color: 'var(--text-primary)' }} data-placeholder="Obsah poznámky…" />
-        <div className="mx-4 md:mx-6 my-3 border rounded-xl px-3 py-3 md:py-2.5" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
-          <div className="text-[10px] font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>Úkoly</div>
-          <div className="space-y-2 md:space-y-1">
-            {tasks.map(task => (
-              <div key={task.id} className="flex items-center gap-2.5 md:gap-2 group/task">
-                <input type="checkbox" checked={task.checked} onChange={() => toggleTask(task.id)} className="w-5 h-5 md:w-3.5 md:h-3.5 flex-shrink-0 cursor-pointer" style={{ accentColor: '#9ca3af' }} />
-                <input ref={el => { if (el) taskRefs.current.set(task.id, el); else taskRefs.current.delete(task.id); }}
-                  type="text" value={task.text}
-                  onChange={e => updateTaskText(task.id, e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTask(); } if (e.key === 'Backspace' && task.text === '') { e.preventDefault(); removeTask(task.id); } }}
-                  className="flex-1 bg-transparent outline-none min-w-0 text-base md:text-xs py-1 md:py-0"
-                  style={{ color: task.checked ? 'var(--text-muted)' : 'var(--text-primary)', textDecoration: task.checked ? 'line-through' : 'none' }}
-                  placeholder="Úkol…" />
-                <button onClick={() => removeTask(task.id)} className="opacity-60 md:opacity-0 md:group-hover/task:opacity-60 hover:!opacity-100 flex-shrink-0 transition-opacity p-1.5 md:p-0"
-                  style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="md:w-[9px] md:h-[9px]"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
-              </div>
-            ))}
+        {tasks.length > 0 ? (
+          <div className="mx-4 md:mx-6 my-3 border rounded-xl px-3 py-3 md:py-2.5" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
+            <div className="text-[10px] font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>Úkoly</div>
+            <div className="space-y-2 md:space-y-1">
+              {tasks.map(task => (
+                <div key={task.id} className="flex items-center gap-2.5 md:gap-2 group/task">
+                  <input type="checkbox" checked={task.checked} onChange={() => toggleTask(task.id)} className="w-5 h-5 md:w-3.5 md:h-3.5 flex-shrink-0 cursor-pointer" style={{ accentColor: '#9ca3af' }} />
+                  <input ref={el => { if (el) taskRefs.current.set(task.id, el); else taskRefs.current.delete(task.id); }}
+                    type="text" value={task.text}
+                    onChange={e => updateTaskText(task.id, e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTask(); } if (e.key === 'Backspace' && task.text === '') { e.preventDefault(); removeTask(task.id); } }}
+                    className="flex-1 bg-transparent outline-none min-w-0 text-base md:text-xs py-1 md:py-0"
+                    style={{ color: task.checked ? 'var(--text-muted)' : 'var(--text-primary)', textDecoration: task.checked ? 'line-through' : 'none' }}
+                    placeholder="Úkol…" />
+                  <button onClick={() => removeTask(task.id)} className="opacity-60 md:opacity-0 md:group-hover/task:opacity-60 hover:!opacity-100 flex-shrink-0 transition-opacity p-1.5 md:p-0"
+                    style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="md:w-[9px] md:h-[9px]"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button onClick={addTask} className="flex items-center gap-1.5 md:gap-1 text-sm md:text-[11px] mt-2.5 md:mt-1.5 py-1 md:py-0" style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
+              onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-secondary)')} onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="md:w-2 md:h-2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Přidat úkol
+            </button>
           </div>
-          <button onClick={addTask} className="flex items-center gap-1.5 md:gap-1 text-sm md:text-[11px] mt-2.5 md:mt-1.5 py-1 md:py-0" style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
-            onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-secondary)')} onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}>
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="md:w-2 md:h-2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Přidat úkol
+        ) : (
+          <button onClick={addTask} className="mx-4 md:mx-6 my-2 flex items-center gap-1.5 text-xs transition-colors"
+            style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
+            onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Přidat úkoly
           </button>
-        </div>
+        )}
       </div>
     </div>
   );
@@ -1279,7 +1342,10 @@ function NotebookContent() {
     showInbox: boolean;
     defaultSort: 'date' | 'title' | 'oldest' | 'title_desc';
     folderSortOrder: 'name' | 'created' | 'manual';
-  }>({ foldersAutoOpen: false, showInbox: true, defaultSort: 'date', folderSortOrder: 'manual' });
+    saveFolderSort: boolean;
+    showDoneFeature: boolean;
+  }>({ foldersAutoOpen: false, showInbox: true, defaultSort: 'date', folderSortOrder: 'manual', saveFolderSort: false, showDoneFeature: false });
+  const [folderSortCache, setFolderSortCache] = useState<Record<string, string>>({});
 
   // Copy done animation (note id, or null)
   const [copyDoneNoteId, setCopyDoneNoteId] = useState<string | null>(null);
@@ -1312,6 +1378,10 @@ function NotebookContent() {
         setNotebookSettings(prev => ({ ...prev, ...parsed }));
         if (parsed.defaultSort) setSortBy(parsed.defaultSort);
       } catch {}
+    }
+    const savedFolderSort = localStorage.getItem(`trackino_notebook_folder_sort_${wsId}`);
+    if (savedFolderSort) {
+      try { setFolderSortCache(JSON.parse(savedFolderSort)); } catch {}
     }
   }, [wsId]);
 
@@ -1528,7 +1598,7 @@ function NotebookContent() {
     const { data, error } = await supabase.from('trackino_notes').insert({
       workspace_id: wsId, user_id: userId,
       title: 'Nová poznámka', content: '', tasks: [],
-      folder_id: folderId, is_favorite: false, is_important: false, is_archived: false,
+      folder_id: folderId, is_favorite: false, is_important: false, is_archived: false, is_done: false,
     }).select().single();
     if (!error && data) {
       await fetchNotes();
@@ -1538,7 +1608,7 @@ function NotebookContent() {
     }
   }
 
-  async function saveNote(noteId: string, title: string, content: string, tasks: TaskItem[], meta: { is_favorite: boolean; is_important: boolean }) {
+  async function saveNote(noteId: string, title: string, content: string, tasks: TaskItem[], meta: { is_favorite: boolean; is_important: boolean; is_done: boolean }) {
     if (!wsId) return;
     await supabase.from('trackino_notes').update({ title, content, tasks, ...meta, updated_at: new Date().toISOString() }).eq('id', noteId).eq('workspace_id', wsId);
     setNotes(prev => prev.map(n => n.id === noteId ? { ...n, title, content, tasks, ...meta, updated_at: new Date().toISOString() } : n));
@@ -1557,7 +1627,7 @@ function NotebookContent() {
     setNotes(prev => prev.map(n => n.id === note.id ? { ...n, is_archived: !n.is_archived } : n));
   }
 
-  async function toggleFlag(note: Note, field: 'is_favorite' | 'is_important') {
+  async function toggleFlag(note: Note, field: 'is_favorite' | 'is_important' | 'is_done') {
     const val = !note[field];
     await supabase.from('trackino_notes').update({ [field]: val, updated_at: new Date().toISOString() }).eq('id', note.id);
     setNotes(prev => prev.map(n => n.id === note.id ? { ...n, [field]: val } : n));
@@ -1569,7 +1639,7 @@ function NotebookContent() {
     const { data, error } = await supabase.from('trackino_notes').insert({
       workspace_id: wsId, user_id: userId,
       title: newTitle, content: note.content, tasks: note.tasks,
-      folder_id: note.folder_id, is_favorite: false, is_important: false, is_archived: false,
+      folder_id: note.folder_id, is_favorite: false, is_important: false, is_archived: false, is_done: false,
     }).select().single();
     if (!error && data) {
       await fetchNotes();
@@ -1725,6 +1795,10 @@ function NotebookContent() {
 
   function selectFilter(f: NoteFilter) {
     setListFilter(f);
+    if (f.type === 'folder' && notebookSettings.saveFolderSort) {
+      const cached = folderSortCache[f.folderId];
+      if (cached) setSortBy(cached as typeof sortBy);
+    }
     setSelectedNote(null);
     setSelectedCalNote(null);
     setArchiveSelected(new Set());
@@ -1901,6 +1975,7 @@ function NotebookContent() {
             folders={folders}
             onMove={moveNote}
             onDuplicate={() => duplicateNote(selectedNote)}
+            showDoneFeature={notebookSettings.showDoneFeature}
           />
         ) : selectedCalNote && showCalEventNotes ? (
           /* ── Editor view (calendar event note) ── */
@@ -1932,7 +2007,7 @@ function NotebookContent() {
               )}
               {/* Folder name label */}
               {listFilter?.type === 'folder' && !selectedNote && (
-                <span className="text-sm font-semibold truncate max-w-[160px]" style={{ color: 'var(--text-primary)' }}>
+                <span className="text-sm font-semibold truncate max-w-[480px]" style={{ color: 'var(--text-primary)' }}>
                   {folders.find(f => f.id === (listFilter as { type: 'folder'; folderId: string }).folderId)?.name ?? 'Složka'}
                 </span>
               )}
@@ -1950,6 +2025,21 @@ function NotebookContent() {
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                   </div>
                 </div>
+              )}
+              {listFilter?.type === 'folder' && notebookSettings.saveFolderSort && !isRecent && !showCalEventNotes && (
+                <button onClick={() => {
+                  if (listFilter.type === 'folder') {
+                    const next = { ...folderSortCache, [listFilter.folderId]: sortBy };
+                    setFolderSortCache(next);
+                    if (wsId) localStorage.setItem(`trackino_notebook_folder_sort_${wsId}`, JSON.stringify(next));
+                  }
+                }} className="flex-shrink-0 flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border transition-colors"
+                  style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)', background: 'var(--bg-card)', cursor: 'pointer' }}>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+                  </svg>
+                  Uložit filtraci
+                </button>
               )}
               {showCalEventNotes && (
                 <div className="relative flex-shrink-0">
@@ -2023,7 +2113,7 @@ function NotebookContent() {
                   return (
                   <div key={note.id}
                     className="group flex items-start gap-3 px-4 py-3 md:py-3 border-b transition-colors"
-                    style={{ borderColor: 'var(--border)' }}
+                    style={{ borderColor: 'var(--border)', opacity: notebookSettings.showDoneFeature && note.is_done ? 0.45 : 1 }}
                     onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
                     {/* Archive checkbox */}
@@ -2036,9 +2126,10 @@ function NotebookContent() {
                     <div className="flex-1 min-w-0 cursor-pointer" onClick={() => { setSelectedNote(note); setShowLeftPanel(false); }}>
                       {/* Line 1: Title + flags */}
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{note.title || 'Bez názvu'}</span>
+                        <span className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)', textDecoration: notebookSettings.showDoneFeature && note.is_done ? 'line-through' : 'none' }}>{note.title || 'Bez názvu'}</span>
                         {note.is_favorite && <svg width="10" height="10" viewBox="0 0 24 24" fill="#f59e0b" stroke="#f59e0b" strokeWidth="1" className="flex-shrink-0"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>}
                         {note.is_important && <svg width="10" height="10" viewBox="0 0 24 24" fill="#dc2626" stroke="#dc2626" strokeWidth="1" className="flex-shrink-0"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>}
+                        {notebookSettings.showDoneFeature && note.is_done && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0"><polyline points="20 6 9 17 4 12"/></svg>}
                       </div>
                       {/* Line 2: Preview */}
                       {stripHtml(note.content) && <p className="hidden sm:block text-xs truncate mt-0.5" style={{ color: 'var(--text-muted)' }}>{stripHtml(note.content).slice(0, 150)}</p>}
@@ -2068,6 +2159,17 @@ function NotebookContent() {
                           <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
                         </svg>
                       </button>
+                      {/* Done toggle */}
+                      {notebookSettings.showDoneFeature && (
+                        <button onClick={e => { e.stopPropagation(); toggleFlag(note, 'is_done'); }}
+                          className="w-9 h-9 md:w-7 md:h-7 flex items-center justify-center rounded-lg"
+                          style={{ color: note.is_done ? '#22c55e' : 'var(--text-muted)' }} title={note.is_done ? 'Označit jako nedokončené' : 'Označit jako hotové'}
+                          onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill={note.is_done ? 'none' : 'none'} stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="md:w-3 md:h-3">
+                            <polyline points="20 6 9 17 4 12"/>
+                          </svg>
+                        </button>
+                      )}
                       {/* Copy content */}
                       <button onClick={e => {
                         e.stopPropagation();
@@ -2254,6 +2356,34 @@ function NotebookContent() {
                   </div>
                 </div>
               </div>
+              {/* Save filter per folder */}
+              <label className="flex items-center justify-between gap-4 cursor-pointer">
+                <div>
+                  <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Uložit filtraci pro složku</div>
+                  <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Každá složka si pamatuje své řazení. Tlačítko „Uložit filtraci" se zobrazí v toolbaru.</div>
+                </div>
+                <button type="button"
+                  onClick={() => saveSettings({ ...notebookSettings, saveFolderSort: !notebookSettings.saveFolderSort })}
+                  className="relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 transition-colors"
+                  style={{ background: notebookSettings.saveFolderSort ? 'var(--primary)' : 'var(--border)', borderColor: notebookSettings.saveFolderSort ? 'var(--primary)' : 'var(--border)' }}>
+                  <span className="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+                    style={{ transform: notebookSettings.saveFolderSort ? 'translateX(16px)' : 'translateX(0px)' }} />
+                </button>
+              </label>
+              {/* Show done feature */}
+              <label className="flex items-center justify-between gap-4 cursor-pointer">
+                <div>
+                  <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Stav „Hotovo"</div>
+                  <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Přidá tlačítko Hotovo do editoru a výpisu poznámek</div>
+                </div>
+                <button type="button"
+                  onClick={() => saveSettings({ ...notebookSettings, showDoneFeature: !notebookSettings.showDoneFeature })}
+                  className="relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 transition-colors"
+                  style={{ background: notebookSettings.showDoneFeature ? 'var(--primary)' : 'var(--border)', borderColor: notebookSettings.showDoneFeature ? 'var(--primary)' : 'var(--border)' }}>
+                  <span className="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+                    style={{ transform: notebookSettings.showDoneFeature ? 'translateX(16px)' : 'translateX(0px)' }} />
+                </button>
+              </label>
             </div>
             <div className="flex justify-end mt-5">
               <button onClick={() => setShowSettings(false)} className="px-4 py-1.5 rounded-lg text-sm font-medium text-white" style={{ background: 'var(--primary)' }}>Hotovo</button>
@@ -2354,9 +2484,15 @@ const editorStyles = `
   .nb-tb-del { opacity: 0; transition: opacity 0.1s; }
   .nb-task-block .nb-tb-item:hover .nb-tb-del { opacity: 0.5; }
   .nb-task-block .nb-tb-item:hover .nb-tb-del:hover { opacity: 1; }
+  .nb-tb-remove-block { opacity: 0; transition: opacity 0.15s; }
+  .nb-task-block:hover .nb-tb-remove-block { opacity: 0.5; }
+  .nb-task-block:hover .nb-tb-remove-block:hover { opacity: 1; }
   .nb-tb-txt:empty::before { content: attr(data-placeholder); color: var(--text-muted); pointer-events: none; }
   .nb-tb-add { color: var(--text-muted); }
   .nb-tb-add:hover { color: var(--text-secondary); }
+  .nb-editor ul { list-style-type: disc; padding-left: 1.5em; margin: 0.25em 0; }
+  .nb-editor ol { list-style-type: decimal; padding-left: 1.5em; margin: 0.25em 0; }
+  .nb-editor li { margin: 0.1em 0; }
 `;
 
 // ─── Page export ──────────────────────────────────────────────────────────────
