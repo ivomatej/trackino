@@ -11,6 +11,16 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.51.18 – 10. 3. 2026</h3>
+<ul>
+  <li><strong>Notebook – 2 úpravy</strong>:
+    <ul>
+      <li><strong>Breadcrumb v hlavičce poznámky</strong> – pod řádkem s action buttons se zobrazuje hierarchická cesta složek (např. Marketing / SEO); kliknutím na složku se zvýrazní v levém panelu, poznámka zůstane otevřená</li>
+      <li><strong>Hierarchické počty složek</strong> – počet u nadřazené složky nyní zahrnuje i všechny poznámky z podsložek libovolné hloubky (např. Marketing (10) = přímé + SEO (3) + PPC (7))</li>
+    </ul>
+  </li>
+</ul>
+
 <h3>v2.51.17 – 10. 3. 2026</h3>
 <ul>
   <li><strong>Notebook – 3 úpravy</strong>:
