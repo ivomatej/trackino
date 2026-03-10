@@ -11,6 +11,17 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.51.17 – 10. 3. 2026</h3>
+<ul>
+  <li><strong>Notebook – 3 úpravy</strong>:
+    <ul>
+      <li><strong>Složky – hierarchické filtrování</strong> – výběr složky zobrazí i poznámky ze všech podsložek (např. Marketing zobrazí i poznámky ze SEO, PPC, atd.)</li>
+      <li><strong>Uložit filtraci – animace</strong> – po kliknutí na tlačítko se zobrazí zelené „Uloženo ✓" na 2 sekundy, poté se vrátí do výchozího stavu; přechod je plynulý</li>
+      <li><strong>Odstraněno tlačítko „+ Přidat úkoly"</strong> – v detailu poznámky bez úkolů se tlačítko přidat úkoly již nezobrazuje; úkoly se přidávají přes tlačítko v toolbaru</li>
+    </ul>
+  </li>
+</ul>
+
 <h3>v2.51.16 – 10. 3. 2026</h3>
 <ul>
   <li><strong>Notebook – 6 vylepšení</strong>:
