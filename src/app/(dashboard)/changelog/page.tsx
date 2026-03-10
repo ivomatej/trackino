@@ -11,6 +11,21 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.51.20 – 10. 3. 2026</h3>
+<ul>
+  <li><strong>Úkoly – Přehled workspace (cross-workspace zobrazení)</strong>:
+    <ul>
+      <li><strong>Nové tlačítko „Přehled workspace"</strong> – v levém panelu modulu Úkoly; zobrazí úkoly ze všech workspace, kde je uživatel členem</li>
+      <li><strong>Tabulkový pohled</strong> – Název / Projekt (barevný badge) / Workspace (barevná tečka) / Řešitel / Priorita / Status / Termín; kliknutím na řádek se otevře detail úkolu</li>
+      <li><strong>Záložky workspace</strong> – „Vše" + záložka per workspace s deterministickou barvou a počtem úkolů; slouží jako rychlý filtr</li>
+      <li><strong>Filtry</strong> – priorita, termín (dnes/tento týden/tento měsíc/po termínu/bez termínu), projekt, řešitel, fulltextové hledání, přepínač „Skrýt hotové"; počet aktivních filtrů je zobrazen jako badge</li>
+      <li><strong>Nový úkol</strong> – modal s výběrem workspace → projekt → sloupec → název, priorita, termín, řešitel</li>
+      <li><strong>Detail úkolu</strong> – kliknutí otevře existující detail panel; breadcrumb zobrazuje ws / projekt / sloupec</li>
+      <li><strong>Bezpečnost</strong> – RLS z v2.51.19 zajišťuje, že uživatel vidí pouze data workspace, kde je schváleným členem; žádný obcházení izolace</li>
+    </ul>
+  </li>
+</ul>
+
 <h3>v2.51.19 – 10. 3. 2026</h3>
 <ul>
   <li><strong>Bezpečnost – Supabase RLS workspace izolace</strong>:

@@ -328,6 +328,7 @@ const DEFAULT_HELP_CONTENT = `
   <li><strong>Filtrování</strong> – fulltextové hledání, filtr dle přiřazeného člena, priority, deadline; přepínač „Jen moje úkoly"; přepínač „Skrýt hotové" (skryje veškeré dokončené úkoly bez ohledu na sloupec); řazení dle data, priority, názvu, termínu a „Naposledy přiřazené"</li>
   <li><strong>Moje úkoly</strong> – kliknutí na „Moje úkoly" v levém panelu přepne do Seznamu, zobrazí pouze úkoly přiřazené vám a seřadí je dle posledního přiřazení. Řazení lze kdykoli změnit přes rozbalovací nabídku.</li>
   <li><strong>Oprávnění</strong> – úkoly mohou spravovat admini, vlastník workspace a členové s oprávněním „Spravuje úkoly" (nastavitelné v sekci Tým)</li>
+  <li><strong>Přehled workspace (cross-workspace)</strong> – pokud jste členem více workspace, kliknutím na tlačítko „Přehled workspace" v levém panelu zobrazíte úkoly ze všech svých workspace v jedné tabulce. Záložky nad tabulkou filtrují dle workspace. Dostupné filtry: priorita, termín, projekt, řešitel, fulltextové hledání, skrýt hotové. Kliknutím na řádek se otevře detail úkolu. Nový úkol lze přidat přes tlačítko „+ Nový úkol" (výběr workspace → projekt → sloupec → vyplnění). Data jsou stále bezpečně izolována – vidíte jen workspace, kde jste schváleným členem.</li>
 </ul>
 
 <h3>Oblíbené v levém menu</h3>

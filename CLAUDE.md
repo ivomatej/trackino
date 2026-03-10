@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 10. 3. 2026 (v2.51.19)
+> Aktualizováno: 10. 3. 2026 (v2.51.20)
 
 ---
 
@@ -544,6 +544,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.51.20 | 10. 3. 2026 | Úkoly – Přehled workspace: cross-workspace tabulkový pohled (Název/Projekt/Workspace/Řešitel/Priorita/Status/Termín); záložky per workspace s barevným kódováním; filtry (priorita/termín/projekt/řešitel/search/hide-completed); modal Nový úkol (ws→projekt→sloupec→název/priorita/termín/řešitel); detail panel s breadcrumb ws/projekt/sloupec; deterministické barvy workspace; RLS z v2.51.19 zajišťuje izolaci dat |
 | v2.51.19 | 10. 3. 2026 | Supabase RLS – kompletní workspace izolace na DB vrstvě: dvě SECURITY DEFINER helper funkce (trackino_is_master_admin, trackino_user_workspaces), idempotentní politiky na všech ~92 tabulkách; cross-workspace pohled v modulu Úkoly funguje automaticky přes standard workspace_id filter; child tabulky bez workspace_id chainovány přes parent; exchange_rates = globální cache (SELECT pro všechny, zápis jen service_role/Master Admin) |
 | v2.51.18 | 10. 3. 2026 | Notebook – 2 úpravy: (a) Breadcrumb v hlavičce NoteEditor – hierarchická cesta složek kde je poznámka uložena, kliknutím zvýrazní složku v levém panelu (setListFilter, neuzavírá editor); (b) Hierarchické počty u složek – počet u nadřazené složky zahrnuje všechny poznámky z podsložek libovolné hloubky (getDescendantFolderIds) |
 | v2.51.17 | 10. 3. 2026 | Notebook – 3 úpravy: (a) Hierarchické filtrování složek (getDescendantFolderIds – hlavní složka zobrazuje poznámky ze všech podsložek); (b) Animace tlačítka „Uložit filtraci" (zelené „Uloženo ✓" na 2s, filterSaved state); (c) Odstraněno tlačítko „+ Přidat úkoly" z prázdného stavu (NoteEditor + CalEventNoteEditor) |
@@ -2622,6 +2623,51 @@ USING (
 
 ### Cross-workspace Úkoly – záměrné chování
 `workspace_id IN (SELECT trackino_user_workspaces())` automaticky vrátí záznamy ze VŠECH workspace, kde je user schválený člen → pohled „Moje úkoly" napříč workspace funguje bez nutnosti obcházet izolaci. Toto je požadované chování.
+
+### Cross-workspace pohled (v2.51.20) – architektura
+
+**State proměnné (prefix `cws`):**
+- `crossWsMode: boolean` – přepínač pro cross-ws pohled
+- `userWorkspaces: UserWorkspace[]` – seznam všech workspace uživatele
+- `cwsTasks: TaskItem[]` – úkoly ze všech workspace
+- `cwsBoardsMap: Map<string, CwsBoardInfo>` – board_id → {id, name, workspace_id, color}
+- `cwsColsMap: Map<string, CwsColumnInfo>` – column_id → {id, name, board_id, sort_order}
+- `cwsAllMembers: Map<string, Member>` – user_id → profil pro zobrazení jmen
+- `cwsTab: string` – 'all' nebo workspace_id pro filtr záložky
+- `cwsSearch, cwsSortBy, cwsHideCompleted` – filtry
+- `cwsFilterPriority, cwsFilterDeadline, cwsFilterBoard, cwsFilterAssignee` – rozšířené filtry
+- `showCwsFilters: boolean` – toggle pro panel filtrů
+
+**Interfaces:**
+```typescript
+interface UserWorkspace { id: string; name: string; color?: string | null; }
+interface CwsBoardInfo { id: string; name: string; workspace_id: string; color?: string | null; }
+interface CwsColumnInfo { id: string; name: string; board_id: string; sort_order: number; }
+```
+
+**Barvy workspace:**
+```typescript
+const WORKSPACE_COLORS = ['#6366f1', '#3b82f6', '#22c55e', '#f97316', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6'];
+const getWsColor = (wsId: string, ws?: UserWorkspace) => ws?.color ?? WORKSPACE_COLORS[parseInt(wsId.slice(0,8), 16) % WORKSPACE_COLORS.length];
+```
+
+**fetchCrossWsData():**
+1. Fetch `trackino_workspace_members` pro current user → unikátní workspace_id listA
+2. Fetch `trackino_workspaces` WHERE id IN listA → userWorkspaces
+3. Fetch `trackino_task_boards` WHERE workspace_id IN listA → cwsBoardsMap
+4. Fetch `trackino_task_columns` WHERE board_id IN [board IDs]
+5. Fetch `trackino_task_items` WHERE workspace_id IN listA ORDER BY updated_at DESC, LIMIT 500
+6. Fetch `trackino_profiles` pro všechny assigned_to unikátní user_ids
+
+**Komponenty v UI (crossWsMode):**
+- Záložky workspace (Vše + per-ws) nad tabulkou
+- Tabulka: 7 sloupců, kliknutím na řádek → `openDetail(task)` (existující funkce)
+- Filtry: priorita, termín (overdue/today/week/month/no_deadline), board, assignee, search, hide-completed
+- Modal Nový úkol: cascade ws → board → col → form fields
+
+**Detail panel v crossWsMode:**
+- `breadcrumb`: ws.name / board.name / col.name (z cwsBoardsMap, cwsColsMap, userWorkspaces)
+- `maxWidth`: vždy 'normal' preset (520px) když crossWsMode (activeBoard může být null)
 
 ### Kdo je `approved = true`
 - `trackino_workspace_members.approved` – člen, jehož pozvánka byla přijata a admin ho schválil
