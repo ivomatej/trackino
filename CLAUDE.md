@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 10. 3. 2026 (v2.51.9)
+> Aktualizováno: 10. 3. 2026 (v2.51.10)
 
 ---
 
@@ -544,6 +544,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.51.10 | 10. 3. 2026 | Notebook – 8 vylepšení: Řazení Název Z-A; Nastavení (ozubené kolo, localStorage `trackino_notebook_settings_{wsId}`: showInbox/foldersAutoOpen/defaultSort/folderSortOrder); Kódový blok `</>` + copy icon (CSS ::after, coordinate detection, nb-code-copied); Pohyb složek šipkami (moveFolderPos, jen manual sort); Název složky v pravém toolbaru; Fix ICS poznámek (ICS_REF_RE + `trackino_ics_event_cache` query); Řazení Poznámek k událostem (calNotesSortBy); Zarovnání počtů složek (mr-8) |
 | v2.51.9 | 10. 3. 2026 | Notebook – 5 vylepšení: Kopírovat obsah (clipboard + 2s zelená fajfka); Duplikovat poznámku (suffix „– kopie N"); Poznámky k událostem – titulek s datem+časem + „Otevřít v Kalendáři" → localStorage deep-link → inline note panel; Řazení Nejstarší; Zarovnání počtů složek (ml-auto) |
 | v2.51.8 | 10. 3. 2026 | Notebook – 5 oprav levého panelu: FolderTree počty složek nezahrnují archivované poznámky (a+e); přejmenování „Doručené" → „Inbox" v move menu (b); FolderTree počty fade místo hide (c); hover shift opraven – akční tlačítka absolutně pozicována (d) |
 | v2.51.4 | 10. 3. 2026 | Globální scrollbar auto-hide (is-scrolling class); Poznámky – move button v detailu, autofocus titulku, delší preview (2 řádky); Kanban – odstraněn text „Přetáhněte sem úkol", počet úkolů v šedém kroužku |
