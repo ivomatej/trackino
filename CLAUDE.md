@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 10. 3. 2026 (v2.51.18)
+> Aktualizováno: 10. 3. 2026 (v2.51.19)
 
 ---
 
@@ -544,6 +544,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.51.19 | 10. 3. 2026 | Supabase RLS – kompletní workspace izolace na DB vrstvě: dvě SECURITY DEFINER helper funkce (trackino_is_master_admin, trackino_user_workspaces), idempotentní politiky na všech ~92 tabulkách; cross-workspace pohled v modulu Úkoly funguje automaticky přes standard workspace_id filter; child tabulky bez workspace_id chainovány přes parent; exchange_rates = globální cache (SELECT pro všechny, zápis jen service_role/Master Admin) |
 | v2.51.18 | 10. 3. 2026 | Notebook – 2 úpravy: (a) Breadcrumb v hlavičce NoteEditor – hierarchická cesta složek kde je poznámka uložena, kliknutím zvýrazní složku v levém panelu (setListFilter, neuzavírá editor); (b) Hierarchické počty u složek – počet u nadřazené složky zahrnuje všechny poznámky z podsložek libovolné hloubky (getDescendantFolderIds) |
 | v2.51.17 | 10. 3. 2026 | Notebook – 3 úpravy: (a) Hierarchické filtrování složek (getDescendantFolderIds – hlavní složka zobrazuje poznámky ze všech podsložek); (b) Animace tlačítka „Uložit filtraci" (zelené „Uloženo ✓" na 2s, filterSaved state); (c) Odstraněno tlačítko „+ Přidat úkoly" z prázdného stavu (NoteEditor + CalEventNoteEditor) |
 | v2.51.16 | 10. 3. 2026 | Notebook – 6 vylepšení: (a) Uložit filtraci pro složku (toggle v Nastavení, folderSortCache v localStorage trackino_notebook_folder_sort_{wsId}); (b) Fix odrážek/číslování v editoru (nb-editor class + CSS ul/ol/li v editorStyles); (c) Kódový blok výška 5em; (d) × tlačítko pro odstranění task bloku + conditional tasks section (prázdný stav = „+ Přidat úkoly"); (e) Název složky max-w 160px→480px; (f) Stav Hotovo (is_done v DB, toggle v Nastavení, pill button v toolbaru, line-through+opacity v listě) |
@@ -2552,5 +2553,85 @@ Modul je rozdělen do ~32 souborů. `page.tsx` je entry point (25 ř.), orchestr
 - `ROW_H = 60` px/hodina (definováno v `utils.ts`, exportováno)
 
 ---
+
+## 36. Supabase RLS – architektura workspace izolace (v2.51.19)
+
+### Výchozí stav před auditem
+Všechny tabulky měly jedinou politiku `"Auth full" FOR ALL TO authenticated USING (true) WITH CHECK (true)` – nulová workspace izolace na DB vrstvě. Jakýkoliv autentizovaný uživatel mohl číst/zapisovat data libovolného workspace přímým API voláním.
+
+### Dvě SECURITY DEFINER helper funkce
+
+```sql
+-- Ověřuje is_master_admin na profilu (bypasuje RLS aby nedošlo k circular dependency)
+CREATE OR REPLACE FUNCTION trackino_is_master_admin()
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT COALESCE((SELECT is_master_admin FROM trackino_profiles WHERE id = auth.uid()), false);
+$$;
+
+-- Vrací workspace UUIDs, kde je uživatel schválený člen (approved = true)
+-- SECURITY DEFINER je nutný – tato funkce sama čte trackino_workspace_members,
+-- jehož RLS by jinak způsobilo circular dependency
+CREATE OR REPLACE FUNCTION trackino_user_workspaces()
+RETURNS SETOF uuid LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT workspace_id FROM trackino_workspace_members
+  WHERE user_id = auth.uid() AND approved = true;
+$$;
+```
+
+### Vzory politik
+
+**Standardní tabulka s workspace_id:**
+```sql
+CREATE POLICY "<name>_all" ON <table> FOR ALL TO authenticated
+  USING  (workspace_id IN (SELECT trackino_user_workspaces()) OR trackino_is_master_admin())
+  WITH CHECK (workspace_id IN (SELECT trackino_user_workspaces()) OR trackino_is_master_admin());
+```
+
+**Child tabulka BEZ workspace_id (chain přes parent):**
+```sql
+CREATE POLICY "<name>_all" ON <child_table> FOR ALL TO authenticated
+  USING (
+    <parent_fk_col> IN (
+      SELECT id FROM <parent_table>
+      WHERE workspace_id IN (SELECT trackino_user_workspaces())
+    ) OR trackino_is_master_admin()
+  ) WITH CHECK (...stejné...);
+```
+
+**AI konverzace (workspace_id + user_id – soukromé):**
+```sql
+USING (
+  (workspace_id IN (SELECT trackino_user_workspaces()) AND user_id = auth.uid())
+  OR trackino_is_master_admin()
+)
+```
+
+**exchange_rates (globální cache bez workspace_id):**
+- `SELECT`: všichni authenticated (USING true)
+- `INSERT/UPDATE/DELETE`: pouze Master Admin (service_role API routes obchází RLS automaticky)
+
+### Speciální případy
+| Tabulka | Vzor |
+|---------|------|
+| `trackino_task_columns` | chain → `trackino_task_boards.workspace_id` |
+| `trackino_task_subtasks`, `_comments`, `_attachments`, `_history` | chain → `trackino_task_items.workspace_id` |
+| `trackino_ai_messages` | chain → `trackino_ai_conversations` (workspace_id + user_id) |
+| `trackino_exchange_rates` | globální – SELECT všichni, WRITE jen master admin |
+| `trackino_system_notifications` | globální – není workspace_id; READ všichni, WRITE jen master admin |
+| `trackino_app_changes` | workspace_id → standardní vzor |
+
+### Cross-workspace Úkoly – záměrné chování
+`workspace_id IN (SELECT trackino_user_workspaces())` automaticky vrátí záznamy ze VŠECH workspace, kde je user schválený člen → pohled „Moje úkoly" napříč workspace funguje bez nutnosti obcházet izolaci. Toto je požadované chování.
+
+### Kdo je `approved = true`
+- `trackino_workspace_members.approved` – člen, jehož pozvánka byla přijata a admin ho schválil
+- Neschválení čekatelé (`approved = false`) nemohou vidět žádná workspace data ani přes přímé API volání
+
+### Idempotentnost SQL migrace
+Migrace používá `DROP POLICY IF EXISTS` + `CREATE POLICY` – lze spustit opakovaně bez chyb nebo duplicit. Funkce jsou `CREATE OR REPLACE` – bezpečné i při opakovaném spuštění.
+
+---
+
+*Soubor spravuje Claude. Aktualizuj při každé větší změně architektury nebo přidání nových funkcí.*
 
 *Soubor spravuje Claude. Aktualizuj při každé větší změně architektury nebo přidání nových funkcí.*

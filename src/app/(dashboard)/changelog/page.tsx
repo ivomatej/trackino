@@ -11,6 +11,20 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.51.19 – 10. 3. 2026</h3>
+<ul>
+  <li><strong>Bezpečnost – Supabase RLS workspace izolace</strong>:
+    <ul>
+      <li><strong>Kompletní audit a oprava ~92 tabulek</strong> – všechny tabulky měly politiku <code>USING (true)</code> bez workspace filtru; každý autentizovaný uživatel mohl přes přímé API volání číst data libovolného workspace; toto bylo opraveno idempotentní SQL migrací</li>
+      <li><strong>Dvě SECURITY DEFINER funkce</strong> – <code>trackino_is_master_admin()</code> a <code>trackino_user_workspaces()</code>; druhá vrací seznam workspace UUID kde je uživatel schváleným členem (<code>approved = true</code>); SECURITY DEFINER zabraňuje circular dependency při čtení workspace_members</li>
+      <li><strong>Standard vzor</strong> – <code>workspace_id IN (SELECT trackino_user_workspaces()) OR trackino_is_master_admin()</code>; Master Admin vidí vše, neschválení čekatelé nemají přístup k žádným datům</li>
+      <li><strong>Child tabulky bez workspace_id</strong> – <code>trackino_task_columns</code>, <code>trackino_task_subtasks/comments/attachments/history</code>, <code>trackino_ai_messages</code> chainovány přes parent tabulku</li>
+      <li><strong>Cross-workspace Úkoly zachovány</strong> – workspace_id filtr automaticky vrací záznamy ze všech workspace uživatele; pohled „Moje úkoly" napříč workspace funguje bez obcházení izolace</li>
+      <li><strong>exchange_rates</strong> – globální cache kurzů ČNB; SELECT pro všechny authenticated, INSERT/UPDATE pouze Master Admin (API routes používají service_role, která RLS obchází automaticky)</li>
+    </ul>
+  </li>
+</ul>
+
 <h3>v2.51.18 – 10. 3. 2026</h3>
 <ul>
   <li><strong>Notebook – 2 úpravy</strong>:

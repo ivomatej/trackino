@@ -561,6 +561,18 @@ const DEFAULT_HELP_CONTENT = `
   <li><strong>Publikování stránky</strong> – admin může kliknutím na ikonku zeměkoule v hlavičce stránky zpřístupnit stránku veřejně na unikátní URL bez nutnosti přihlášení; URL obsahuje slug z názvu a bezpečnostní token; u publikované stránky se zobrazí zelený proužek s tlačítky „Kopírovat odkaz" a „Otevřít"; opětovným kliknutím na zeměkouli se publikace zruší a URL přestane fungovat</li>
 </ul>
 
+<h3>Bezpečnost – izolace workspace (Master Admin)</h3>
+<p>Trackino zajišťuje <strong>úplnou izolaci dat</strong> na úrovni databáze pomocí PostgreSQL Row Level Security (RLS). Každý workspace je striktně oddělen – uživatel nemůže přistupovat k datům jiného workspace ani přímým API voláním mimo aplikaci.</p>
+<ul>
+  <li><strong>Workspace izolace</strong> – všechny tabulky jsou chráněny politikami; dotaz vždy vrátí pouze záznamy z workspace, kde je uživatel schváleným členem (<code>approved = true</code>)</li>
+  <li><strong>Neschválení čekatelé</strong> – uživatelé čekající na schválení nemají přístup k žádným datům workspace (ani přes přímé Supabase API volání)</li>
+  <li><strong>Master Admin bypass</strong> – Master Admin vidí data všech workspace; toto je záměrné a nezbytné pro správu platformy</li>
+  <li><strong>Cross-workspace Úkoly</strong> – pokud je uživatel členem více workspace, modul Úkoly automaticky zobrazí úkoly ze všech jeho workspace dohromady (pohled „Moje úkoly"); toto je záměrné chování, nikoli bezpečnostní díra – data jsou stále izolována dle schválených členství</li>
+  <li><strong>AI konverzace</strong> – konverzace jsou soukromé; uživatel vidí pouze své vlastní konverzace i v rámci jednoho workspace</li>
+  <li><strong>Anonymní připomínky</strong> – tabulka feedback záměrně neobsahuje user_id; nikdo (ani Master Admin) nemůže zjistit, kdo připomínku napsal; izolace workspace je ale zachována</li>
+</ul>
+<p><strong>Pro Master Adminy:</strong> RLS politiky jsou spravovány v Supabase SQL editoru. Migrace jsou idempotentní (<code>DROP POLICY IF EXISTS</code> + <code>CREATE POLICY</code>) a lze je bezpečně spouštět opakovaně. Detailní architektura je popsána v CLAUDE.md sekce 36.</p>
+
 <h3>Dokumenty – správa souborů a složek</h3>
 <p>Modul <strong>Dokumenty</strong> (sekce Společnost) slouží jako centrální úložiště firemních materiálů dostupných všem členům workspace.</p>
 <ul>
