@@ -156,6 +156,23 @@ function nanoid() {
   return Math.random().toString(36).slice(2, 10);
 }
 
+// ─── Shared folder utilities ─────────────────────────────────────────────────
+function getDescendantFolderIds(folderId: string, allFolders: NoteFolder[]): string[] {
+  const result: string[] = [folderId];
+  const children = allFolders.filter(f => f.parent_id === folderId);
+  for (const child of children) {
+    result.push(...getDescendantFolderIds(child.id, allFolders));
+  }
+  return result;
+}
+
+function buildFolderBreadcrumb(folderId: string | null, allFolders: NoteFolder[]): NoteFolder[] {
+  if (!folderId) return [];
+  const folder = allFolders.find(f => f.id === folderId);
+  if (!folder) return [];
+  return [...buildFolderBreadcrumb(folder.parent_id, allFolders), folder];
+}
+
 // ─── FolderTree ──────────────────────────────────────────────────────────────
 function FolderTree({
   folders, selectedId, expanded, onSelect, onToggle, onAddSub, onEdit, onDelete, onShare, onMoveUp, onMoveDown, userId, items, folderSortOrder = 'manual', depth = 0, parentId = null,
@@ -186,7 +203,8 @@ function FolderTree({
         const isExpanded = expanded.has(folder.id);
         const isSelected = selectedId === folder.id;
         const isOwner = folder.owner_id === userId;
-        const itemCount = items.filter(b => b.folder_id === folder.id && !b.is_archived).length;
+        const descendantIds = getDescendantFolderIds(folder.id, folders);
+        const itemCount = items.filter(b => b.folder_id && descendantIds.includes(b.folder_id) && !b.is_archived).length;
         return (
           <div key={folder.id}>
             <div className="group/folder relative flex items-center gap-1 py-1 px-1 rounded-lg cursor-pointer transition-colors"
@@ -348,7 +366,7 @@ function buildFolderFlat(
 
 // ─── NoteEditor ──────────────────────────────────────────────────────────────
 function NoteEditor({
-  note, onSave, onBack, onDelete, folders, onMove, onDuplicate, showDoneFeature,
+  note, onSave, onBack, onDelete, folders, onMove, onDuplicate, showDoneFeature, onSelectFolder,
 }: {
   note: Note | null;
   onSave: (title: string, content: string, tasks: TaskItem[], meta: { is_favorite: boolean; is_important: boolean; is_done: boolean }) => Promise<void>;
@@ -358,6 +376,7 @@ function NoteEditor({
   onMove?: (noteId: string, folderId: string | null) => Promise<void>;
   onDuplicate?: () => void;
   showDoneFeature?: boolean;
+  onSelectFolder?: (folderId: string) => void;
 }) {
   const [title, setTitle] = useState(note?.title === 'Nová poznámka' ? '' : (note?.title ?? ''));
   const [content, setContent] = useState(note?.content ?? '');
@@ -756,6 +775,34 @@ function NoteEditor({
           </svg>
         </button>
       </div>
+
+      {/* Breadcrumb – cesta složkami */}
+      {note?.folder_id && folders && folders.length > 0 && (() => {
+        const crumbs = buildFolderBreadcrumb(note.folder_id, folders);
+        if (!crumbs.length) return null;
+        return (
+          <div className="px-4 md:px-6 py-1.5 flex items-center gap-1 flex-wrap border-b flex-shrink-0 text-[11px]"
+            style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+            </svg>
+            {crumbs.map((f, i) => (
+              <span key={f.id} className="flex items-center gap-1">
+                {i > 0 && <span style={{ color: 'var(--text-muted)' }}>/</span>}
+                <button
+                  onClick={() => onSelectFolder?.(f.id)}
+                  className="hover:underline transition-colors"
+                  style={{
+                    color: i === crumbs.length - 1 ? 'var(--text-secondary)' : 'var(--text-muted)',
+                    background: 'none', border: 'none', cursor: onSelectFolder ? 'pointer' : 'default', padding: 0,
+                  }}>
+                  {f.name}
+                </button>
+              </span>
+            ))}
+          </div>
+        );
+      })()}
 
       {/* Title */}
       <div className="px-4 md:px-6 pt-5 pb-2 flex-shrink-0">
@@ -1712,15 +1759,6 @@ function NotebookContent() {
   }
 
   // ── Filter logic ──────────────────────────────────────────────────────────
-  function getDescendantFolderIds(folderId: string, allFolders: NoteFolder[]): string[] {
-    const result: string[] = [folderId];
-    const children = allFolders.filter(f => f.parent_id === folderId);
-    for (const child of children) {
-      result.push(...getDescendantFolderIds(child.id, allFolders));
-    }
-    return result;
-  }
-
   const filteredNotes = (() => {
     const qLow = searchQ.trim().toLowerCase();
     let base: Note[];
@@ -1967,6 +2005,7 @@ function NotebookContent() {
             onMove={moveNote}
             onDuplicate={() => duplicateNote(selectedNote)}
             showDoneFeature={notebookSettings.showDoneFeature}
+            onSelectFolder={(folderId) => setListFilter({ type: 'folder', folderId })}
           />
         ) : selectedCalNote && showCalEventNotes ? (
           /* ── Editor view (calendar event note) ── */
