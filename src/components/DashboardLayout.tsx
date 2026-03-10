@@ -223,24 +223,23 @@ export default function DashboardLayout({ children, showTimer = false, onTimerEn
     return () => window.removeEventListener('scroll', handleScroll);
   }, [isMobile]);
 
-  // ── Globální scrollbar auto-hide (přidá třídu is-scrolling scrollovanému elementu) ──
+  // ── Globální scrollbar auto-hide (přidá třídu is-scrolling na <html>) ──
   useEffect(() => {
-    const timers = new Map<EventTarget, ReturnType<typeof setTimeout>>();
-    const handleScroll = (e: Event) => {
-      const el = e.target;
-      if (!(el instanceof Element)) return;
-      el.classList.add('is-scrolling');
-      const existing = timers.get(el);
-      if (existing) clearTimeout(existing);
-      timers.set(el, setTimeout(() => {
-        el.classList.remove('is-scrolling');
-        timers.delete(el);
-      }, 1000));
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const handleScroll = () => {
+      document.documentElement.classList.add('is-scrolling');
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        document.documentElement.classList.remove('is-scrolling');
+        timer = null;
+      }, 1000);
     };
+    window.addEventListener('scroll', handleScroll, { passive: true });
     document.addEventListener('scroll', handleScroll, { capture: true, passive: true });
     return () => {
+      window.removeEventListener('scroll', handleScroll);
       document.removeEventListener('scroll', handleScroll, { capture: true });
-      timers.forEach(t => clearTimeout(t));
+      if (timer) clearTimeout(timer);
     };
   }, []);
 

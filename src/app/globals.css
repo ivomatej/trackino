@@ -150,8 +150,9 @@ body {
   background: var(--text-secondary);
 }
 
-/* Zobrazí scrollbar v průběhu scrollování (třída přidávána JavaScriptem) */
-.is-scrolling::-webkit-scrollbar-thumb {
+/* Zobrazí scrollbar v průběhu scrollování (třída přidávána JavaScriptem na <html>) */
+html.is-scrolling ::-webkit-scrollbar-thumb,
+html.is-scrolling::-webkit-scrollbar-thumb {
   background: var(--text-muted);
 }
 

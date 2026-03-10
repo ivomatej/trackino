@@ -206,6 +206,21 @@ function FolderTree({
   );
 }
 
+// ─── buildFolderFlat ──────────────────────────────────────────────────────────
+function buildFolderFlat(
+  folders: NoteFolder[],
+  parentId: string | null = null,
+  depth = 0
+): Array<{ folder: NoteFolder; depth: number }> {
+  const result: Array<{ folder: NoteFolder; depth: number }> = [];
+  const children = folders.filter(f => f.parent_id === parentId).sort((a, b) => a.sort_order - b.sort_order);
+  for (const f of children) {
+    result.push({ folder: f, depth });
+    result.push(...buildFolderFlat(folders, f.id, depth + 1));
+  }
+  return result;
+}
+
 // ─── NoteEditor ──────────────────────────────────────────────────────────────
 function NoteEditor({
   note, onSave, onBack, onDelete, folders, onMove,
@@ -217,7 +232,7 @@ function NoteEditor({
   folders?: NoteFolder[];
   onMove?: (noteId: string, folderId: string | null) => Promise<void>;
 }) {
-  const [title, setTitle] = useState(note?.title ?? '');
+  const [title, setTitle] = useState(note?.title === 'Nová poznámka' ? '' : (note?.title ?? ''));
   const [content, setContent] = useState(note?.content ?? '');
   const [tasks, setTasks] = useState<TaskItem[]>(note?.tasks ?? []);
   const [isFavorite, setIsFavorite] = useState(note?.is_favorite ?? false);
@@ -244,7 +259,8 @@ function NoteEditor({
 
   // Sync when note changes (switching notes)
   useEffect(() => {
-    setTitle(note?.title ?? '');
+    const rawTitle = note?.title ?? '';
+    setTitle(rawTitle === 'Nová poznámka' ? '' : rawTitle);
     setContent(note?.content ?? '');
     setTasks(note?.tasks ?? []);
     setIsFavorite(note?.is_favorite ?? false);
@@ -424,13 +440,17 @@ function NoteEditor({
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                   Doručené
                 </button>
-                {folders.map(f => (
+                {buildFolderFlat(folders).map(({ folder: f, depth }) => (
                   <button key={f.id} onClick={async () => { await onMove(note!.id, f.id); setShowMoveMenu(false); }}
-                    className="w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 transition-colors"
-                    style={{ color: note?.folder_id === f.id ? 'var(--primary)' : 'var(--text-primary)' }}
+                    className="w-full text-left py-1.5 text-xs flex items-center gap-2 transition-colors"
+                    style={{
+                      paddingLeft: depth * 14 + 12,
+                      paddingRight: 12,
+                      color: note?.folder_id === f.id ? 'var(--primary)' : depth > 0 ? 'var(--text-secondary)' : 'var(--text-primary)',
+                    }}
                     onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
                     {f.name}
                   </button>
                 ))}
@@ -455,7 +475,6 @@ function NoteEditor({
           type="text"
           value={title}
           onChange={e => handleTitleChange(e.target.value)}
-          onFocus={() => { if (title === 'Nová poznámka') handleTitleChange(''); }}
           onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); editorRef.current?.focus(); } }}
           autoFocus={note?.title === 'Nová poznámka'}
           placeholder="Název poznámky"
@@ -1344,7 +1363,7 @@ function NotebookContent() {
                         {note.is_important && <svg width="10" height="10" viewBox="0 0 24 24" fill="#dc2626" stroke="#dc2626" strokeWidth="1" className="flex-shrink-0"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>}
                       </div>
                       {/* Line 2: Preview */}
-                      {stripHtml(note.content) && <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' } as React.CSSProperties}>{stripHtml(note.content).slice(0, 200)}</p>}
+                      {stripHtml(note.content) && <p className="hidden sm:block text-xs truncate mt-0.5" style={{ color: 'var(--text-muted)' }}>{stripHtml(note.content).slice(0, 150)}</p>}
                       {/* Line 3: Date + Author */}
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{fmtDate(note.updated_at)}</span>
