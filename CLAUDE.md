@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 10. 3. 2026 (v2.51.10)
+> Aktualizováno: 10. 3. 2026 (v2.51.11)
 
 ---
 
@@ -544,6 +544,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.51.11 | 10. 3. 2026 | Notebook – 4 opravy: Kopírování obsahu zachovává formátování (htmlToPlainText); Kód blok – klik maže placeholder + Enter = nový řádek; Sync s Kalendářem – odstraněny neexistující sloupce event_title/event_date z upsert; Zarovnání počtů složek (mr-8 → mr-1) |
 | v2.51.10 | 10. 3. 2026 | Notebook – 8 vylepšení: Řazení Název Z-A; Nastavení (ozubené kolo, localStorage `trackino_notebook_settings_{wsId}`: showInbox/foldersAutoOpen/defaultSort/folderSortOrder); Kódový blok `</>` + copy icon (CSS ::after, coordinate detection, nb-code-copied); Pohyb složek šipkami (moveFolderPos, jen manual sort); Název složky v pravém toolbaru; Fix ICS poznámek (ICS_REF_RE + `trackino_ics_event_cache` query); Řazení Poznámek k událostem (calNotesSortBy); Zarovnání počtů složek (mr-8) |
 | v2.51.9 | 10. 3. 2026 | Notebook – 5 vylepšení: Kopírovat obsah (clipboard + 2s zelená fajfka); Duplikovat poznámku (suffix „– kopie N"); Poznámky k událostem – titulek s datem+časem + „Otevřít v Kalendáři" → localStorage deep-link → inline note panel; Řazení Nejstarší; Zarovnání počtů složek (ml-auto) |
 | v2.51.8 | 10. 3. 2026 | Notebook – 5 oprav levého panelu: FolderTree počty složek nezahrnují archivované poznámky (a+e); přejmenování „Doručené" → „Inbox" v move menu (b); FolderTree počty fade místo hide (c); hover shift opraven – akční tlačítka absolutně pozicována (d) |

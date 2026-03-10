@@ -11,6 +11,18 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.51.11 – 10. 3. 2026</h3>
+<ul>
+  <li><strong>Notebook – 4 opravy</strong>:
+    <ul>
+      <li><strong>Kopírování obsahu</strong> – nová funkce zachovává řádkování, odrážky, kód bloky a úkoly (☑/☐); vložení do jiné poznámky je věrné originálu</li>
+      <li><strong>Kódový blok – kurzor</strong> – kliknutí do kód bloku s placeholderem „Kód…" ho smaže a umístí kurzor na začátek; Enter v kód bloku vkládá nový řádek (ne nový blok)</li>
+      <li><strong>Sync poznámek s Kalendářem</strong> – opravena chyba v ukládání poznámek k událostem (neexistující sloupce event_title/event_date způsobovaly selhání upsert); poznámky vytvořené v Kalendáři se nyní korektně zobrazí v sekci Poznámky k událostem</li>
+      <li><strong>Zarovnání počtů složek</strong> – badge počtu poznámek zarovnán se zbytkem pravého okraje panelu (mr-8 → mr-1)</li>
+    </ul>
+  </li>
+</ul>
+
 <h3>v2.51.10 – 10. 3. 2026</h3>
 <ul>
   <li><strong>Notebook – 8 vylepšení</strong>:
