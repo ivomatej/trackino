@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 10. 3. 2026 (v2.51.3)
+> Aktualizováno: 10. 3. 2026 (v2.51.4)
 
 ---
 
@@ -544,6 +544,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.51.4 | 10. 3. 2026 | Globální scrollbar auto-hide (is-scrolling class); Poznámky – move button v detailu, autofocus titulku, delší preview (2 řádky); Kanban – odstraněn text „Přetáhněte sem úkol", počet úkolů v šedém kroužku |
 | v2.51.3 | 10. 3. 2026 | Úkoly – 6 vylepšení: oprava „Skrýt hotové" (filtruje is_completed bez závislosti na sloupci); zakázán drag sloupců v Kanban; zvýraznění vybraného úkolu (modrý border); redesign detailu (Asana styl – kroužkové tlačítko, kompaktní pole, Zadavatel/Kontrolor, Časový odhad, Datum vytvoření, volba šířky panelu); přidána pole reviewer_id a time_estimate do DB; posun headeru výše |
 | v2.51.2 | 9. 3. 2026 | Úkoly – 7 oprav: výrazné tlačítko dokončení v detailu; „Moje úkoly" řazení „Naposledy přiřazené" (updated_at); share modal oprava pořadí tlačítek + email pod jménem; DnD deaktivován na mobilu; odstraněno šedé pozadí z detail panel polí |
 | v2.51.1 | 8. 3. 2026 | Úkoly – 8 vylepšení: odstraněn badge ze sidebaru; detail úkolu jako fixní overlay z pravé strany (celý viewport); pořadí sloupců v nastavení boardu (šipky ↑↓); editace projektů v levém panelu (hover akce tužka/křížek + modal); oprava priority strip zaoblení (overflow-hidden); redesign komentářového pole; zasouvací/vysouvací levý sidebar na desktopu (localStorage persist); Kalendář – SVG ikonka opakující se události přesunuta do pravého horního rohu (Týden/3 dny/Den/Měsíc) |
@@ -2356,6 +2357,188 @@ ALTER TABLE trackino_task_board_members ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Auth full" ON trackino_task_board_members
   FOR ALL TO authenticated USING (true) WITH CHECK (true);
 ```
+
+---
+
+## 35. Mapa souborů projektu (aktualizováno: 10. 3. 2026)
+
+> **Účel:** Rychlý přehled – kde co hledat bez procházení stromu souborů.
+
+### Vstupní body a layout
+
+| Soubor | Co dělá |
+|--------|---------|
+| `src/app/layout.tsx` | Root layout – ThemeProvider, metadata |
+| `src/app/page.tsx` | Root redirect (přesměruje na `/`) |
+| `src/app/(auth)/login/page.tsx` | Přihlašovací stránka |
+| `src/app/(auth)/register/page.tsx` | Registrační stránka |
+| `src/app/invite/[token]/page.tsx` | Přijetí pozvánky do workspace |
+| `src/app/kb/[slug]/[token]/page.tsx` | Veřejná KB stránka (bez auth) |
+
+### Komponenty (src/components/)
+
+| Soubor | Co dělá |
+|--------|---------|
+| `DashboardLayout.tsx` | Hlavní layout: header (TimerBar), Sidebar, systémové notifikace, auto-hide header na mobilu, bottom timer bar |
+| `Sidebar.tsx` | Navigační menu: skupiny, Oblíbené, badge nevyřízených položek, WorkspaceSwitcher, collapse na desktopu |
+| `TimerBar.tsx` | Spouštění/zastavování timeru, manuální zadání, picker projektu/kategorie/tagu, půlnoční split |
+| `ManualTimeEntry.tsx` | Formulář pro ruční zadání time entry |
+| `TimeEntryList.tsx` | Seznam time entries s editací/mazáním |
+| `TagPicker.tsx` | Multi-select štítků (použito v TimerBar) |
+| `ThemeProvider.tsx` | Dark/light mode přepínač |
+| `WorkspaceSelector.tsx` | Přepínač workspace (použito v Sidebaru) |
+
+### Kontexty a hooky (src/contexts/, src/hooks/)
+
+| Soubor | Co dělá |
+|--------|---------|
+| `contexts/AuthContext.tsx` | Auth stav: user, profile (is_master_admin, timer_always_visible, ...), loading |
+| `contexts/WorkspaceContext.tsx` | Workspace data: currentWorkspace, currentMembership, enabledModules, managerAssignments, isManagerOf() |
+| `hooks/usePermissions.ts` | React hook – kombinuje AuthContext + WorkspaceContext → canAdmin, isManager, canManualEntry, canSeeTags atd. |
+
+### Knihovny (src/lib/)
+
+| Soubor | Co dělá |
+|--------|---------|
+| `supabase.ts` | Supabase klient (anon key, storageKey 'trackino-auth') |
+| `supabase-admin.ts` | Supabase klient se service role (bypasuje RLS, pouze server-side) |
+| `permissions.ts` | Čisté funkce: isMasterAdmin, isWorkspaceAdmin, isManager, canManualEntry, canEditTimeEntry, canAccessSettings atd. |
+| `modules.ts` | ALL_MODULES, TARIFF_MODULES, computeEnabledModules() |
+| `czech-calendar.ts` | getCzechHolidays(year) → { date: Date; name: string }[], isCzechHoliday() – 13 svátků vč. Velikonoc |
+| `czech-namedays.ts` | getCzechNameday(monthDay), getCzechNamedayForDate(date) – 366 jmen |
+| `midnight-split.ts` | splitAtMidnight(start, end) → pole segmentů (pro timer přes půlnoc) |
+| `ai-providers.ts` | Konfigurace AI providerů (OpenAI + Gemini), AiModel[], DEFAULT_MODEL_ID |
+| `cron-handler.ts` | verifyCronSecret(), saveCronResult(), parseCronBody() – sdílené helpery pro cron routes |
+| `utils.ts` | Obecné utility (nesouvisí s Kalendářem) |
+
+### Typy (src/types/)
+
+| Soubor | Co dělá |
+|--------|---------|
+| `database.ts` | VŠECHNY TypeScript typy pro DB tabulky (Profile, Workspace, TimeEntry, VacationEntry, TaskItem atd.) |
+
+### API routes (src/app/api/)
+
+| Soubor | Co dělá |
+|--------|---------|
+| `ai-chat/route.ts` | POST – streaming/non-streaming AI chat (OpenAI + Gemini), server-side API klíče |
+| `cnb-rates/route.ts` | GET – kurzovní lístek ČNB s lazy DB cache (trackino_exchange_rates) |
+| `cron-jobs/route.ts` | GET/PUT proxy pro cron-job.org API (seznam + vytvoření jobů) |
+| `cron-jobs/[jobId]/route.ts` | GET/PATCH/DELETE proxy pro konkrétní job |
+| `cron-jobs/[jobId]/history/route.ts` | GET – historie spuštění jobu |
+| `cron/weekly-report/route.ts` | POST – týdenní AI report hodin |
+| `cron/inactive-check/route.ts` | POST – kontrola neaktivních členů |
+| `cron/kb-reviews-digest/route.ts` | POST – digest revizí KB |
+| `cron/feedback-summary/route.ts` | POST – AI shrnutí připomínek |
+| `cron/vacation-report/route.ts` | POST – report dovolených |
+| `firecrawl/scrape/route.ts` | POST – scrape URL → Markdown (Firecrawl wrapper) |
+| `firecrawl/search/route.ts` | POST – webové vyhledávání (Firecrawl wrapper) |
+| `ics-proxy/route.ts` | GET – proxy pro ICS kalendářové odběry |
+| `kb-public/route.ts` | GET – veřejná KB stránka přes token (bypasuje RLS) |
+
+### Stránky (src/app/(dashboard)/) – přehled
+
+| Cesta | Soubor | Modul/tarif |
+|-------|--------|-------------|
+| `/` | `page.tsx` (root) | Přehled – dashboard |
+| `/tracker` | `tracker/page.tsx` | Time Tracker (Free+) |
+| `/planner` | `planner/page.tsx` | Plánovač dostupnosti (Pro+) |
+| `/calendar` | `calendar/page.tsx` → CalendarContent | Kalendář (Max) |
+| `/vacation` | `vacation/page.tsx` | Dovolená (Pro+) |
+| `/invoices` | `invoices/page.tsx` | Fakturace (Pro+) |
+| `/reports` | `reports/page.tsx` | Reporty (Free+) |
+| `/attendance` | `attendance/page.tsx` | Přehled hodin (Pro+) |
+| `/category-report` | `category-report/page.tsx` | Analýza kategorií – Recharts (Pro+) |
+| `/subordinates` | `subordinates/page.tsx` | Přehled podřízených (Pro+) |
+| `/notes` | `notes/page.tsx` | Manažerské poznámky (Pro+) |
+| `/projects` | `projects/page.tsx` | Správa projektů (Free+) |
+| `/clients` | `clients/page.tsx` | Správa klientů (Free+) |
+| `/tags` | `tags/page.tsx` | Správa štítků (Free+) |
+| `/team` | `team/page.tsx` | Správa týmu + sazby (Free+) |
+| `/tasks` | `tasks/page.tsx` | Úkoly + Kanban (Pro+) |
+| `/subscriptions` | `subscriptions/page.tsx` | Evidence předplatných (Pro+) |
+| `/domains` | `domains/page.tsx` | Evidence domén (Pro+) |
+| `/important-days` | `important-days/page.tsx` | Důležité dny (Pro+) |
+| `/requests` | `requests/page.tsx` | Žádosti zaměstnanců (Pro+) |
+| `/feedback` | `feedback/page.tsx` | Anonymní připomínky (Pro+) |
+| `/knowledge-base` | `knowledge-base/page.tsx` | Znalostní báze (Pro+) |
+| `/documents` | `documents/page.tsx` | Dokumenty + Supabase Storage (Pro+) |
+| `/company-rules` | `company-rules/page.tsx` | Firemní pravidla – rich text (Pro+) |
+| `/office-rules` | `office-rules/page.tsx` | Pravidla v kanceláři – rich text (Pro+) |
+| `/text-converter` | `text-converter/page.tsx` | Převodník textu (Pro+) |
+| `/prompts` | `prompts/page.tsx` | Prompty – složky + rich editor (Pro+) |
+| `/bookmarks` | `bookmarks/page.tsx` | Záložky – složky + favicon (Pro+) |
+| `/ai-assistant` | `ai-assistant/page.tsx` | AI asistent – OpenAI + Gemini (Max) |
+| `/settings` | `settings/page.tsx` | Nastavení workspace – 8 záložek (Pro+) |
+| `/audit` | `audit/page.tsx` | Audit log (Max) |
+| `/team` | `team/page.tsx` | Tým – role, sazby, toggles |
+| `/profile` | `profile/page.tsx` | Profil uživatele |
+| `/admin` | `admin/page.tsx` | Master admin panel |
+| `/app-settings` | `app-settings/page.tsx` | Nastavení modulů dle tarifu (admin) |
+| `/app-changes` | `app-changes/page.tsx` | Úpravy aplikace |
+| `/bugs` | `bugs/page.tsx` | Hlášení chyb |
+| `/changelog` | `changelog/page.tsx` | Changelog verzí |
+| `/help` | `help/page.tsx` | Nápověda |
+| `/notebook` | `notebook/page.tsx` | Notebook |
+| `/dashboard` | `dashboard/page.tsx` | Redirect na `/` |
+
+### Kalendář – modul (src/app/(dashboard)/calendar/)
+
+Modul je rozdělen do ~32 souborů. `page.tsx` je entry point (25 ř.), orchestrátor je `CalendarContent.tsx`.
+
+#### Sdílené typy a utility
+
+| Soubor | Co dělá |
+|--------|---------|
+| `CalendarContext.tsx` | CalendarContextValue interface + createContext + useCalendarContext() |
+| `types.ts` | Lokální typy: DisplayEvent, ViewType, SharedCalendarInfo, MemberWithProfile, BirthdayMember, EventNote, OrphanNote, TaskItem |
+| `utils.ts` | toDateStr, parseDate, addDays, getMonday, isSameDay, formatMonthYear, formatWeekRange, DAY_NAMES_SHORT, MONTH_NAMES, DEFAULT_COLORS, ROW_H=60, eventOnDay, sourceBadgeLabel, parseICS, linkifyHtml, stripHtmlToText |
+| `recurrenceUtils.ts` | expandRecurringEvent, getImportantDayOccurrences, getRecurrenceLabel, RECURRENCE_OPTIONS (14 typů) |
+| `layoutUtils.ts` | Utility pro layout eventů v časové mřížce (výpočet přesahů) |
+
+#### Hooky
+
+| Soubor | Co dělá | Vrací |
+|--------|---------|-------|
+| `hooks/useCalendarState.ts` | VEŠKERÝ useState + useRef + základní efekty (scroll, hodiny, localStorage, ICS load) | ~80 state proměnných + setterů + refs |
+| `hooks/useCalendarData.ts` | Fetch funkce: fetchData, fetchSubscriptions (vrací data, nevolá setSubscriptions!), fetchWorkspaceMembers, fetchBirthdayMembers, fetchCalendarShares, fetchSharedWithMe, fetchSharedEvents, fetchAttendees, fetchAttendeeEvents | Výše uvedené funkce |
+| `hooks/useCalendarCrud.ts` | CRUD: openNewEvent, openEditEvent, saveEvent, respondToAttendance, deleteEvent, openShareModal, saveShare, updateSharePref, openNewCalendar, openEditCalendar, saveCalendar, deleteCalendar | Výše uvedené funkce |
+| `hooks/useCalendarNotes.ts` | Poznámky k událostem: fetchNotesBatch, handleNoteSave, handleNoteDelete, fetchOrphanNotes, deleteOrphanNote | Výše uvedené funkce |
+| `hooks/useCalendarSubscriptions.ts` | ICS odběry + řazení: openNewSub, openEditSub, saveSubscription, deleteSubscription, toggleSubscription, sortedSubscriptions, moveSubscription | Výše uvedené + sortedSubscriptions |
+
+#### Komponenty (components/)
+
+| Soubor | Co dělá |
+|--------|---------|
+| `CalendarContent.tsx` | **Orchestrátor** (680 ř.) – zapojuje všechny hooky, počítá displayEvents/visibleRange/..., sestavuje ctxValue, renderuje layout |
+| `CalendarHeader.tsx` | Záhlaví: název, navigace (prev/today/next), přepínač pohledů, tlačítko Pozvánky, tlačítko Přidat událost |
+| `InvitationsPanel.tsx` | Panel pozvánek – záložky (Vše/Čeká/Přijato/...), vyhledávání, RSVP tlačítka; vrací null pokud !showInvitationsPanel |
+| `CalendarSidebar.tsx` | Fragment: mobilní toggle button + levý panel (md:w-56) s CalendarSidebarCalendars + CalendarSidebarOther + mini kalendář |
+| `CalendarSidebarCalendars.tsx` | Levý panel – sekce Mé kalendáře, Sdílené kalendáře, Ext. odběry (ICS) |
+| `CalendarSidebarOther.tsx` | Levý panel – sekce Automaticky (Dovolená, Důl. dny), Další kalendáře (Svátky, Jmeniny, Narozeniny) |
+| `EventPill.tsx` | Barevná pilulka události (slouží jako prop `onEventClick: (ev) => void`!) – zobrazuje opakování SVG, pending border, decline opacity |
+| `NotePanel.tsx` | Editor poznámek k události – contenteditable, toolbar B/I/U/..., checklist, URL linking, meta flagy |
+| `MonthView.tsx` | Měsíční mřížka (78 ř.) |
+| `WeekView.tsx` | Týdenní pohled s časovou osou, ROW_H=60, all-day strip, overlapping events |
+| `ThreeDaysView.tsx` | 3-sloupcový pohled (předchozí/dnešek/další den) |
+| `TodayView.tsx` | Denní pohled s časovou osou |
+| `YearView.tsx` | Roční přehled – 12 mini-mřížek |
+| `ListView.tsx` | Chronologický seznam po měsících, poznámky v pravém panelu, načítání starších událostí |
+| `EventFormModal.tsx` | Formulář pro vytvoření/editaci události (419 ř.) |
+| `EventDetailModal.tsx` | Detail modal – preview vlastních/sdílených/účastnických událostí (301 ř.) |
+| `RsvpModal.tsx` | RSVP modal – přijmout/odmítnout/nezávazně |
+| `CalendarFormModal.tsx` | Formulář pro vytvoření/editaci kalendáře |
+| `ShareModal.tsx` | Modal sdílení kalendáře nebo ICS odběru |
+| `IcsSubscriptionModal.tsx` | Formulář pro přidání/editaci ICS odběru (URL, název, barva) |
+| `CalSettingsModal.tsx` | Nastavení zobrazení – rozsah hodin (calViewStart/calViewEnd) |
+
+#### Důležité detaily implementace
+
+- `fetchSubscriptions` v `useCalendarData` vrací data ale NEVOLÁ `setSubscriptions` – CalendarContent.tsx obsahuje wrapper
+- `useCalendarNotes` musí být volán AŽ PO výpočtu `displayEvents` (hook call order)
+- `EventPill` vyžaduje povinný prop `onEventClick: (ev: DisplayEvent) => void`
+- `CalendarSidebar` obsahuje OBOJÍ: mobilní toggle I levý panel (Fragment, ne div)
+- `ROW_H = 60` px/hodina (definováno v `utils.ts`, exportováno)
 
 ---
 

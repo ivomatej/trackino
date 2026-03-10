@@ -141,12 +141,18 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--text-muted);
+  background: transparent;
   border-radius: 3px;
+  transition: background 0.2s;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-secondary);
+}
+
+/* Zobrazí scrollbar v průběhu scrollování (třída přidávána JavaScriptem) */
+.is-scrolling::-webkit-scrollbar-thumb {
+  background: var(--text-muted);
 }
 
 /* Sidebar scrollbar – skrytý, zobrazí se až při hoveru */

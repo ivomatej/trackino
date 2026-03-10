@@ -1470,7 +1470,7 @@ function TasksContent() {
                         ) : (
                           <span className="text-sm font-semibold flex-1 min-w-0 truncate cursor-pointer" style={{ color: 'var(--text-primary)' }}
                             onDoubleClick={e => { e.stopPropagation(); if (canManage) { setEditingColumnId(col.id); setEditColumnName(col.name); } }}>
-                            {col.name} <span className="text-xs font-normal" style={{ color: 'var(--text-muted)' }}>{colTasks.length}</span>
+                            {col.name} <span className="inline-flex items-center justify-center text-[11px] font-semibold rounded-full ml-1" style={{ minWidth: '20px', height: '20px', padding: '0 5px', background: 'var(--bg-main)', color: 'var(--text-muted)' }}>{colTasks.length}</span>
                           </span>
                         )}
                         {canManage && (
@@ -1500,7 +1500,7 @@ function TasksContent() {
                               onOpen={openDetail} canDrag={canManage && !isMobile} onToggleComplete={canManage ? toggleComplete : undefined}
                               isSelected={selectedTask?.id === task.id} />
                           ))}
-                          {colTasks.length === 0 && <div className="text-xs py-4 text-center" style={{ color: 'var(--text-muted)' }}>Přetáhněte sem úkol</div>}
+                          {colTasks.length === 0 && <div className="py-4" />}
                         </SortableContext>
                       </DroppableColumn>
 

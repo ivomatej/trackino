@@ -237,6 +237,8 @@ const DEFAULT_HELP_CONTENT = `
   <li><strong>Rich text editor</strong> – formátování B/I/U, odrážkový a číselný seznam, inline code; URL jsou automaticky klikatelné (otevírají se v novém okně)</li>
   <li><strong>Panel s úkoly</strong> – pod editorem je seznam úkolů s checkboxy; Enter přidá nový, Backspace na prázdném odstraní; úkoly jsou uloženy spolu s poznámkou</li>
   <li><strong>Příznaky</strong> – Oblíbená (hvězdička), Důležitá (červená, zvýrazní rámeček); lze nastavit přes toolbar nebo klávesové ikonky v záhlaví poznámky</li>
+  <li><strong>Přesunout do složky</strong> – v detailu poznámky je v záhlaví ikonka složky; kliknutím se otevře rychlé menu pro přesun do jiné složky nebo do Doručených</li>
+  <li><strong>Nová poznámka</strong> – po vytvoření se automaticky zobrazí kurzor v poli názvu; stiskem Enter přejde kurzor do editoru obsahu</li>
   <li><strong>Archiv</strong> – archivované poznámky jsou v samostatné sekci; archivovat/obnovit lze přes kebab menu (⋮)</li>
   <li><strong>Poznámky k událostem</strong> – samostatná sekce pro poznámky přidané ke kalendářním událostem</li>
 </ul>
@@ -306,7 +308,7 @@ const DEFAULT_HELP_CONTENT = `
 <ul>
   <li><strong>Levý sidebar</strong> – strom složek a projektů (nástěnek); složky lze vnořovat do 5 úrovní; projekty se zobrazují uvnitř složek nebo jako nezařazené; na mobilu se sidebar skrývá a otevírá toggle tlačítkem; na desktopu lze panel skrýt/zobrazit ikonou (stav se ukládá)</li>
   <li><strong>3 pohledy</strong> – Seznam (výpis s checkboxy dokončení), Kanban (sloupcový přehled s drag & drop), Tabulka (kompaktní řádkový výpis s řazením)</li>
-  <li><strong>Kanban nástěnka</strong> – přesouvání úkolů mezi sloupci tažením (drag & drop jen na desktopu, na mobilu deaktivováno); editace/mazání sloupců (double-click přejmenuje, koš smaže); přidání nového sloupce; sloupce jako celek nelze přetahovat – drag & drop funguje pouze pro jednotlivé úkoly</li>
+  <li><strong>Kanban nástěnka</strong> – přesouvání úkolů mezi sloupci tažením (drag & drop jen na desktopu, na mobilu deaktivováno); editace/mazání sloupců (double-click přejmenuje, koš smaže); přidání nového sloupce; u každého sloupce je v záhlaví šedý kroužek s počtem úkolů; sloupce jako celek nelze přetahovat – drag & drop funguje pouze pro jednotlivé úkoly</li>
   <li><strong>Zvýraznění vybraného úkolu</strong> – v Kanban pohledu je aktuálně otevřený úkol ohraničen modrou barvou, takže je na první pohled jasné, který úkol je právě zobrazen v detailu</li>
   <li><strong>Dokončení úkolu</strong> – kroužkové tlačítko dokončení je umístěno vedle názvu úkolu v detailu; kliknutím se úkol označí jako hotový (kroužek zezeleně, název se přeškrtne); v kartičkách (Kanban/Seznam) je checkbox přímo u názvu; lze opakovaně zapínat/vypínat</li>
   <li><strong>Nastavení nástěnky</strong> – pořadí sloupců (šipky nahoru/dolů); auto-přesun dokončených úkolů do zvoleného sloupce; barevné podbarvení sloupců (toggle + color picker); <strong>šířka detailu úkolu</strong> – volba Úzký (400 px), Střední (520 px) nebo Široký (680 px) pro detail panel</li>

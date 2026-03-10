@@ -11,6 +11,24 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.51.4 – 10. 3. 2026</h3>
+<ul>
+  <li><strong>Globální scrollbar auto-hide</strong> – scrollbar v prohlížeči je nyní skrytý v klidu; zobrazí se pouze při aktivním scrollování a zmizí 1 sekundu po zastavení. Funguje na všech scrollovatelných plochách v celé aplikaci automaticky.</li>
+  <li><strong>Poznámky – 3 vylepšení</strong>:
+    <ul>
+      <li><strong>Přesunout do složky</strong> – v záhlaví detailu poznámky přibyla ikonka složky; kliknutím se otevře rychlé menu pro přesun poznámky do jiné složky nebo do Doručených</li>
+      <li><strong>Autofocus při nové poznámce</strong> – po vytvoření nové poznámky se kurzor automaticky zobrazí v poli názvu; stiskem Enter přejde kurzor do editoru obsahu</li>
+      <li><strong>Delší náhled popisku</strong> – ve výpisu poznámek se nyní zobrazují 2 řádky náhledu obsahu (dříve 1 řádek zkrácený na 100 znaků)</li>
+    </ul>
+  </li>
+  <li><strong>Úkoly – 2 vylepšení Kanban pohledu</strong>:
+    <ul>
+      <li><strong>Počet úkolů ve sloupci</strong> – číslo vedle názvu sloupce je nyní ve stylizovaném šedém kroužku</li>
+      <li><strong>Odstraněn text „Přetáhněte sem úkol"</strong> – prázdné sloupce v Kanban pohledu jsou čistší bez nadbytečného textu</li>
+    </ul>
+  </li>
+</ul>
+
 <h3>v2.51.3 – 10. 3. 2026</h3>
 <ul>
   <li><strong>Úkoly – 6 vylepšení</strong>:

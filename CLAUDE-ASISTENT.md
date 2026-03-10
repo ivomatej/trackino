@@ -48,6 +48,24 @@ Před implementací nového modulu nebo funkce se podívej do existujícího kó
 - **Modální okna, tlačítka, formuláře** – stejný vizuální styl jako v existujících modalech
 - Pokud stávající řešení vyhovuje, používej ho i v nových místech. Lepší alternativu navrhni jen pokud přináší viditelnou přidanou hodnotu.
 
+### 14. Globální scrollbar auto-hide
+Scrollbar v prohlížeči je skrytý v klidu – zobrazí se pouze při aktivním scrollování. Implementace je ve dvou místech:
+
+**globals.css:**
+```css
+::-webkit-scrollbar-thumb { background: transparent; } /* skrytý v klidu */
+.is-scrolling::-webkit-scrollbar-thumb { background: var(--text-muted); } /* viditelný při scrollu */
+```
+
+**DashboardLayout.tsx (useEffect):**
+- `document.addEventListener('scroll', handler, { capture: true, passive: true })` — zachytí scroll na libovolném elementu
+- Handler přidá třídu `is-scrolling` na scrollovaný element a nastaví timeout 1 000 ms pro její odebrání
+- `Map<EventTarget, timeout>` sleduje timer per element
+
+**Pravidlo při přidávání nových modulů:**
+- Nezahrnuj vlastní CSS pro scrollbar viditelnost – globální řešení pokrývá celou aplikaci automaticky.
+- Výjimka: `.sidebar-scroll` a `.kanban-scroll` třídy (hover-based) zůstávají zachovány pro specifické případy, kde je preferovaný hover přístup.
+
 ### 10. Šipky u select elementů a color picker
 - **Select dropdown šipky**: Každý `<select>` element musí mít vlastní vizuální šipku – obal ho do `<div className="relative">`, přidej `appearance-none pr-8` na select a vlož SVG chevron jako absolutně pozicovaný dekorativní prvek (`pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2`). Nikdy nespoléhej na nativní šipku prohlížeče, která v tmavém režimu nebo na různých platformách vypadá jinak.
 - **Color picker**: Po výběru barvy musí být zvolená barva vizuálně jasně oddělena od ostatních – zvýrazňovací kroužek (ring/outline) nesmí přesahovat do sousedních barev. Používej `ring-2 ring-offset-2 ring-[var(--primary)]` nebo ekvivalent s `outline-offset`. Vždy ověř, že se kroužek správně zobrazuje v tmavém i světlém režimu.

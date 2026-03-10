@@ -208,12 +208,14 @@ function FolderTree({
 
 // ─── NoteEditor ──────────────────────────────────────────────────────────────
 function NoteEditor({
-  note, onSave, onBack, onDelete,
+  note, onSave, onBack, onDelete, folders, onMove,
 }: {
   note: Note | null;
   onSave: (title: string, content: string, tasks: TaskItem[], meta: { is_favorite: boolean; is_important: boolean }) => Promise<void>;
   onBack: () => void;
   onDelete: (id: string) => void;
+  folders?: NoteFolder[];
+  onMove?: (noteId: string, folderId: string | null) => Promise<void>;
 }) {
   const [title, setTitle] = useState(note?.title ?? '');
   const [content, setContent] = useState(note?.content ?? '');
@@ -222,9 +224,23 @@ function NoteEditor({
   const [isImportant, setIsImportant] = useState(note?.is_important ?? false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [showMoveMenu, setShowMoveMenu] = useState(false);
   const editorRef = useRef<HTMLDivElement>(null);
   const taskRefs = useRef<Map<string, HTMLInputElement>>(new Map());
   const saveTimer = useRef<NodeJS.Timeout | null>(null);
+  const moveMenuRef = useRef<HTMLDivElement>(null);
+
+  // Zavři move menu při kliknutí mimo
+  useEffect(() => {
+    if (!showMoveMenu) return;
+    const handler = (e: MouseEvent) => {
+      if (moveMenuRef.current && !moveMenuRef.current.contains(e.target as Node)) {
+        setShowMoveMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showMoveMenu]);
 
   // Sync when note changes (switching notes)
   useEffect(() => {
@@ -384,6 +400,44 @@ function NoteEditor({
         <div className="flex-1 text-xs" style={{ color: 'var(--text-muted)' }}>
           {saving ? 'Ukládám…' : saved ? '✓ Uloženo' : note ? fmtDate(note.updated_at) : ''}
         </div>
+        {/* Move to folder button */}
+        {onMove && folders && (
+          <div className="relative" ref={moveMenuRef}>
+            <button onClick={() => setShowMoveMenu(v => !v)}
+              className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors"
+              style={{ color: 'var(--text-muted)' }} title="Přesunout do složky"
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+              </svg>
+            </button>
+            {showMoveMenu && (
+              <div className="absolute right-0 top-full mt-1 w-48 rounded-xl border shadow-lg z-50 py-1 overflow-hidden"
+                style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+                <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Přesunout do</div>
+                <button onClick={async () => { await onMove(note!.id, null); setShowMoveMenu(false); }}
+                  className="w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 transition-colors"
+                  style={{ color: note?.folder_id === null ? 'var(--primary)' : 'var(--text-primary)' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                  Doručené
+                </button>
+                {folders.map(f => (
+                  <button key={f.id} onClick={async () => { await onMove(note!.id, f.id); setShowMoveMenu(false); }}
+                    className="w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 transition-colors"
+                    style={{ color: note?.folder_id === f.id ? 'var(--primary)' : 'var(--text-primary)' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                    {f.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         <button onClick={() => { if (confirm('Smazat tuto poznámku?')) onDelete(note!.id); }}
           className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors"
           style={{ color: 'var(--text-muted)' }}
@@ -402,6 +456,8 @@ function NoteEditor({
           value={title}
           onChange={e => handleTitleChange(e.target.value)}
           onFocus={() => { if (title === 'Nová poznámka') handleTitleChange(''); }}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); editorRef.current?.focus(); } }}
+          autoFocus={note?.title === 'Nová poznámka'}
           placeholder="Název poznámky"
           className="w-full text-xl font-semibold bg-transparent border-none outline-none text-base sm:text-xl"
           style={{ color: 'var(--text-primary)' }}
@@ -1169,6 +1225,8 @@ function NotebookContent() {
             onSave={async (title, content, tasks, meta) => saveNote(selectedNote.id, title, content, tasks, meta)}
             onBack={() => setSelectedNote(null)}
             onDelete={async (id) => { await deleteNote(id); setSelectedNote(null); }}
+            folders={folders}
+            onMove={moveNote}
           />
         ) : selectedCalNote && showCalEventNotes ? (
           /* ── Editor view (calendar event note) ── */
@@ -1286,7 +1344,7 @@ function NotebookContent() {
                         {note.is_important && <svg width="10" height="10" viewBox="0 0 24 24" fill="#dc2626" stroke="#dc2626" strokeWidth="1" className="flex-shrink-0"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>}
                       </div>
                       {/* Line 2: Preview */}
-                      {stripHtml(note.content) && <p className="text-xs truncate mt-0.5" style={{ color: 'var(--text-muted)' }}>{stripHtml(note.content).slice(0, 100)}</p>}
+                      {stripHtml(note.content) && <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' } as React.CSSProperties}>{stripHtml(note.content).slice(0, 200)}</p>}
                       {/* Line 3: Date + Author */}
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{fmtDate(note.updated_at)}</span>

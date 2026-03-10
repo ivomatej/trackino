@@ -223,6 +223,27 @@ export default function DashboardLayout({ children, showTimer = false, onTimerEn
     return () => window.removeEventListener('scroll', handleScroll);
   }, [isMobile]);
 
+  // ── Globální scrollbar auto-hide (přidá třídu is-scrolling scrollovanému elementu) ──
+  useEffect(() => {
+    const timers = new Map<EventTarget, ReturnType<typeof setTimeout>>();
+    const handleScroll = (e: Event) => {
+      const el = e.target;
+      if (!(el instanceof Element)) return;
+      el.classList.add('is-scrolling');
+      const existing = timers.get(el);
+      if (existing) clearTimeout(existing);
+      timers.set(el, setTimeout(() => {
+        el.classList.remove('is-scrolling');
+        timers.delete(el);
+      }, 1000));
+    };
+    document.addEventListener('scroll', handleScroll, { capture: true, passive: true });
+    return () => {
+      document.removeEventListener('scroll', handleScroll, { capture: true });
+      timers.forEach(t => clearTimeout(t));
+    };
+  }, []);
+
   const toggleDesktopSidebar = () => {
     setSidebarCollapsed(prev => {
       const next = !prev;
