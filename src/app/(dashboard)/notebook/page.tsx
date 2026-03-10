@@ -871,7 +871,7 @@ function NoteEditor({
         />
 
         {/* Checklist */}
-        {tasks.length > 0 ? (
+        {tasks.length > 0 && (
           <div className="mx-4 md:mx-6 my-3 border rounded-xl px-3 md:px-3 py-3 md:py-2.5" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
             <div className="text-[10px] font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>Úkoly</div>
             <div className="space-y-2 md:space-y-1">
@@ -911,16 +911,6 @@ function NoteEditor({
               Přidat úkol
             </button>
           </div>
-        ) : (
-          <button onClick={addTask} className="mx-4 md:mx-6 my-2 flex items-center gap-1.5 text-xs transition-colors"
-            style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
-            onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
-            onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}>
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-            Přidat úkoly
-          </button>
         )}
       </div>
     </div>
@@ -1272,7 +1262,7 @@ function CalEventNoteEditor({
           onClick={handleEditorClick}
           className="px-4 md:px-6 py-2 min-h-[120px] outline-none text-sm leading-relaxed nb-editor"
           style={{ color: 'var(--text-primary)' }} data-placeholder="Obsah poznámky…" />
-        {tasks.length > 0 ? (
+        {tasks.length > 0 && (
           <div className="mx-4 md:mx-6 my-3 border rounded-xl px-3 py-3 md:py-2.5" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
             <div className="text-[10px] font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>Úkoly</div>
             <div className="space-y-2 md:space-y-1">
@@ -1299,16 +1289,6 @@ function CalEventNoteEditor({
               Přidat úkol
             </button>
           </div>
-        ) : (
-          <button onClick={addTask} className="mx-4 md:mx-6 my-2 flex items-center gap-1.5 text-xs transition-colors"
-            style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
-            onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
-            onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}>
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-            Přidat úkoly
-          </button>
         )}
       </div>
     </div>
@@ -1346,6 +1326,7 @@ function NotebookContent() {
     showDoneFeature: boolean;
   }>({ foldersAutoOpen: false, showInbox: true, defaultSort: 'date', folderSortOrder: 'manual', saveFolderSort: false, showDoneFeature: false });
   const [folderSortCache, setFolderSortCache] = useState<Record<string, string>>({});
+  const [filterSaved, setFilterSaved] = useState(false);
 
   // Copy done animation (note id, or null)
   const [copyDoneNoteId, setCopyDoneNoteId] = useState<string | null>(null);
@@ -1731,6 +1712,15 @@ function NotebookContent() {
   }
 
   // ── Filter logic ──────────────────────────────────────────────────────────
+  function getDescendantFolderIds(folderId: string, allFolders: NoteFolder[]): string[] {
+    const result: string[] = [folderId];
+    const children = allFolders.filter(f => f.parent_id === folderId);
+    for (const child of children) {
+      result.push(...getDescendantFolderIds(child.id, allFolders));
+    }
+    return result;
+  }
+
   const filteredNotes = (() => {
     const qLow = searchQ.trim().toLowerCase();
     let base: Note[];
@@ -1742,7 +1732,8 @@ function NotebookContent() {
     else if (listFilter.type === 'recent') {
       base = [...notes].filter(n => !n.is_archived).sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()).slice(0, 10);
     } else if (listFilter.type === 'folder') {
-      base = notes.filter(n => n.folder_id === listFilter.folderId && !n.is_archived);
+      const folderIds = getDescendantFolderIds(listFilter.folderId, folders);
+      base = notes.filter(n => n.folder_id && folderIds.includes(n.folder_id) && !n.is_archived);
     } else base = notes.filter(n => !n.is_archived);
 
     if (qLow) base = base.filter(n => n.title.toLowerCase().includes(qLow) || stripHtml(n.content).toLowerCase().includes(qLow));
@@ -2032,13 +2023,32 @@ function NotebookContent() {
                     const next = { ...folderSortCache, [listFilter.folderId]: sortBy };
                     setFolderSortCache(next);
                     if (wsId) localStorage.setItem(`trackino_notebook_folder_sort_${wsId}`, JSON.stringify(next));
+                    setFilterSaved(true);
+                    setTimeout(() => setFilterSaved(false), 2000);
                   }
-                }} className="flex-shrink-0 flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border transition-colors"
-                  style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)', background: 'var(--bg-card)', cursor: 'pointer' }}>
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
-                  </svg>
-                  Uložit filtraci
+                }} className="flex-shrink-0 flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border"
+                  style={{
+                    borderColor: filterSaved ? '#86efac' : 'var(--border)',
+                    color: filterSaved ? '#16a34a' : 'var(--text-secondary)',
+                    background: filterSaved ? '#dcfce7' : 'var(--bg-card)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                  }}>
+                  {filterSaved ? (
+                    <>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                      Uloženo
+                    </>
+                  ) : (
+                    <>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+                      </svg>
+                      Uložit filtraci
+                    </>
+                  )}
                 </button>
               )}
               {showCalEventNotes && (
