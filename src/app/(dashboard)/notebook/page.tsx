@@ -90,19 +90,26 @@ function nanoid() {
 
 // ─── FolderTree ──────────────────────────────────────────────────────────────
 function FolderTree({
-  folders, selectedId, expanded, onSelect, onToggle, onAddSub, onEdit, onDelete, onShare, userId, items, depth = 0, parentId = null,
+  folders, selectedId, expanded, onSelect, onToggle, onAddSub, onEdit, onDelete, onShare, onMoveUp, onMoveDown, userId, items, folderSortOrder = 'manual', depth = 0, parentId = null,
 }: {
   folders: NoteFolder[]; selectedId: string | null; expanded: Set<string>;
   onSelect: (id: string) => void; onToggle: (id: string) => void;
   onAddSub: (parentId: string, depth: number) => void;
   onEdit: (f: NoteFolder) => void; onDelete: (f: NoteFolder) => void;
-  onShare: (f: NoteFolder) => void; userId: string;
+  onShare: (f: NoteFolder) => void;
+  onMoveUp?: (id: string) => void; onMoveDown?: (id: string) => void;
+  userId: string;
   items: { folder_id: string | null; is_archived: boolean }[];
+  folderSortOrder?: 'name' | 'created' | 'manual';
   depth?: number; parentId?: string | null;
 }) {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
-  const children = folders.filter(f => f.parent_id === parentId);
+  const children = folders.filter(f => f.parent_id === parentId).sort((a, b) => {
+    if (folderSortOrder === 'name') return a.name.localeCompare(b.name, 'cs');
+    if (folderSortOrder === 'created') return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    return a.sort_order - b.sort_order;
+  });
   if (children.length === 0) return null;
   return (
     <div>
@@ -132,7 +139,7 @@ function FolderTree({
                 {folder.name}
               </span>
               {itemCount > 0 && (
-                <span className="ml-auto text-[10px] flex-shrink-0 sm:group-hover/folder:opacity-0 transition-opacity" style={{ color: 'var(--text-muted)' }}>{itemCount}</span>
+                <span className="ml-auto mr-8 text-[10px] flex-shrink-0 sm:group-hover/folder:opacity-0 transition-opacity" style={{ color: 'var(--text-muted)' }}>{itemCount}</span>
               )}
               <div className="sm:hidden flex-shrink-0" onClick={e => e.stopPropagation()}>
                 <button type="button"
@@ -160,6 +167,22 @@ function FolderTree({
                         Přidat podsložku
                       </button>
                     )}
+                    {folderSortOrder === 'manual' && (
+                      <>
+                        <button type="button" className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left hover:bg-[var(--bg-hover)]"
+                          style={{ color: 'var(--text-secondary)' }}
+                          onClick={e => { e.stopPropagation(); setOpenMenu(null); onMoveUp?.(folder.id); }}>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+                          Posunout nahoru
+                        </button>
+                        <button type="button" className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left hover:bg-[var(--bg-hover)]"
+                          style={{ color: 'var(--text-secondary)' }}
+                          onClick={e => { e.stopPropagation(); setOpenMenu(null); onMoveDown?.(folder.id); }}>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                          Posunout dolů
+                        </button>
+                      </>
+                    )}
                     {isOwner && (
                       <>
                         <button type="button" className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left hover:bg-[var(--bg-hover)]"
@@ -186,6 +209,18 @@ function FolderTree({
                 )}
               </div>
               <div className="hidden sm:flex items-center gap-0.5 absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover/folder:opacity-100 transition-opacity">
+                {folderSortOrder === 'manual' && (
+                  <>
+                    <button type="button" title="Posunout nahoru" onClick={e => { e.stopPropagation(); onMoveUp?.(folder.id); }}
+                      className="w-5 h-5 flex items-center justify-center rounded hover:bg-[var(--bg-hover)]" style={{ color: 'var(--text-muted)' }}>
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+                    </button>
+                    <button type="button" title="Posunout dolů" onClick={e => { e.stopPropagation(); onMoveDown?.(folder.id); }}
+                      className="w-5 h-5 flex items-center justify-center rounded hover:bg-[var(--bg-hover)]" style={{ color: 'var(--text-muted)' }}>
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                    </button>
+                  </>
+                )}
                 {depth < MAX_DEPTH - 1 && (
                   <button type="button" title="Přidat podsložku" onClick={e => { e.stopPropagation(); onAddSub(folder.id, depth + 1); }}
                     className="w-5 h-5 flex items-center justify-center rounded hover:bg-[var(--bg-hover)]" style={{ color: 'var(--text-muted)' }}>
@@ -217,7 +252,9 @@ function FolderTree({
               <FolderTree folders={folders} selectedId={selectedId} expanded={expanded}
                 onSelect={onSelect} onToggle={onToggle} onAddSub={onAddSub}
                 onEdit={onEdit} onDelete={onDelete} onShare={onShare}
-                userId={userId} items={items} depth={depth + 1} parentId={folder.id} />
+                onMoveUp={onMoveUp} onMoveDown={onMoveDown}
+                userId={userId} items={items} folderSortOrder={folderSortOrder}
+                depth={depth + 1} parentId={folder.id} />
             )}
           </div>
         );
@@ -370,6 +407,16 @@ function NoteEditor({
       e.preventDefault();
       const href = anchor.getAttribute('href');
       if (href) window.open(href, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    const pre = (e.target as HTMLElement).closest('pre[data-nb-code]') as HTMLElement | null;
+    if (pre) {
+      const rect = pre.getBoundingClientRect();
+      if (e.clientX - rect.left > rect.width - 44 && e.clientY - rect.top < 44) {
+        navigator.clipboard.writeText(pre.querySelector('code')?.textContent ?? '');
+        pre.classList.add('nb-code-copied');
+        setTimeout(() => pre.classList.remove('nb-code-copied'), 1500);
+      }
     }
   }
 
@@ -557,6 +604,16 @@ function NoteEditor({
             <path d="M4 6h1v4" strokeLinecap="round"/><path d="M4 10h2" strokeLinecap="round"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1" strokeLinecap="round"/>
           </svg>
         </button>
+        <button onMouseDown={e => {
+          e.preventDefault();
+          document.execCommand('insertHTML', false, '<pre data-nb-code="1" style="background:var(--bg-hover);border:1px solid var(--border);border-radius:6px;padding:10px 36px 10px 12px;overflow-x:auto;position:relative;font-family:monospace;font-size:12px;color:var(--text-primary);margin:4px 0"><code>Kód…</code></pre><br>');
+          editorRef.current?.focus();
+        }} style={btnStyle} title="Kódový blok"
+          onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+          </svg>
+        </button>
         <div style={{ width: 1, height: 12, background: 'var(--border)', margin: '0 2px', flexShrink: 0 }} />
         {/* Meta flags */}
         <button onMouseDown={e => { e.preventDefault(); toggleImportant(); }}
@@ -735,6 +792,16 @@ function CalEventNoteEditor({
       e.preventDefault();
       const href = anchor.getAttribute('href');
       if (href) window.open(href, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    const pre = (e.target as HTMLElement).closest('pre[data-nb-code]') as HTMLElement | null;
+    if (pre) {
+      const rect = pre.getBoundingClientRect();
+      if (e.clientX - rect.left > rect.width - 44 && e.clientY - rect.top < 44) {
+        navigator.clipboard.writeText(pre.querySelector('code')?.textContent ?? '');
+        pre.classList.add('nb-code-copied');
+        setTimeout(() => pre.classList.remove('nb-code-copied'), 1500);
+      }
     }
   }
 
@@ -805,6 +872,16 @@ function CalEventNoteEditor({
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/>
             <circle cx="4" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1.5" fill="currentColor" stroke="none"/>
+          </svg>
+        </button>
+        <button onMouseDown={e => {
+          e.preventDefault();
+          document.execCommand('insertHTML', false, '<pre data-nb-code="1" style="background:var(--bg-hover);border:1px solid var(--border);border-radius:6px;padding:10px 36px 10px 12px;overflow-x:auto;position:relative;font-family:monospace;font-size:12px;color:var(--text-primary);margin:4px 0"><code>Kód…</code></pre><br>');
+          editorRef.current?.focus();
+        }} style={btnStyle} title="Kódový blok"
+          onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
           </svg>
         </button>
         <div style={{ width: 1, height: 12, background: 'var(--border)', margin: '0 2px' }} />
@@ -878,10 +955,18 @@ function NotebookContent() {
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [selectedCalNote, setSelectedCalNote] = useState<CalEventNote | null>(null);
   const [searchQ, setSearchQ] = useState('');
-  const [sortBy, setSortBy] = useState<'date' | 'title' | 'oldest'>('date');
+  const [sortBy, setSortBy] = useState<'date' | 'title' | 'oldest' | 'title_desc'>('date');
+  const [calNotesSortBy, setCalNotesSortBy] = useState<'date' | 'date_asc' | 'title' | 'title_desc'>('date');
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [authorExpanded, setAuthorExpanded] = useState(false);
   const [showLeftPanel, setShowLeftPanel] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [notebookSettings, setNotebookSettings] = useState<{
+    foldersAutoOpen: boolean;
+    showInbox: boolean;
+    defaultSort: 'date' | 'title' | 'oldest' | 'title_desc';
+    folderSortOrder: 'name' | 'created' | 'manual';
+  }>({ foldersAutoOpen: false, showInbox: true, defaultSort: 'date', folderSortOrder: 'manual' });
 
   // Copy done animation (note id, or null)
   const [copyDoneNoteId, setCopyDoneNoteId] = useState<string | null>(null);
@@ -903,6 +988,36 @@ function NotebookContent() {
 
   const wsId = currentWorkspace?.id;
   const userId = user?.id ?? '';
+
+  // ── Load settings from localStorage ─────────────────────────────────────
+  useEffect(() => {
+    if (!wsId) return;
+    const saved = localStorage.getItem(`trackino_notebook_settings_${wsId}`);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setNotebookSettings(prev => ({ ...prev, ...parsed }));
+        if (parsed.defaultSort) setSortBy(parsed.defaultSort);
+      } catch {}
+    }
+  }, [wsId]);
+
+  // ── Auto-expand folders ───────────────────────────────────────────────────
+  useEffect(() => {
+    if (notebookSettings.foldersAutoOpen && folders.length > 0) {
+      const parentIds = new Set(folders.filter(f => f.parent_id !== null).map(f => f.parent_id!));
+      setExpanded(prev => {
+        const next = new Set(prev);
+        for (const id of parentIds) next.add(id);
+        return next;
+      });
+    }
+  }, [notebookSettings.foldersAutoOpen, folders]);
+
+  function saveSettings(next: typeof notebookSettings) {
+    setNotebookSettings(next);
+    if (wsId) localStorage.setItem(`trackino_notebook_settings_${wsId}`, JSON.stringify(next));
+  }
 
   // ── Fetch ────────────────────────────────────────────────────────────────
   const fetchNotes = useCallback(async () => {
@@ -944,38 +1059,63 @@ function NotebookContent() {
       .select('*')
       .eq('workspace_id', wsId)
       .eq('user_id', userId);
-    if (!noteData) return;
+    if (!noteData || noteData.length === 0) { setCalEventNotes([]); return; }
+
+    const result: CalEventNote[] = [];
+
+    // ── Ruční události (UUID event_ref) ───────────────────────────────────
     const uuidNotes = noteData.filter(n => UUID_RE.test(n.event_ref));
-    if (uuidNotes.length === 0) { setCalEventNotes([]); return; }
-    const eventIds = uuidNotes.map(n => n.event_ref);
-    const { data: evData } = await supabase
-      .from('trackino_calendar_events')
-      .select('id, title, start_date, start_time, end_time, is_all_day')
-      .in('id', eventIds);
-    if (!evData) return;
-    const evMap: Record<string, { title: string; start_date: string; start_time: string | null; end_time: string | null; is_all_day: boolean }> = {};
-    for (const e of evData) evMap[e.id] = { title: e.title, start_date: e.start_date, start_time: e.start_time ?? null, end_time: e.end_time ?? null, is_all_day: e.is_all_day ?? true };
-    const result: CalEventNote[] = uuidNotes
-      .filter(n => evMap[n.event_ref])
-      .map(n => {
-        const ev = evMap[n.event_ref];
-        const dateStr = fmtEventDate(ev.start_date);
-        const timeStr = ev.is_all_day ? '' : fmtEventTime(ev.start_time, ev.end_time);
-        const title = timeStr ? `${ev.title} – ${dateStr} ${timeStr}` : `${ev.title} – ${dateStr}`;
-        return {
-          event_ref: n.event_ref,
-          event_id: n.event_ref,
-          title,
-          date: ev.start_date,
-          start_time: ev.start_time,
-          end_time: ev.end_time,
-          is_all_day: ev.is_all_day,
-          content: n.content ?? '',
-          tasks: Array.isArray(n.tasks) ? n.tasks : [],
-          is_favorite: n.is_favorite ?? false,
-          is_important: n.is_important ?? false,
-        };
-      });
+    if (uuidNotes.length > 0) {
+      const eventIds = uuidNotes.map(n => n.event_ref);
+      const { data: evData } = await supabase
+        .from('trackino_calendar_events')
+        .select('id, title, start_date, start_time, end_time, is_all_day')
+        .in('id', eventIds);
+      if (evData) {
+        const evMap: Record<string, { title: string; start_date: string; start_time: string | null; end_time: string | null; is_all_day: boolean }> = {};
+        for (const e of evData) evMap[e.id] = { title: e.title, start_date: e.start_date, start_time: e.start_time ?? null, end_time: e.end_time ?? null, is_all_day: e.is_all_day ?? true };
+        for (const n of uuidNotes) {
+          const ev = evMap[n.event_ref];
+          if (!ev) continue;
+          const dateStr = fmtEventDate(ev.start_date);
+          const timeStr = ev.is_all_day ? '' : fmtEventTime(ev.start_time, ev.end_time);
+          const title = timeStr ? `${ev.title} – ${dateStr} ${timeStr}` : `${ev.title} – ${dateStr}`;
+          result.push({ event_ref: n.event_ref, event_id: n.event_ref, title, date: ev.start_date, start_time: ev.start_time ?? null, end_time: ev.end_time ?? null, is_all_day: ev.is_all_day ?? true, content: n.content ?? '', tasks: Array.isArray(n.tasks) ? n.tasks : [], is_favorite: n.is_favorite ?? false, is_important: n.is_important ?? false });
+        }
+      }
+    }
+
+    // ── ICS události (sub-UUID-uidFrag-YYYY-MM-DD) ────────────────────────
+    const ICS_REF_RE = /^sub-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})-(.+)-(\d{4}-\d{2}-\d{2})$/;
+    const icsNotes = noteData.filter(n => !UUID_RE.test(n.event_ref) && n.event_ref.startsWith('sub-'));
+    if (icsNotes.length > 0) {
+      type Parsed = { note: typeof icsNotes[0]; subId: string; uidFrag: string; startDate: string };
+      const parsed: Parsed[] = [];
+      for (const n of icsNotes) {
+        const m = n.event_ref.match(ICS_REF_RE);
+        if (m) parsed.push({ note: n, subId: m[1], uidFrag: m[2], startDate: m[3] });
+      }
+      if (parsed.length > 0) {
+        const subIds = [...new Set(parsed.map(p => p.subId))];
+        const startDates = [...new Set(parsed.map(p => p.startDate))];
+        const { data: icsEvData } = await supabase
+          .from('trackino_ics_event_cache')
+          .select('subscription_id, uid, title, start_date, start_time, end_time, is_all_day')
+          .in('subscription_id', subIds)
+          .in('start_date', startDates);
+        if (icsEvData) {
+          for (const p of parsed) {
+            const ev = icsEvData.find(e => e.subscription_id === p.subId && e.start_date === p.startDate && (e.uid ?? '').slice(0, 40) === p.uidFrag);
+            if (!ev) continue;
+            const dateStr = fmtEventDate(ev.start_date);
+            const timeStr = ev.is_all_day ? '' : fmtEventTime(ev.start_time ?? null, ev.end_time ?? null);
+            const title = timeStr ? `${ev.title} – ${dateStr} ${timeStr}` : `${ev.title} – ${dateStr}`;
+            result.push({ event_ref: p.note.event_ref, event_id: p.note.event_ref, title, date: ev.start_date, start_time: ev.start_time ?? null, end_time: ev.end_time ?? null, is_all_day: ev.is_all_day ?? true, content: p.note.content ?? '', tasks: Array.isArray(p.note.tasks) ? p.note.tasks : [], is_favorite: p.note.is_favorite ?? false, is_important: p.note.is_important ?? false });
+          }
+        }
+      }
+    }
+
     setCalEventNotes(result);
   }, [wsId, userId]);
 
@@ -1091,6 +1231,19 @@ function NotebookContent() {
     await fetchAll();
   }
 
+  async function moveFolderPos(folderId: string, direction: 'up' | 'down') {
+    const folder = folders.find(f => f.id === folderId);
+    if (!folder) return;
+    const siblings = folders.filter(f => f.parent_id === folder.parent_id).sort((a, b) => a.sort_order - b.sort_order);
+    const idx = siblings.findIndex(f => f.id === folderId);
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= siblings.length) return;
+    const sibling = siblings[swapIdx];
+    await supabase.from('trackino_note_folders').update({ sort_order: sibling.sort_order }).eq('id', folder.id);
+    await supabase.from('trackino_note_folders').update({ sort_order: folder.sort_order }).eq('id', sibling.id);
+    await fetchFolders();
+  }
+
   // ── Share ─────────────────────────────────────────────────────────────────
   async function openShare(folder: NoteFolder) {
     const existing = shares.filter(s => s.folder_id === folder.id);
@@ -1133,7 +1286,12 @@ function NotebookContent() {
 
     if (qLow) base = base.filter(n => n.title.toLowerCase().includes(qLow) || stripHtml(n.content).toLowerCase().includes(qLow));
     if (listFilter?.type !== 'recent') {
-      base = [...base].sort((a, b) => sortBy === 'title' ? a.title.localeCompare(b.title, 'cs') : sortBy === 'oldest' ? new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime() : new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+      base = [...base].sort((a, b) => {
+        if (sortBy === 'title') return a.title.localeCompare(b.title, 'cs');
+        if (sortBy === 'title_desc') return b.title.localeCompare(a.title, 'cs');
+        if (sortBy === 'oldest') return new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime();
+        return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+      });
     }
     return base;
   })();
@@ -1142,7 +1300,12 @@ function NotebookContent() {
     const q = searchQ.trim().toLowerCase();
     let base = calEventNotes;
     if (q) base = base.filter(n => n.title.toLowerCase().includes(q) || stripHtml(n.content).toLowerCase().includes(q));
-    return [...base].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return [...base].sort((a, b) => {
+      if (calNotesSortBy === 'date_asc') return new Date(a.date).getTime() - new Date(b.date).getTime();
+      if (calNotesSortBy === 'title') return a.title.localeCompare(b.title, 'cs');
+      if (calNotesSortBy === 'title_desc') return b.title.localeCompare(a.title, 'cs');
+      return new Date(b.date).getTime() - new Date(a.date).getTime();
+    });
   })();
 
   // Counts for left panel
@@ -1194,8 +1357,18 @@ function NotebookContent() {
         style={{ width: 340, background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
 
         {/* Header */}
-        <div className="px-4 pt-4 pb-2 flex-shrink-0">
+        <div className="px-4 pt-4 pb-2 flex-shrink-0 flex items-center justify-between">
           <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Poznámky</h1>
+          <button onClick={() => setShowSettings(true)} title="Nastavení poznámek"
+            className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors"
+            style={{ color: 'var(--text-muted)' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+          </button>
         </div>
 
         {/* Search */}
@@ -1212,9 +1385,11 @@ function NotebookContent() {
 
         {/* Nav */}
         <div className="px-2 py-2 border-b flex-shrink-0 space-y-0.5" style={{ borderColor: 'var(--border)' }}>
-          <NavBtn active={listFilter?.type === 'inbox' || (!listFilter && true)} onClick={() => selectFilter({ type: 'inbox' })} count={inboxCount}
-            label="Inbox"
-            icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>} />
+          {notebookSettings.showInbox && (
+            <NavBtn active={listFilter?.type === 'inbox' || (!listFilter && true)} onClick={() => selectFilter({ type: 'inbox' })} count={inboxCount}
+              label="Inbox"
+              icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>} />
+          )}
           <NavBtn active={listFilter?.type === 'all'} onClick={() => selectFilter({ type: 'all' })} count={allCount}
             label="Všechny poznámky"
             icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>} />
@@ -1259,8 +1434,11 @@ function NotebookContent() {
             onEdit={f => { setFolderName(f.name); setFolderModal({ open: true, parentId: null, editing: f }); }}
             onDelete={deleteFolder}
             onShare={openShare}
+            onMoveUp={id => moveFolderPos(id, 'up')}
+            onMoveDown={id => moveFolderPos(id, 'down')}
             userId={userId}
             items={notes}
+            folderSortOrder={notebookSettings.folderSortOrder}
           />
 
           {/* Podle autora */}
@@ -1358,14 +1536,36 @@ function NotebookContent() {
                   Označit vše
                 </button>
               )}
+              {/* Folder name label */}
+              {listFilter?.type === 'folder' && !selectedNote && (
+                <span className="text-sm font-semibold truncate max-w-[160px]" style={{ color: 'var(--text-primary)' }}>
+                  {folders.find(f => f.id === (listFilter as { type: 'folder'; folderId: string }).folderId)?.name ?? 'Složka'}
+                </span>
+              )}
               {!isRecent && !showCalEventNotes && (
                 <div className="relative flex-shrink-0">
-                  <select value={sortBy} onChange={e => setSortBy(e.target.value as 'date' | 'title' | 'oldest')}
+                  <select value={sortBy} onChange={e => setSortBy(e.target.value as 'date' | 'title' | 'oldest' | 'title_desc')}
                     className="text-base sm:text-sm border rounded-lg pl-3 pr-8 py-1.5 appearance-none cursor-pointer"
                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-secondary)', outline: 'none' }}>
                     <option value="date">Nejnovější</option>
                     <option value="oldest">Nejstarší</option>
                     <option value="title">Název A–Z</option>
+                    <option value="title_desc">Název Z–A</option>
+                  </select>
+                  <div className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                  </div>
+                </div>
+              )}
+              {showCalEventNotes && (
+                <div className="relative flex-shrink-0">
+                  <select value={calNotesSortBy} onChange={e => setCalNotesSortBy(e.target.value as 'date' | 'date_asc' | 'title' | 'title_desc')}
+                    className="text-base sm:text-sm border rounded-lg pl-3 pr-8 py-1.5 appearance-none cursor-pointer"
+                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-secondary)', outline: 'none' }}>
+                    <option value="date">Nejnovější</option>
+                    <option value="date_asc">Nejstarší</option>
+                    <option value="title">Název A–Z</option>
+                    <option value="title_desc">Název Z–A</option>
                   </select>
                   <div className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}>
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
@@ -1591,6 +1791,83 @@ function NotebookContent() {
         </div>
       )}
 
+      {/* ── Settings Modal ── */}
+      {showSettings && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowSettings(false)}>
+          <div className="w-96 p-5 rounded-2xl border shadow-xl" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }} onClick={e => e.stopPropagation()}>
+            <h2 className="text-base font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Nastavení poznámek</h2>
+            <div className="space-y-4">
+              {/* Show Inbox */}
+              <label className="flex items-center justify-between gap-4 cursor-pointer">
+                <div>
+                  <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Zobrazit Inbox</div>
+                  <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Sekce pro poznámky bez složky</div>
+                </div>
+                <button type="button"
+                  onClick={() => saveSettings({ ...notebookSettings, showInbox: !notebookSettings.showInbox })}
+                  className="relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 transition-colors"
+                  style={{ background: notebookSettings.showInbox ? 'var(--primary)' : 'var(--border)', borderColor: notebookSettings.showInbox ? 'var(--primary)' : 'var(--border)' }}>
+                  <span className="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+                    style={{ transform: notebookSettings.showInbox ? 'translateX(16px)' : 'translateX(0px)' }} />
+                </button>
+              </label>
+              {/* Auto-expand folders */}
+              <label className="flex items-center justify-between gap-4 cursor-pointer">
+                <div>
+                  <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Automaticky rozbalit složky</div>
+                  <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Rozbalí všechny složky při načtení</div>
+                </div>
+                <button type="button"
+                  onClick={() => saveSettings({ ...notebookSettings, foldersAutoOpen: !notebookSettings.foldersAutoOpen })}
+                  className="relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 transition-colors"
+                  style={{ background: notebookSettings.foldersAutoOpen ? 'var(--primary)' : 'var(--border)', borderColor: notebookSettings.foldersAutoOpen ? 'var(--primary)' : 'var(--border)' }}>
+                  <span className="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+                    style={{ transform: notebookSettings.foldersAutoOpen ? 'translateX(16px)' : 'translateX(0px)' }} />
+                </button>
+              </label>
+              {/* Default sort */}
+              <div>
+                <div className="text-sm font-medium mb-1.5" style={{ color: 'var(--text-primary)' }}>Výchozí řazení poznámek</div>
+                <div className="relative">
+                  <select value={notebookSettings.defaultSort}
+                    onChange={e => saveSettings({ ...notebookSettings, defaultSort: e.target.value as typeof notebookSettings.defaultSort })}
+                    className="w-full text-base sm:text-sm border rounded-lg pl-3 pr-8 py-1.5 appearance-none cursor-pointer"
+                    style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-secondary)', outline: 'none' }}>
+                    <option value="date">Nejnovější</option>
+                    <option value="oldest">Nejstarší</option>
+                    <option value="title">Název A–Z</option>
+                    <option value="title_desc">Název Z–A</option>
+                  </select>
+                  <div className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                  </div>
+                </div>
+              </div>
+              {/* Folder sort order */}
+              <div>
+                <div className="text-sm font-medium mb-1.5" style={{ color: 'var(--text-primary)' }}>Řazení složek</div>
+                <div className="relative">
+                  <select value={notebookSettings.folderSortOrder}
+                    onChange={e => saveSettings({ ...notebookSettings, folderSortOrder: e.target.value as typeof notebookSettings.folderSortOrder })}
+                    className="w-full text-base sm:text-sm border rounded-lg pl-3 pr-8 py-1.5 appearance-none cursor-pointer"
+                    style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-secondary)', outline: 'none' }}>
+                    <option value="manual">Ručně (šipkami)</option>
+                    <option value="name">Abecedně</option>
+                    <option value="created">Datum vytvoření</option>
+                  </select>
+                  <div className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end mt-5">
+              <button onClick={() => setShowSettings(false)} className="px-4 py-1.5 rounded-lg text-sm font-medium text-white" style={{ background: 'var(--primary)' }}>Hotovo</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Share Modal ── */}
       {shareModal.open && shareModal.folder && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShareModal({ open: false, folder: null })}>
@@ -1646,12 +1923,39 @@ function NotebookContent() {
   );
 }
 
-// ─── Styles for contenteditable placeholder ───────────────────────────────────
+// ─── Styles for contenteditable placeholder + code block copy button ──────────
 const editorStyles = `
   [contenteditable][data-placeholder]:empty::before {
     content: attr(data-placeholder);
     color: var(--text-muted);
     pointer-events: none;
+  }
+  pre[data-nb-code] {
+    position: relative;
+    cursor: text;
+  }
+  pre[data-nb-code]::after {
+    content: '';
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 22px;
+    height: 22px;
+    opacity: 0.35;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='13' height='13' rx='2' ry='2'/%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 14px;
+    border-radius: 4px;
+    transition: opacity 0.15s;
+  }
+  pre[data-nb-code]:hover::after {
+    opacity: 0.7;
+  }
+  pre[data-nb-code].nb-code-copied::after {
+    opacity: 1 !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2322c55e' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
   }
 `;
 
