@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { WorkspaceProvider, useWorkspace } from '@/contexts/WorkspaceContext';
@@ -189,7 +190,7 @@ function FolderTree({
   depth?: number; parentId?: string | null;
 }) {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
-  const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
+  const [menuPos, setMenuPos] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
   const children = folders.filter(f => f.parent_id === parentId).sort((a, b) => {
     if (folderSortOrder === 'name') return a.name.localeCompare(b.name, 'cs');
     if (folderSortOrder === 'created') return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
@@ -237,7 +238,13 @@ function FolderTree({
                     if (openMenu === folder.id) { setOpenMenu(null); setMenuPos(null); }
                     else {
                       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                      setMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+                      const spaceBelow = window.innerHeight - rect.bottom;
+                      const openUpward = spaceBelow < 180;
+                      setMenuPos({
+                        top: openUpward ? undefined : rect.bottom + 4,
+                        bottom: openUpward ? window.innerHeight - rect.top + 4 : undefined,
+                        right: window.innerWidth - rect.right,
+                      });
                       setOpenMenu(folder.id);
                     }
                   }}
@@ -247,12 +254,12 @@ function FolderTree({
                 </button>
               </div>
             </div>
-            {/* Dropdown je MIMO opacity wrapper – nezávislý na hover stavu složky */}
-            {openMenu === folder.id && menuPos && (
+            {/* Dropdown přes portál – unikne z transformovaného left panelu na document.body */}
+            {openMenu === folder.id && menuPos && typeof document !== 'undefined' && createPortal(
               <>
                 <div className="fixed inset-0 z-[9998]" onClick={e => { e.stopPropagation(); setOpenMenu(null); setMenuPos(null); }} />
                 <div className="fixed z-[9999] rounded-lg border shadow-lg py-1 min-w-[160px]"
-                  style={{ top: menuPos.top, right: menuPos.right, background: 'var(--bg-card)', borderColor: 'var(--border)' }}
+                  style={{ top: menuPos.top, bottom: menuPos.bottom, right: menuPos.right, background: 'var(--bg-card)', borderColor: 'var(--border)' }}
                   onClick={e => e.stopPropagation()}>
                   {depth < MAX_DEPTH - 1 && (
                     <button type="button" className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left hover:bg-[var(--bg-hover)]"
@@ -301,7 +308,8 @@ function FolderTree({
                     </>
                   )}
                 </div>
-              </>
+              </>,
+              document.body
             )}
             {isExpanded && (
               <FolderTree folders={folders} selectedId={selectedId} expanded={expanded}
