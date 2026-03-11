@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 11. 3. 2026 (v2.51.28)
+> Aktualizováno: 11. 3. 2026 (v2.51.31)
 
 ---
 
@@ -546,6 +546,10 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
 | v2.51.28 | 11. 3. 2026 | Notebook – FolderTree: odstraněny desktop individuální tlačítka, nahrazeny třemi tečkami (⋮) zobrazující se na hover na desktopu + vždy viditelné na mobilu; NoteEditor: paste handler strippuje background-* CSS vlastnosti a bgcolor atribut z vkládaného HTML (žádná změna barvy pozadí z externích nástrojů) |
+| v2.51.31 | 11. 3. 2026 | Refaktoring: ai-assistant/page.tsx (1340 ř.) rozdělen na 10 souborů v _components/ (types.ts, utils.ts, constants.ts, useAiAssistant.ts, ConversationSidebar.tsx, ChatMessages.tsx, ChatInput.tsx, FavoritePromptsPanel.tsx, ModelInfoPanel.tsx, AiAssistantContent.tsx); page.tsx redukován na ~10 řádků |
+| v2.51.30 | 11. 3. 2026 | Notebook – fix dropdown složek: createPortal() na document.body (CSS transform levého panelu způsoboval špatné fixed pozicování); flip nahoru pokud spaceBelow < 180px (spodní složky na mobilu) |
+| v2.51.29 | 11. 3. 2026 | Notebook – fix dropdown složek: sm:absolute (bez vlivu na layout), dropdown mimo opacity wrapper + backdrop; fix číslo počtu poznámek; paste handler odstraňuje background barvy |
+| v2.51.28 | 11. 3. 2026 | Notebook – tři tečky u složek (hover desktop / vždy mobil), dropdown s akcemi; paste handler stripuje CSS background barvy |
 | v2.51.27 | 11. 3. 2026 | Rate Limiting: Upstash Redis (@upstash/ratelimit, @upstash/redis); src/lib/rate-limit.ts (rateLimitRegister 3/hod, rateLimitAI 20/min, rateLimitFirecrawl 10/min); nová API route /api/auth/register (server-side signup s rate limitem dle IP); register/page.tsx přepnut na volání nového endpointu; rate limit přidán do /api/ai-chat, /api/firecrawl/scrape, /api/firecrawl/search; env vars UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN |
 | v2.51.26 | 11. 3. 2026 | Refaktoring: team/page.tsx (1516 ř.) rozdělen na 6 souborů v _components/ (types.tsx, useTeam.ts, MembersTab.tsx, StructureTab.tsx, ManagersTab.tsx, EditMemberModal.tsx s PermissionToggle sub-komponentou); page.tsx redukován na ~170 řádků |
 | v2.51.25 | 11. 3. 2026 | Notebook – folderSortCache přesunuta do DB (nová tabulka trackino_notebook_prefs, cross-device per-user); mobilní výpis poznámek: 3 řádky (název / datum+autor / ikonky justify-around, tap target 44px) |
@@ -1436,14 +1440,24 @@ className={`
 
 ---
 
-## 28. AI asistent – architektura (ai-assistant/page.tsx)
+## 28. AI asistent – architektura (ai-assistant/)
 
-### Soubory
+### Soubory (po refaktoringu v2.51.31 – rozdělen z 1340 ř. na subsoubory)
 | Soubor | Popis |
 |--------|-------|
 | `src/lib/ai-providers.ts` | Konfigurace providerů (AiProvider, AiProviderConfig) + seznam modelů (AiModel, AI_MODELS) + helpery |
 | `src/app/api/ai-chat/route.ts` | Serverová POST route – drží API klíče bezpečně na serveru; streaming přes ReadableStream; non-streaming pro modely bez podpory (o1-mini) |
-| `src/app/(dashboard)/ai-assistant/page.tsx` | Chat UI – výběr modelu, temperature, system prompt, stream/stop, Markdown rendering |
+| `ai-assistant/page.tsx` | Entry point – WorkspaceProvider wrapper (~10 ř.) |
+| `ai-assistant/_components/AiAssistantContent.tsx` | **Orchestrátor** – access guard, layout, header, nastavení panel, skládá subkomponenty |
+| `ai-assistant/_components/useAiAssistant.ts` | Custom hook – veškerý state, computed hodnoty, CRUD konverzací, sendMessage, streaming, Firecrawl; exportuje `UseAiAssistantReturn` |
+| `ai-assistant/_components/types.ts` | Sdílené typy: `ChatMessage`, `FirecrawlStatus`, `FavoritePrompt` |
+| `ai-assistant/_components/utils.ts` | Helper funkce: `fmtTime`, `fmtDate`, `estimateTokens`, `extractUrls`, `autoTitle`, `escHtml`, `renderMarkdown`, `htmlToPlainText` |
+| `ai-assistant/_components/constants.ts` | Konstanty: `FIRECRAWL_CREDIT_LIMIT`, `CREDITS_PER_SCRAPE/SEARCH`, `FIRECRAWL_CREDITS_KEY`, `AI_MSG_STYLES` (CSS string) |
+| `ai-assistant/_components/ConversationSidebar.tsx` | Levý sidebar – seznam konverzací, vyhledávání, Oblíbené/Ostatní sekce, hvězdička, mazání |
+| `ai-assistant/_components/ChatMessages.tsx` | Oblast zpráv – prázdný stav, bubliny user/AI, Firecrawl loading, streaming bublina s kurzorem |
+| `ai-assistant/_components/ChatInput.tsx` | Input oblast – textarea, web search toggle, model pills, token counter, Firecrawl kredity; skládá FavoritePromptsPanel + ModelInfoPanel |
+| `ai-assistant/_components/FavoritePromptsPanel.tsx` | Panel oblíbených promptů (toggle, seznam, kopírování) |
+| `ai-assistant/_components/ModelInfoPanel.tsx` | Info dialog o modelech – grid karet per provider, výběr modelu, ceny v Kč |
 
 ### AI providers (src/lib/ai-providers.ts)
 ```typescript
@@ -2566,7 +2580,7 @@ CREATE POLICY "Auth full" ON trackino_task_board_members
 | `/text-converter` | `text-converter/page.tsx` | Převodník textu (Pro+) |
 | `/prompts` | `prompts/page.tsx` | Prompty – složky + rich editor (Pro+) |
 | `/bookmarks` | `bookmarks/page.tsx` | Záložky – složky + favicon (Pro+) |
-| `/ai-assistant` | `ai-assistant/page.tsx` | AI asistent – OpenAI + Gemini (Max) |
+| `/ai-assistant` | `ai-assistant/page.tsx` (entry point) + `_components/AiAssistantContent.tsx` (orchestrátor) + `_components/` (10 souborů: useAiAssistant, types, utils, constants, ConversationSidebar, ChatMessages, ChatInput, FavoritePromptsPanel, ModelInfoPanel) | AI asistent – OpenAI + Gemini (Max) |
 | `/settings` | `settings/page.tsx` | Nastavení workspace – 8 záložek (Pro+) |
 | `/audit` | `audit/page.tsx` | Audit log (Max) |
 | `/team` | `team/page.tsx` | Tým – role, sazby, toggles |
