@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 11. 3. 2026 (v2.51.22)
+> Aktualizováno: 11. 3. 2026 (v2.51.23)
 
 ---
 
@@ -544,6 +544,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.51.23 | 11. 3. 2026 | Notebook – smazání složky nyní archivuje všechny poznámky (včetně podsložek) místo přesunu do Inboxu; deleteFolder() používá getDescendantFolderIds() + batch UPDATE is_archived=true před DELETE složky |
 | v2.51.22 | 11. 3. 2026 | Kalendář – fix timezone u ICS externích kalendářů: UTC časy (Z přípona) převedeny na lokální čas prohlížeče; přidán helper parseTzIdToLocal() pro TZID= pojmenované timezone (Intl.DateTimeFormat); Notebook – tlačítko Skrýt hotové v záhlaví výpisu (viditelné pokud showDoneFeature=true, hideDone state, filtruje is_done=true poznámky) |
 | v2.51.21 | 11. 3. 2026 | Refaktoring: knowledge-base/page.tsx (2174 ř.) rozdělen na 10 souborů v _components/ (types.ts, utils.ts, RichEditor.tsx, PageViewer.tsx, KbFolderTree.tsx, KbSidebar.tsx, KbWelcomeScreen.tsx, PageListView.tsx, KbModals.tsx, KbPageDetail.tsx); page.tsx (~400 ř.) je orchestrátor; opravena záložka Historie (chybějící prop revertToVersion) |
 | v2.51.20 | 10. 3. 2026 | Úkoly – Přehled workspace: cross-workspace tabulkový pohled (Název/Projekt/Workspace/Řešitel/Priorita/Status/Termín); záložky per workspace s barevným kódováním; filtry (priorita/termín/projekt/řešitel/search/hide-completed); modal Nový úkol (ws→projekt→sloupec→název/priorita/termín/řešitel); detail panel s breadcrumb ws/projekt/sloupec; deterministické barvy workspace; RLS z v2.51.19 zajišťuje izolaci dat |

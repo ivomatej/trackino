@@ -11,6 +11,11 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.51.23 – 11. 3. 2026</h3>
+<ul>
+  <li><strong>Notebook – smazání složky archivuje poznámky</strong>: při smazání složky se nyní všechny nearchivované poznámky (včetně poznámek v podsložkách) automaticky přesunou do Archivu. Žádná poznámka se při smazání složky neztratí.</li>
+</ul>
+
 <h3>v2.51.22 – 11. 3. 2026</h3>
 <ul>
   <li><strong>Kalendář – oprava časových pásem externích ICS kalendářů</strong>: UTC časy (přípona Z) se nyní správně převádí na lokální čas prohlížeče; přidána podpora TZID= (pojmenované timezone, napr. Europe/Prague) pomocí Intl API. Události se již nezobrazují o hodinu dříve.</li>
