@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 11. 3. 2026 (v2.51.31)
+> Aktualizováno: 11. 3. 2026 (v2.51.32)
 
 ---
 
@@ -546,6 +546,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
 | v2.51.28 | 11. 3. 2026 | Notebook – FolderTree: odstraněny desktop individuální tlačítka, nahrazeny třemi tečkami (⋮) zobrazující se na hover na desktopu + vždy viditelné na mobilu; NoteEditor: paste handler strippuje background-* CSS vlastnosti a bgcolor atribut z vkládaného HTML (žádná změna barvy pozadí z externích nástrojů) |
+| v2.51.32 | 11. 3. 2026 | Refaktoring: TimerBar.tsx (938 ř.) rozdělen na 6 souborů v timer-bar/ (types.ts, utils.ts, useTimerBar.ts, ProjectPicker.tsx, CategoryTaskPicker.tsx, TimerControls.tsx); TimerBar.tsx redukován na ~80 řádků orchestrátoru |
 | v2.51.31 | 11. 3. 2026 | Refaktoring: ai-assistant/page.tsx (1340 ř.) rozdělen na 10 souborů v _components/ (types.ts, utils.ts, constants.ts, useAiAssistant.ts, ConversationSidebar.tsx, ChatMessages.tsx, ChatInput.tsx, FavoritePromptsPanel.tsx, ModelInfoPanel.tsx, AiAssistantContent.tsx); page.tsx redukován na ~10 řádků |
 | v2.51.30 | 11. 3. 2026 | Notebook – fix dropdown složek: createPortal() na document.body (CSS transform levého panelu způsoboval špatné fixed pozicování); flip nahoru pokud spaceBelow < 180px (spodní složky na mobilu) |
 | v2.51.29 | 11. 3. 2026 | Notebook – fix dropdown složek: sm:absolute (bez vlivu na layout), dropdown mimo opacity wrapper + backdrop; fix číslo počtu poznámek; paste handler odstraňuje background barvy |
@@ -2491,7 +2492,13 @@ CREATE POLICY "Auth full" ON trackino_task_board_members
 |--------|---------|
 | `DashboardLayout.tsx` | Hlavní layout: header (TimerBar), Sidebar, systémové notifikace, auto-hide header na mobilu, bottom timer bar |
 | `Sidebar.tsx` | Navigační menu: skupiny, Oblíbené, badge nevyřízených položek, WorkspaceSwitcher, collapse na desktopu |
-| `TimerBar.tsx` | Spouštění/zastavování timeru, manuální zadání, picker projektu/kategorie/tagu, půlnoční split |
+| `TimerBar.tsx` | **Orchestrátor** (po refaktoringu v2.51.32) – importuje subkomponenty z `timer-bar/`, renderuje layout |
+| `timer-bar/types.ts` | Typy: `PlayData`, `TimerBarProps` |
+| `timer-bar/utils.ts` | Helper: `formatTime(seconds)` |
+| `timer-bar/useTimerBar.ts` | Hlavní hook – veškerý state, logika (start/stop/discard, offline, midnight split, computed hodnoty) |
+| `timer-bar/ProjectPicker.tsx` | Projekt picker – tlačítko + dropdown s hledáním a seskupením dle klienta |
+| `timer-bar/CategoryTaskPicker.tsx` | Kategorie/úkol picker – tlačítko + dropdown se stromem kategorií/úkolů |
+| `timer-bar/TimerControls.tsx` | Čas + start/stop/discard tlačítka + validační chyba + offline indikátor |
 | `ManualTimeEntry.tsx` | Formulář pro ruční zadání time entry |
 | `TimeEntryList.tsx` | Seznam time entries s editací/mazáním |
 | `TagPicker.tsx` | Multi-select štítků (použito v TimerBar) |
