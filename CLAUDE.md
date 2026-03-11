@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 10. 3. 2026 (v2.51.20)
+> Aktualizováno: 11. 3. 2026 (v2.51.20)
 
 ---
 
@@ -2475,7 +2475,7 @@ CREATE POLICY "Auth full" ON trackino_task_board_members
 | `/planner` | `planner/page.tsx` | Plánovač dostupnosti (Pro+) |
 | `/calendar` | `calendar/page.tsx` → CalendarContent | Kalendář (Max) |
 | `/vacation` | `vacation/page.tsx` | Dovolená (Pro+) |
-| `/invoices` | `invoices/page.tsx` | Fakturace (Pro+) |
+| `/invoices` | `invoices/page.tsx` (orchestrátor) + `types.ts`, `utils.ts`, `components/InvoiceRow.tsx`, `components/SubmitInvoiceForm.tsx`, `components/InvoiceFilters.tsx`, `components/ApproveModal.tsx`, `components/ReturnModal.tsx`, `components/DetailModal.tsx` | Fakturace (Pro+) |
 | `/reports` | `reports/page.tsx` | Reporty (Free+) |
 | `/attendance` | `attendance/page.tsx` | Přehled hodin (Pro+) |
 | `/category-report` | `category-report/page.tsx` | Analýza kategorií – Recharts (Pro+) |
