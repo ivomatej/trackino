@@ -1408,11 +1408,34 @@ function NotebookContent() {
         if (parsed.defaultSort) setSortBy(parsed.defaultSort);
       } catch {}
     }
-    const savedFolderSort = localStorage.getItem(`trackino_notebook_folder_sort_${wsId}`);
-    if (savedFolderSort) {
-      try { setFolderSortCache(JSON.parse(savedFolderSort)); } catch {}
-    }
   }, [wsId]);
+
+  // ── Folder sort cache – DB (cross-device, per-user) ──────────────────────
+  const fetchNotebookPrefs = useCallback(async () => {
+    if (!wsId || !userId) return;
+    const { data } = await supabase
+      .from('trackino_notebook_prefs')
+      .select('folder_sort_cache')
+      .eq('workspace_id', wsId)
+      .eq('user_id', userId)
+      .single();
+    if (data?.folder_sort_cache) {
+      setFolderSortCache(data.folder_sort_cache as Record<string, string>);
+    }
+  }, [wsId, userId]);
+
+  const saveNotebookPrefs = useCallback(async (cache: Record<string, string>) => {
+    if (!wsId || !userId) return;
+    await supabase.from('trackino_notebook_prefs').upsert(
+      { workspace_id: wsId, user_id: userId, folder_sort_cache: cache, updated_at: new Date().toISOString() },
+      { onConflict: 'workspace_id,user_id' }
+    );
+  }, [wsId, userId]);
+
+  useEffect(() => {
+    if (!wsId || !userId) return;
+    fetchNotebookPrefs();
+  }, [wsId, userId, fetchNotebookPrefs]);
 
   // ── Auto-expand folders ───────────────────────────────────────────────────
   useEffect(() => {
@@ -2076,7 +2099,7 @@ function NotebookContent() {
                   if (listFilter.type === 'folder') {
                     const next = { ...folderSortCache, [listFilter.folderId]: sortBy };
                     setFolderSortCache(next);
-                    if (wsId) localStorage.setItem(`trackino_notebook_folder_sort_${wsId}`, JSON.stringify(next));
+                    saveNotebookPrefs(next);
                     setFilterSaved(true);
                     setTimeout(() => setFilterSaved(false), 2000);
                   }
@@ -2192,7 +2215,7 @@ function NotebookContent() {
                   const authorName = members.find(m => m.user_id === note.user_id)?.display_name ?? '';
                   return (
                   <div key={note.id}
-                    className="group flex items-start gap-3 px-4 py-3 md:py-3 border-b transition-colors"
+                    className="group flex flex-col sm:flex-row sm:items-start sm:gap-3 px-4 py-3 border-b transition-colors"
                     style={{ borderColor: 'var(--border)', opacity: notebookSettings.showDoneFeature && note.is_done ? 0.45 : 1 }}
                     onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
@@ -2204,81 +2227,82 @@ function NotebookContent() {
                     )}
                     {/* Main clickable area */}
                     <div className="flex-1 min-w-0 cursor-pointer" onClick={() => { setSelectedNote(note); setShowLeftPanel(false); }}>
-                      {/* Line 1: Title + flags */}
+                      {/* Řádek 1: Název + flagy */}
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)', textDecoration: notebookSettings.showDoneFeature && note.is_done ? 'line-through' : 'none' }}>{note.title || 'Bez názvu'}</span>
                         {note.is_favorite && <svg width="10" height="10" viewBox="0 0 24 24" fill="#f59e0b" stroke="#f59e0b" strokeWidth="1" className="flex-shrink-0"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>}
                         {note.is_important && <svg width="10" height="10" viewBox="0 0 24 24" fill="#dc2626" stroke="#dc2626" strokeWidth="1" className="flex-shrink-0"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>}
                         {notebookSettings.showDoneFeature && note.is_done && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0"><polyline points="20 6 9 17 4 12"/></svg>}
                       </div>
-                      {/* Line 2: Preview */}
+                      {/* Řádek 2 (jen desktop): Preview obsahu */}
                       {stripHtml(note.content) && <p className="hidden sm:block text-xs truncate mt-0.5" style={{ color: 'var(--text-muted)' }}>{stripHtml(note.content).slice(0, 150)}</p>}
-                      {/* Line 3: Date + Author */}
+                      {/* Řádek 2 (mobil) / Řádek 3 (desktop): Datum + Autor */}
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{fmtDate(note.updated_at)}</span>
                         {authorName && <span className="text-xs" style={{ color: 'var(--text-muted)' }}>· {authorName}</span>}
                       </div>
                     </div>
-                    {/* Actions – bigger on mobile */}
-                    <div className="flex items-center gap-1.5 md:gap-0.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex-shrink-0 mt-0.5">
-                      {/* Important toggle */}
+                    {/* Akce – na mobilu celá šíře (justify-around), na desktopu hover */}
+                    <div className="flex items-center w-full sm:w-auto justify-around sm:justify-start gap-0 sm:gap-0.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity sm:flex-shrink-0 border-t sm:border-0 mt-2 sm:mt-0 pt-2 sm:pt-0"
+                      style={{ borderColor: 'var(--border)' }}>
+                      {/* Důležité */}
                       <button onClick={e => { e.stopPropagation(); toggleFlag(note, 'is_important'); }}
-                        className="w-9 h-9 md:w-7 md:h-7 flex items-center justify-center rounded-lg"
+                        className="w-11 h-11 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg"
                         style={{ color: note.is_important ? '#dc2626' : 'var(--text-muted)' }} title={note.is_important ? 'Odebrat důležité' : 'Označit jako důležité'}
                         onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill={note.is_important ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="md:w-3 md:h-3">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill={note.is_important ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:w-3 sm:h-3">
                           <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>
                         </svg>
                       </button>
-                      {/* Favorite toggle */}
+                      {/* Oblíbené */}
                       <button onClick={e => { e.stopPropagation(); toggleFlag(note, 'is_favorite'); }}
-                        className="w-9 h-9 md:w-7 md:h-7 flex items-center justify-center rounded-lg"
+                        className="w-11 h-11 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg"
                         style={{ color: note.is_favorite ? '#f59e0b' : 'var(--text-muted)' }} title={note.is_favorite ? 'Odebrat z oblíbených' : 'Přidat do oblíbených'}
                         onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill={note.is_favorite ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="md:w-3 md:h-3">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill={note.is_favorite ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:w-3 sm:h-3">
                           <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
                         </svg>
                       </button>
-                      {/* Done toggle */}
+                      {/* Hotovo */}
                       {notebookSettings.showDoneFeature && (
                         <button onClick={e => { e.stopPropagation(); toggleFlag(note, 'is_done'); }}
-                          className="w-9 h-9 md:w-7 md:h-7 flex items-center justify-center rounded-lg"
+                          className="w-11 h-11 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg"
                           style={{ color: note.is_done ? '#22c55e' : 'var(--text-muted)' }} title={note.is_done ? 'Označit jako nedokončené' : 'Označit jako hotové'}
                           onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill={note.is_done ? 'none' : 'none'} stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="md:w-3 md:h-3">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="sm:w-3 sm:h-3">
                             <polyline points="20 6 9 17 4 12"/>
                           </svg>
                         </button>
                       )}
-                      {/* Copy content */}
+                      {/* Kopírovat obsah */}
                       <button onClick={e => {
                         e.stopPropagation();
                         navigator.clipboard.writeText(htmlToPlainText(note.content, note.tasks));
                         setCopyDoneNoteId(note.id);
                         setTimeout(() => setCopyDoneNoteId(null), 2000);
                       }}
-                        className="w-9 h-9 md:w-7 md:h-7 flex items-center justify-center rounded-lg" title="Kopírovat obsah"
+                        className="w-11 h-11 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg" title="Kopírovat obsah"
                         style={{ color: copyDoneNoteId === note.id ? '#22c55e' : 'var(--text-muted)' }}
                         onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
                         {copyDoneNoteId === note.id ? (
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="md:w-3 md:h-3"><polyline points="20 6 9 17 4 12"/></svg>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="sm:w-3 sm:h-3"><polyline points="20 6 9 17 4 12"/></svg>
                         ) : (
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="md:w-3 md:h-3"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:w-3 sm:h-3"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                         )}
                       </button>
-                    {/* Duplicate (only for non-archived) */}
+                      {/* Duplikovat (jen ne-archivované) */}
                       {!note.is_archived && (
                         <button onClick={e => { e.stopPropagation(); duplicateNote(note); }}
-                          className="w-9 h-9 md:w-7 md:h-7 flex items-center justify-center rounded-lg" title="Duplikovat poznámku"
+                          className="w-11 h-11 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg" title="Duplikovat poznámku"
                           style={{ color: 'var(--text-muted)' }}
                           onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="md:w-3 md:h-3">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:w-3 sm:h-3">
                             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
                             <line x1="18" y1="12" x2="18" y2="18"/><line x1="15" y1="15" x2="21" y2="15"/>
                           </svg>
                         </button>
                       )}
-                    {/* Move (only for non-archived) */}
+                      {/* Přesunout (jen ne-archivované) */}
                       {!note.is_archived && (
                         <button onClick={e => {
                           e.stopPropagation();
@@ -2290,24 +2314,24 @@ function NotebookContent() {
                             setMoveDropdown({ noteId: note.id, bottom: window.innerHeight - rect.top + 4, right: window.innerWidth - rect.right });
                           }
                         }}
-                          className="w-9 h-9 md:w-7 md:h-7 flex items-center justify-center rounded-lg" title="Přesunout do složky"
+                          className="w-11 h-11 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg" title="Přesunout do složky"
                           style={{ color: 'var(--text-muted)' }}
                           onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="md:w-3 md:h-3">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:w-3 sm:h-3">
                             <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
                             <polyline points="12 11 12 17"/><polyline points="9 14 12 17 15 14"/>
                           </svg>
                         </button>
                       )}
-                      {/* Archive / Unarchive */}
+                      {/* Archivovat / Obnovit */}
                       <button onClick={e => { e.stopPropagation(); toggleArchive(note); }}
-                        className="w-9 h-9 md:w-7 md:h-7 flex items-center justify-center rounded-lg" title={note.is_archived ? 'Obnovit z archivu' : 'Archivovat'}
+                        className="w-11 h-11 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg" title={note.is_archived ? 'Obnovit z archivu' : 'Archivovat'}
                         style={{ color: 'var(--text-muted)' }}
                         onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
                         {note.is_archived ? (
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="md:w-3 md:h-3"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:w-3 sm:h-3"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
                         ) : (
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="md:w-3 md:h-3"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:w-3 sm:h-3"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
                         )}
                       </button>
                     </div>
