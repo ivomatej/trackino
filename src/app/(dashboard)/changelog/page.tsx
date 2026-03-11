@@ -11,6 +11,22 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.51.33 – 11. 3. 2026</h3>
+<ul>
+  <li><strong>Refaktoring: Sidebar</strong>:
+    <ul>
+      <li>Původní monolitický soubor <code>Sidebar.tsx</code> (~800 ř.) rozdělen na 7 souborů v adresáři <code>sidebar/</code></li>
+      <li><code>types.ts</code> – sdílené typy (SidebarProps, NavItem, NavGroup, BadgeCounts)</li>
+      <li><code>icons.tsx</code> – 40+ SVG ikon + StarIcon + RemoveIcon</li>
+      <li><code>useSidebar.ts</code> – custom hook se veškerým stavem a logikou (badge fetch, navGroups, oblíbené)</li>
+      <li><code>SidebarHeader.tsx</code> – logo, název workspace, tlačítka collapse/close</li>
+      <li><code>SidebarNav.tsx</code> – navigační skupiny, oblíbené, bottom items</li>
+      <li><code>SidebarUserPanel.tsx</code> – user panel, workspace switcher, odhlášení</li>
+      <li><code>Sidebar.tsx</code> redukován na ~80 řádků (thin orchestrátor)</li>
+    </ul>
+  </li>
+</ul>
+
 <h3>v2.51.27 – 11. 3. 2026</h3>
 <ul>
   <li><strong>Rate Limiting (Upstash Redis)</strong>: Přidána ochrana API endpointů před zneužitím pomocí sliding window algoritmu:

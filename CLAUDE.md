@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 11. 3. 2026 (v2.51.32)
+> Aktualizováno: 11. 3. 2026 (v2.51.33)
 
 ---
 
@@ -546,6 +546,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
 | v2.51.28 | 11. 3. 2026 | Notebook – FolderTree: odstraněny desktop individuální tlačítka, nahrazeny třemi tečkami (⋮) zobrazující se na hover na desktopu + vždy viditelné na mobilu; NoteEditor: paste handler strippuje background-* CSS vlastnosti a bgcolor atribut z vkládaného HTML (žádná změna barvy pozadí z externích nástrojů) |
+| v2.51.33 | 11. 3. 2026 | Refaktoring: Sidebar.tsx (~800 ř.) rozdělen na 7 souborů v sidebar/ (types.ts, icons.tsx, useSidebar.ts, SidebarHeader.tsx, SidebarNav.tsx, SidebarUserPanel.tsx); Sidebar.tsx redukován na ~80 řádků orchestrátoru |
 | v2.51.32 | 11. 3. 2026 | Refaktoring: TimerBar.tsx (938 ř.) rozdělen na 6 souborů v timer-bar/ (types.ts, utils.ts, useTimerBar.ts, ProjectPicker.tsx, CategoryTaskPicker.tsx, TimerControls.tsx); TimerBar.tsx redukován na ~80 řádků orchestrátoru |
 | v2.51.31 | 11. 3. 2026 | Refaktoring: ai-assistant/page.tsx (1340 ř.) rozdělen na 10 souborů v _components/ (types.ts, utils.ts, constants.ts, useAiAssistant.ts, ConversationSidebar.tsx, ChatMessages.tsx, ChatInput.tsx, FavoritePromptsPanel.tsx, ModelInfoPanel.tsx, AiAssistantContent.tsx); page.tsx redukován na ~10 řádků |
 | v2.51.30 | 11. 3. 2026 | Notebook – fix dropdown složek: createPortal() na document.body (CSS transform levého panelu způsoboval špatné fixed pozicování); flip nahoru pokud spaceBelow < 180px (spodní složky na mobilu) |
@@ -2491,7 +2492,13 @@ CREATE POLICY "Auth full" ON trackino_task_board_members
 | Soubor | Co dělá |
 |--------|---------|
 | `DashboardLayout.tsx` | Hlavní layout: header (TimerBar), Sidebar, systémové notifikace, auto-hide header na mobilu, bottom timer bar |
-| `Sidebar.tsx` | Navigační menu: skupiny, Oblíbené, badge nevyřízených položek, WorkspaceSwitcher, collapse na desktopu |
+| `Sidebar.tsx` | **Orchestrátor** (po refaktoringu v2.51.33) – importuje subkomponenty z `sidebar/`, renderuje layout |
+| `sidebar/types.ts` | Typy: `SidebarProps`, `NavItem`, `NavGroup`, `BadgeCounts` |
+| `sidebar/icons.tsx` | `ICONS` objekt (40+ SVG ikon) + `StarIcon` + `RemoveIcon` |
+| `sidebar/useSidebar.ts` | Custom hook – veškerý state, logika (navGroups, badge fetch, oblíbené, collapsedGroups) |
+| `sidebar/SidebarHeader.tsx` | Logo, název workspace, tlačítka zavřít (mobil) a collapse (desktop) |
+| `sidebar/SidebarNav.tsx` | Navigace – sekce OBLÍBENÉ, skupiny (SLEDOVÁNÍ/ANALÝZA/...), bottom items; renderNavItem, renderFavoriteItem |
+| `sidebar/SidebarUserPanel.tsx` | User panel + workspace switcher + odhlášení |
 | `TimerBar.tsx` | **Orchestrátor** (po refaktoringu v2.51.32) – importuje subkomponenty z `timer-bar/`, renderuje layout |
 | `timer-bar/types.ts` | Typy: `PlayData`, `TimerBarProps` |
 | `timer-bar/utils.ts` | Helper: `formatTime(seconds)` |
