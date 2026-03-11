@@ -11,6 +11,24 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.51.21 – 11. 3. 2026</h3>
+<ul>
+  <li><strong>Refaktoring: Znalostní báze</strong>:
+    <ul>
+      <li>Původní monolitický soubor <code>knowledge-base/page.tsx</code> (2174 ř.) rozdělen na 10 souborů v adresáři <code>_components/</code></li>
+      <li><code>types.ts</code>, <code>utils.ts</code> – sdílené typy a utility</li>
+      <li><code>RichEditor.tsx</code> – rich text editor s toolbarem (H1–H3, B/I/U, checklist, callout, toggle, kód, link, @mention)</li>
+      <li><code>PageViewer.tsx</code> – HTML viewer s checklist toggle a animací kopírování kódu</li>
+      <li><code>KbFolderTree.tsx</code>, <code>KbSidebar.tsx</code> – levý panel s rekurzivním stromem složek</li>
+      <li><code>KbWelcomeScreen.tsx</code>, <code>PageListView.tsx</code> – uvítací obrazovka a seznam stránek</li>
+      <li><code>KbModals.tsx</code> – modály pro složky, sdílení, šablony a revize</li>
+      <li><code>KbPageDetail.tsx</code> – detail stránky se záložkami (Komentáře / Historie / Přístupy / Odkazující / Revize)</li>
+      <li><code>page.tsx</code> (~400 ř.) zůstává orchestrátorem – drží veškerý stav a Supabase logiku</li>
+      <li>Oprava: záložka Historie – chybějící prop <code>revertToVersion</code> způsoboval nefunkční tlačítko Obnovit verzi</li>
+    </ul>
+  </li>
+</ul>
+
 <h3>v2.51.20 – 10. 3. 2026</h3>
 <ul>
   <li><strong>Úkoly – Přehled workspace (cross-workspace zobrazení)</strong>:

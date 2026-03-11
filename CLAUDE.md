@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 11. 3. 2026 (v2.51.20)
+> Aktualizováno: 11. 3. 2026 (v2.51.21)
 
 ---
 
@@ -544,6 +544,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.51.21 | 11. 3. 2026 | Refaktoring: knowledge-base/page.tsx (2174 ř.) rozdělen na 10 souborů v _components/ (types.ts, utils.ts, RichEditor.tsx, PageViewer.tsx, KbFolderTree.tsx, KbSidebar.tsx, KbWelcomeScreen.tsx, PageListView.tsx, KbModals.tsx, KbPageDetail.tsx); page.tsx (~400 ř.) je orchestrátor; opravena záložka Historie (chybějící prop revertToVersion) |
 | v2.51.20 | 10. 3. 2026 | Úkoly – Přehled workspace: cross-workspace tabulkový pohled (Název/Projekt/Workspace/Řešitel/Priorita/Status/Termín); záložky per workspace s barevným kódováním; filtry (priorita/termín/projekt/řešitel/search/hide-completed); modal Nový úkol (ws→projekt→sloupec→název/priorita/termín/řešitel); detail panel s breadcrumb ws/projekt/sloupec; deterministické barvy workspace; RLS z v2.51.19 zajišťuje izolaci dat |
 | v2.51.19 | 10. 3. 2026 | Supabase RLS – kompletní workspace izolace na DB vrstvě: dvě SECURITY DEFINER helper funkce (trackino_is_master_admin, trackino_user_workspaces), idempotentní politiky na všech ~92 tabulkách; cross-workspace pohled v modulu Úkoly funguje automaticky přes standard workspace_id filter; child tabulky bez workspace_id chainovány přes parent; exchange_rates = globální cache (SELECT pro všechny, zápis jen service_role/Master Admin) |
 | v2.51.18 | 10. 3. 2026 | Notebook – 2 úpravy: (a) Breadcrumb v hlavičce NoteEditor – hierarchická cesta složek kde je poznámka uložena, kliknutím zvýrazní složku v levém panelu (setListFilter, neuzavírá editor); (b) Hierarchické počty u složek – počet u nadřazené složky zahrnuje všechny poznámky z podsložek libovolné hloubky (getDescendantFolderIds) |
@@ -2491,7 +2492,7 @@ CREATE POLICY "Auth full" ON trackino_task_board_members
 | `/important-days` | `important-days/page.tsx` | Důležité dny (Pro+) |
 | `/requests` | `requests/page.tsx` | Žádosti zaměstnanců (Pro+) |
 | `/feedback` | `feedback/page.tsx` | Anonymní připomínky (Pro+) |
-| `/knowledge-base` | `knowledge-base/page.tsx` | Znalostní báze (Pro+) |
+| `/knowledge-base` | `knowledge-base/page.tsx` (orchestrátor) + `_components/types.ts`, `utils.ts`, `RichEditor.tsx`, `PageViewer.tsx`, `KbFolderTree.tsx`, `KbSidebar.tsx`, `KbWelcomeScreen.tsx`, `PageListView.tsx`, `KbModals.tsx`, `KbPageDetail.tsx` | Znalostní báze (Pro+) |
 | `/documents` | `documents/page.tsx` | Dokumenty + Supabase Storage (Pro+) |
 | `/company-rules` | `company-rules/page.tsx` | Firemní pravidla – rich text (Pro+) |
 | `/office-rules` | `office-rules/page.tsx` | Pravidla v kanceláři – rich text (Pro+) |
