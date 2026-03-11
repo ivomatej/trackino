@@ -3,6 +3,7 @@
 // Podpora providerů: OpenAI, Google Gemini (+ připraveno pro Anthropic, Mistral)
 
 import { getProviderForModel, AI_MODELS } from '@/lib/ai-providers';
+import { rateLimitAI } from '@/lib/rate-limit';
 import type { NextRequest } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import type { Content } from '@google/generative-ai';
@@ -235,6 +236,19 @@ async function handleOpenAI(
 
 export async function POST(req: NextRequest) {
   try {
+    // Rate limiting dle IP adresy (max 20 požadavků/min)
+    const ip =
+      req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+      req.headers.get('x-real-ip') ??
+      'anonymous';
+    const { success } = await rateLimitAI.limit(ip);
+    if (!success) {
+      return Response.json(
+        { error: 'Příliš mnoho požadavků. Zkuste to za chvíli.' },
+        { status: 429 }
+      );
+    }
+
     const body = (await req.json()) as AiChatRequest;
     const { messages, model, systemPrompt, stream = true, temperature = 0.7, maxTokens } = body;
 

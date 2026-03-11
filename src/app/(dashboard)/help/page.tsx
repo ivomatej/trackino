@@ -233,7 +233,8 @@ const DEFAULT_HELP_CONTENT = `
 <p>Modul <strong>Poznámky</strong> (sekce <strong>ANALÝZA</strong>, tarif Pro a Max) je osobní notes aplikace s úkoly, oblíbenými a sdílením složek.</p>
 <ul>
   <li><strong>Navigace v levém panelu</strong> – v záhlaví je název „Poznámky" + ikonka ozubeného kola (Nastavení); pod ním jsou položky Inbox (lze skrýt v Nastavení), Všechny poznámky, Oblíbené, Důležité, Naposledy upravené, Poznámky k událostem, Archiv a stromová struktura složek; počty u složek zobrazují pouze nearchivované poznámky</li>
-  <li><strong>Nastavení poznámek</strong> – ozubené kolo v záhlaví levého panelu otevře modal s možnostmi: Zobrazit Inbox (toggle), Automaticky rozbalit složky (toggle), Výchozí řazení poznámek (select), Řazení složek (Ručně / Abecedně / Datum vytvoření), <strong>Uložit filtraci pro složku</strong> (toggle – každá složka si zapamatuje své vlastní řazení), <strong>Stav „Hotovo"</strong> (toggle – zapne funkci dokončení poznámek); nastavení se ukládá v localStorage</li>
+  <li><strong>Nastavení poznámek</strong> – ozubené kolo v záhlaví levého panelu otevře modal s možnostmi: Zobrazit Inbox (toggle), Automaticky rozbalit složky (toggle), Výchozí řazení poznámek (select), Řazení složek (Ručně / Abecedně / Datum vytvoření), <strong>Uložit filtraci pro složku</strong> (toggle – každá složka si zapamatuje své vlastní řazení; nastavení se ukládá v databázi a platí pro přihlášeného uživatele na všech zařízeních), <strong>Stav „Hotovo"</strong> (toggle – zapne funkci dokončení poznámek); ostatní nastavení se ukládá v localStorage per zařízení</li>
+  <li><strong>Mobilní výpis poznámek</strong> – každá poznámka je zobrazena ve 3 řádcích: 1. řádek název, 2. řádek datum a autor, 3. řádek ikonky akcí (Důležité / Oblíbené / Hotovo / Kopírovat / Duplikovat / Přesunout / Archivovat) rovnoměrně rozložené přes celou šíři pro snadné klepání</li>
   <li><strong>Složky a sdílení</strong> – až 5 úrovní podsložek; sdílení s celým workspacem nebo konkrétními uživateli; řazení složek šipkami nahoru/dolů (hover akce na desktopu, menu na mobilu) – dostupné při nastavení řazení „Ručně"; název aktivní složky se zobrazuje v záhlaví pravého panelu; <strong>smazání složky</strong> automaticky přesune všechny poznámky (včetně podsložek) do Archivu (žádná poznámka se neztratí)</li>
   <li><strong>Rich text editor</strong> – formátování B/I/U, odrážkový a číselný seznam (odrážky/čísla jsou správně viditelná v editoru), kódový blok (tlačítko <code>&lt;/&gt;</code> vloží blok s copy ikonkou vpravo nahoře); URL jsou automaticky klikatelné</li>
   <li><strong>Panel s úkoly</strong> – když poznámka nemá žádné úkoly, zobrazí se kompaktní tlačítko <em>+ Přidat úkoly</em>; po přidání prvního úkolu se zobrazí plný panel s checkboxy; Enter přidá nový, Backspace na prázdném odstraní; celý blok úkolů lze odebrat z editoru křížkem <strong>×</strong> v pravém horním rohu bloku</li>
@@ -584,6 +585,14 @@ const DEFAULT_HELP_CONTENT = `
   <li><strong>Úprava dokumentu</strong> – najeďte myší na dokument a klikněte ikonu tužky; lze měnit název, popis, složku a u odkazů i URL adresu</li>
   <li><strong>Otevření dokumentu</strong> – klikněte na název nebo ikonu otevření; soubory se otevírají v novém okně pomocí podepsané URL (platné 60 sekund)</li>
   <li><strong>Správa přístupu</strong> – nastavuje se v Tým → Členové → editace → příznak „Spravuje dokumenty"</li>
+</ul>
+
+<h3>Ochrana API (Rate Limiting)</h3>
+<p>Trackino chrání své endpointy před zneužitím pomocí rate limitingu (Upstash Redis). Pokud je překročen limit, zobrazí se chyba „Příliš mnoho požadavků. Zkuste to za chvíli." Limity:</p>
+<ul>
+  <li><strong>Registrace</strong> – max 3 pokusy za hodinu z jedné IP adresy</li>
+  <li><strong>AI asistent</strong> – max 20 požadavků za minutu</li>
+  <li><strong>Web scraping / vyhledávání (Firecrawl)</strong> – max 10 požadavků za minutu</li>
 </ul>
 `;
 

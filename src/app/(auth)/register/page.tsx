@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
@@ -12,7 +12,6 @@ export default function RegisterPage() {
   const [workspaceCode, setWorkspaceCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signUp } = useAuth();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -33,19 +32,35 @@ export default function RegisterPage() {
       localStorage.setItem('trackino_pending_join_code', code);
     }
 
-    const { error: signUpError } = await signUp(email, password, displayName);
+    // Volání server-side endpointu s rate limitingem (max 3 registrace/hod./IP)
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, displayName }),
+    });
 
-    if (signUpError) {
+    const data = (await res.json()) as {
+      error?: string;
+      session?: { access_token: string; refresh_token: string };
+    };
+
+    if (!res.ok) {
       // Při chybě odstranit uložený kód
       localStorage.removeItem('trackino_pending_join_code');
-      setError(signUpError);
+      setError(data.error ?? 'Registrace se nezdařila. Zkuste to znovu.');
       setLoading(false);
-    } else {
-      // Email confirmation je vypnuto → uživatel je ihned přihlášen.
-      // Přesměrovat na dashboard: WorkspaceProvider se mountne, fetchWorkspaces
-      // zavolá tryJoinWorkspaceByCode a přidá uživatele do workspace.
-      router.push('/');
+      return;
     }
+
+    // Nastav session v prohlížeči (stejný efekt jako přímé volání supabase.auth.signUp)
+    if (data.session) {
+      await supabase.auth.setSession(data.session as Parameters<typeof supabase.auth.setSession>[0]);
+    }
+
+    // Email confirmation je vypnuto → uživatel je ihned přihlášen.
+    // Přesměrovat na dashboard: WorkspaceProvider se mountne, fetchWorkspaces
+    // zavolá tryJoinWorkspaceByCode a přidá uživatele do workspace.
+    router.push('/');
   };
 
   return (

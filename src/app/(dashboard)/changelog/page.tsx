@@ -11,6 +11,20 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.51.27 – 11. 3. 2026</h3>
+<ul>
+  <li><strong>Rate Limiting (Upstash Redis)</strong>: Přidána ochrana API endpointů před zneužitím pomocí sliding window algoritmu:
+    <ul>
+      <li><strong>Registrace</strong> – max 3 pokusy za hodinu z jedné IP adresy (nová server-side route <code>/api/auth/register</code>)</li>
+      <li><strong>AI asistent</strong> (<code>/api/ai-chat</code>) – max 20 požadavků za minutu na IP</li>
+      <li><strong>Firecrawl scrape + search</strong> – max 10 požadavků za minutu na IP</li>
+      <li>Při překročení limitu vrací HTTP 429 s českou chybovou zprávou</li>
+      <li>Nová knihovna: <code>src/lib/rate-limit.ts</code></li>
+      <li>Endpointy <code>/api/cron/*</code> zůstávají chráněny CRON_SECRET (beze změny)</li>
+    </ul>
+  </li>
+</ul>
+
 <h3>v2.51.26 – 11. 3. 2026</h3>
 <ul>
   <li><strong>Refaktoring: Tým</strong>:

@@ -2,6 +2,7 @@
 // Serverová route – API klíč je bezpečně na serveru, nikdy v prohlížeči.
 // Převádí URL na čistý Markdown pomocí Firecrawl API.
 
+import { rateLimitFirecrawl } from '@/lib/rate-limit';
 import type { NextRequest } from 'next/server';
 
 interface FirecrawlScrapeResponse {
@@ -27,6 +28,19 @@ export interface ScrapeResponse {
 
 export async function POST(req: NextRequest) {
   try {
+    // Rate limiting dle IP adresy (max 10 požadavků/min)
+    const ip =
+      req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+      req.headers.get('x-real-ip') ??
+      'anonymous';
+    const { success } = await rateLimitFirecrawl.limit(ip);
+    if (!success) {
+      return Response.json(
+        { error: 'Příliš mnoho požadavků. Zkuste to za chvíli.' },
+        { status: 429 }
+      );
+    }
+
     const apiKey = process.env.FIRECRAWL_API_KEY;
     if (!apiKey) {
       return Response.json(

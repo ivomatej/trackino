@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 11. 3. 2026 (v2.51.24)
+> Aktualizováno: 11. 3. 2026 (v2.51.27)
 
 ---
 
@@ -545,6 +545,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.51.27 | 11. 3. 2026 | Rate Limiting: Upstash Redis (@upstash/ratelimit, @upstash/redis); src/lib/rate-limit.ts (rateLimitRegister 3/hod, rateLimitAI 20/min, rateLimitFirecrawl 10/min); nová API route /api/auth/register (server-side signup s rate limitem dle IP); register/page.tsx přepnut na volání nového endpointu; rate limit přidán do /api/ai-chat, /api/firecrawl/scrape, /api/firecrawl/search; env vars UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN |
 | v2.51.26 | 11. 3. 2026 | Refaktoring: team/page.tsx (1516 ř.) rozdělen na 6 souborů v _components/ (types.tsx, useTeam.ts, MembersTab.tsx, StructureTab.tsx, ManagersTab.tsx, EditMemberModal.tsx s PermissionToggle sub-komponentou); page.tsx redukován na ~170 řádků |
 | v2.51.25 | 11. 3. 2026 | Notebook – folderSortCache přesunuta do DB (nová tabulka trackino_notebook_prefs, cross-device per-user); mobilní výpis poznámek: 3 řádky (název / datum+autor / ikonky justify-around, tap target 44px) |
 | v2.51.24 | 11. 3. 2026 | Refaktoring: subscriptions/page.tsx (2124 ř.) rozdělen na 19 souborů v _components/ (types.ts, constants.tsx, utils.ts, useSubscriptions.ts, StarRating, StatsDashboard, SubsTabContent, CategoriesTabContent, AccessByServiceView, AccessByUserView, AccessSummaryView, AccessTabContent, DetailModal, SubFormModal, AccessModal, ExtUserModal, CatFormModal, SubscriptionsContent); page.tsx redukován na ~20 řádků |
@@ -1712,6 +1713,45 @@ const STATUS_CONFIG: Record<KbPageStatus, { label: string; color: string }>
 
 ---
 
+## 36b. Rate Limiting – architektura (Upstash Redis)
+
+### Soubory
+| Soubor | Popis |
+|--------|-------|
+| `src/lib/rate-limit.ts` | Tři limitery: `rateLimitRegister`, `rateLimitAI`, `rateLimitFirecrawl` |
+| `src/app/api/auth/register/route.ts` | Server-side registrace s rate limitem (POST) |
+
+### Limitery
+| Název | Limit | Prefix | Použití |
+|-------|-------|--------|---------|
+| `rateLimitRegister` | 3 / 1 hod | `trackino:register` | `/api/auth/register` |
+| `rateLimitAI` | 20 / 1 min | `trackino:ai` | `/api/ai-chat` |
+| `rateLimitFirecrawl` | 10 / 1 min | `trackino:firecrawl` | `/api/firecrawl/scrape`, `/api/firecrawl/search` |
+
+### Klíč pro rate limiting
+Všechny limitery používají **IP adresu** jako klíč:
+```typescript
+const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+  ?? req.headers.get('x-real-ip') ?? 'anonymous';
+```
+Při překročení limitu vrací HTTP **429** s `{ error: 'Příliš mnoho požadavků. Zkuste to za chvíli.' }`.
+
+### Registrace – nový tok (v2.51.27)
+Původní tok: `register/page.tsx` → `signUp()` z AuthContext → `supabase.auth.signUp()` (client-side)
+Nový tok: `register/page.tsx` → `POST /api/auth/register` (rate limit check) → `supabase.auth.signUp()` (server-side) → `supabase.auth.setSession(session)` v prohlížeči
+
+### Env proměnné (nutno přidat na Vercel)
+```
+UPSTASH_REDIS_REST_URL=https://...upstash.io
+UPSTASH_REDIS_REST_TOKEN=...
+```
+Hodnoty z: https://console.upstash.com/ → vytvoř Redis databázi → REST API sekce.
+
+### Algoritmus
+Sliding window – okno se posouvá s každým požadavkem (ne fixed bucket). Vhodné pro ochranu před burst útoky.
+
+---
+
 ## 30. Automatizace – architektura (settings/page.tsx záložka Automatizace)
 
 ### Co to je
@@ -2463,6 +2503,7 @@ CREATE POLICY "Auth full" ON trackino_task_board_members
 | `czech-namedays.ts` | getCzechNameday(monthDay), getCzechNamedayForDate(date) – 366 jmen |
 | `midnight-split.ts` | splitAtMidnight(start, end) → pole segmentů (pro timer přes půlnoc) |
 | `ai-providers.ts` | Konfigurace AI providerů (OpenAI + Gemini), AiModel[], DEFAULT_MODEL_ID |
+| `rate-limit.ts` | Upstash Redis rate limitery: rateLimitRegister (3/hod), rateLimitAI (20/min), rateLimitFirecrawl (10/min) |
 | `cron-handler.ts` | verifyCronSecret(), saveCronResult(), parseCronBody() – sdílené helpery pro cron routes |
 | `utils.ts` | Obecné utility (nesouvisí s Kalendářem) |
 
@@ -2476,7 +2517,8 @@ CREATE POLICY "Auth full" ON trackino_task_board_members
 
 | Soubor | Co dělá |
 |--------|---------|
-| `ai-chat/route.ts` | POST – streaming/non-streaming AI chat (OpenAI + Gemini), server-side API klíče |
+| `auth/register/route.ts` | POST – server-side registrace s rate limitem (max 3/hod./IP), volá Supabase signUp |
+| `ai-chat/route.ts` | POST – streaming/non-streaming AI chat (OpenAI + Gemini), server-side API klíče, rate limit 20/min/IP |
 | `cnb-rates/route.ts` | GET – kurzovní lístek ČNB s lazy DB cache (trackino_exchange_rates) |
 | `cron-jobs/route.ts` | GET/PUT proxy pro cron-job.org API (seznam + vytvoření jobů) |
 | `cron-jobs/[jobId]/route.ts` | GET/PATCH/DELETE proxy pro konkrétní job |
@@ -2486,8 +2528,8 @@ CREATE POLICY "Auth full" ON trackino_task_board_members
 | `cron/kb-reviews-digest/route.ts` | POST – digest revizí KB |
 | `cron/feedback-summary/route.ts` | POST – AI shrnutí připomínek |
 | `cron/vacation-report/route.ts` | POST – report dovolených |
-| `firecrawl/scrape/route.ts` | POST – scrape URL → Markdown (Firecrawl wrapper) |
-| `firecrawl/search/route.ts` | POST – webové vyhledávání (Firecrawl wrapper) |
+| `firecrawl/scrape/route.ts` | POST – scrape URL → Markdown (Firecrawl wrapper), rate limit 10/min/IP |
+| `firecrawl/search/route.ts` | POST – webové vyhledávání (Firecrawl wrapper), rate limit 10/min/IP |
 | `ics-proxy/route.ts` | GET – proxy pro ICS kalendářové odběry |
 | `kb-public/route.ts` | GET – veřejná KB stránka přes token (bypasuje RLS) |
 
