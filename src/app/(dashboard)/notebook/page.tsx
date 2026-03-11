@@ -227,7 +227,10 @@ function FolderTree({
               {itemCount > 0 && (
                 <span className="ml-auto mr-1 text-[10px] flex-shrink-0 sm:group-hover/folder:opacity-0 transition-opacity" style={{ color: 'var(--text-muted)' }}>{itemCount}</span>
               )}
-              <div className="flex-shrink-0 opacity-100 sm:opacity-0 sm:group-hover/folder:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+              {/* Tři tečky: na mobilu v toku (vždy viditelné), na desktopu absolutně (hover) – nezabírá místo v layoutu */}
+              <div
+                className="flex-shrink-0 sm:absolute sm:right-1 sm:top-1/2 sm:-translate-y-1/2 sm:opacity-0 sm:group-hover/folder:opacity-100 transition-opacity"
+                onClick={e => e.stopPropagation()}>
                 <button type="button"
                   onClick={e => {
                     e.stopPropagation();
@@ -242,59 +245,64 @@ function FolderTree({
                   style={{ color: 'var(--text-muted)', background: openMenu === folder.id ? 'var(--bg-hover)' : 'transparent' }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
                 </button>
-                {openMenu === folder.id && menuPos && (
-                  <div className="fixed z-[9999] rounded-lg border shadow-lg py-1 min-w-[160px]"
-                    style={{ top: menuPos.top, right: menuPos.right, background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
-                    {depth < MAX_DEPTH - 1 && (
-                      <button type="button" className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left hover:bg-[var(--bg-hover)]"
-                        style={{ color: 'var(--text-secondary)' }}
-                        onClick={e => { e.stopPropagation(); setOpenMenu(null); onAddSub(folder.id, depth + 1); }}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                        Přidat podsložku
-                      </button>
-                    )}
-                    {folderSortOrder === 'manual' && (
-                      <>
-                        <button type="button" className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left hover:bg-[var(--bg-hover)]"
-                          style={{ color: 'var(--text-secondary)' }}
-                          onClick={e => { e.stopPropagation(); setOpenMenu(null); onMoveUp?.(folder.id); }}>
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
-                          Posunout nahoru
-                        </button>
-                        <button type="button" className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left hover:bg-[var(--bg-hover)]"
-                          style={{ color: 'var(--text-secondary)' }}
-                          onClick={e => { e.stopPropagation(); setOpenMenu(null); onMoveDown?.(folder.id); }}>
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-                          Posunout dolů
-                        </button>
-                      </>
-                    )}
-                    {isOwner && (
-                      <>
-                        <button type="button" className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left hover:bg-[var(--bg-hover)]"
-                          style={{ color: folder.is_shared ? 'var(--primary)' : 'var(--text-secondary)' }}
-                          onClick={e => { e.stopPropagation(); setOpenMenu(null); onShare(folder); }}>
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-                          Sdílet
-                        </button>
-                        <button type="button" className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left hover:bg-[var(--bg-hover)]"
-                          style={{ color: 'var(--text-secondary)' }}
-                          onClick={e => { e.stopPropagation(); setOpenMenu(null); onEdit(folder); }}>
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                          Přejmenovat
-                        </button>
-                        <button type="button" className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left hover:bg-[var(--bg-hover)]"
-                          style={{ color: 'var(--danger)' }}
-                          onClick={e => { e.stopPropagation(); setOpenMenu(null); onDelete(folder); }}>
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M9 6V4h6v2"/></svg>
-                          Smazat
-                        </button>
-                      </>
-                    )}
-                  </div>
-                )}
               </div>
             </div>
+            {/* Dropdown je MIMO opacity wrapper – nezávislý na hover stavu složky */}
+            {openMenu === folder.id && menuPos && (
+              <>
+                <div className="fixed inset-0 z-[9998]" onClick={e => { e.stopPropagation(); setOpenMenu(null); setMenuPos(null); }} />
+                <div className="fixed z-[9999] rounded-lg border shadow-lg py-1 min-w-[160px]"
+                  style={{ top: menuPos.top, right: menuPos.right, background: 'var(--bg-card)', borderColor: 'var(--border)' }}
+                  onClick={e => e.stopPropagation()}>
+                  {depth < MAX_DEPTH - 1 && (
+                    <button type="button" className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left hover:bg-[var(--bg-hover)]"
+                      style={{ color: 'var(--text-secondary)' }}
+                      onClick={e => { e.stopPropagation(); setOpenMenu(null); onAddSub(folder.id, depth + 1); }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                      Přidat podsložku
+                    </button>
+                  )}
+                  {folderSortOrder === 'manual' && (
+                    <>
+                      <button type="button" className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left hover:bg-[var(--bg-hover)]"
+                        style={{ color: 'var(--text-secondary)' }}
+                        onClick={e => { e.stopPropagation(); setOpenMenu(null); onMoveUp?.(folder.id); }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+                        Posunout nahoru
+                      </button>
+                      <button type="button" className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left hover:bg-[var(--bg-hover)]"
+                        style={{ color: 'var(--text-secondary)' }}
+                        onClick={e => { e.stopPropagation(); setOpenMenu(null); onMoveDown?.(folder.id); }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                        Posunout dolů
+                      </button>
+                    </>
+                  )}
+                  {isOwner && (
+                    <>
+                      <button type="button" className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left hover:bg-[var(--bg-hover)]"
+                        style={{ color: folder.is_shared ? 'var(--primary)' : 'var(--text-secondary)' }}
+                        onClick={e => { e.stopPropagation(); setOpenMenu(null); onShare(folder); }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                        Sdílet
+                      </button>
+                      <button type="button" className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left hover:bg-[var(--bg-hover)]"
+                        style={{ color: 'var(--text-secondary)' }}
+                        onClick={e => { e.stopPropagation(); setOpenMenu(null); onEdit(folder); }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        Přejmenovat
+                      </button>
+                      <button type="button" className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left hover:bg-[var(--bg-hover)]"
+                        style={{ color: 'var(--danger)' }}
+                        onClick={e => { e.stopPropagation(); setOpenMenu(null); onDelete(folder); }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M9 6V4h6v2"/></svg>
+                        Smazat
+                      </button>
+                    </>
+                  )}
+                </div>
+              </>
+            )}
             {isExpanded && (
               <FolderTree folders={folders} selectedId={selectedId} expanded={expanded}
                 onSelect={onSelect} onToggle={onToggle} onAddSub={onAddSub}
