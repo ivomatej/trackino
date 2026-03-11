@@ -1385,6 +1385,9 @@ function NotebookContent() {
   // Move note dropdown
   const [moveDropdown, setMoveDropdown] = useState<{ noteId: string; top?: number; bottom?: number; right: number } | null>(null);
 
+  // Mobile note actions menu (3 dots)
+  const [noteActionsMenu, setNoteActionsMenu] = useState<{ noteId: string; top?: number; bottom?: number; right: number } | null>(null);
+
   // Folder modal
   const [folderModal, setFolderModal] = useState<{ open: boolean; parentId: string | null; editing: NoteFolder | null }>({ open: false, parentId: null, editing: null });
   const [folderName, setFolderName] = useState('');
@@ -2215,7 +2218,7 @@ function NotebookContent() {
                   const authorName = members.find(m => m.user_id === note.user_id)?.display_name ?? '';
                   return (
                   <div key={note.id}
-                    className="group flex flex-col sm:flex-row sm:items-start sm:gap-3 px-4 py-3 border-b transition-colors"
+                    className="group flex flex-row items-center sm:items-start gap-2 sm:gap-3 px-4 py-3 border-b transition-colors"
                     style={{ borderColor: 'var(--border)', opacity: notebookSettings.showDoneFeature && note.is_done ? 0.45 : 1 }}
                     onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
@@ -2242,34 +2245,50 @@ function NotebookContent() {
                         {authorName && <span className="text-xs" style={{ color: 'var(--text-muted)' }}>· {authorName}</span>}
                       </div>
                     </div>
-                    {/* Akce – na mobilu celá šíře (justify-around), na desktopu hover */}
-                    <div className="flex items-center w-full sm:w-auto justify-around sm:justify-start gap-0 sm:gap-0.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity sm:flex-shrink-0 border-t sm:border-0 mt-2 sm:mt-0 pt-2 sm:pt-0"
-                      style={{ borderColor: 'var(--border)' }}>
+                    {/* 3 tečky – jen mobil */}
+                    <button className="sm:hidden flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-lg transition-colors"
+                      style={{ color: 'var(--text-muted)' }}
+                      onClick={e => {
+                        e.stopPropagation();
+                        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                        const spaceBelow = window.innerHeight - rect.bottom;
+                        if (spaceBelow >= 320) {
+                          setNoteActionsMenu({ noteId: note.id, top: rect.bottom + 4, right: window.innerWidth - rect.right });
+                        } else {
+                          setNoteActionsMenu({ noteId: note.id, bottom: window.innerHeight - rect.top + 4, right: window.innerWidth - rect.right });
+                        }
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+                    </button>
+                    {/* Akce – jen desktop (hover) */}
+                    <div className="hidden sm:flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                       {/* Důležité */}
                       <button onClick={e => { e.stopPropagation(); toggleFlag(note, 'is_important'); }}
-                        className="w-11 h-11 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg"
+                        className="w-7 h-7 flex items-center justify-center rounded-lg"
                         style={{ color: note.is_important ? '#dc2626' : 'var(--text-muted)' }} title={note.is_important ? 'Odebrat důležité' : 'Označit jako důležité'}
                         onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill={note.is_important ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:w-3 sm:h-3">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill={note.is_important ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>
                         </svg>
                       </button>
                       {/* Oblíbené */}
                       <button onClick={e => { e.stopPropagation(); toggleFlag(note, 'is_favorite'); }}
-                        className="w-11 h-11 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg"
+                        className="w-7 h-7 flex items-center justify-center rounded-lg"
                         style={{ color: note.is_favorite ? '#f59e0b' : 'var(--text-muted)' }} title={note.is_favorite ? 'Odebrat z oblíbených' : 'Přidat do oblíbených'}
                         onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill={note.is_favorite ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:w-3 sm:h-3">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill={note.is_favorite ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
                         </svg>
                       </button>
                       {/* Hotovo */}
                       {notebookSettings.showDoneFeature && (
                         <button onClick={e => { e.stopPropagation(); toggleFlag(note, 'is_done'); }}
-                          className="w-11 h-11 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg"
+                          className="w-7 h-7 flex items-center justify-center rounded-lg"
                           style={{ color: note.is_done ? '#22c55e' : 'var(--text-muted)' }} title={note.is_done ? 'Označit jako nedokončené' : 'Označit jako hotové'}
                           onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="sm:w-3 sm:h-3">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <polyline points="20 6 9 17 4 12"/>
                           </svg>
                         </button>
@@ -2281,22 +2300,22 @@ function NotebookContent() {
                         setCopyDoneNoteId(note.id);
                         setTimeout(() => setCopyDoneNoteId(null), 2000);
                       }}
-                        className="w-11 h-11 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg" title="Kopírovat obsah"
+                        className="w-7 h-7 flex items-center justify-center rounded-lg" title="Kopírovat obsah"
                         style={{ color: copyDoneNoteId === note.id ? '#22c55e' : 'var(--text-muted)' }}
                         onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
                         {copyDoneNoteId === note.id ? (
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="sm:w-3 sm:h-3"><polyline points="20 6 9 17 4 12"/></svg>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                         ) : (
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:w-3 sm:h-3"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                         )}
                       </button>
                       {/* Duplikovat (jen ne-archivované) */}
                       {!note.is_archived && (
                         <button onClick={e => { e.stopPropagation(); duplicateNote(note); }}
-                          className="w-11 h-11 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg" title="Duplikovat poznámku"
+                          className="w-7 h-7 flex items-center justify-center rounded-lg" title="Duplikovat poznámku"
                           style={{ color: 'var(--text-muted)' }}
                           onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:w-3 sm:h-3">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
                             <line x1="18" y1="12" x2="18" y2="18"/><line x1="15" y1="15" x2="21" y2="15"/>
                           </svg>
@@ -2314,10 +2333,10 @@ function NotebookContent() {
                             setMoveDropdown({ noteId: note.id, bottom: window.innerHeight - rect.top + 4, right: window.innerWidth - rect.right });
                           }
                         }}
-                          className="w-11 h-11 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg" title="Přesunout do složky"
+                          className="w-7 h-7 flex items-center justify-center rounded-lg" title="Přesunout do složky"
                           style={{ color: 'var(--text-muted)' }}
                           onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:w-3 sm:h-3">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
                             <polyline points="12 11 12 17"/><polyline points="9 14 12 17 15 14"/>
                           </svg>
@@ -2325,13 +2344,13 @@ function NotebookContent() {
                       )}
                       {/* Archivovat / Obnovit */}
                       <button onClick={e => { e.stopPropagation(); toggleArchive(note); }}
-                        className="w-11 h-11 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg" title={note.is_archived ? 'Obnovit z archivu' : 'Archivovat'}
+                        className="w-7 h-7 flex items-center justify-center rounded-lg" title={note.is_archived ? 'Obnovit z archivu' : 'Archivovat'}
                         style={{ color: 'var(--text-muted)' }}
                         onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
                         {note.is_archived ? (
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:w-3 sm:h-3"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
                         ) : (
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:w-3 sm:h-3"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
                         )}
                       </button>
                     </div>
@@ -2367,6 +2386,117 @@ function NotebookContent() {
           </div>
         </>
       )}
+
+      {/* ── Note Actions Menu (mobilní 3 tečky) ── */}
+      {noteActionsMenu && (() => {
+        const note = filteredNotes.find(n => n.id === noteActionsMenu.noteId);
+        if (!note) return null;
+        const close = () => setNoteActionsMenu(null);
+        return (
+          <>
+            <div className="fixed inset-0 z-40" onClick={close} />
+            <div className="fixed z-50 rounded-xl border shadow-lg py-1.5 w-52 overflow-hidden"
+              style={{ top: noteActionsMenu.top, bottom: noteActionsMenu.bottom, right: noteActionsMenu.right, background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+              {/* Důležité */}
+              <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors text-left"
+                style={{ color: note.is_important ? '#dc2626' : 'var(--text-primary)' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                onClick={() => { toggleFlag(note, 'is_important'); close(); }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill={note.is_important ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>
+                </svg>
+                {note.is_important ? 'Odebrat důležité' : 'Označit jako důležité'}
+              </button>
+              {/* Oblíbené */}
+              <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors text-left"
+                style={{ color: note.is_favorite ? '#f59e0b' : 'var(--text-primary)' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                onClick={() => { toggleFlag(note, 'is_favorite'); close(); }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill={note.is_favorite ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                </svg>
+                {note.is_favorite ? 'Odebrat z oblíbených' : 'Přidat do oblíbených'}
+              </button>
+              {/* Hotovo */}
+              {notebookSettings.showDoneFeature && (
+                <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors text-left"
+                  style={{ color: note.is_done ? '#22c55e' : 'var(--text-primary)' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                  onClick={() => { toggleFlag(note, 'is_done'); close(); }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                  {note.is_done ? 'Označit jako nedokončené' : 'Označit jako hotové'}
+                </button>
+              )}
+              <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
+              {/* Kopírovat obsah */}
+              <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors text-left"
+                style={{ color: 'var(--text-primary)' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                onClick={() => {
+                  navigator.clipboard.writeText(htmlToPlainText(note.content, note.tasks));
+                  setCopyDoneNoteId(note.id); setTimeout(() => setCopyDoneNoteId(null), 2000);
+                  close();
+                }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                Kopírovat obsah
+              </button>
+              {/* Duplikovat */}
+              {!note.is_archived && (
+                <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors text-left"
+                  style={{ color: 'var(--text-primary)' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                  onClick={() => { duplicateNote(note); close(); }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                    <line x1="18" y1="12" x2="18" y2="18"/><line x1="15" y1="15" x2="21" y2="15"/>
+                  </svg>
+                  Duplikovat poznámku
+                </button>
+              )}
+              {/* Přesunout */}
+              {!note.is_archived && (
+                <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors text-left"
+                  style={{ color: 'var(--text-primary)' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                  onClick={() => {
+                    const menuRight = noteActionsMenu.right ?? 8;
+                    const menuTop = noteActionsMenu.top;
+                    const menuBottom = noteActionsMenu.bottom;
+                    close();
+                    setTimeout(() => {
+                      if (menuTop !== undefined) {
+                        setMoveDropdown({ noteId: note.id, top: menuTop, right: menuRight });
+                      } else {
+                        setMoveDropdown({ noteId: note.id, bottom: menuBottom, right: menuRight });
+                      }
+                    }, 0);
+                  }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                    <polyline points="12 11 12 17"/><polyline points="9 14 12 17 15 14"/>
+                  </svg>
+                  Přesunout do složky
+                </button>
+              )}
+              <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
+              {/* Archivovat / Obnovit */}
+              <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors text-left"
+                style={{ color: 'var(--text-muted)' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                onClick={() => { toggleArchive(note); close(); }}>
+                {note.is_archived ? (
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+                ) : (
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+                )}
+                {note.is_archived ? 'Obnovit z archivu' : 'Archivovat'}
+              </button>
+            </div>
+          </>
+        );
+      })()}
 
       {/* ── Folder Modal ── */}
       {folderModal.open && (
