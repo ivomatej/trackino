@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 11. 3. 2026 (v2.51.23)
+> Aktualizováno: 11. 3. 2026 (v2.51.24)
 
 ---
 
@@ -544,6 +544,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.51.24 | 11. 3. 2026 | Refaktoring: subscriptions/page.tsx (2124 ř.) rozdělen na 19 souborů v _components/ (types.ts, constants.tsx, utils.ts, useSubscriptions.ts, StarRating, StatsDashboard, SubsTabContent, CategoriesTabContent, AccessByServiceView, AccessByUserView, AccessSummaryView, AccessTabContent, DetailModal, SubFormModal, AccessModal, ExtUserModal, CatFormModal, SubscriptionsContent); page.tsx redukován na ~20 řádků |
 | v2.51.23 | 11. 3. 2026 | Notebook – smazání složky nyní archivuje všechny poznámky (včetně podsložek) místo přesunu do Inboxu; deleteFolder() používá getDescendantFolderIds() + batch UPDATE is_archived=true před DELETE složky |
 | v2.51.22 | 11. 3. 2026 | Kalendář – fix timezone u ICS externích kalendářů: UTC časy (Z přípona) převedeny na lokální čas prohlížeče; přidán helper parseTzIdToLocal() pro TZID= pojmenované timezone (Intl.DateTimeFormat); Notebook – tlačítko Skrýt hotové v záhlaví výpisu (viditelné pokud showDoneFeature=true, hideDone state, filtruje is_done=true poznámky) |
 | v2.51.21 | 11. 3. 2026 | Refaktoring: knowledge-base/page.tsx (2174 ř.) rozdělen na 10 souborů v _components/ (types.ts, utils.ts, RichEditor.tsx, PageViewer.tsx, KbFolderTree.tsx, KbSidebar.tsx, KbWelcomeScreen.tsx, PageListView.tsx, KbModals.tsx, KbPageDetail.tsx); page.tsx (~400 ř.) je orchestrátor; opravena záložka Historie (chybějící prop revertToVersion) |
@@ -1919,12 +1920,30 @@ Existující cron joby mají URL `https://trackino.vercel.app/api/cron/...`. Po 
 
 ---
 
-## 32. Předplatná – architektura (subscriptions/page.tsx)
+## 32. Předplatná – architektura (subscriptions/)
 
-### Soubory
+### Soubory (po refaktoringu v2.51.24)
 | Soubor | Popis |
 |--------|-------|
-| `src/app/(dashboard)/subscriptions/page.tsx` | Hlavní stránka modulu – dashboard, 4 záložky (Předplatná/Tipy/Kategorie/Přístupy), CRUD, hodnocení, evidence přístupů |
+| `subscriptions/page.tsx` | Auth guard + WorkspaceProvider (~20 ř.) |
+| `subscriptions/_components/SubscriptionsContent.tsx` | Orchestrátor – volá useSubscriptions, renderuje layout, přepíná záložky, zobrazuje modaly |
+| `subscriptions/_components/useSubscriptions.ts` | Custom hook – veškerý state, computed hodnoty, CRUD (~315 ř.) |
+| `subscriptions/_components/types.ts` | Sdílené TypeScript typy: Tab, SortField, Member, Rates, Stats, SubForm, CatForm, AccessForm, ExtUserForm |
+| `subscriptions/_components/constants.tsx` | STATUS_CONFIG, TYPE_LABELS, ICONS (SVG JSX), inputCls, btnPrimary, CATEGORY_COLORS |
+| `subscriptions/_components/utils.ts` | toMonthly, toYearly, getFaviconUrl, fmtPrice, fmtDate, daysUntil |
+| `subscriptions/_components/StarRating.tsx` | Interaktivní 5-hvězdičkové hodnocení |
+| `subscriptions/_components/StatsDashboard.tsx` | 4 statistické karty (aktivní/měsíčně/ročně/blížící se) |
+| `subscriptions/_components/SubsTabContent.tsx` | Záložka Předplatná/Tipy – filtry + seřaditelná tabulka |
+| `subscriptions/_components/CategoriesTabContent.tsx` | Záložka Kategorie – 3-sloupcová mřížka s podkategoriemi |
+| `subscriptions/_components/AccessByServiceView.tsx` | Pohled Přístupy: Podle služby |
+| `subscriptions/_components/AccessByUserView.tsx` | Pohled Přístupy: Podle uživatele |
+| `subscriptions/_components/AccessSummaryView.tsx` | Pohled Přístupy: Souhrnný přehled |
+| `subscriptions/_components/AccessTabContent.tsx` | Záložka Přístupy – přepínač 3 pohledů + routing |
+| `subscriptions/_components/DetailModal.tsx` | Detail modal předplatného |
+| `subscriptions/_components/SubFormModal.tsx` | Formulář vytvoření/editace předplatného |
+| `subscriptions/_components/AccessModal.tsx` | Formulář přidání přístupu |
+| `subscriptions/_components/ExtUserModal.tsx` | Formulář externího uživatele |
+| `subscriptions/_components/CatFormModal.tsx` | Formulář kategorie (název, barva, nadřazená kat.) |
 | `src/app/api/cnb-rates/route.ts` | ČNB kurzovní lístek (EUR/USD→CZK) s lazy DB cache (1× denně) |
 
 ### DB tabulky
@@ -2489,7 +2508,7 @@ CREATE POLICY "Auth full" ON trackino_task_board_members
 | `/tags` | `tags/page.tsx` | Správa štítků (Free+) |
 | `/team` | `team/page.tsx` | Správa týmu + sazby (Free+) |
 | `/tasks` | `tasks/page.tsx` (orchestrátor) | Úkoly + Kanban (Pro+) – rozdělen na subsoubory od v2.51.21 |
-| `/subscriptions` | `subscriptions/page.tsx` | Evidence předplatných (Pro+) |
+| `/subscriptions` | `subscriptions/page.tsx` (auth guard) + `_components/SubscriptionsContent.tsx` (orchestrátor) + `_components/` (18 souborů: types, constants, utils, useSubscriptions, StarRating, StatsDashboard, SubsTabContent, CategoriesTabContent, AccessByServiceView, AccessByUserView, AccessSummaryView, AccessTabContent, DetailModal, SubFormModal, AccessModal, ExtUserModal, CatFormModal) | Evidence předplatných (Pro+) |
 | `/domains` | `domains/page.tsx` | Evidence domén (Pro+) |
 | `/important-days` | `important-days/page.tsx` | Důležité dny (Pro+) |
 | `/requests` | `requests/page.tsx` | Žádosti zaměstnanců (Pro+) |
