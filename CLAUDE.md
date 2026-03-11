@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 11. 3. 2026 (v2.51.27)
+> Aktualizováno: 11. 3. 2026 (v2.51.28)
 
 ---
 
@@ -545,6 +545,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.51.28 | 11. 3. 2026 | Notebook – FolderTree: odstraněny desktop individuální tlačítka, nahrazeny třemi tečkami (⋮) zobrazující se na hover na desktopu + vždy viditelné na mobilu; NoteEditor: paste handler strippuje background-* CSS vlastnosti a bgcolor atribut z vkládaného HTML (žádná změna barvy pozadí z externích nástrojů) |
 | v2.51.27 | 11. 3. 2026 | Rate Limiting: Upstash Redis (@upstash/ratelimit, @upstash/redis); src/lib/rate-limit.ts (rateLimitRegister 3/hod, rateLimitAI 20/min, rateLimitFirecrawl 10/min); nová API route /api/auth/register (server-side signup s rate limitem dle IP); register/page.tsx přepnut na volání nového endpointu; rate limit přidán do /api/ai-chat, /api/firecrawl/scrape, /api/firecrawl/search; env vars UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN |
 | v2.51.26 | 11. 3. 2026 | Refaktoring: team/page.tsx (1516 ř.) rozdělen na 6 souborů v _components/ (types.tsx, useTeam.ts, MembersTab.tsx, StructureTab.tsx, ManagersTab.tsx, EditMemberModal.tsx s PermissionToggle sub-komponentou); page.tsx redukován na ~170 řádků |
 | v2.51.25 | 11. 3. 2026 | Notebook – folderSortCache přesunuta do DB (nová tabulka trackino_notebook_prefs, cross-device per-user); mobilní výpis poznámek: 3 řádky (název / datum+autor / ikonky justify-around, tap target 44px) |
