@@ -72,6 +72,64 @@ export function unescapeIcs(s: string): string {
   return s.replace(/\\,/g, ',').replace(/\\;/g, ';').replace(/\\n/gi, ' ').replace(/\\\\/g, '\\');
 }
 
+/**
+ * Převede ICS datetime hodnotu na lokální { date, time }.
+ * Podporuje:
+ *   - UTC čas (přípona Z):          "20260311T100000Z" → převede UTC → lokální
+ *   - TZID čas (pojmenované pásmo): "20260311T110000"  + tzid "Europe/Prague" → konverze
+ *   - Plovoucí čas (bez Z a TZID):  "20260311T110000"  → bere přímo jako lokální
+ */
+function parseIcsDt(value: string, tzid: string | null): { date: string; time: string } {
+  const isUtc = value.endsWith('Z');
+  const raw = value.replace(/Z$/, '');
+  const isoBase = `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}T${raw.slice(9, 11)}:${raw.slice(11, 13)}:00`;
+
+  let d: Date;
+  if (isUtc) {
+    // UTC → lokální čas prohlížeče
+    d = new Date(isoBase + 'Z');
+  } else if (tzid) {
+    // Pojmenované časové pásmo → najdeme UTC ekvivalent pomocí Intl API
+    try {
+      d = parseTzIdToLocal(isoBase, tzid);
+    } catch {
+      // Fallback: plováme jako lokální
+      d = new Date(isoBase);
+    }
+  } else {
+    // Plovoucí čas – bere se jako lokální
+    d = new Date(isoBase);
+  }
+
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return { date: toDateStr(d), time: `${hh}:${mm}` };
+}
+
+/**
+ * Převede "naivní" lokální čas v daném časovém pásmu na Date objekt.
+ * Příklad: isoBase = "2026-03-11T11:00:00", tzid = "Europe/Prague" → Date(10:00 UTC)
+ */
+function parseTzIdToLocal(isoBase: string, tzid: string): Date {
+  // Krok 1: parsuj jako "falešné" UTC pro získání epoch ms
+  const naiveMs = new Date(isoBase + 'Z').getTime();
+  // Krok 2: zjisti, jak vypadá tento okamžik v cílovém TZ
+  const fmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone: tzid,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hour12: false,
+  });
+  const parts = fmt.formatToParts(new Date(naiveMs));
+  const get = (t: string) => parts.find(p => p.type === t)?.value ?? '00';
+  const tzAsUtcMs = new Date(
+    `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}:${get('second')}Z`
+  ).getTime();
+  // Krok 3: offset a skutečný UTC čas
+  const actualUtcMs = naiveMs + (naiveMs - tzAsUtcMs);
+  return new Date(actualUtcMs);
+}
+
 // Parsování ICS/iCal textu na DisplayEvent záznamy
 export function parseICS(icsText: string, subId: string, color: string): DisplayEvent[] {
   // Rozloží zalomené řádky (RFC 5545 line folding)
@@ -82,8 +140,12 @@ export function parseICS(icsText: string, subId: string, color: string): Display
 
   while ((m = veventRe.exec(unfolded)) !== null) {
     const blk = m[1];
+    // Extrahuje hodnotu vlastnosti (ignoruje parametry jako TZID=...)
     const get = (key: string) =>
       blk.match(new RegExp(`(?:^|\\n)${key}(?:;[^:]*)?:([^\\r\\n]+)`, 'i'))?.[1]?.trim() ?? '';
+    // Extrahuje hodnotu TZID parametru z řádku vlastnosti
+    const getTzid = (key: string) =>
+      blk.match(new RegExp(`(?:^|\\n)${key};TZID=([^:;]+)`, 'i'))?.[1]?.trim() ?? null;
 
     const summary = unescapeIcs(get('SUMMARY')) || '(Bez názvu)';
     const dtstart = get('DTSTART');
@@ -100,12 +162,14 @@ export function parseICS(icsText: string, subId: string, color: string): Display
     let endTime: string | null = null;
 
     if (isDateTime) {
-      const s = dtstart.replace(/Z$/, '');
-      startDate = `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`;
-      startTime = `${s.slice(9, 11)}:${s.slice(11, 13)}`;
-      const e = dtend.replace(/Z$/, '');
-      endDate = `${e.slice(0, 4)}-${e.slice(4, 6)}-${e.slice(6, 8)}`;
-      endTime = `${e.slice(9, 11)}:${e.slice(11, 13)}`;
+      const tzid = getTzid('DTSTART');
+      const tzidEnd = getTzid('DTEND') ?? tzid;
+      const s = parseIcsDt(dtstart, tzid);
+      startDate = s.date;
+      startTime = s.time;
+      const e = parseIcsDt(dtend, tzidEnd);
+      endDate = e.date;
+      endTime = e.time;
     } else {
       // Celodenní – DTEND je exkluzivní (den po posledním dni)
       startDate = `${dtstart.slice(0, 4)}-${dtstart.slice(4, 6)}-${dtstart.slice(6, 8)}`;

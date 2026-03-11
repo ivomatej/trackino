@@ -1374,6 +1374,7 @@ function NotebookContent() {
   }>({ foldersAutoOpen: false, showInbox: true, defaultSort: 'date', folderSortOrder: 'manual', saveFolderSort: false, showDoneFeature: false });
   const [folderSortCache, setFolderSortCache] = useState<Record<string, string>>({});
   const [filterSaved, setFilterSaved] = useState(false);
+  const [hideDone, setHideDone] = useState(false);
 
   // Copy done animation (note id, or null)
   const [copyDoneNoteId, setCopyDoneNoteId] = useState<string | null>(null);
@@ -1775,6 +1776,7 @@ function NotebookContent() {
     } else base = notes.filter(n => !n.is_archived);
 
     if (qLow) base = base.filter(n => n.title.toLowerCase().includes(qLow) || stripHtml(n.content).toLowerCase().includes(qLow));
+    if (notebookSettings.showDoneFeature && hideDone) base = base.filter(n => !n.is_done);
     if (listFilter?.type !== 'recent') {
       base = [...base].sort((a, b) => {
         if (sortBy === 'title') return a.title.localeCompare(b.title, 'cs');
@@ -2088,6 +2090,22 @@ function NotebookContent() {
                       Uložit filtraci
                     </>
                   )}
+                </button>
+              )}
+              {notebookSettings.showDoneFeature && !isArchive && !showCalEventNotes && (
+                <button onClick={() => setHideDone(v => !v)}
+                  className="flex-shrink-0 flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border"
+                  style={{
+                    borderColor: hideDone ? 'var(--primary)' : 'var(--border)',
+                    color: hideDone ? 'var(--primary)' : 'var(--text-secondary)',
+                    background: hideDone ? 'color-mix(in srgb, var(--primary) 10%, transparent)' : 'var(--bg-card)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                  }}>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                  Skrýt hotové
                 </button>
               )}
               {showCalEventNotes && (
