@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 11. 3. 2026 (v2.51.33)
+> Aktualizováno: 11. 3. 2026 (v2.51.34)
 
 ---
 
@@ -546,6 +546,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
 | v2.51.28 | 11. 3. 2026 | Notebook – FolderTree: odstraněny desktop individuální tlačítka, nahrazeny třemi tečkami (⋮) zobrazující se na hover na desktopu + vždy viditelné na mobilu; NoteEditor: paste handler strippuje background-* CSS vlastnosti a bgcolor atribut z vkládaného HTML (žádná změna barvy pozadí z externích nástrojů) |
+| v2.51.34 | 11. 3. 2026 | Refaktoring: planner/page.tsx (1280 ř.) rozdělen na 11 souborů v _components/ (types.ts, utils.ts, icons.tsx, CellFull.tsx, CellHalf.tsx, NoteInput.tsx, usePlanner.ts, StatusManager.tsx, PlannerTable.tsx, CellPicker.tsx, PlannerContent.tsx); page.tsx redukován na ~25 řádků |
 | v2.51.33 | 11. 3. 2026 | Refaktoring: Sidebar.tsx (~800 ř.) rozdělen na 7 souborů v sidebar/ (types.ts, icons.tsx, useSidebar.ts, SidebarHeader.tsx, SidebarNav.tsx, SidebarUserPanel.tsx); Sidebar.tsx redukován na ~80 řádků orchestrátoru |
 | v2.51.32 | 11. 3. 2026 | Refaktoring: TimerBar.tsx (938 ř.) rozdělen na 6 souborů v timer-bar/ (types.ts, utils.ts, useTimerBar.ts, ProjectPicker.tsx, CategoryTaskPicker.tsx, TimerControls.tsx); TimerBar.tsx redukován na ~80 řádků orchestrátoru |
 | v2.51.31 | 11. 3. 2026 | Refaktoring: ai-assistant/page.tsx (1340 ř.) rozdělen na 10 souborů v _components/ (types.ts, utils.ts, constants.ts, useAiAssistant.ts, ConversationSidebar.tsx, ChatMessages.tsx, ChatInput.tsx, FavoritePromptsPanel.tsx, ModelInfoPanel.tsx, AiAssistantContent.tsx); page.tsx redukován na ~10 řádků |
@@ -2568,7 +2569,7 @@ CREATE POLICY "Auth full" ON trackino_task_board_members
 |-------|--------|-------------|
 | `/` | `page.tsx` (root) | Přehled – dashboard |
 | `/tracker` | `tracker/page.tsx` | Time Tracker (Free+) |
-| `/planner` | `planner/page.tsx` | Plánovač dostupnosti (Pro+) |
+| `/planner` | `planner/page.tsx` (auth guard) + `_components/PlannerContent.tsx` (orchestrátor) + `_components/` (10 souborů: types.ts, utils.ts, icons.tsx, CellFull.tsx, CellHalf.tsx, NoteInput.tsx, usePlanner.ts, StatusManager.tsx, PlannerTable.tsx, CellPicker.tsx) | Plánovač dostupnosti (Pro+) |
 | `/calendar` | `calendar/page.tsx` → CalendarContent | Kalendář (Max) |
 | `/vacation` | `vacation/page.tsx` | Dovolená (Pro+) |
 | `/invoices` | `invoices/page.tsx` (orchestrátor) + `types.ts`, `utils.ts`, `components/InvoiceRow.tsx`, `components/SubmitInvoiceForm.tsx`, `components/InvoiceFilters.tsx`, `components/ApproveModal.tsx`, `components/ReturnModal.tsx`, `components/DetailModal.tsx` | Fakturace (Pro+) |
