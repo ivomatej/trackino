@@ -11,6 +11,12 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.51.22 – 11. 3. 2026</h3>
+<ul>
+  <li><strong>Kalendář – oprava časových pásem externích ICS kalendářů</strong>: UTC časy (přípona Z) se nyní správně převádí na lokální čas prohlížeče; přidána podpora TZID= (pojmenované timezone, napr. Europe/Prague) pomocí Intl API. Události se již nezobrazují o hodinu dříve.</li>
+  <li><strong>Notebook – tlačítko Skrýt hotové</strong>: pokud je v Nastavení aktivován <em>Stav „Hotovo"</em>, zobrazí se v záhlaví výpisu nové tlačítko <em>Skrýt hotové</em>. Kliknutím se z výpisu skryjí poznámky označené jako hotové; opětovným kliknutím se zobrazí zpět. Tlačítko je zvýrazněno primární barvou v aktivním stavu.</li>
+</ul>
+
 <h3>v2.51.21 – 11. 3. 2026</h3>
 <ul>
   <li><strong>Refaktoring: Znalostní báze</strong>:
