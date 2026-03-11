@@ -135,6 +135,7 @@ Výchozí policy: `CREATE POLICY "Auth full" ... FOR ALL TO authenticated USING 
 | `trackino_document_folders` | id, workspace_id, name, color, sort_order, created_by, created_at, updated_at | Složky pro organizaci dokumentů |
 | `trackino_documents` | id, workspace_id, folder_id (uuid\|null), name, type ('file'\|'link'), file_path (text\|null), file_size (int\|null), file_mime (text\|null), url (text\|null), description, created_by, created_at, updated_at | Firemní dokumenty a odkazy; soubory uloženy v Supabase Storage bucket `trackino-documents` |
 | `trackino_calendar_event_notes` | id, workspace_id, user_id, event_ref (text – ID události), content (HTML), tasks (jsonb – TaskItem[]), is_important (bool), is_done (bool), is_favorite (bool), created_at, updated_at | Poznámky k událostem v kalendáři – per-user, UNIQUE (workspace_id, user_id, event_ref) |
+| `trackino_notebook_prefs` | workspace_id, user_id, folder_sort_cache (jsonb), updated_at | Per-user preference Notebooku (uložení filtrace složek); PRIMARY KEY (workspace_id, user_id); cross-device |
 | `trackino_subscription_categories` | id, workspace_id, name, color, sort_order, parent_id (uuid\|null, self-ref), created_at | Kategorie předplatných (barva, řazení, hierarchie) |
 | `trackino_subscriptions` | id, workspace_id, name, type, website_url, login_url, registration_email, company_name, registered_by, description, notes, priority, status, renewal_type, price, currency, frequency, next_payment_date, registration_date, category_id, is_tip, created_by, created_at, updated_at | Evidence firemních předplatných a SaaS služeb |
 | `trackino_subscription_ratings` | id, subscription_id, workspace_id, user_id, rating (1-5), created_at, updated_at | Hvězdičkové hodnocení předplatných (per-user, UNIQUE subscription_id+user_id) |
@@ -544,6 +545,8 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
+| v2.51.26 | 11. 3. 2026 | Refaktoring: team/page.tsx (1516 ř.) rozdělen na 6 souborů v _components/ (types.tsx, useTeam.ts, MembersTab.tsx, StructureTab.tsx, ManagersTab.tsx, EditMemberModal.tsx s PermissionToggle sub-komponentou); page.tsx redukován na ~170 řádků |
+| v2.51.25 | 11. 3. 2026 | Notebook – folderSortCache přesunuta do DB (nová tabulka trackino_notebook_prefs, cross-device per-user); mobilní výpis poznámek: 3 řádky (název / datum+autor / ikonky justify-around, tap target 44px) |
 | v2.51.24 | 11. 3. 2026 | Refaktoring: subscriptions/page.tsx (2124 ř.) rozdělen na 19 souborů v _components/ (types.ts, constants.tsx, utils.ts, useSubscriptions.ts, StarRating, StatsDashboard, SubsTabContent, CategoriesTabContent, AccessByServiceView, AccessByUserView, AccessSummaryView, AccessTabContent, DetailModal, SubFormModal, AccessModal, ExtUserModal, CatFormModal, SubscriptionsContent); page.tsx redukován na ~20 řádků |
 | v2.51.23 | 11. 3. 2026 | Notebook – smazání složky nyní archivuje všechny poznámky (včetně podsložek) místo přesunu do Inboxu; deleteFolder() používá getDescendantFolderIds() + batch UPDATE is_archived=true před DELETE složky |
 | v2.51.22 | 11. 3. 2026 | Kalendář – fix timezone u ICS externích kalendářů: UTC časy (Z přípona) převedeny na lokální čas prohlížeče; přidán helper parseTzIdToLocal() pro TZID= pojmenované timezone (Intl.DateTimeFormat); Notebook – tlačítko Skrýt hotové v záhlaví výpisu (viditelné pokud showDoneFeature=true, hideDone state, filtruje is_done=true poznámky) |
@@ -2506,7 +2509,7 @@ CREATE POLICY "Auth full" ON trackino_task_board_members
 | `/projects` | `projects/page.tsx` | Správa projektů (Free+) |
 | `/clients` | `clients/page.tsx` | Správa klientů (Free+) |
 | `/tags` | `tags/page.tsx` | Správa štítků (Free+) |
-| `/team` | `team/page.tsx` | Správa týmu + sazby (Free+) |
+| `/team` | `team/page.tsx` (orchestrátor) + `_components/types.tsx`, `useTeam.ts`, `MembersTab.tsx`, `StructureTab.tsx`, `ManagersTab.tsx`, `EditMemberModal.tsx` | Správa týmu + sazby (Free+) |
 | `/tasks` | `tasks/page.tsx` (orchestrátor) | Úkoly + Kanban (Pro+) – rozdělen na subsoubory od v2.51.21 |
 | `/subscriptions` | `subscriptions/page.tsx` (auth guard) + `_components/SubscriptionsContent.tsx` (orchestrátor) + `_components/` (18 souborů: types, constants, utils, useSubscriptions, StarRating, StatsDashboard, SubsTabContent, CategoriesTabContent, AccessByServiceView, AccessByUserView, AccessSummaryView, AccessTabContent, DetailModal, SubFormModal, AccessModal, ExtUserModal, CatFormModal) | Evidence předplatných (Pro+) |
 | `/domains` | `domains/page.tsx` | Evidence domén (Pro+) |

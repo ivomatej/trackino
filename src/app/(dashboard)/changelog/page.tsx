@@ -11,6 +11,28 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.51.26 – 11. 3. 2026</h3>
+<ul>
+  <li><strong>Refaktoring: Tým</strong>:
+    <ul>
+      <li>Původní monolitický soubor <code>team/page.tsx</code> (1516 ř.) rozdělen na 6 souborů v adresáři <code>_components/</code></li>
+      <li><code>types.tsx</code> – sdílené typy, konstanty, <code>TrashIcon</code>, <code>inputCls</code>/<code>inputStyle</code></li>
+      <li><code>useTeam.ts</code> – custom hook se vším stavem (53× useState) a akcemi</li>
+      <li><code>MembersTab.tsx</code> – seznam členů, join kód, schvalování, kopírování kontaktů</li>
+      <li><code>StructureTab.tsx</code> – CRUD oddělení / kategorií / úkolů</li>
+      <li><code>ManagersTab.tsx</code> – přiřazení manažerů členům</li>
+      <li><code>EditMemberModal.tsx</code> – editace profilu, oprávnění (PermissionToggle), sazby</li>
+      <li><code>page.tsx</code> redukován na ~170 řádků (thin orchestrátor)</li>
+    </ul>
+  </li>
+</ul>
+
+<h3>v2.51.25 – 11. 3. 2026</h3>
+<ul>
+  <li><strong>Notebook – filtraci složky ukládá do databáze</strong>: nastavení řazení v jednotlivých složkách (funkce „Uložit filtraci pro složku") se nyní ukládá v databázi a platí pro přihlášeného uživatele na všech zařízeních (desktop, mobil, tablet). Dříve bylo navázáno na konkrétní prohlížeč.</li>
+  <li><strong>Notebook – mobilní výpis poznámek</strong>: každá poznámka zobrazuje 3 řádky: 1. název, 2. datum a autor, 3. ikonky akcí (Důležité / Oblíbené / Hotovo / Kopírovat / Duplikovat / Přesunout / Archivovat) rovnoměrně rozložené přes celou šíři pro snadné klepání (tap target 44 px).</li>
+</ul>
+
 <h3>v2.51.23 – 11. 3. 2026</h3>
 <ul>
   <li><strong>Notebook – smazání složky archivuje poznámky</strong>: při smazání složky se nyní všechny nearchivované poznámky (včetně poznámek v podsložkách) automaticky přesunou do Archivu. Žádná poznámka se při smazání složky neztratí.</li>
