@@ -1716,7 +1716,20 @@ function NotebookContent() {
   }
 
   async function deleteFolder(f: NoteFolder) {
-    if (!confirm(`Smazat složku "${f.name}"? Poznámky se přesunou do Inboxu.`)) return;
+    if (!confirm(`Smazat složku "${f.name}"? Všechny poznámky (včetně podsložek) budou přesunuty do Archivu.`)) return;
+    if (!wsId) return;
+    // Archivuj všechny poznámky ve složce i podsložkách před smazáním
+    const folderIds = getDescendantFolderIds(f.id, folders);
+    const noteIds = notes
+      .filter(n => n.folder_id && folderIds.includes(n.folder_id) && !n.is_archived)
+      .map(n => n.id);
+    if (noteIds.length > 0) {
+      await supabase
+        .from('trackino_notes')
+        .update({ is_archived: true, updated_at: new Date().toISOString() })
+        .in('id', noteIds)
+        .eq('workspace_id', wsId);
+    }
     await supabase.from('trackino_note_folders').delete().eq('id', f.id);
     await fetchAll();
   }
