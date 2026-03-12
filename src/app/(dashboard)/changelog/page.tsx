@@ -11,6 +11,43 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.51.37 – 12. 3. 2026</h3>
+<ul>
+  <li><strong>Refaktoring: Prompty</strong>:
+    <ul>
+      <li>Původní monolitický soubor <code>prompts/page.tsx</code> (1001 ř.) rozdělen na 10 souborů v adresáři <code>_components/</code></li>
+      <li><code>types.ts</code> – sdílené typy (PromptFolder, FolderShare, Prompt, PromptComment, Member, PromptFilter, MAX_DEPTH)</li>
+      <li><code>utils.ts</code> – pomocné funkce (getDepth, getInitials, stripHtml, extractCodeBlocks)</li>
+      <li><code>RichEditor.tsx</code> – rich text editor s contentEditable a kódovými bloky</li>
+      <li><code>FolderTree.tsx</code> – rekurzivní strom složek s mobilním dropdown menu</li>
+      <li><code>usePrompts.ts</code> – custom hook se veškerým stavem a CRUD logikou (~270 ř.)</li>
+      <li><code>PromptCard.tsx</code> – karta promptu s akcemi (copy/like/fav/edit/delete)</li>
+      <li><code>PromptModals.tsx</code> – tři modaly (složka, sdílení, prompt)</li>
+      <li><code>PromptsLeftPanel.tsx</code> – levý panel (vyhledávání, filtry, složky)</li>
+      <li><code>PromptsContent.tsx</code> – orchestrátor skládající vše dohromady</li>
+      <li><code>page.tsx</code> redukován na ~15 řádků (auth guard + WorkspaceProvider)</li>
+    </ul>
+  </li>
+</ul>
+
+<h3>v2.51.36 – 12. 3. 2026</h3>
+<ul>
+  <li><strong>Refaktoring: Záložky</strong>:
+    <ul>
+      <li>Původní monolitický soubor <code>bookmarks/page.tsx</code> (1008 ř.) rozdělen na 8 souborů v adresáři <code>_components/</code></li>
+      <li><code>types.ts</code> – sdílené typy (BookmarkFolder, FolderShare, Bookmark, BookmarkComment, Member, BookmarkFilter, MAX_DEPTH)</li>
+      <li><code>utils.ts</code> – pomocné funkce (getInitials, getDomain, getFaviconUrl)</li>
+      <li><code>useBookmarks.ts</code> – custom hook se veškerým stavem a CRUD logikou (~260 ř.)</li>
+      <li><code>FolderTree.tsx</code> – rekurzivní strom složek s mobilním dropdown menu</li>
+      <li><code>BookmarksLeftPanel.tsx</code> – levý panel (vyhledávání, filtry, složky)</li>
+      <li><code>BookmarkCard.tsx</code> – karta záložky s komentáři inline</li>
+      <li><code>BookmarkModals.tsx</code> – tři modaly (složka, sdílení, záložka)</li>
+      <li><code>BookmarksContent.tsx</code> – orchestrátor skládající vše dohromady</li>
+      <li><code>page.tsx</code> redukován na ~15 řádků (auth guard + WorkspaceProvider)</li>
+    </ul>
+  </li>
+</ul>
+
 <h3>v2.51.33 – 11. 3. 2026</h3>
 <ul>
   <li><strong>Refaktoring: Sidebar</strong>:

@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 12. 3. 2026 (v2.51.35)
+> Aktualizováno: 12. 3. 2026 (v2.51.37)
 
 ---
 
@@ -546,6 +546,8 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
 | v2.51.28 | 11. 3. 2026 | Notebook – FolderTree: odstraněny desktop individuální tlačítka, nahrazeny třemi tečkami (⋮) zobrazující se na hover na desktopu + vždy viditelné na mobilu; NoteEditor: paste handler strippuje background-* CSS vlastnosti a bgcolor atribut z vkládaného HTML (žádná změna barvy pozadí z externích nástrojů) |
+| v2.51.37 | 12. 3. 2026 | Refaktoring: prompts/page.tsx (1001 ř.) rozdělen na 10 souborů v _components/ (types.ts, utils.ts, RichEditor.tsx, FolderTree.tsx, usePrompts.ts, PromptCard.tsx, PromptModals.tsx, PromptsLeftPanel.tsx, PromptsContent.tsx); page.tsx redukován na ~15 řádků |
+| v2.51.36 | 12. 3. 2026 | Refaktoring: bookmarks/page.tsx (1008 ř.) rozdělen na 8 souborů v _components/ (types.ts, utils.ts, useBookmarks.ts, FolderTree.tsx, BookmarksLeftPanel.tsx, BookmarkCard.tsx, BookmarkModals.tsx, BookmarksContent.tsx); page.tsx redukován na ~15 řádků |
 | v2.51.35 | 12. 3. 2026 | Refaktoring: domains/page.tsx (1195 ř.) rozdělen na 11 souborů v _components/ (types.ts, constants.tsx, utils.ts, useDomains.ts, StatsDashboard.tsx, DomainsTabContent.tsx, RegistrarsTabContent.tsx, DomainFormModal.tsx, RegistrarFormModal.tsx, DomainDetailModal.tsx, DomainsContent.tsx); page.tsx redukován na ~20 řádků |
 | v2.51.34 | 11. 3. 2026 | Refaktoring: planner/page.tsx (1280 ř.) rozdělen na 11 souborů v _components/ (types.ts, utils.ts, icons.tsx, CellFull.tsx, CellHalf.tsx, NoteInput.tsx, usePlanner.ts, StatusManager.tsx, PlannerTable.tsx, CellPicker.tsx, PlannerContent.tsx); page.tsx redukován na ~25 řádků |
 | v2.51.33 | 11. 3. 2026 | Refaktoring: Sidebar.tsx (~800 ř.) rozdělen na 7 souborů v sidebar/ (types.ts, icons.tsx, useSidebar.ts, SidebarHeader.tsx, SidebarNav.tsx, SidebarUserPanel.tsx); Sidebar.tsx redukován na ~80 řádků orchestrátoru |
@@ -1318,7 +1320,21 @@ style={{
 
 ---
 
-## 24. Prompty – architektura (prompts/page.tsx)
+## 24. Prompty – architektura (prompts/)
+
+### Soubory (po refaktoringu v2.51.37 – rozdělen z 1001 ř. na subsoubory)
+| Soubor | Popis |
+|--------|-------|
+| `prompts/page.tsx` | Auth guard + WorkspaceProvider (~15 ř.) |
+| `prompts/_components/PromptsContent.tsx` | **Orchestrátor** – volá usePrompts, renderuje layout, PromptsLeftPanel, PromptCard, PromptModals |
+| `prompts/_components/usePrompts.ts` | Custom hook – veškerý state, computed hodnoty, CRUD (~270 ř.) |
+| `prompts/_components/types.ts` | Sdílené typy: PromptFolder, FolderShare, Prompt, PromptComment, Member, PromptFilter, MAX_DEPTH |
+| `prompts/_components/utils.ts` | Pomocné funkce: getDepth, getInitials, stripHtml, extractCodeBlocks |
+| `prompts/_components/RichEditor.tsx` | Rich text editor (H2/H3/B/I/U/seznamy/kód) s contentEditable |
+| `prompts/_components/FolderTree.tsx` | Rekurzivní strom složek (mobil ⋮ dropdown, desktop hover akce) |
+| `prompts/_components/PromptCard.tsx` | Karta promptu s akcemi (copy/like/fav/edit/delete) |
+| `prompts/_components/PromptModals.tsx` | Tři modaly: FolderModal, ShareModal, PromptModal |
+| `prompts/_components/PromptsLeftPanel.tsx` | Levý panel (vyhledávání, filtry, podle autora, složky) |
 
 ### DB tabulky
 | Tabulka | Popis |
@@ -1355,7 +1371,20 @@ Prompt je viditelný pokud: `created_by === userId` OR `is_shared === true` OR `
 
 ---
 
-## 25. Záložky – architektura (bookmarks/page.tsx)
+## 25. Záložky – architektura (bookmarks/)
+
+### Soubory (po refaktoringu v2.51.36 – rozdělen z 1008 ř. na subsoubory)
+| Soubor | Popis |
+|--------|-------|
+| `bookmarks/page.tsx` | Auth guard + WorkspaceProvider (~15 ř.) |
+| `bookmarks/_components/BookmarksContent.tsx` | **Orchestrátor** – volá useBookmarks, renderuje layout, přepíná záložky, zobrazuje modaly |
+| `bookmarks/_components/useBookmarks.ts` | Custom hook – veškerý state, computed hodnoty, CRUD (~260 ř.) |
+| `bookmarks/_components/types.ts` | Sdílené typy: BookmarkFolder, FolderShare, Bookmark, BookmarkComment, Member, BookmarkFilter, MAX_DEPTH |
+| `bookmarks/_components/utils.ts` | Pomocné funkce: getInitials, getDomain, getFaviconUrl |
+| `bookmarks/_components/FolderTree.tsx` | Rekurzivní strom složek (mobil ⋮ dropdown, desktop hover akce) |
+| `bookmarks/_components/BookmarksLeftPanel.tsx` | Levý panel (vyhledávání, filtry, podle autora, složky) |
+| `bookmarks/_components/BookmarkCard.tsx` | Karta záložky s inline komentáři (edit/delete), akce (copy/like/fav/edit/delete) |
+| `bookmarks/_components/BookmarkModals.tsx` | Tři modaly: FolderModal, ShareModal, BookmarkModal |
 
 ### DB tabulky
 | Tabulka | Popis |
