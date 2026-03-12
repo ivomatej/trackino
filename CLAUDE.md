@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 11. 3. 2026 (v2.51.34)
+> Aktualizováno: 12. 3. 2026 (v2.51.35)
 
 ---
 
@@ -546,6 +546,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
 | v2.51.28 | 11. 3. 2026 | Notebook – FolderTree: odstraněny desktop individuální tlačítka, nahrazeny třemi tečkami (⋮) zobrazující se na hover na desktopu + vždy viditelné na mobilu; NoteEditor: paste handler strippuje background-* CSS vlastnosti a bgcolor atribut z vkládaného HTML (žádná změna barvy pozadí z externích nástrojů) |
+| v2.51.35 | 12. 3. 2026 | Refaktoring: domains/page.tsx (1195 ř.) rozdělen na 11 souborů v _components/ (types.ts, constants.tsx, utils.ts, useDomains.ts, StatsDashboard.tsx, DomainsTabContent.tsx, RegistrarsTabContent.tsx, DomainFormModal.tsx, RegistrarFormModal.tsx, DomainDetailModal.tsx, DomainsContent.tsx); page.tsx redukován na ~20 řádků |
 | v2.51.34 | 11. 3. 2026 | Refaktoring: planner/page.tsx (1280 ř.) rozdělen na 11 souborů v _components/ (types.ts, utils.ts, icons.tsx, CellFull.tsx, CellHalf.tsx, NoteInput.tsx, usePlanner.ts, StatusManager.tsx, PlannerTable.tsx, CellPicker.tsx, PlannerContent.tsx); page.tsx redukován na ~25 řádků |
 | v2.51.33 | 11. 3. 2026 | Refaktoring: Sidebar.tsx (~800 ř.) rozdělen na 7 souborů v sidebar/ (types.ts, icons.tsx, useSidebar.ts, SidebarHeader.tsx, SidebarNav.tsx, SidebarUserPanel.tsx); Sidebar.tsx redukován na ~80 řádků orchestrátoru |
 | v2.51.32 | 11. 3. 2026 | Refaktoring: TimerBar.tsx (938 ř.) rozdělen na 6 souborů v timer-bar/ (types.ts, utils.ts, useTimerBar.ts, ProjectPicker.tsx, CategoryTaskPicker.tsx, TimerControls.tsx); TimerBar.tsx redukován na ~80 řádků orchestrátoru |
@@ -2178,12 +2179,23 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_sub_access_ext_user
 
 ---
 
-## 33. Evidence domén – architektura (domains/page.tsx)
+## 33. Evidence domén – architektura (domains/)
 
-### Soubory
+### Soubory (po refaktoringu v2.51.35 – rozdělen z 1195 ř. na subsoubory)
 | Soubor | Popis |
 |--------|-------|
-| `src/app/(dashboard)/domains/page.tsx` | Hlavní stránka modulu – dashboard, tabulka, CRUD, detail modal |
+| `domains/page.tsx` | Auth guard + WorkspaceProvider (~20 ř.) |
+| `domains/_components/DomainsContent.tsx` | **Orchestrátor** – renderuje DashboardLayout, header, záložky, všechny podkomponenty |
+| `domains/_components/useDomains.ts` | Custom hook – veškerý state, computed hodnoty, CRUD (~240 ř.) |
+| `domains/_components/types.ts` | Sdílené typy: DisplayStatus, SortField, SortDir, TabType, DomainFormState, RegFormState, DomainStats |
+| `domains/_components/constants.tsx` | STATUS_CONFIG, DB_STATUSES, EXPIRING_THRESHOLD_DAYS, ICONS (SVG JSX), inputCls, inputStyle |
+| `domains/_components/utils.ts` | daysUntilExpiration, getDisplayStatus, fmtDate |
+| `domains/_components/StatsDashboard.tsx` | 5 statistických karet (Celkem/Aktivní/Expirující/Dobíhá/Expirované) |
+| `domains/_components/DomainsTabContent.tsx` | Záložka Domény – filtry + seřaditelná tabulka + mobilní karty |
+| `domains/_components/RegistrarsTabContent.tsx` | Záložka Registrátoři – tabulka + mobilní karty |
+| `domains/_components/DomainFormModal.tsx` | Formulář vytvoření/editace domény (z-index z-50) |
+| `domains/_components/RegistrarFormModal.tsx` | Formulář vytvoření/editace registrátora (z-index z-[60]) |
+| `domains/_components/DomainDetailModal.tsx` | Read-only detail domény s editačním tlačítkem (z-index z-50) |
 
 ### DB tabulka `trackino_domains`
 | Sloupec | Typ | Popis |
@@ -2584,7 +2596,7 @@ CREATE POLICY "Auth full" ON trackino_task_board_members
 | `/team` | `team/page.tsx` (orchestrátor) + `_components/types.tsx`, `useTeam.ts`, `MembersTab.tsx`, `StructureTab.tsx`, `ManagersTab.tsx`, `EditMemberModal.tsx` | Správa týmu + sazby (Free+) |
 | `/tasks` | `tasks/page.tsx` (orchestrátor) | Úkoly + Kanban (Pro+) – rozdělen na subsoubory od v2.51.21 |
 | `/subscriptions` | `subscriptions/page.tsx` (auth guard) + `_components/SubscriptionsContent.tsx` (orchestrátor) + `_components/` (18 souborů: types, constants, utils, useSubscriptions, StarRating, StatsDashboard, SubsTabContent, CategoriesTabContent, AccessByServiceView, AccessByUserView, AccessSummaryView, AccessTabContent, DetailModal, SubFormModal, AccessModal, ExtUserModal, CatFormModal) | Evidence předplatných (Pro+) |
-| `/domains` | `domains/page.tsx` | Evidence domén (Pro+) |
+| `/domains` | `domains/page.tsx` (auth guard) + `_components/DomainsContent.tsx` (orchestrátor) + `_components/` (10 souborů: types.ts, constants.tsx, utils.ts, useDomains.ts, StatsDashboard.tsx, DomainsTabContent.tsx, RegistrarsTabContent.tsx, DomainFormModal.tsx, RegistrarFormModal.tsx, DomainDetailModal.tsx) | Evidence domén (Pro+) |
 | `/important-days` | `important-days/page.tsx` | Důležité dny (Pro+) |
 | `/requests` | `requests/page.tsx` | Žádosti zaměstnanců (Pro+) |
 | `/feedback` | `feedback/page.tsx` | Anonymní připomínky (Pro+) |
