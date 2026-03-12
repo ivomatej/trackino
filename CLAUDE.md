@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 12. 3. 2026 (v2.51.38)
+> Aktualizováno: 12. 3. 2026 (v2.51.39)
 
 ---
 
@@ -62,7 +62,8 @@ src/
       help/           – Nápověda
     invite/[token]/   – Přijetí pozvánky do workspace
   components/
-    DashboardLayout.tsx  – hlavní layout s TimerBarem a Sidebarem
+    DashboardLayout.tsx  – hlavní layout s TimerBarem a Sidebarem; obaluje children + TimerBar ErrorBoundary
+    ErrorBoundary.tsx    – React class Error Boundary; moduleName prop, timerFallback varianta, dev detail
     Sidebar.tsx          – navigační menu (Oblíbené, skupiny, bottom items)
     TimerBar.tsx         – spouštění/zastavování timeru, manuální zadání
     TimeEntryList.tsx    – seznam time entries
@@ -378,6 +379,111 @@ SPRÁVA
 
 ---
 
+## 7b. Error Boundary systém (v2.51.39)
+
+### Architektura
+
+```
+DashboardLayout
+  ├── ErrorBoundary (timerFallback) → TimerBar
+  └── <main>
+        └── ErrorBoundary (moduleName) → children (obsah stránky)
+
+src/app/error.tsx              – globální záchranná síť (root layout)
+src/app/(dashboard)/error.tsx  – Next.js Error Boundary pro dashboard segment
+```
+
+### Komponenta `src/components/ErrorBoundary.tsx`
+- React **class component** (Error Boundaries nelze implementovat jako function component)
+- Props:
+  - `moduleName?: string` – zobrazí se v nadpisu fallback UI „Modul X selhal"
+  - `fallback?: ReactNode` – vlastní fallback UI (optional)
+  - `timerFallback?: boolean` – speciální kompaktní varianta pro TimerBar
+- Fallback UI: karta s ikonou varování (SVG triangle), nadpisem, podtextem a dvěma tlačítky
+- Dev mode (`NODE_ENV === 'development'`): collapsible detail s chybovým stack trace
+- Logování: `componentDidCatch` loguje do konzole s kontextem `{ error, stack, componentStack, timestamp }`
+- TODO komentář: napojit na Sentry/LogRocket
+- Tlačítko **Přejít na přehled**: `<a href="/">` (nekontroluje router, funguje vždy)
+- Tlačítko **Zkusit znovu**: volá `setState({ hasError: false })` → pokusí se znovu renderovat podstrom
+
+### TimerBar fallback (`timerFallback`)
+- Zachová výšku a layout hlavičky – lišta „Timer nedostupný" s ikonou
+- Tlačítko Zkusit znovu přímo v liště
+- Neodstraňuje prostor – layout se nepřeskočí
+
+### Integrace do DashboardLayout
+```tsx
+// DashboardLayout.tsx – prop:
+interface DashboardLayoutProps {
+  moduleName?: string; // předává se do vnitřního ErrorBoundary
+  // ...ostatní props
+}
+
+// V <main>:
+<ErrorBoundary moduleName={moduleName}>
+  {children}
+</ErrorBoundary>
+
+// TimerBar v headeru a v bottom baru:
+<ErrorBoundary timerFallback>
+  <TimerBar ... />
+</ErrorBoundary>
+```
+
+### Obalené moduly (moduleName prop)
+| Soubor | moduleName |
+|--------|-----------|
+| tracker/page.tsx | Měřič |
+| page.tsx (root) | Přehled |
+| reports/page.tsx | Reporty |
+| attendance/page.tsx | Přehled hodin |
+| category-report/page.tsx | Analýza kategorií |
+| planner/_components/PlannerContent.tsx | Plánovač |
+| vacation/_components/VacationContent.tsx | Dovolená |
+| calendar/components/CalendarContent.tsx | Kalendář |
+| invoices/page.tsx | Fakturace |
+| projects/page.tsx | Projekty |
+| clients/page.tsx | Klienti |
+| tags/page.tsx | Štítky |
+| team/page.tsx | Tým |
+| settings/SettingsContent.tsx | Nastavení |
+| audit/page.tsx | Audit log |
+| text-converter/page.tsx | Převodník textu |
+| important-days/page.tsx | Důležité dny |
+| requests/page.tsx | Žádosti |
+| feedback/page.tsx | Připomínky |
+| documents/page.tsx | Dokumenty |
+| company-rules/page.tsx | Firemní pravidla |
+| office-rules/page.tsx | Pravidla v kanceláři |
+| help/page.tsx | Nápověda |
+| changelog/page.tsx | Changelog |
+| bugs/page.tsx | Hlášení chyb |
+| admin/page.tsx | Admin |
+| app-settings/page.tsx | Nastavení aplikace |
+| app-changes/page.tsx | Úpravy aplikace |
+| profile/page.tsx | Profil |
+| notes/page.tsx | Poznámky |
+| subordinates/page.tsx | Podřízení |
+| knowledge-base/page.tsx | Znalostní báze |
+| tasks/page.tsx | Úkoly |
+| subscriptions/_components/SubscriptionsContent.tsx | Předplatná |
+| domains/_components/DomainsContent.tsx | Evidence domén |
+| prompts/_components/PromptsContent.tsx | Prompty |
+| bookmarks/_components/BookmarksContent.tsx | Záložky |
+| ai-assistant/_components/AiAssistantContent.tsx | AI Asistent |
+| notebook/page.tsx | Notebook |
+
+### Globální Next.js error.tsx
+- `src/app/error.tsx` – kořenový error (fullscreen, bez CSS proměnných – nezná theme)
+- `src/app/(dashboard)/error.tsx` – dashboard error (s CSS proměnnými, zachová sidebar)
+
+### Co ErrorBoundary NEZACHYTÍ
+- Async chyby v `useEffect` (musí být re-thrown do render fáze)
+- Chyby v event handlerech (try/catch)
+- Server-side chyby (ty zachytí `error.tsx`)
+
+---
+
 ## 8. Plánovač (planner/page.tsx)
 
 ### Synchronizace s Dovolenou
@@ -546,6 +652,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
 | v2.51.28 | 11. 3. 2026 | Notebook – FolderTree: odstraněny desktop individuální tlačítka, nahrazeny třemi tečkami (⋮) zobrazující se na hover na desktopu + vždy viditelné na mobilu; NoteEditor: paste handler strippuje background-* CSS vlastnosti a bgcolor atribut z vkládaného HTML (žádná změna barvy pozadí z externích nástrojů) |
+| v2.51.39 | 12. 3. 2026 | Error Boundaries – izolace selhání modulů: ErrorBoundary.tsx (React class component, moduleName prop, timerFallback varianta), DashboardLayout obaluje children + TimerBar, 39 stránek s moduleName, globální error.tsx (root + dashboard segment), konzistentní logování |
 | v2.51.38 | 12. 3. 2026 | Refaktoring: vacation/page.tsx (925 ř.) rozdělen na 11 souborů v _components/ (types.ts, utils.ts, useVacation.ts, VacationStats.tsx, VacationForm.tsx, VacationRecordsTab.tsx, VacationRequestsTab.tsx, VacationArchiveTab.tsx, RejectModal.tsx, VacationContent.tsx); page.tsx redukován na ~23 řádků |
 | v2.51.37 | 12. 3. 2026 | Refaktoring: prompts/page.tsx (1001 ř.) rozdělen na 10 souborů v _components/ (types.ts, utils.ts, RichEditor.tsx, FolderTree.tsx, usePrompts.ts, PromptCard.tsx, PromptModals.tsx, PromptsLeftPanel.tsx, PromptsContent.tsx); page.tsx redukován na ~15 řádků |
 | v2.51.36 | 12. 3. 2026 | Refaktoring: bookmarks/page.tsx (1008 ř.) rozdělen na 8 souborů v _components/ (types.ts, utils.ts, useBookmarks.ts, FolderTree.tsx, BookmarksLeftPanel.tsx, BookmarkCard.tsx, BookmarkModals.tsx, BookmarksContent.tsx); page.tsx redukován na ~15 řádků |
@@ -2551,7 +2658,8 @@ CREATE POLICY "Auth full" ON trackino_task_board_members
 
 | Soubor | Co dělá |
 |--------|---------|
-| `DashboardLayout.tsx` | Hlavní layout: header (TimerBar), Sidebar, systémové notifikace, auto-hide header na mobilu, bottom timer bar |
+| `DashboardLayout.tsx` | Hlavní layout: header (TimerBar), Sidebar, systémové notifikace, auto-hide header na mobilu, bottom timer bar; obaluje children + oba TimerBar výskyty ErrorBoundary; prop `moduleName?` |
+| `ErrorBoundary.tsx` | React class Error Boundary; props: `moduleName`, `fallback`, `timerFallback`; fallback karta s varováním; dev collapsible stack; TODO Sentry |
 | `Sidebar.tsx` | **Orchestrátor** (po refaktoringu v2.51.33) – importuje subkomponenty z `sidebar/`, renderuje layout |
 | `sidebar/types.ts` | Typy: `SidebarProps`, `NavItem`, `NavGroup`, `BadgeCounts` |
 | `sidebar/icons.tsx` | `ICONS` objekt (40+ SVG ikon) + `StarIcon` + `RemoveIcon` |

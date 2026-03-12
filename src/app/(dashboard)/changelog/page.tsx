@@ -11,6 +11,25 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.51.39 – 12. 3. 2026</h3>
+<ul>
+  <li><strong>Error Boundaries – izolace selhání modulů</strong>:
+    <ul>
+      <li>Každý modul aplikace je nyní obalen Error Boundary – selhání jednoho modulu neshodí celou aplikaci</li>
+      <li>Uživatel uvidí přehlednou chybovou hlášku s tlačítky „Přejít na přehled" a „Zkusit znovu"</li>
+      <li>Sidebar a navigace zůstávají funkční i při selhání obsahu stránky</li>
+      <li>TimerBar má vlastní izolovanou Error Boundary – při selhání se zobrazí kompaktní lišta „Timer nedostupný"</li>
+      <li>Globální záchranná síť: <code>error.tsx</code> na úrovni root layoutu i dashboard segmentu</li>
+      <li>Konzistentní logování chyb do konzole s kontextem (název modulu, čas, stack trace)</li>
+    </ul>
+  </li>
+</ul>
+
+<h3>v2.51.38 – 12. 3. 2026</h3>
+<ul>
+  <li><strong>Refaktoring: Dovolená</strong> – viz changelog níže</li>
+</ul>
+
 <h3>v2.51.37 – 12. 3. 2026</h3>
 <ul>
   <li><strong>Refaktoring: Prompty</strong>:
