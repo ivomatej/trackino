@@ -269,7 +269,7 @@ function TextConverterContent() {
 
   if (!hasModule('text_converter')) {
     return (
-      <DashboardLayout>
+      <DashboardLayout moduleName="Převodník textu">
         <div className="max-w-xl">
           <h1 className="text-xl font-bold mb-3" style={{ color: 'var(--text-primary)' }}>Převodník textu</h1>
           <div className="p-6 rounded-xl border text-center" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
@@ -296,7 +296,7 @@ function TextConverterContent() {
   const forwardOutput = outputTab === 'plain' ? plainOutput : markdownOutput;
 
   return (
-    <DashboardLayout>
+    <DashboardLayout moduleName="Převodník textu">
       <div>
         {/* Hlavička */}
         <div className="flex items-center justify-between mb-4">

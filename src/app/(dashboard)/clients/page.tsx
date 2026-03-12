@@ -124,7 +124,7 @@ function ClientsContent() {
   const inputStyle = { borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' };
 
   return (
-    <DashboardLayout>
+    <DashboardLayout moduleName="Klienti">
       <div className="max-w-2xl">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Klienti</h1>

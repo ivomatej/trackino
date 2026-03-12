@@ -272,7 +272,7 @@ function CategoryReportContent() {
   const inputStyle = { borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' };
 
   return (
-    <DashboardLayout>
+    <DashboardLayout moduleName="Analýza kategorií">
       <div className="max-w-4xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-6 flex-wrap gap-3">

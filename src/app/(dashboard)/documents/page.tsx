@@ -485,7 +485,7 @@ function DocumentsContent() {
 
   if (loading) {
     return (
-      <DashboardLayout>
+      <DashboardLayout moduleName="Dokumenty">
         <div className="flex items-center justify-center py-20">
           <div className="w-6 h-6 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
         </div>
@@ -494,7 +494,7 @@ function DocumentsContent() {
   }
 
   return (
-    <DashboardLayout>
+    <DashboardLayout moduleName="Dokumenty">
       <h1 className="text-xl font-bold mb-3 flex-shrink-0" style={{ color: 'var(--text-primary)' }}>Dokumenty</h1>
 
       <div className="flex flex-col md:flex-row gap-5 flex-1 min-h-0">

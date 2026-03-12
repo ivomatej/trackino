@@ -35,7 +35,7 @@ export function DomainsContent() {
 
   if (wsLoading || loading) {
     return (
-      <DashboardLayout>
+      <DashboardLayout moduleName="Evidence domén">
         <div className="flex justify-center py-12">
           <div className="w-6 h-6 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
         </div>
@@ -44,7 +44,7 @@ export function DomainsContent() {
   }
 
   return (
-    <DashboardLayout>
+    <DashboardLayout moduleName="Evidence domén">
       <div className="max-w-6xl mx-auto space-y-6">
 
         {/* ── Message banner ── */}

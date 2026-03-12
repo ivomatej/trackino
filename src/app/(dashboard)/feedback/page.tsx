@@ -100,7 +100,7 @@ function FeedbackContent() {
 
   if (loading) {
     return (
-      <DashboardLayout>
+      <DashboardLayout moduleName="Připomínky">
         <div className="flex items-center justify-center py-20">
           <div className="w-6 h-6 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
         </div>
@@ -112,7 +112,7 @@ function FeedbackContent() {
   const resolved = feedbackList.filter(f => f.is_resolved);
 
   return (
-    <DashboardLayout>
+    <DashboardLayout moduleName="Připomínky">
       <div className="max-w-2xl mx-auto overflow-x-hidden">
         {/* Záhlaví */}
         <div className="flex items-start justify-between gap-4 mb-6">

@@ -157,7 +157,7 @@ function SubordinatesContent() {
 
   if (!isManager && !isWorkspaceAdmin) {
     return (
-      <DashboardLayout>
+      <DashboardLayout moduleName="Podřízení">
         <div className="max-w-2xl">
           <h1 className="text-xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>Podřízení</h1>
           <p style={{ color: 'var(--text-muted)' }}>Nemáte oprávnění k zobrazení podřízených.</p>
@@ -236,7 +236,7 @@ function SubordinatesContent() {
   const inputStyle = { borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' };
 
   return (
-    <DashboardLayout>
+    <DashboardLayout moduleName="Podřízení">
       <div className="max-w-4xl">
         <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
           <div>

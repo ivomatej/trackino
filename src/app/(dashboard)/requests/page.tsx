@@ -285,7 +285,7 @@ function RequestsContent() {
 
   if (loading) {
     return (
-      <DashboardLayout>
+      <DashboardLayout moduleName="Žádosti">
         <div className="flex items-center justify-center py-20">
           <div className="w-6 h-6 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
         </div>
@@ -297,7 +297,7 @@ function RequestsContent() {
   const inputCls = 'w-full px-3 py-2 rounded-lg border text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]';
 
   return (
-    <DashboardLayout>
+    <DashboardLayout moduleName="Žádosti">
       <div className="max-w-3xl">
         {/* Záhlaví */}
         <div className="flex items-start justify-between mb-6 gap-4">

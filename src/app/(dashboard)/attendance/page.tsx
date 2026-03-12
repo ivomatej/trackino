@@ -237,7 +237,7 @@ function AttendanceContent() {
   const cellW = 'minWidth: 90px';
 
   return (
-    <DashboardLayout>
+    <DashboardLayout moduleName="Přehled hodin">
       <div style={{ maxWidth: '100%' }}>
         {/* Header */}
         <div className="flex items-center justify-between mb-6 flex-wrap gap-3">

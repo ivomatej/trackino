@@ -41,7 +41,7 @@ export default function SettingsContent() {
 
   if (!canAccessSettings) {
     return (
-      <DashboardLayout>
+      <DashboardLayout moduleName="Nastavení">
         <div>
           <h1 className="text-xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>Nastavení</h1>
           <p style={{ color: 'var(--text-muted)' }}>Nemáte oprávnění k nastavení workspace.</p>
@@ -64,7 +64,7 @@ export default function SettingsContent() {
   ];
 
   return (
-    <DashboardLayout>
+    <DashboardLayout moduleName="Nastavení">
       <div className="max-w-5xl">
         <h1 className="text-xl font-bold mb-6" style={{ color: 'var(--text-primary)' }}>Nastavení workspace</h1>
 

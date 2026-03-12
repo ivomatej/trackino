@@ -564,7 +564,7 @@ function BugsContent() {
   };
 
   return (
-    <DashboardLayout>
+    <DashboardLayout moduleName="Hlášení chyb">
       <div className="max-w-3xl space-y-6">
         <div>
           <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Nahlásit chybu</h1>

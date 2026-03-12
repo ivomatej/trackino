@@ -33,7 +33,7 @@ export function AiAssistantContent() {
   // Přístup: tarif Max + canUseAiAssistant
   if (!hasModule('ai_assistant') || !canUseAiAssistant) {
     return (
-      <DashboardLayout>
+      <DashboardLayout moduleName="AI Asistent">
         <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ color: 'var(--text-muted)' }}>
             <path d="M12 2a8 8 0 0 1 8 8c0 3.5-2 6.5-5 7.7V20h-6v-2.3C6 16.5 4 13.5 4 10a8 8 0 0 1 8-8z"/>
@@ -51,7 +51,7 @@ export function AiAssistantContent() {
   }
 
   return (
-    <DashboardLayout>
+    <DashboardLayout moduleName="AI Asistent">
       <style>{AI_MSG_STYLES}</style>
 
       {/* Mobilní overlay sidebar */}

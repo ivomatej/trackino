@@ -148,7 +148,7 @@ function ProjectsContent() {
   if (!currentWorkspace) return null;
 
   return (
-    <DashboardLayout>
+    <DashboardLayout moduleName="Projekty">
       <div className="max-w-4xl">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <div>

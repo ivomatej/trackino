@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 12. 3. 2026 (v2.51.37)
+> Aktualizováno: 12. 3. 2026 (v2.51.38)
 
 ---
 
@@ -546,6 +546,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
 | v2.51.28 | 11. 3. 2026 | Notebook – FolderTree: odstraněny desktop individuální tlačítka, nahrazeny třemi tečkami (⋮) zobrazující se na hover na desktopu + vždy viditelné na mobilu; NoteEditor: paste handler strippuje background-* CSS vlastnosti a bgcolor atribut z vkládaného HTML (žádná změna barvy pozadí z externích nástrojů) |
+| v2.51.38 | 12. 3. 2026 | Refaktoring: vacation/page.tsx (925 ř.) rozdělen na 11 souborů v _components/ (types.ts, utils.ts, useVacation.ts, VacationStats.tsx, VacationForm.tsx, VacationRecordsTab.tsx, VacationRequestsTab.tsx, VacationArchiveTab.tsx, RejectModal.tsx, VacationContent.tsx); page.tsx redukován na ~23 řádků |
 | v2.51.37 | 12. 3. 2026 | Refaktoring: prompts/page.tsx (1001 ř.) rozdělen na 10 souborů v _components/ (types.ts, utils.ts, RichEditor.tsx, FolderTree.tsx, usePrompts.ts, PromptCard.tsx, PromptModals.tsx, PromptsLeftPanel.tsx, PromptsContent.tsx); page.tsx redukován na ~15 řádků |
 | v2.51.36 | 12. 3. 2026 | Refaktoring: bookmarks/page.tsx (1008 ř.) rozdělen na 8 souborů v _components/ (types.ts, utils.ts, useBookmarks.ts, FolderTree.tsx, BookmarksLeftPanel.tsx, BookmarkCard.tsx, BookmarkModals.tsx, BookmarksContent.tsx); page.tsx redukován na ~15 řádků |
 | v2.51.35 | 12. 3. 2026 | Refaktoring: domains/page.tsx (1195 ř.) rozdělen na 11 souborů v _components/ (types.ts, constants.tsx, utils.ts, useDomains.ts, StatsDashboard.tsx, DomainsTabContent.tsx, RegistrarsTabContent.tsx, DomainFormModal.tsx, RegistrarFormModal.tsx, DomainDetailModal.tsx, DomainsContent.tsx); page.tsx redukován na ~20 řádků |
@@ -901,11 +902,27 @@ ALTER TABLE trackino_calendar_event_notes
 
 ---
 
-## 17. Schvalování dovolené – architektura (vacation/page.tsx)
+## 17. Schvalování dovolené – architektura (vacation/)
+
+### Soubory (po refaktoringu v2.51.38 – rozdělen z 925 ř. na subsoubory)
+| Soubor | Popis |
+|--------|-------|
+| `vacation/page.tsx` | Auth guard + WorkspaceProvider (~23 ř.) |
+| `vacation/_components/VacationContent.tsx` | **Orchestrátor** – volá useVacation, renderuje access guard, header (user filter + add button), tab switcher, podmíněný obsah záložek, RejectModal (~170 ř.) |
+| `vacation/_components/useVacation.ts` | Custom hook – veškerý state, fetchData, addEntry, deleteEntry, approveEntry, rejectEntry, computed hodnoty; exportuje `UseVacationReturn` (~230 ř.) |
+| `vacation/_components/types.ts` | Sdílené typy: `APPROVAL_THRESHOLD = 3`, `VacationEntryWithProfile`, `ActiveTab` |
+| `vacation/_components/utils.ts` | Helper funkce: `calcWorkDays`, `formatDate`, `inputCls`, `inputStyle`, `syncVacationToPlanner`, `removeVacationFromPlanner` |
+| `vacation/_components/VacationStats.tsx` | 3 stat karty (Čerpáno/Zbývá/Celkový nárok) + allowance warning banner (~45 ř.) |
+| `vacation/_components/VacationForm.tsx` | Formulář přidání dovolené (user picker, datumové pole, náhled pracovních dní, badge schválení, poznámka) (~100 ř.) |
+| `vacation/_components/VacationRecordsTab.tsx` | Tabulka schválených záznamů s mazáním + sekce „Moje žádosti" (pending/rejected) (~130 ř.) |
+| `vacation/_components/VacationRequestsTab.tsx` | Seznam čekajících žádostí pro manažery/adminy se Schválit/Zamítnout tlačítky (~90 ř.) |
+| `vacation/_components/VacationArchiveTab.tsx` | Archiv vyřízených žádostí (schválené + zamítnuté) s info o reviewerovi (~100 ř.) |
+| `vacation/_components/RejectModal.tsx` | Fixní modal pro zadání důvodu zamítnutí s textarea (~65 ř.) |
 
 ### Konstanty
 ```typescript
-const APPROVAL_THRESHOLD = 3; // > 3 pracovních dní vyžaduje schválení
+export const APPROVAL_THRESHOLD = 3; // > 3 pracovních dní vyžaduje schválení
+// Definováno v vacation/_components/types.ts
 ```
 
 ### Status flow
@@ -924,13 +941,14 @@ export type VacationStatus = 'approved' | 'pending' | 'rejected';
 // VacationEntry má: status, reviewed_by, reviewed_at, reviewer_note
 ```
 
-### Key state variables
-- `activeTab: 'records' | 'requests'` – tab state
-- `subordinateUserIds: string[]` – z managerAssignments kde manager_user_id === user?.id
+### Key state variables (v useVacation.ts)
+- `activeTab: ActiveTab` – `'records' | 'requests' | 'archive'`
+- `subordinateUserIds: string[]` – z managerAssignments kde manager_user_id === user?.id (useMemo)
 - `canSeeRequests = isWorkspaceAdmin || isManager`
 - `approvedEntries` – jen `status === 'approved'`
 - `myPendingRejectedEntries` – vlastní pending/rejected záznamy
 - `pendingRequestEntries` – pending od podřízených (manager) nebo od všech (admin)
+- `archiveEntries` – všechny approved+rejected (pro adminy/managery)
 
 ### Klíčové funkce
 - `addEntry()` – pokud `days > APPROVAL_THRESHOLD && !isWorkspaceAdmin` → status='pending', jinak 'approved' + sync
@@ -2612,7 +2630,7 @@ CREATE POLICY "Auth full" ON trackino_task_board_members
 | `/tracker` | `tracker/page.tsx` | Time Tracker (Free+) |
 | `/planner` | `planner/page.tsx` (auth guard) + `_components/PlannerContent.tsx` (orchestrátor) + `_components/` (10 souborů: types.ts, utils.ts, icons.tsx, CellFull.tsx, CellHalf.tsx, NoteInput.tsx, usePlanner.ts, StatusManager.tsx, PlannerTable.tsx, CellPicker.tsx) | Plánovač dostupnosti (Pro+) |
 | `/calendar` | `calendar/page.tsx` → CalendarContent | Kalendář (Max) |
-| `/vacation` | `vacation/page.tsx` | Dovolená (Pro+) |
+| `/vacation` | `vacation/page.tsx` (auth guard) + `_components/VacationContent.tsx` (orchestrátor) + `_components/` (9 souborů: types.ts, utils.ts, useVacation.ts, VacationStats.tsx, VacationForm.tsx, VacationRecordsTab.tsx, VacationRequestsTab.tsx, VacationArchiveTab.tsx, RejectModal.tsx) | Dovolená (Pro+) |
 | `/invoices` | `invoices/page.tsx` (orchestrátor) + `types.ts`, `utils.ts`, `components/InvoiceRow.tsx`, `components/SubmitInvoiceForm.tsx`, `components/InvoiceFilters.tsx`, `components/ApproveModal.tsx`, `components/ReturnModal.tsx`, `components/DetailModal.tsx` | Fakturace (Pro+) |
 | `/reports` | `reports/page.tsx` | Reporty (Free+) |
 | `/attendance` | `attendance/page.tsx` | Přehled hodin (Pro+) |

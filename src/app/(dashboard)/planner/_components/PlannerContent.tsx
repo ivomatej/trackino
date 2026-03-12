@@ -59,7 +59,7 @@ export function PlannerContent() {
   }
 
   return (
-    <DashboardLayout>
+    <DashboardLayout moduleName="Plánovač">
       <div style={{ minWidth: 0 }}>
 
         {/* Hlavička */}

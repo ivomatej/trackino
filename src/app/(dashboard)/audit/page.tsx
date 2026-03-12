@@ -75,7 +75,7 @@ function AuditContent() {
 
   if (!canAccessAuditLog) {
     return (
-      <DashboardLayout>
+      <DashboardLayout moduleName="Audit log">
         <div className="max-w-2xl">
           <h1 className="text-xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>Audit log</h1>
           <p style={{ color: 'var(--text-muted)' }}>Nemáte oprávnění k zobrazení audit logu.</p>
@@ -96,7 +96,7 @@ function AuditContent() {
   };
 
   return (
-    <DashboardLayout>
+    <DashboardLayout moduleName="Audit log">
       <div className="max-w-3xl">
         <div className="mb-6">
           <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Audit log</h1>

@@ -384,7 +384,7 @@ function ReportsContent() {
   const memberName = (userId: string) => members.find(m => m.user_id === userId)?.display_name ?? '—';
 
   return (
-    <DashboardLayout>
+    <DashboardLayout moduleName="Reporty">
       <div className="max-w-5xl space-y-6">
         {/* Záhlaví */}
         <div className="flex items-start justify-between flex-wrap gap-3">

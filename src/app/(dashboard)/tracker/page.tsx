@@ -64,7 +64,7 @@ function TrackerContent() {
   }
 
   return (
-    <DashboardLayout showTimer onTimerEntryChanged={() => setRefreshKey(k => k + 1)} timerPlayData={timerPlayData}>
+    <DashboardLayout moduleName="Měřič" showTimer onTimerEntryChanged={() => setRefreshKey(k => k + 1)} timerPlayData={timerPlayData}>
       <div>
         {/* Hlavička stránky */}
         <div className="flex items-center justify-between mb-6">

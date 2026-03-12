@@ -557,7 +557,7 @@ export default function CalendarContent() {
   // ── 9. Guard + render ──────────────────────────────────────────────────────
 
   if (!currentWorkspace) return (
-    <DashboardLayout>
+    <DashboardLayout moduleName="Kalendář">
       <div className="flex items-center justify-center h-48">
         <div className="w-6 h-6 border-2 rounded-full animate-spin" style={{ borderColor: 'var(--primary)', borderTopColor: 'transparent' }} />
       </div>
@@ -673,7 +673,7 @@ export default function CalendarContent() {
   };
 
   return (
-    <DashboardLayout>
+    <DashboardLayout moduleName="Kalendář">
       <CalendarContext.Provider value={ctxValue}>
         <div className="h-full flex flex-col" style={{ minHeight: 0 }}>
           <CalendarHeader />

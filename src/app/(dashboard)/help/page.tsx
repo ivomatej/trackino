@@ -674,7 +674,7 @@ function HelpContent() {
 
   if (loading) {
     return (
-      <DashboardLayout>
+      <DashboardLayout moduleName="Nápověda">
         <div className="flex justify-center py-16">
           <div className="w-6 h-6 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
         </div>
@@ -683,7 +683,7 @@ function HelpContent() {
   }
 
   return (
-    <DashboardLayout>
+    <DashboardLayout moduleName="Nápověda">
       <div className="max-w-3xl">
         <div className="flex items-center justify-between mb-6">
           <div>

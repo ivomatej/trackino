@@ -205,7 +205,7 @@ function NotesContent() {
 
   if (!canManageNotes) {
     return (
-      <DashboardLayout>
+      <DashboardLayout moduleName="Poznámky">
         <div className="max-w-2xl">
           <h1 className="text-xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>Poznámky</h1>
           <p style={{ color: 'var(--text-muted)' }}>Nemáte oprávnění k zobrazení poznámek.</p>
@@ -217,7 +217,7 @@ function NotesContent() {
   const withNotes = entries.filter(e => e.manager_note && e.manager_note.trim() !== '');
 
   return (
-    <DashboardLayout>
+    <DashboardLayout moduleName="Poznámky">
       <div className="max-w-4xl space-y-6">
         {/* Záhlaví */}
         <div>

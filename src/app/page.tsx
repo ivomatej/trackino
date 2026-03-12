@@ -732,7 +732,7 @@ function DashboardWrapper() {
   }
 
   return (
-    <DashboardLayout>
+    <DashboardLayout moduleName="Přehled">
       <DashboardContent />
     </DashboardLayout>
   );

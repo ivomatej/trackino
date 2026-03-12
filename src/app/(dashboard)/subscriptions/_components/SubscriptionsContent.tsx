@@ -27,7 +27,7 @@ export function SubscriptionsContent() {
   /* ── Loading ── */
   if (h.wsLoading || h.loading) {
     return (
-      <DashboardLayout>
+      <DashboardLayout moduleName="Předplatná">
         <div className="flex items-center justify-center py-20">
           <div className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin"
             style={{ borderColor: 'var(--primary)', borderTopColor: 'transparent' }} />
@@ -38,7 +38,7 @@ export function SubscriptionsContent() {
 
   /* ── Render ── */
   return (
-    <DashboardLayout>
+    <DashboardLayout moduleName="Předplatná">
       <h1 className="text-xl font-bold mb-4 flex-shrink-0" style={{ color: 'var(--text-primary)' }}>
         Předplatná
       </h1>

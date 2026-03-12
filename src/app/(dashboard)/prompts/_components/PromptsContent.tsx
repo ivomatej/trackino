@@ -49,7 +49,7 @@ export function PromptsContent() {
   if (!currentWorkspace) return null;
 
   return (
-    <DashboardLayout>
+    <DashboardLayout moduleName="Prompty">
       <div className="flex -m-4 lg:-m-6 overflow-hidden" style={{ height: 'calc(100vh - var(--topbar-height))' }}>
 
         <PromptsLeftPanel

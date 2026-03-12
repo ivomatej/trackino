@@ -511,7 +511,7 @@ function KnowledgeBaseContent() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   if (wsLoading) return (
-    <DashboardLayout>
+    <DashboardLayout moduleName="Znalostní báze">
       <div className="flex items-center justify-center h-40">
         <div className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--primary)', borderTopColor: 'transparent' }} />
       </div>
@@ -519,7 +519,7 @@ function KnowledgeBaseContent() {
   );
 
   return (
-    <DashboardLayout>
+    <DashboardLayout moduleName="Znalostní báze">
       <div className="flex h-full gap-0 -m-4 lg:-m-6" style={{ minHeight: 'calc(100vh - var(--topbar-height))' }}>
 
         {/* Mobile overlay */}

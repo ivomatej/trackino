@@ -285,7 +285,7 @@ function AppSettingsContent() {
   const groups = ['Sledování', 'Analýza', 'Správa', 'Nástroje', 'Společnost'];
 
   return (
-    <DashboardLayout>
+    <DashboardLayout moduleName="Nastavení aplikace">
       <div>
         {/* Záhlaví */}
         <div className="mb-5">

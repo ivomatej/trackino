@@ -470,7 +470,7 @@ function InvoicesContent() {
   };
 
   return (
-    <DashboardLayout>
+    <DashboardLayout moduleName="Fakturace">
       <div className="max-w-3xl">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <div>

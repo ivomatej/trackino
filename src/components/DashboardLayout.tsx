@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, ReactNode } from 'react';
 import Sidebar from './Sidebar';
 import TimerBar from './TimerBar';
+import ErrorBoundary from './ErrorBoundary';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -22,6 +23,8 @@ interface DashboardLayoutProps {
   showTimer?: boolean;
   onTimerEntryChanged?: () => void;
   timerPlayData?: TimerPlayData | null;
+  /** Název modulu zobrazený v Error Boundary fallback UI */
+  moduleName?: string;
 }
 
 function PendingApprovalScreen() {
@@ -153,7 +156,7 @@ function useSystemNotifications() {
   return { visible, dismiss };
 }
 
-export default function DashboardLayout({ children, showTimer = false, onTimerEntryChanged, timerPlayData }: DashboardLayoutProps) {
+export default function DashboardLayout({ children, showTimer = false, onTimerEntryChanged, timerPlayData, moduleName }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     if (typeof window === 'undefined') return false;
@@ -345,7 +348,9 @@ export default function DashboardLayout({ children, showTimer = false, onTimerEn
             {/* Timer v hlavičce – jen pokud není přesunutý ke spodní hraně na mobilu */}
             {shouldShowTimer && !timerAtBottom ? (
               <div className="flex-1 min-w-0">
-                <TimerBar onEntryChanged={onTimerEntryChanged} playData={timerPlayData} />
+                <ErrorBoundary timerFallback>
+                  <TimerBar onEntryChanged={onTimerEntryChanged} playData={timerPlayData} />
+                </ErrorBoundary>
               </div>
             ) : (
               <div className="flex-1" />
@@ -359,7 +364,11 @@ export default function DashboardLayout({ children, showTimer = false, onTimerEn
           className="flex-1 p-4 lg:p-6 flex flex-col"
           style={timerAtBottom && shouldShowTimer ? { paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 130px)' } : undefined}
         >
-          {showLockedScreen ? <LockedWorkspaceScreen /> : isPendingApproval ? <PendingApprovalScreen /> : children}
+          {showLockedScreen ? <LockedWorkspaceScreen /> : isPendingApproval ? <PendingApprovalScreen /> : (
+            <ErrorBoundary moduleName={moduleName}>
+              {children}
+            </ErrorBoundary>
+          )}
         </main>
 
         {/* Patička */}
@@ -382,7 +391,9 @@ export default function DashboardLayout({ children, showTimer = false, onTimerEn
             paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)',
           }}
         >
+          <ErrorBoundary timerFallback>
           <TimerBar onEntryChanged={onTimerEntryChanged} playData={timerPlayData} isBottomBar />
+        </ErrorBoundary>
         </div>
       )}
     </div>

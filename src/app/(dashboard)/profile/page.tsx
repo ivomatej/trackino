@@ -81,7 +81,7 @@ function ProfileContent() {
   const inputStyle = { borderColor: 'var(--border)', background: 'var(--bg-hover)', color: 'var(--text-primary)' };
 
   return (
-    <DashboardLayout>
+    <DashboardLayout moduleName="Profil">
       <div className="max-w-2xl">
         <div className="mb-6">
           <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Detailní nastavení</h1>

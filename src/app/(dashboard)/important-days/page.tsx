@@ -537,7 +537,7 @@ function ImportantDaysPage() {
   }, [currentWorkspace, router]);
 
   return (
-    <DashboardLayout>
+    <DashboardLayout moduleName="Důležité dny">
       <div className="p-6">
         <ImportantDaysContent />
       </div>

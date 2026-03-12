@@ -309,7 +309,7 @@ function AppChangesContent() {
   // Zobrazit loading, dokud se auth a profil nenačtou
   if (authLoading || !user || profile === null) {
     return (
-      <DashboardLayout>
+      <DashboardLayout moduleName="Úpravy aplikace">
         <div className="flex items-center justify-center py-20">
           <div className="w-6 h-6 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
         </div>
@@ -320,7 +320,7 @@ function AppChangesContent() {
   if (!isMasterAdmin) return null;
 
   return (
-    <DashboardLayout>
+    <DashboardLayout moduleName="Úpravy aplikace">
       <div className="max-w-4xl">
 
         {/* Hlavička */}

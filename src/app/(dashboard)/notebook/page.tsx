@@ -2743,7 +2743,7 @@ const editorStyles = `
 export default function NotebookPage() {
   return (
     <WorkspaceProvider>
-      <DashboardLayout showTimer={false}>
+      <DashboardLayout moduleName="Notebook" showTimer={false}>
         <style>{editorStyles}</style>
         <NotebookContent />
       </DashboardLayout>

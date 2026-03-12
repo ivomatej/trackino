@@ -930,7 +930,7 @@ function AdminContent() {
 export default function AdminPage() {
   return (
     <WorkspaceProvider>
-      <DashboardLayout>
+      <DashboardLayout moduleName="Admin">
         <AdminContent />
       </DashboardLayout>
     </WorkspaceProvider>

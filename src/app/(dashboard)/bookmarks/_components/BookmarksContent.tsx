@@ -19,7 +19,7 @@ export default function BookmarksContent() {
   if (!bm.currentWorkspace) return null;
 
   return (
-    <DashboardLayout>
+    <DashboardLayout moduleName="Záložky">
       <div className="flex -m-4 lg:-m-6 overflow-hidden" style={{ height: 'calc(100vh - var(--topbar-height))' }}>
 
         {/* Left Panel */}

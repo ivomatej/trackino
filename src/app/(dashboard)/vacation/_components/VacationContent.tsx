@@ -17,7 +17,7 @@ export function VacationContent() {
   // Vstupní stráž: bez nároku a bez admin/manager role
   if (!v.canUseVacation && !v.isWorkspaceAdmin && !v.isManager) {
     return (
-      <DashboardLayout>
+      <DashboardLayout moduleName="Dovolená">
         <div className="max-w-2xl">
           <h1 className="text-xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>Dovolená</h1>
           <div className="rounded-xl border p-6 text-center" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
@@ -38,7 +38,7 @@ export function VacationContent() {
   ];
 
   return (
-    <DashboardLayout>
+    <DashboardLayout moduleName="Dovolená">
       <div className="max-w-3xl">
 
         {/* Hlavička */}

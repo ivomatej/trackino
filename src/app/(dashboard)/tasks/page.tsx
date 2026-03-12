@@ -1007,11 +1007,11 @@ function TasksContent() {
   const getFolderChildren = useCallback((parentId: string) => folders.filter(f => f.parent_id === parentId).sort((a, b) => a.sort_order - b.sort_order), [folders]);
   const getBoardsInFolder = useCallback((folderId: string) => visibleBoards.filter(b => b.folder_id === folderId), [visibleBoards]);
 
-  if (!hasModule('tasks')) return <DashboardLayout><div /></DashboardLayout>;
+  if (!hasModule('tasks')) return <DashboardLayout moduleName="Úkoly"><div /></DashboardLayout>;
 
   if (loading) {
     return (
-      <DashboardLayout>
+      <DashboardLayout moduleName="Úkoly">
         <div className="flex items-center justify-center py-20">
           <div className="w-8 h-8 border-2 rounded-full animate-spin" style={{ borderColor: 'var(--border)', borderTopColor: 'var(--primary)' }} />
         </div>
@@ -1024,7 +1024,7 @@ function TasksContent() {
   // ══════════════════════════════════════
 
   return (
-    <DashboardLayout>
+    <DashboardLayout moduleName="Úkoly">
     <div className="flex -m-4 lg:-m-6" style={{ height: 'calc(100vh - var(--topbar-height, 56px))' }}>
 
       {/* ── LEFT SIDEBAR ── */}
