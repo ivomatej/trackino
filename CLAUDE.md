@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 13. 3. 2026 (v2.51.45)
+> Aktualizováno: 13. 3. 2026 (v2.51.48)
 
 ---
 
@@ -652,6 +652,9 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
 | v2.51.28 | 11. 3. 2026 | Notebook – FolderTree: odstraněny desktop individuální tlačítka, nahrazeny třemi tečkami (⋮) zobrazující se na hover na desktopu + vždy viditelné na mobilu; NoteEditor: paste handler strippuje background-* CSS vlastnosti a bgcolor atribut z vkládaného HTML (žádná změna barvy pozadí z externích nástrojů) |
+| v2.51.48 | 13. 3. 2026 | Refaktoring: requests/page.tsx (762 ř.) rozdělen na 7 souborů v _components/ (types.ts, utils.ts, useRequests.ts, StatusBadge.tsx, RequestFormModal.tsx, RejectModal.tsx, RequestsContent.tsx); page.tsx redukován na ~20 řádků |
+| v2.51.47 | 13. 3. 2026 | Refaktoring: reports/page.tsx (917 ř.) rozdělen na 9 souborů v _components/ (types.ts, utils.ts, SelectWrap.tsx, useReports.ts, ManualEntryForm.tsx, ReportsFilters.tsx, ReportsSummary.tsx, ReportsEntryList.tsx, ReportsContent.tsx); page.tsx redukován na ~20 řádků |
+| v2.51.46 | 13. 3. 2026 | Refaktoring: important-days/page.tsx (555 ř.) rozdělen na 6 souborů v _components/ (constants.ts, utils.ts, useImportantDays.ts, ImportantDayItem.tsx, ImportantDayForm.tsx, ImportantDaysContent.tsx); page.tsx redukován na ~25 řádků |
 | v2.51.45 | 13. 3. 2026 | Refaktoring: help/page.tsx (818 ř.) rozdělen na 4 soubory v _components/ (constants.ts, useHelp.ts, HelpToolbar.tsx, HelpContent.tsx); page.tsx redukován na ~20 řádků |
 | v2.51.44 | 13. 3. 2026 | Refaktoring: documents/page.tsx (917 ř.) rozdělen na 9 souborů v _components/ (types.ts, utils.tsx, useDocuments.ts, FolderTree.tsx, FolderModal.tsx, ShareModal.tsx, DocFormModal.tsx, DocumentsContent.tsx); page.tsx redukován na ~20 řádků |
 | v2.51.43 | 13. 3. 2026 | Refaktoring: category-report/page.tsx (534 ř.) rozdělen na 8 souborů v _components/ (types.ts, utils.ts, useCategoryReport.ts, CategoryFilters.tsx, SummaryBar.tsx, CategoryPieChart.tsx, CategoryBarChart.tsx, CategoryTable.tsx, CategoryReportContent.tsx); page.tsx redukován na ~20 řádků |
@@ -2746,7 +2749,7 @@ CREATE POLICY "Auth full" ON trackino_task_board_members
 | `/calendar` | `calendar/page.tsx` → CalendarContent | Kalendář (Max) |
 | `/vacation` | `vacation/page.tsx` (auth guard) + `_components/VacationContent.tsx` (orchestrátor) + `_components/` (9 souborů: types.ts, utils.ts, useVacation.ts, VacationStats.tsx, VacationForm.tsx, VacationRecordsTab.tsx, VacationRequestsTab.tsx, VacationArchiveTab.tsx, RejectModal.tsx) | Dovolená (Pro+) |
 | `/invoices` | `invoices/page.tsx` (orchestrátor) + `types.ts`, `utils.ts`, `components/InvoiceRow.tsx`, `components/SubmitInvoiceForm.tsx`, `components/InvoiceFilters.tsx`, `components/ApproveModal.tsx`, `components/ReturnModal.tsx`, `components/DetailModal.tsx` | Fakturace (Pro+) |
-| `/reports` | `reports/page.tsx` | Reporty (Free+) |
+| `/reports` | `reports/page.tsx` (auth guard ~20 ř.) + `_components/ReportsContent.tsx` (orchestrátor) + `_components/` (types.ts, utils.ts, SelectWrap.tsx, useReports.ts, ManualEntryForm.tsx, ReportsFilters.tsx, ReportsSummary.tsx, ReportsEntryList.tsx) | Reporty (Free+) |
 | `/attendance` | `attendance/page.tsx` | Přehled hodin (Pro+) |
 | `/category-report` | `category-report/page.tsx` (auth guard ~20 ř.) + `_components/CategoryReportContent.tsx` (orchestrátor) + `_components/` (types.ts, utils.ts, useCategoryReport.ts, CategoryFilters.tsx, SummaryBar.tsx, CategoryPieChart.tsx, CategoryBarChart.tsx, CategoryTable.tsx) | Analýza kategorií – Recharts (Pro+) |
 | `/subordinates` | `subordinates/page.tsx` | Přehled podřízených (Pro+) |
@@ -2758,8 +2761,8 @@ CREATE POLICY "Auth full" ON trackino_task_board_members
 | `/tasks` | `tasks/page.tsx` (orchestrátor) | Úkoly + Kanban (Pro+) – rozdělen na subsoubory od v2.51.21 |
 | `/subscriptions` | `subscriptions/page.tsx` (auth guard) + `_components/SubscriptionsContent.tsx` (orchestrátor) + `_components/` (18 souborů: types, constants, utils, useSubscriptions, StarRating, StatsDashboard, SubsTabContent, CategoriesTabContent, AccessByServiceView, AccessByUserView, AccessSummaryView, AccessTabContent, DetailModal, SubFormModal, AccessModal, ExtUserModal, CatFormModal) | Evidence předplatných (Pro+) |
 | `/domains` | `domains/page.tsx` (auth guard) + `_components/DomainsContent.tsx` (orchestrátor) + `_components/` (10 souborů: types.ts, constants.tsx, utils.ts, useDomains.ts, StatsDashboard.tsx, DomainsTabContent.tsx, RegistrarsTabContent.tsx, DomainFormModal.tsx, RegistrarFormModal.tsx, DomainDetailModal.tsx) | Evidence domén (Pro+) |
-| `/important-days` | `important-days/page.tsx` | Důležité dny (Pro+) |
-| `/requests` | `requests/page.tsx` | Žádosti zaměstnanců (Pro+) |
+| `/important-days` | `important-days/page.tsx` (auth guard ~25 ř.) + `_components/ImportantDaysContent.tsx` (orchestrátor) + `_components/` (constants.ts, utils.ts, useImportantDays.ts, ImportantDayItem.tsx, ImportantDayForm.tsx) | Důležité dny (Pro+) |
+| `/requests` | `requests/page.tsx` (auth guard ~20 ř.) + `_components/RequestsContent.tsx` (orchestrátor) + `_components/` (types.ts, utils.ts, useRequests.ts, StatusBadge.tsx, RequestFormModal.tsx, RejectModal.tsx) | Žádosti zaměstnanců (Pro+) |
 | `/feedback` | `feedback/page.tsx` | Anonymní připomínky (Pro+) |
 | `/knowledge-base` | `knowledge-base/page.tsx` (orchestrátor) + `_components/types.ts`, `utils.ts`, `RichEditor.tsx`, `PageViewer.tsx`, `KbFolderTree.tsx`, `KbSidebar.tsx`, `KbWelcomeScreen.tsx`, `PageListView.tsx`, `KbModals.tsx`, `KbPageDetail.tsx` | Znalostní báze (Pro+) |
 | `/documents` | `documents/page.tsx` (auth guard ~20 ř.) + `_components/DocumentsContent.tsx` (orchestrátor) + `_components/` (types.ts, utils.tsx, useDocuments.ts, FolderTree.tsx, FolderModal.tsx, ShareModal.tsx, DocFormModal.tsx) | Dokumenty + Supabase Storage (Pro+) |

@@ -11,6 +11,42 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.51.48 – 13. 3. 2026</h3>
+<ul>
+  <li><strong>Refaktoring: Žádosti</strong>:
+    <ul>
+      <li>Původní monolitický soubor <code>requests/page.tsx</code> (762 ř.) rozdělen na 7 souborů v adresáři <code>_components/</code></li>
+      <li><code>types.ts</code> – typy RequestWithProfile, ActiveTab a konstanty REQUEST_TYPE_LABELS, REQUEST_TYPE_OPTIONS, CATEGORY_GUIDE</li>
+      <li><code>utils.ts</code> – helper funkce (initials) a sdílené styly inputCls/inputStyle</li>
+      <li><code>useRequests.ts</code> – custom hook se veškerým stavem, fetch logikou a CRUD akcemi (~200 ř.)</li>
+      <li><code>StatusBadge.tsx</code> – komponenta badge stavu žádosti (Čeká/Schváleno/Zamítnuto)</li>
+      <li><code>RequestFormModal.tsx</code> – modal pro podání nové žádosti</li>
+      <li><code>RejectModal.tsx</code> – modal pro zamítnutí žádosti s důvodem</li>
+      <li><code>RequestsContent.tsx</code> – orchestrátor renderující celou stránku</li>
+      <li><code>page.tsx</code> redukován na ~20 řádků (auth guard + WorkspaceProvider)</li>
+    </ul>
+  </li>
+</ul>
+
+<h3>v2.51.47 – 13. 3. 2026</h3>
+<ul>
+  <li><strong>Refaktoring: Reporty</strong>:
+    <ul>
+      <li>Původní monolitický soubor <code>reports/page.tsx</code> (917 ř.) rozdělen na 9 souborů v adresáři <code>_components/</code></li>
+      <li><code>types.ts</code> – MemberProfile interface, DatePreset typ, PRESETS konstanta</li>
+      <li><code>utils.ts</code> – helper funkce (fmtDuration, fmtTime, fmtDateGroup, isoDate, getPresetRange, fmtCost, getRateForEntry)</li>
+      <li><code>SelectWrap.tsx</code> – obal pro select s vlastní SVG šipkou</li>
+      <li><code>useReports.ts</code> – custom hook se veškerým stavem, fetch logikou, akcemi a computed hodnotami (~240 ř.)</li>
+      <li><code>ManualEntryForm.tsx</code> – formulář pro ruční zadání časového záznamu</li>
+      <li><code>ReportsFilters.tsx</code> – filtry (preset, datum, uživatel, projekt)</li>
+      <li><code>ReportsSummary.tsx</code> – souhrnné karty a per-user přehled nákladů</li>
+      <li><code>ReportsEntryList.tsx</code> – seznam záznamů seskupených dle dnů s poznámkami</li>
+      <li><code>ReportsContent.tsx</code> – orchestrátor skládající vše dohromady</li>
+      <li><code>page.tsx</code> redukován na ~20 řádků (auth guard + WorkspaceProvider)</li>
+    </ul>
+  </li>
+</ul>
+
 <h3>v2.51.44 – 13. 3. 2026</h3>
 <ul>
   <li><strong>Refaktoring: Dokumenty</strong>:
