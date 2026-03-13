@@ -1,6 +1,29 @@
 export const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.51.54 – 13. 3. 2026</h3>
+<ul>
+  <li><strong>Refaktoring: Databázové typy</strong>:
+    <ul>
+      <li>Původní monolitický soubor <code>types/database.ts</code> (1160 ř.) rozdělen na 13 souborů v adresáři <code>types/db/</code></li>
+      <li><code>core.ts</code> – základní typy: workspace, profil, role, modul, systémová oznámení</li>
+      <li><code>tracking.ts</code> – time tracking: projekt, kategorie, time entry, klient, štítek</li>
+      <li><code>vacation.ts</code> – dovolená a plánovač dostupnosti</li>
+      <li><code>invoices.ts</code> – fakturace a důležité dny</li>
+      <li><code>calendar.ts</code> – kalendář, sdílení, ICS, RSVP účastníci</li>
+      <li><code>requests.ts</code> – žádosti, anonymní feedback, workspace stránky</li>
+      <li><code>documents.ts</code> – správa dokumentů a složek</li>
+      <li><code>knowledge.ts</code> – znalostní báze (KB)</li>
+      <li><code>content.ts</code> – prompty, záložky, notebook poznámky</li>
+      <li><code>subscriptions.ts</code> – evidence předplatných a přístupů</li>
+      <li><code>domains.ts</code> – evidence domén a registrátorů</li>
+      <li><code>tasks.ts</code> – úkolník (kanban board, sloupce, úkoly, podúkoly)</li>
+      <li><code>ai.ts</code> – AI asistent (konverzace, zprávy, limity)</li>
+      <li><code>database.ts</code> redukován na 14 řádků (orchestrátor s re-exporty); všechny existující importy fungují beze změny</li>
+    </ul>
+  </li>
+</ul>
+
 <h3>v2.51.52 – 13. 3. 2026</h3>
 <ul>
   <li><strong>Refaktoring: Notebook</strong>:

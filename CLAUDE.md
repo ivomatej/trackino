@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 13. 3. 2026 (v2.51.53)
+> Aktualizováno: 13. 3. 2026 (v2.51.54)
 
 ---
 
@@ -652,6 +652,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
 | v2.51.28 | 11. 3. 2026 | Notebook – FolderTree: odstraněny desktop individuální tlačítka, nahrazeny třemi tečkami (⋮) zobrazující se na hover na desktopu + vždy viditelné na mobilu; NoteEditor: paste handler strippuje background-* CSS vlastnosti a bgcolor atribut z vkládaného HTML (žádná změna barvy pozadí z externích nástrojů) |
+| v2.51.54 | 13. 3. 2026 | Refaktoring: types/database.ts (1160 ř.) rozdělen na 13 souborů v db/ (core.ts, tracking.ts, vacation.ts, invoices.ts, calendar.ts, requests.ts, documents.ts, knowledge.ts, content.ts, subscriptions.ts, domains.ts, tasks.ts, ai.ts); database.ts redukován na 14 řádků orchestrátoru (re-exporty); existující importy beze změny |
 | v2.51.53 | 13. 3. 2026 | Refaktoring: tasks/page.tsx (1622 ř.) rozdělen na 4 hooky v _hooks/ (useTasksData.ts, useCrossWorkspace.ts, useTasksCrud.ts, useTasksDetail.ts); page.tsx redukován na ~530 řádků orchestrátoru |
 | v2.51.52 | 13. 3. 2026 | Refaktoring: notebook/page.tsx (2753 ř.) rozdělen na 6 souborů v _components/ (types.ts, utils.ts, FolderTree.tsx, NoteEditor.tsx, CalEventNoteEditor.tsx, NotebookContent.tsx); page.tsx redukován na ~15 řádků |
 | v2.51.51 | 13. 3. 2026 | Refaktoring: invoices/page.tsx (794 ř.) rozdělen na 3 nové soubory v components/ (useInvoices.ts, InvoicesContent.tsx, CurrentPeriodCard.tsx); page.tsx redukován na ~13 řádků |
@@ -2729,7 +2730,20 @@ CREATE POLICY "Auth full" ON trackino_task_board_members
 
 | Soubor | Co dělá |
 |--------|---------|
-| `database.ts` | VŠECHNY TypeScript typy pro DB tabulky (Profile, Workspace, TimeEntry, VacationEntry, TaskItem atd.) |
+| `database.ts` | **Orchestrátor** – re-exportuje všechny typy z `db/` (existující importy fungují beze změny) |
+| `db/core.ts` | Základní typy: UserRole, Tariff, ModuleId, Workspace, Profile, WorkspaceMember, ManagerAssignment, WorkspaceBilling, AuditLogEntry, Invitation, Department, CooperationType, SystemNotification, AppChange, BugReport, HelpContent |
+| `db/tracking.ts` | Time tracking: Project, Category, Task, TimeEntry, Client, ClientProject, Tag, TimeEntryTag, MemberRate |
+| `db/vacation.ts` | Dovolená a plánovač: VacationAllowance, VacationStatus, VacationEntry, AvailabilityStatus, AvailabilityHalf, AvailabilityEntry, PlannerPin |
+| `db/invoices.ts` | Fakturace a důležité dny: MemberInvoiceSettings, InvoiceStatus, Invoice, ImportantDayRecurring, ImportantDay |
+| `db/calendar.ts` | Kalendář: Calendar, CalendarEvent, CalendarShare, CalendarSharePref, IcsEventCache, CalendarEventAttendee, CalendarSubscription, CalendarEventSource/Recurrence |
+| `db/requests.ts` | Žádosti, feedback, stránky: RequestType/Status, TrackingRequest, FeedbackEntry, WorkspacePage |
+| `db/documents.ts` | Dokumenty: DocumentFolder, DocFolderShare, DocumentItemType, WorkspaceDocument |
+| `db/knowledge.ts` | Znalostní báze: KbPageStatus, KbFolder, KbFolderShare, KbPage, KbVersion, KbComment, KbReview, KbAccess |
+| `db/content.ts` | Obsah (prompty, záložky, notebook): PromptFolder, Prompt, PromptComment, BookmarkFolder, Bookmark, BookmarkComment, Note, NoteFolder, NoteFolderShare |
+| `db/subscriptions.ts` | Předplatná: SubscriptionCategory, Subscription, SubscriptionRating, ExchangeRate, SubscriptionAccessUser, SubscriptionAccess, a related types |
+| `db/domains.ts` | Domény: DomainStatus, Domain, DomainRegistrar |
+| `db/tasks.ts` | Úkolník: TaskPriority, TaskBoardSettings, TaskBoard, TaskColumn, TaskItem, TaskSubtask, TaskComment, TaskAttachment, TaskHistory, TaskFolder, TaskFolderShare, TaskBoardMember |
+| `db/ai.ts` | AI asistent: AiConversation, AiMessage, AiLimitType, AiUsageLimit |
 
 ### API routes (src/app/api/)
 
