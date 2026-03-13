@@ -1,6 +1,57 @@
-// Trackino – typy pro evidenci domén
+// Trackino – typy pro evidenci domén + Openprovider integrace
 
 export type DomainStatus = 'active' | 'expired' | 'transferred' | 'cancelled' | 'winding_down';
+
+// ─── Openprovider integrace ────────────────────────────────────────────────
+
+/** Nastavení Openprovider napojení per workspace */
+export interface DomainSettings {
+  id: string;
+  workspace_id: string;
+  openprovider_username: string | null;
+  openprovider_password_encrypted: string | null;
+  openprovider_base_url: string;
+  notify_days_before: number[];
+  last_sync_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Nameserver záznamy v Openprovider formátu */
+export interface OpenproviderNameserver {
+  name: string;
+  ip?: string;
+}
+
+/** Lokální cache záznamu domény synchronizované z Openprovider */
+export interface DomainCache {
+  id: string;
+  workspace_id: string;
+  openprovider_id: number;
+  domain_name: string;
+  status: string;
+  expiration_date: string | null;
+  creation_date: string | null;
+  is_locked: boolean;
+  nameservers: OpenproviderNameserver[];
+  registrant: Record<string, unknown> | null;
+  ssl_expiry_date: string | null;
+  auto_renew: boolean;
+  raw_data: Record<string, unknown> | null;
+  synced_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Log odeslaných notifikací o expiraci */
+export interface DomainNotification {
+  id: string;
+  workspace_id: string;
+  domain_cache_id: string;
+  notification_type: 'domain_expiry' | 'ssl_expiry';
+  days_before: number;
+  sent_at: string;
+}
 
 export interface Domain {
   id: string;
