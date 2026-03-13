@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 13. 3. 2026 (v2.51.42)
+> Aktualizováno: 13. 3. 2026 (v2.51.43)
 
 ---
 
@@ -652,6 +652,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
 | v2.51.28 | 11. 3. 2026 | Notebook – FolderTree: odstraněny desktop individuální tlačítka, nahrazeny třemi tečkami (⋮) zobrazující se na hover na desktopu + vždy viditelné na mobilu; NoteEditor: paste handler strippuje background-* CSS vlastnosti a bgcolor atribut z vkládaného HTML (žádná změna barvy pozadí z externích nástrojů) |
+| v2.51.43 | 13. 3. 2026 | Refaktoring: category-report/page.tsx (534 ř.) rozdělen na 8 souborů v _components/ (types.ts, utils.ts, useCategoryReport.ts, CategoryFilters.tsx, SummaryBar.tsx, CategoryPieChart.tsx, CategoryBarChart.tsx, CategoryTable.tsx, CategoryReportContent.tsx); page.tsx redukován na ~20 řádků |
 | v2.51.42 | 13. 3. 2026 | Refaktoring: bugs/page.tsx (700 ř.) rozdělen na 5 souborů v _components/ (types.ts, ui.tsx, useBugs.ts, BugCard.tsx, BugsContent.tsx); page.tsx redukován na ~20 řádků |
 | v2.51.41 | 13. 3. 2026 | Refaktoring: page.tsx (765 ř.) rozdělen na 8 souborů v _components/ (types.ts, utils.ts, useDashboard.ts, StatCard.tsx, GreetingCard.tsx, NotificationsPanel.tsx, WeekChart.tsx, MonthOverview.tsx, DashboardContent.tsx); page.tsx redukován na ~55 řádků |
 | v2.51.40 | 13. 3. 2026 | Refaktoring: app-changes/page.tsx (818 ř.) rozdělen na 6 souborů v _components/ (types.ts, utils.ts, useAppChanges.ts, AppChangeFormModal.tsx, AppChangeItem.tsx, AppChangesContent.tsx); page.tsx redukován na ~10 řádků |
@@ -2745,7 +2746,7 @@ CREATE POLICY "Auth full" ON trackino_task_board_members
 | `/invoices` | `invoices/page.tsx` (orchestrátor) + `types.ts`, `utils.ts`, `components/InvoiceRow.tsx`, `components/SubmitInvoiceForm.tsx`, `components/InvoiceFilters.tsx`, `components/ApproveModal.tsx`, `components/ReturnModal.tsx`, `components/DetailModal.tsx` | Fakturace (Pro+) |
 | `/reports` | `reports/page.tsx` | Reporty (Free+) |
 | `/attendance` | `attendance/page.tsx` | Přehled hodin (Pro+) |
-| `/category-report` | `category-report/page.tsx` | Analýza kategorií – Recharts (Pro+) |
+| `/category-report` | `category-report/page.tsx` (auth guard ~20 ř.) + `_components/CategoryReportContent.tsx` (orchestrátor) + `_components/` (types.ts, utils.ts, useCategoryReport.ts, CategoryFilters.tsx, SummaryBar.tsx, CategoryPieChart.tsx, CategoryBarChart.tsx, CategoryTable.tsx) | Analýza kategorií – Recharts (Pro+) |
 | `/subordinates` | `subordinates/page.tsx` | Přehled podřízených (Pro+) |
 | `/notes` | `notes/page.tsx` | Manažerské poznámky (Pro+) |
 | `/projects` | `projects/page.tsx` | Správa projektů (Free+) |

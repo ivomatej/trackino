@@ -11,6 +11,25 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.51.43 – 13. 3. 2026</h3>
+<ul>
+  <li><strong>Refaktoring: Analýza kategorií</strong>:
+    <ul>
+      <li>Původní monolitický soubor <code>category-report/page.tsx</code> (534 ř.) rozdělen na 9 souborů v adresáři <code>_components/</code></li>
+      <li><code>types.ts</code> – typy Preset a CategoryStats</li>
+      <li><code>utils.ts</code> – helper funkce (toDateStr, getMonday, formatHM, formatHMFull, COLORS)</li>
+      <li><code>useCategoryReport.ts</code> – custom hook se veškerým stavem, fetch logikou a agregací</li>
+      <li><code>CategoryFilters.tsx</code> – preset tabs, user select, custom date inputs</li>
+      <li><code>SummaryBar.tsx</code> – souhrnné statistiky (odpracováno, záznamy, kategorie)</li>
+      <li><code>CategoryPieChart.tsx</code> – koláčový graf + legenda s procenty</li>
+      <li><code>CategoryBarChart.tsx</code> – horizontální sloupcový graf</li>
+      <li><code>CategoryTable.tsx</code> – detail tabulka s progress bary</li>
+      <li><code>CategoryReportContent.tsx</code> – orchestrátor skládající vše dohromady</li>
+      <li><code>page.tsx</code> redukován na ~20 řádků (auth guard + WorkspaceProvider)</li>
+    </ul>
+  </li>
+</ul>
+
 <h3>v2.51.39 – 12. 3. 2026</h3>
 <ul>
   <li><strong>Error Boundaries – izolace selhání modulů</strong>:
