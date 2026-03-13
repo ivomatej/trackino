@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 13. 3. 2026 (v2.51.54)
+> Aktualizováno: 13. 3. 2026 (v2.51.55)
 
 ---
 
@@ -652,6 +652,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
 | v2.51.28 | 11. 3. 2026 | Notebook – FolderTree: odstraněny desktop individuální tlačítka, nahrazeny třemi tečkami (⋮) zobrazující se na hover na desktopu + vždy viditelné na mobilu; NoteEditor: paste handler strippuje background-* CSS vlastnosti a bgcolor atribut z vkládaného HTML (žádná změna barvy pozadí z externích nástrojů) |
+| v2.51.55 | 13. 3. 2026 | Openprovider API integrace – Session 1 (infrastruktura): src/lib/openprovider.ts (Bearer token cache 47h, auto-refresh), API routes /api/openprovider/domains, /domains/[id], /balance, /sync; rateLimitOpenprovider (30/min/IP); DB typy DomainSettings/DomainCache/DomainNotification; SQL migrace 3 nových tabulek (trackino_domain_settings, trackino_domain_cache, trackino_domain_notifications) s RLS workspace izolací |
 | v2.51.54 | 13. 3. 2026 | Refaktoring: types/database.ts (1160 ř.) rozdělen na 13 souborů v db/ (core.ts, tracking.ts, vacation.ts, invoices.ts, calendar.ts, requests.ts, documents.ts, knowledge.ts, content.ts, subscriptions.ts, domains.ts, tasks.ts, ai.ts); database.ts redukován na 14 řádků orchestrátoru (re-exporty); existující importy beze změny |
 | v2.51.53 | 13. 3. 2026 | Refaktoring: tasks/page.tsx (1622 ř.) rozdělen na 4 hooky v _hooks/ (useTasksData.ts, useCrossWorkspace.ts, useTasksCrud.ts, useTasksDetail.ts); page.tsx redukován na ~530 řádků orchestrátoru |
 | v2.51.52 | 13. 3. 2026 | Refaktoring: notebook/page.tsx (2753 ř.) rozdělen na 6 souborů v _components/ (types.ts, utils.ts, FolderTree.tsx, NoteEditor.tsx, CalEventNoteEditor.tsx, NotebookContent.tsx); page.tsx redukován na ~15 řádků |
@@ -1906,7 +1907,7 @@ const STATUS_CONFIG: Record<KbPageStatus, { label: string; color: string }>
 ### Soubory
 | Soubor | Popis |
 |--------|-------|
-| `src/lib/rate-limit.ts` | Tři limitery: `rateLimitRegister`, `rateLimitAI`, `rateLimitFirecrawl` |
+| `src/lib/rate-limit.ts` | Čtyři limitery: `rateLimitRegister`, `rateLimitAI`, `rateLimitFirecrawl`, `rateLimitOpenprovider` |
 | `src/app/api/auth/register/route.ts` | Server-side registrace s rate limitem (POST) |
 
 ### Limitery
@@ -2722,7 +2723,8 @@ CREATE POLICY "Auth full" ON trackino_task_board_members
 | `czech-namedays.ts` | getCzechNameday(monthDay), getCzechNamedayForDate(date) – 366 jmen |
 | `midnight-split.ts` | splitAtMidnight(start, end) → pole segmentů (pro timer přes půlnoc) |
 | `ai-providers.ts` | Konfigurace AI providerů (OpenAI + Gemini), AiModel[], DEFAULT_MODEL_ID |
-| `rate-limit.ts` | Upstash Redis rate limitery: rateLimitRegister (3/hod), rateLimitAI (20/min), rateLimitFirecrawl (10/min) |
+| `rate-limit.ts` | Upstash Redis rate limitery: rateLimitRegister (3/hod), rateLimitAI (20/min), rateLimitFirecrawl (10/min), rateLimitOpenprovider (30/min) |
+| `openprovider.ts` | Openprovider API klient – getToken() s cache 47h, auto-refresh při 401, openproviderFetch(), hasOpenproviderCredentials(), formatDomainName() – **server-side only** |
 | `cron-handler.ts` | verifyCronSecret(), saveCronResult(), parseCronBody() – sdílené helpery pro cron routes |
 | `utils.ts` | Obecné utility (nesouvisí s Kalendářem) |
 
@@ -2764,6 +2766,10 @@ CREATE POLICY "Auth full" ON trackino_task_board_members
 | `firecrawl/search/route.ts` | POST – webové vyhledávání (Firecrawl wrapper), rate limit 10/min/IP |
 | `ics-proxy/route.ts` | GET – proxy pro ICS kalendářové odběry |
 | `kb-public/route.ts` | GET – veřejná KB stránka přes token (bypasuje RLS) |
+| `openprovider/domains/route.ts` | GET – seznam domén z Openprovider (proxy, server-side) |
+| `openprovider/domains/[domainId]/route.ts` | GET – detail domény z Openprovider |
+| `openprovider/balance/route.ts` | GET – stav kreditu Openprovider účtu (/resellers/me) |
+| `openprovider/sync/route.ts` | POST – sync domén z Openprovider do trackino_domain_cache (stránkování) |
 
 ### Stránky (src/app/(dashboard)/) – přehled
 
@@ -2991,6 +2997,72 @@ const getWsColor = (wsId: string, ws?: UserWorkspace) => ws?.color ?? WORKSPACE_
 
 ### Idempotentnost SQL migrace
 Migrace používá `DROP POLICY IF EXISTS` + `CREATE POLICY` – lze spustit opakovaně bez chyb nebo duplicit. Funkce jsou `CREATE OR REPLACE` – bezpečné i při opakovaném spuštění.
+
+---
+
+## 37. Openprovider API integrace – architektura (v2.51.55+)
+
+### Co je Openprovider
+Openprovider je registrátor domén s REST API v1beta. Trackino ho integruje do modulu Evidence domén – umožňuje zobrazovat a spravovat domény přímo ze Supabase workspace.
+
+### Env proměnné (přidat do Vercel + .env.local)
+```
+OPENPROVIDER_USERNAME=info@marketixy.com
+OPENPROVIDER_PASSWORD=...
+OPENPROVIDER_BASE_URL=https://api.openprovider.eu/v1beta
+```
+Sandbox (pro vývoj): `https://api.sandbox.openprovider.nl:8480/v1beta`
+
+### Autentizace
+- Bearer token – získán přes `POST /auth/login`
+- Cachován v paměti server procesu (47h – bezpečnostní marže před expirací)
+- Auto-refresh při 401 response: `cachedToken = null` → nový login → retry
+
+### Soubory
+| Soubor | Popis |
+|--------|-------|
+| `src/lib/openprovider.ts` | Klient – `getToken()` (cache 47h), `openproviderFetch()` (auto-refresh), `hasOpenproviderCredentials()`, `formatDomainName()` |
+| `src/app/api/openprovider/domains/route.ts` | GET – seznam domén (limit, offset, status, order_by) |
+| `src/app/api/openprovider/domains/[domainId]/route.ts` | GET – detail konkrétní domény |
+| `src/app/api/openprovider/balance/route.ts` | GET – stav kreditu (`/resellers/me`) |
+| `src/app/api/openprovider/sync/route.ts` | POST – sync všech domén do `trackino_domain_cache` (stránkování po 100) |
+
+### DB tabulky
+| Tabulka | Popis |
+|---------|-------|
+| `trackino_domain_settings` | Nastavení Openprovider per workspace – credentials, notify_days_before, last_sync_at |
+| `trackino_domain_cache` | Lokální cache domén ze sync – openprovider_id, domain_name, status, expiration_date, nameservers, raw_data |
+| `trackino_domain_notifications` | Log notifikací o expiraci (prevence duplicit) – UNIQUE(domain_cache_id, type, days_before) |
+
+### Klíčové Openprovider API endpointy (v1beta)
+```
+GET  /domains                  → seznam domén (limit, offset, status, with_additional_data)
+GET  /domains/{id}             → detail domény
+POST /domains/check            → kontrola dostupnosti (budoucí session)
+GET  /dns/zones/{name}         → DNS záznamy (budoucí session)
+PUT  /dns/zones/{name}         → aktualizace DNS (budoucí session)
+GET  /ssl/certificates         → SSL certifikáty (budoucí session)
+GET  /resellers/me             → stav kreditu a info o reselleru
+```
+
+### Sync strategie
+- **Manuální sync**: tlačítko v UI → `POST /api/openprovider/sync` → refresh `trackino_domain_cache`
+- **Automatický sync**: cron job 1× denně (budoucí session – `domain-sync`)
+- **Hybridní přístup**: seznam z cache (rychlé), detail při otevření modalu (live), DNS vždy live
+
+### Session plán implementace
+| Session | Rozsah |
+|---------|--------|
+| 1 ✅ | openprovider.ts + API routes (domains, balance, sync) + SQL migrace |
+| 2 | Frontend: DomainsContent refaktoring – nové záložky (Domény/DNS/SSL/Finance/Nastavení) |
+| 3 | Záložka Domény: DomainStatsDashboard + DomainListTable + filtry |
+| 4 | DomainDetailModal + DomainCheckForm (kontrola dostupnosti) |
+| 5 | Záložka DNS: DnsRecordsList + DnsRecordForm + API route dns |
+| 6 | Záložka SSL certifikáty + API route ssl |
+| 7 | Záložka Finance (balance + transakce) |
+| 8 | Záložka Nastavení (API credentials + test spojení + notifikace pravidla) |
+| 9 | Cron joby (domain-sync + domain-expiry-check) + notifikace |
+| 10 | CSV export + oprávnění audit + finální testy |
 
 ---
 
