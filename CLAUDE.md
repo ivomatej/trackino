@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 13. 3. 2026 (v2.51.40)
+> Aktualizováno: 13. 3. 2026 (v2.51.41)
 
 ---
 
@@ -652,6 +652,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
 | v2.51.28 | 11. 3. 2026 | Notebook – FolderTree: odstraněny desktop individuální tlačítka, nahrazeny třemi tečkami (⋮) zobrazující se na hover na desktopu + vždy viditelné na mobilu; NoteEditor: paste handler strippuje background-* CSS vlastnosti a bgcolor atribut z vkládaného HTML (žádná změna barvy pozadí z externích nástrojů) |
+| v2.51.41 | 13. 3. 2026 | Refaktoring: page.tsx (765 ř.) rozdělen na 8 souborů v _components/ (types.ts, utils.ts, useDashboard.ts, StatCard.tsx, GreetingCard.tsx, NotificationsPanel.tsx, WeekChart.tsx, MonthOverview.tsx, DashboardContent.tsx); page.tsx redukován na ~55 řádků |
 | v2.51.40 | 13. 3. 2026 | Refaktoring: app-changes/page.tsx (818 ř.) rozdělen na 6 souborů v _components/ (types.ts, utils.ts, useAppChanges.ts, AppChangeFormModal.tsx, AppChangeItem.tsx, AppChangesContent.tsx); page.tsx redukován na ~10 řádků |
 | v2.51.39 | 12. 3. 2026 | Error Boundaries – izolace selhání modulů: ErrorBoundary.tsx (React class component, moduleName prop, timerFallback varianta), DashboardLayout obaluje children + TimerBar, 39 stránek s moduleName, globální error.tsx (root + dashboard segment), konzistentní logování |
 | v2.51.38 | 12. 3. 2026 | Refaktoring: vacation/page.tsx (925 ř.) rozdělen na 11 souborů v _components/ (types.ts, utils.ts, useVacation.ts, VacationStats.tsx, VacationForm.tsx, VacationRecordsTab.tsx, VacationRequestsTab.tsx, VacationArchiveTab.tsx, RejectModal.tsx, VacationContent.tsx); page.tsx redukován na ~23 řádků |
@@ -2735,7 +2736,7 @@ CREATE POLICY "Auth full" ON trackino_task_board_members
 
 | Cesta | Soubor | Modul/tarif |
 |-------|--------|-------------|
-| `/` | `page.tsx` (root) | Přehled – dashboard |
+| `/` | `page.tsx` (auth guard + WorkspaceProvider, ~55 ř.) + `_components/DashboardContent.tsx` (orchestrátor) + `_components/` (8 souborů: types.ts, utils.ts, useDashboard.ts, StatCard.tsx, GreetingCard.tsx, NotificationsPanel.tsx, WeekChart.tsx, MonthOverview.tsx) | Přehled – dashboard |
 | `/tracker` | `tracker/page.tsx` | Time Tracker (Free+) |
 | `/planner` | `planner/page.tsx` (auth guard) + `_components/PlannerContent.tsx` (orchestrátor) + `_components/` (10 souborů: types.ts, utils.ts, icons.tsx, CellFull.tsx, CellHalf.tsx, NoteInput.tsx, usePlanner.ts, StatusManager.tsx, PlannerTable.tsx, CellPicker.tsx) | Plánovač dostupnosti (Pro+) |
 | `/calendar` | `calendar/page.tsx` → CalendarContent | Kalendář (Max) |
