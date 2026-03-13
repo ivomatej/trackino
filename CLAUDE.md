@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 13. 3. 2026 (v2.51.48)
+> Aktualizováno: 13. 3. 2026 (v2.51.49)
 
 ---
 
@@ -652,6 +652,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
 | v2.51.28 | 11. 3. 2026 | Notebook – FolderTree: odstraněny desktop individuální tlačítka, nahrazeny třemi tečkami (⋮) zobrazující se na hover na desktopu + vždy viditelné na mobilu; NoteEditor: paste handler strippuje background-* CSS vlastnosti a bgcolor atribut z vkládaného HTML (žádná změna barvy pozadí z externích nástrojů) |
+| v2.51.49 | 13. 3. 2026 | Refaktoring: text-converter/page.tsx (620 ř.) rozdělen na 7 souborů v _components/ (types.ts, utils.ts, useTextConverter.ts, CopyButton.tsx, ForwardMode.tsx, ReverseMode.tsx, TextConverterContent.tsx); page.tsx redukován na ~9 řádků |
 | v2.51.48 | 13. 3. 2026 | Refaktoring: requests/page.tsx (762 ř.) rozdělen na 7 souborů v _components/ (types.ts, utils.ts, useRequests.ts, StatusBadge.tsx, RequestFormModal.tsx, RejectModal.tsx, RequestsContent.tsx); page.tsx redukován na ~20 řádků |
 | v2.51.47 | 13. 3. 2026 | Refaktoring: reports/page.tsx (917 ř.) rozdělen na 9 souborů v _components/ (types.ts, utils.ts, SelectWrap.tsx, useReports.ts, ManualEntryForm.tsx, ReportsFilters.tsx, ReportsSummary.tsx, ReportsEntryList.tsx, ReportsContent.tsx); page.tsx redukován na ~20 řádků |
 | v2.51.46 | 13. 3. 2026 | Refaktoring: important-days/page.tsx (555 ř.) rozdělen na 6 souborů v _components/ (constants.ts, utils.ts, useImportantDays.ts, ImportantDayItem.tsx, ImportantDayForm.tsx, ImportantDaysContent.tsx); page.tsx redukován na ~25 řádků |
@@ -2768,7 +2769,7 @@ CREATE POLICY "Auth full" ON trackino_task_board_members
 | `/documents` | `documents/page.tsx` (auth guard ~20 ř.) + `_components/DocumentsContent.tsx` (orchestrátor) + `_components/` (types.ts, utils.tsx, useDocuments.ts, FolderTree.tsx, FolderModal.tsx, ShareModal.tsx, DocFormModal.tsx) | Dokumenty + Supabase Storage (Pro+) |
 | `/company-rules` | `company-rules/page.tsx` | Firemní pravidla – rich text (Pro+) |
 | `/office-rules` | `office-rules/page.tsx` | Pravidla v kanceláři – rich text (Pro+) |
-| `/text-converter` | `text-converter/page.tsx` | Převodník textu (Pro+) |
+| `/text-converter` | `text-converter/page.tsx` (auth guard ~9 ř.) + `_components/TextConverterContent.tsx` (orchestrátor) + `_components/` (types.ts, utils.ts, useTextConverter.ts, CopyButton.tsx, ForwardMode.tsx, ReverseMode.tsx) | Převodník textu (Pro+) |
 | `/prompts` | `prompts/page.tsx` | Prompty – složky + rich editor (Pro+) |
 | `/bookmarks` | `bookmarks/page.tsx` | Záložky – složky + favicon (Pro+) |
 | `/ai-assistant` | `ai-assistant/page.tsx` (entry point) + `_components/AiAssistantContent.tsx` (orchestrátor) + `_components/` (10 souborů: useAiAssistant, types, utils, constants, ConversationSidebar, ChatMessages, ChatInput, FavoritePromptsPanel, ModelInfoPanel) | AI asistent – OpenAI + Gemini (Max) |
