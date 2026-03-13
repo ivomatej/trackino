@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 13. 3. 2026 (v2.51.50)
+> Aktualizováno: 13. 3. 2026 (v2.51.52)
 
 ---
 
@@ -471,7 +471,7 @@ interface DashboardLayoutProps {
 | prompts/_components/PromptsContent.tsx | Prompty |
 | bookmarks/_components/BookmarksContent.tsx | Záložky |
 | ai-assistant/_components/AiAssistantContent.tsx | AI Asistent |
-| notebook/page.tsx | Notebook |
+| notebook/page.tsx | Notebook | (po refaktoringu v2.51.52 – entry point ~15 ř.) |
 
 ### Globální Next.js error.tsx
 - `src/app/error.tsx` – kořenový error (fullscreen, bez CSS proměnných – nezná theme)
@@ -652,6 +652,8 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
 | v2.51.28 | 11. 3. 2026 | Notebook – FolderTree: odstraněny desktop individuální tlačítka, nahrazeny třemi tečkami (⋮) zobrazující se na hover na desktopu + vždy viditelné na mobilu; NoteEditor: paste handler strippuje background-* CSS vlastnosti a bgcolor atribut z vkládaného HTML (žádná změna barvy pozadí z externích nástrojů) |
+| v2.51.52 | 13. 3. 2026 | Refaktoring: notebook/page.tsx (2753 ř.) rozdělen na 6 souborů v _components/ (types.ts, utils.ts, FolderTree.tsx, NoteEditor.tsx, CalEventNoteEditor.tsx, NotebookContent.tsx); page.tsx redukován na ~15 řádků |
+| v2.51.51 | 13. 3. 2026 | Refaktoring: invoices/page.tsx (794 ř.) rozdělen na 3 nové soubory v components/ (useInvoices.ts, InvoicesContent.tsx, CurrentPeriodCard.tsx); page.tsx redukován na ~13 řádků |
 | v2.51.50 | 13. 3. 2026 | Refaktoring: admin/page.tsx (939 ř.) rozdělen na 8 souborů v _components/ (types.ts, utils.ts, useAdmin.ts, CopyBtn.tsx, NewWorkspaceForm.tsx, WorkspaceCard.tsx, EditWorkspaceModal.tsx, AdminContent.tsx); page.tsx redukován na ~14 řádků |
 | v2.51.49 | 13. 3. 2026 | Refaktoring: text-converter/page.tsx (620 ř.) rozdělen na 7 souborů v _components/ (types.ts, utils.ts, useTextConverter.ts, CopyButton.tsx, ForwardMode.tsx, ReverseMode.tsx, TextConverterContent.tsx); page.tsx redukován na ~9 řádků |
 | v2.51.48 | 13. 3. 2026 | Refaktoring: requests/page.tsx (762 ř.) rozdělen na 7 souborů v _components/ (types.ts, utils.ts, useRequests.ts, StatusBadge.tsx, RequestFormModal.tsx, RejectModal.tsx, RequestsContent.tsx); page.tsx redukován na ~20 řádků |
@@ -2750,7 +2752,7 @@ CREATE POLICY "Auth full" ON trackino_task_board_members
 | `/planner` | `planner/page.tsx` (auth guard) + `_components/PlannerContent.tsx` (orchestrátor) + `_components/` (10 souborů: types.ts, utils.ts, icons.tsx, CellFull.tsx, CellHalf.tsx, NoteInput.tsx, usePlanner.ts, StatusManager.tsx, PlannerTable.tsx, CellPicker.tsx) | Plánovač dostupnosti (Pro+) |
 | `/calendar` | `calendar/page.tsx` → CalendarContent | Kalendář (Max) |
 | `/vacation` | `vacation/page.tsx` (auth guard) + `_components/VacationContent.tsx` (orchestrátor) + `_components/` (9 souborů: types.ts, utils.ts, useVacation.ts, VacationStats.tsx, VacationForm.tsx, VacationRecordsTab.tsx, VacationRequestsTab.tsx, VacationArchiveTab.tsx, RejectModal.tsx) | Dovolená (Pro+) |
-| `/invoices` | `invoices/page.tsx` (orchestrátor) + `types.ts`, `utils.ts`, `components/InvoiceRow.tsx`, `components/SubmitInvoiceForm.tsx`, `components/InvoiceFilters.tsx`, `components/ApproveModal.tsx`, `components/ReturnModal.tsx`, `components/DetailModal.tsx` | Fakturace (Pro+) |
+| `/invoices` | `invoices/page.tsx` (auth guard ~13 ř.) + `types.ts`, `utils.ts`, `components/InvoicesContent.tsx` (orchestrátor), `components/useInvoices.ts` (custom hook), `components/CurrentPeriodCard.tsx`, `components/InvoiceRow.tsx`, `components/SubmitInvoiceForm.tsx`, `components/InvoiceFilters.tsx`, `components/ApproveModal.tsx`, `components/ReturnModal.tsx`, `components/DetailModal.tsx` | Fakturace (Pro+) |
 | `/reports` | `reports/page.tsx` (auth guard ~20 ř.) + `_components/ReportsContent.tsx` (orchestrátor) + `_components/` (types.ts, utils.ts, SelectWrap.tsx, useReports.ts, ManualEntryForm.tsx, ReportsFilters.tsx, ReportsSummary.tsx, ReportsEntryList.tsx) | Reporty (Free+) |
 | `/attendance` | `attendance/page.tsx` | Přehled hodin (Pro+) |
 | `/category-report` | `category-report/page.tsx` (auth guard ~20 ř.) + `_components/CategoryReportContent.tsx` (orchestrátor) + `_components/` (types.ts, utils.ts, useCategoryReport.ts, CategoryFilters.tsx, SummaryBar.tsx, CategoryPieChart.tsx, CategoryBarChart.tsx, CategoryTable.tsx) | Analýza kategorií – Recharts (Pro+) |
@@ -2784,7 +2786,7 @@ CREATE POLICY "Auth full" ON trackino_task_board_members
 | `/bugs` | `bugs/page.tsx` (auth guard ~20 ř.) + `_components/BugsContent.tsx` (orchestrátor) + `_components/` (types.ts, ui.tsx, useBugs.ts, BugCard.tsx) | Hlášení chyb |
 | `/changelog` | `changelog/page.tsx` | Changelog verzí |
 | `/help` | `help/page.tsx` (auth guard ~20 ř.) + `_components/HelpContent.tsx` (orchestrátor) + `_components/` (constants.ts, useHelp.ts, HelpToolbar.tsx) | Nápověda |
-| `/notebook` | `notebook/page.tsx` | Notebook |
+| `/notebook` | `notebook/page.tsx` (auth guard ~15 ř.) + `_components/NotebookContent.tsx` (orchestrátor) + `_components/` (types.ts, utils.ts, FolderTree.tsx, NoteEditor.tsx, CalEventNoteEditor.tsx) | Notebook |
 | `/dashboard` | `dashboard/page.tsx` | Redirect na `/` |
 
 ### Kalendář – modul (src/app/(dashboard)/calendar/)

@@ -1,6 +1,22 @@
 export const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.51.52 – 13. 3. 2026</h3>
+<ul>
+  <li><strong>Refaktoring: Notebook</strong>:
+    <ul>
+      <li>Původní monolitický soubor <code>notebook/page.tsx</code> (2753 ř.) rozdělen na 6 souborů v adresáři <code>_components/</code></li>
+      <li><code>types.ts</code> – sdílené TypeScript typy (TaskItem, Note, NoteFolder, FolderShare, Member, CalEventNote, NoteFilter)</li>
+      <li><code>utils.ts</code> – konstanty, helpery (htmlToPlainText, linkifyHtml, createTaskBlockHtml, buildFolderFlat, ...) a CSS řetězec editorStyles</li>
+      <li><code>FolderTree.tsx</code> – rekurzivní strom složek s portal-based dropdown menu (⋮)</li>
+      <li><code>NoteEditor.tsx</code> – editor poznámek (contenteditable, inline task bloky, toolbar, auto-save)</li>
+      <li><code>CalEventNoteEditor.tsx</code> – editor poznámek k událostem kalendáře</li>
+      <li><code>NotebookContent.tsx</code> – hlavní orchestrátor se veškerým stavem, fetch logikou a CRUD akcemi</li>
+      <li><code>page.tsx</code> redukován na ~15 řádků (auth guard + WorkspaceProvider)</li>
+    </ul>
+  </li>
+</ul>
+
 <h3>v2.51.51 – 13. 3. 2026</h3>
 <ul>
   <li><strong>Refaktoring: Fakturace</strong>:
