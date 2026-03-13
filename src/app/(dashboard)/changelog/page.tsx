@@ -11,6 +11,24 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.51.44 – 13. 3. 2026</h3>
+<ul>
+  <li><strong>Refaktoring: Dokumenty</strong>:
+    <ul>
+      <li>Původní monolitický soubor <code>documents/page.tsx</code> (917 ř.) rozdělen na 9 souborů v adresáři <code>_components/</code></li>
+      <li><code>types.ts</code> – sdílené typy (Member, DocForm, FolderModalState, ShareModalState) + konstanty (MAX_DEPTH, ALLOWED_MIME_TYPES, MAX_FILE_SIZE_MB/BYTES)</li>
+      <li><code>utils.tsx</code> – helper funkce (fmtSize, getInitials, getFileIcon) + inputCls/inputStyle</li>
+      <li><code>useDocuments.ts</code> – custom hook se veškerým stavem, fetch logikou a CRUD operacemi (~230 ř.)</li>
+      <li><code>FolderTree.tsx</code> – rekurzivní strom složek s mobilním ⋮ dropdownem a desktop hover akcemi</li>
+      <li><code>FolderModal.tsx</code> – modal pro vytvoření/editaci složky (název, barva)</li>
+      <li><code>ShareModal.tsx</code> – modal pro sdílení složky (nikdo/workspace/konkrétní uživatelé)</li>
+      <li><code>DocFormModal.tsx</code> – modal pro přidání/editaci dokumentu (soubor/odkaz)</li>
+      <li><code>DocumentsContent.tsx</code> – orchestrátor skládající vše dohromady</li>
+      <li><code>page.tsx</code> redukován na ~20 řádků (auth guard + WorkspaceProvider)</li>
+    </ul>
+  </li>
+</ul>
+
 <h3>v2.51.43 – 13. 3. 2026</h3>
 <ul>
   <li><strong>Refaktoring: Analýza kategorií</strong>:
