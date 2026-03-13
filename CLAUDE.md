@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 13. 3. 2026 (v2.51.49)
+> Aktualizováno: 13. 3. 2026 (v2.51.50)
 
 ---
 
@@ -458,7 +458,7 @@ interface DashboardLayoutProps {
 | help/page.tsx | Nápověda |
 | changelog/page.tsx | Changelog |
 | bugs/page.tsx | Hlášení chyb |
-| admin/page.tsx | Admin |
+| admin/page.tsx | Admin | (po refaktoringu v2.51.50 – entry point ~14 ř.) |
 | app-settings/page.tsx | Nastavení aplikace |
 | app-changes/_components/AppChangesContent.tsx | Úpravy aplikace |
 | profile/page.tsx | Profil |
@@ -652,6 +652,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
 | v2.51.28 | 11. 3. 2026 | Notebook – FolderTree: odstraněny desktop individuální tlačítka, nahrazeny třemi tečkami (⋮) zobrazující se na hover na desktopu + vždy viditelné na mobilu; NoteEditor: paste handler strippuje background-* CSS vlastnosti a bgcolor atribut z vkládaného HTML (žádná změna barvy pozadí z externích nástrojů) |
+| v2.51.50 | 13. 3. 2026 | Refaktoring: admin/page.tsx (939 ř.) rozdělen na 8 souborů v _components/ (types.ts, utils.ts, useAdmin.ts, CopyBtn.tsx, NewWorkspaceForm.tsx, WorkspaceCard.tsx, EditWorkspaceModal.tsx, AdminContent.tsx); page.tsx redukován na ~14 řádků |
 | v2.51.49 | 13. 3. 2026 | Refaktoring: text-converter/page.tsx (620 ř.) rozdělen na 7 souborů v _components/ (types.ts, utils.ts, useTextConverter.ts, CopyButton.tsx, ForwardMode.tsx, ReverseMode.tsx, TextConverterContent.tsx); page.tsx redukován na ~9 řádků |
 | v2.51.48 | 13. 3. 2026 | Refaktoring: requests/page.tsx (762 ř.) rozdělen na 7 souborů v _components/ (types.ts, utils.ts, useRequests.ts, StatusBadge.tsx, RequestFormModal.tsx, RejectModal.tsx, RequestsContent.tsx); page.tsx redukován na ~20 řádků |
 | v2.51.47 | 13. 3. 2026 | Refaktoring: reports/page.tsx (917 ř.) rozdělen na 9 souborů v _components/ (types.ts, utils.ts, SelectWrap.tsx, useReports.ts, ManualEntryForm.tsx, ReportsFilters.tsx, ReportsSummary.tsx, ReportsEntryList.tsx, ReportsContent.tsx); page.tsx redukován na ~20 řádků |
@@ -2777,7 +2778,7 @@ CREATE POLICY "Auth full" ON trackino_task_board_members
 | `/audit` | `audit/page.tsx` | Audit log (Max) |
 | `/team` | `team/page.tsx` | Tým – role, sazby, toggles |
 | `/profile` | `profile/page.tsx` | Profil uživatele |
-| `/admin` | `admin/page.tsx` | Master admin panel |
+| `/admin` | `admin/page.tsx` (entry point ~14 ř.) + `_components/AdminContent.tsx` (orchestrátor) + `_components/` (7 souborů: types.ts, utils.ts, useAdmin.ts, CopyBtn.tsx, NewWorkspaceForm.tsx, WorkspaceCard.tsx, EditWorkspaceModal.tsx) | Master admin panel |
 | `/app-settings` | `app-settings/page.tsx` | Nastavení modulů dle tarifu (admin) |
 | `/app-changes` | `app-changes/page.tsx` (entry point) + `_components/AppChangesContent.tsx` (orchestrátor) + `_components/` (5 souborů: types.ts, utils.ts, useAppChanges.ts, AppChangeFormModal.tsx, AppChangeItem.tsx) | Úpravy aplikace |
 | `/bugs` | `bugs/page.tsx` (auth guard ~20 ř.) + `_components/BugsContent.tsx` (orchestrátor) + `_components/` (types.ts, ui.tsx, useBugs.ts, BugCard.tsx) | Hlášení chyb |
