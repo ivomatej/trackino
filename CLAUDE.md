@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 13. 3. 2026 (v2.51.41)
+> Aktualizováno: 13. 3. 2026 (v2.51.42)
 
 ---
 
@@ -652,6 +652,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
 | v2.51.28 | 11. 3. 2026 | Notebook – FolderTree: odstraněny desktop individuální tlačítka, nahrazeny třemi tečkami (⋮) zobrazující se na hover na desktopu + vždy viditelné na mobilu; NoteEditor: paste handler strippuje background-* CSS vlastnosti a bgcolor atribut z vkládaného HTML (žádná změna barvy pozadí z externích nástrojů) |
+| v2.51.42 | 13. 3. 2026 | Refaktoring: bugs/page.tsx (700 ř.) rozdělen na 5 souborů v _components/ (types.ts, ui.tsx, useBugs.ts, BugCard.tsx, BugsContent.tsx); page.tsx redukován na ~20 řádků |
 | v2.51.41 | 13. 3. 2026 | Refaktoring: page.tsx (765 ř.) rozdělen na 8 souborů v _components/ (types.ts, utils.ts, useDashboard.ts, StatCard.tsx, GreetingCard.tsx, NotificationsPanel.tsx, WeekChart.tsx, MonthOverview.tsx, DashboardContent.tsx); page.tsx redukován na ~55 řádků |
 | v2.51.40 | 13. 3. 2026 | Refaktoring: app-changes/page.tsx (818 ř.) rozdělen na 6 souborů v _components/ (types.ts, utils.ts, useAppChanges.ts, AppChangeFormModal.tsx, AppChangeItem.tsx, AppChangesContent.tsx); page.tsx redukován na ~10 řádků |
 | v2.51.39 | 12. 3. 2026 | Error Boundaries – izolace selhání modulů: ErrorBoundary.tsx (React class component, moduleName prop, timerFallback varianta), DashboardLayout obaluje children + TimerBar, 39 stránek s moduleName, globální error.tsx (root + dashboard segment), konzistentní logování |
@@ -2772,7 +2773,7 @@ CREATE POLICY "Auth full" ON trackino_task_board_members
 | `/admin` | `admin/page.tsx` | Master admin panel |
 | `/app-settings` | `app-settings/page.tsx` | Nastavení modulů dle tarifu (admin) |
 | `/app-changes` | `app-changes/page.tsx` (entry point) + `_components/AppChangesContent.tsx` (orchestrátor) + `_components/` (5 souborů: types.ts, utils.ts, useAppChanges.ts, AppChangeFormModal.tsx, AppChangeItem.tsx) | Úpravy aplikace |
-| `/bugs` | `bugs/page.tsx` | Hlášení chyb |
+| `/bugs` | `bugs/page.tsx` (auth guard ~20 ř.) + `_components/BugsContent.tsx` (orchestrátor) + `_components/` (types.ts, ui.tsx, useBugs.ts, BugCard.tsx) | Hlášení chyb |
 | `/changelog` | `changelog/page.tsx` | Changelog verzí |
 | `/help` | `help/page.tsx` | Nápověda |
 | `/notebook` | `notebook/page.tsx` | Notebook |
