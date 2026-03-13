@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 13. 3. 2026 (v2.51.52)
+> Aktualizováno: 13. 3. 2026 (v2.51.53)
 
 ---
 
@@ -652,6 +652,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
 | v2.51.28 | 11. 3. 2026 | Notebook – FolderTree: odstraněny desktop individuální tlačítka, nahrazeny třemi tečkami (⋮) zobrazující se na hover na desktopu + vždy viditelné na mobilu; NoteEditor: paste handler strippuje background-* CSS vlastnosti a bgcolor atribut z vkládaného HTML (žádná změna barvy pozadí z externích nástrojů) |
+| v2.51.53 | 13. 3. 2026 | Refaktoring: tasks/page.tsx (1622 ř.) rozdělen na 4 hooky v _hooks/ (useTasksData.ts, useCrossWorkspace.ts, useTasksCrud.ts, useTasksDetail.ts); page.tsx redukován na ~530 řádků orchestrátoru |
 | v2.51.52 | 13. 3. 2026 | Refaktoring: notebook/page.tsx (2753 ř.) rozdělen na 6 souborů v _components/ (types.ts, utils.ts, FolderTree.tsx, NoteEditor.tsx, CalEventNoteEditor.tsx, NotebookContent.tsx); page.tsx redukován na ~15 řádků |
 | v2.51.51 | 13. 3. 2026 | Refaktoring: invoices/page.tsx (794 ř.) rozdělen na 3 nové soubory v components/ (useInvoices.ts, InvoicesContent.tsx, CurrentPeriodCard.tsx); page.tsx redukován na ~13 řádků |
 | v2.51.50 | 13. 3. 2026 | Refaktoring: admin/page.tsx (939 ř.) rozdělen na 8 souborů v _components/ (types.ts, utils.ts, useAdmin.ts, CopyBtn.tsx, NewWorkspaceForm.tsx, WorkspaceCard.tsx, EditWorkspaceModal.tsx, AdminContent.tsx); page.tsx redukován na ~14 řádků |
@@ -2440,11 +2441,15 @@ ALTER TABLE trackino_workspace_members
 
 ## 34. Úkoly – architektura (tasks/page.tsx)
 
-### Struktura souborů (od v2.51.21 – rozdělen z 2978 ř. na subsoubory)
+### Struktura souborů (po refaktoringu v2.51.53 – rozdělen z 1622 ř. na hooky)
 
 | Soubor | Popis |
 |--------|-------|
-| `tasks/page.tsx` | **Orchestrátor** – importuje subkomponenty, drží veškerý state a logiku, renderuje layout |
+| `tasks/page.tsx` | **Orchestrátor** (~530 ř.) – volá 4 hooky, renderuje layout a full JSX |
+| `tasks/_hooks/useTasksData.ts` | Veškerý primární state, fetchData, computed hodnoty (filteredTasks, sortedColumns, activeBoard, visibleBoards, subtaskMap, …), DnD sensors, isMobile, favoriteBoards |
+| `tasks/_hooks/useCrossWorkspace.ts` | Cross-workspace mode – cws* state, filtry, modal nového úkolu, fetchCrossWsData, handleCreateCwsTask, cwsFilteredTasks |
+| `tasks/_hooks/useTasksCrud.ts` | CRUD + DnD + sdílení: createTask, updateTask, deleteTask, createFolder, createBoard, updateBoard, deleteBoard, saveBoardSharing, saveFolderSharing, handleDragStart, handleDragEnd |
+| `tasks/_hooks/useTasksDetail.ts` | Detail panel: openDetail, saveTitle, saveDescription, addSubtask, toggleSubtask, deleteSubtask, addComment, deleteComment, uploadFile, deleteAttachment, downloadAttachment, moveTaskTo, historyText |
 | `tasks/types.tsx` | Shared typy a konstanty: `PRIORITY_CONFIG`, `TaskView`, `DeadlineFilter`, `Member`, `UserWorkspace`, `CwsBoardInfo`, `CwsColumnInfo`, `WORKSPACE_COLORS`, `getWsColor`, `selectCls`, `SelectChevron` |
 | `tasks/components/Avatar.tsx` | `Avatar` – kruhový avatar s iniciálou a barvou |
 | `tasks/components/DragComponents.tsx` | `DroppableColumn` (useDroppable), `SortableColumnWrapper` (useSortable) |
@@ -2457,10 +2462,13 @@ ALTER TABLE trackino_workspace_members
 | `tasks/views/TableView.tsx` | `TableView` – tabulka s klikatelným řazením |
 | `tasks/views/CrossWorkspaceView.tsx` | `CrossWorkspaceView` – tabulka úkolů napříč workspace |
 
-### Soubory
-| Soubor | Popis |
-|--------|-------|
-| `src/app/(dashboard)/tasks/page.tsx` | Hlavní stránka modulu – levý sidebar se složkami a projekty, 3 pohledy (Seznam/Kanban/Tabulka), detail panel, CRUD, DnD karet i sloupců |
+### Hook dependency chain
+```
+useTasksData     (nezávislý – žádné external hook deps)
+useCrossWorkspace (nezávislý – přijímá jen { user })
+useTasksCrud     (závisí na useTasksData – přijímá boards/columns/tasks/folders/...)
+useTasksDetail   (závisí na useTasksData + useTasksCrud – přijímá selectedTask, updateTask, ...)
+```
 
 ### DB tabulky (7 + 3 nové)
 | Tabulka | Popis |
@@ -2762,7 +2770,7 @@ CREATE POLICY "Auth full" ON trackino_task_board_members
 | `/clients` | `clients/page.tsx` | Správa klientů (Free+) |
 | `/tags` | `tags/page.tsx` | Správa štítků (Free+) |
 | `/team` | `team/page.tsx` (orchestrátor) + `_components/types.tsx`, `useTeam.ts`, `MembersTab.tsx`, `StructureTab.tsx`, `ManagersTab.tsx`, `EditMemberModal.tsx` | Správa týmu + sazby (Free+) |
-| `/tasks` | `tasks/page.tsx` (orchestrátor) | Úkoly + Kanban (Pro+) – rozdělen na subsoubory od v2.51.21 |
+| `/tasks` | `tasks/page.tsx` (orchestrátor ~530 ř.) + `_hooks/useTasksData.ts`, `_hooks/useCrossWorkspace.ts`, `_hooks/useTasksCrud.ts`, `_hooks/useTasksDetail.ts` | Úkoly + Kanban (Pro+) – hooky od v2.51.53 |
 | `/subscriptions` | `subscriptions/page.tsx` (auth guard) + `_components/SubscriptionsContent.tsx` (orchestrátor) + `_components/` (18 souborů: types, constants, utils, useSubscriptions, StarRating, StatsDashboard, SubsTabContent, CategoriesTabContent, AccessByServiceView, AccessByUserView, AccessSummaryView, AccessTabContent, DetailModal, SubFormModal, AccessModal, ExtUserModal, CatFormModal) | Evidence předplatných (Pro+) |
 | `/domains` | `domains/page.tsx` (auth guard) + `_components/DomainsContent.tsx` (orchestrátor) + `_components/` (10 souborů: types.ts, constants.tsx, utils.ts, useDomains.ts, StatsDashboard.tsx, DomainsTabContent.tsx, RegistrarsTabContent.tsx, DomainFormModal.tsx, RegistrarFormModal.tsx, DomainDetailModal.tsx) | Evidence domén (Pro+) |
 | `/important-days` | `important-days/page.tsx` (auth guard ~25 ř.) + `_components/ImportantDaysContent.tsx` (orchestrátor) + `_components/` (constants.ts, utils.ts, useImportantDays.ts, ImportantDayItem.tsx, ImportantDayForm.tsx) | Důležité dny (Pro+) |
