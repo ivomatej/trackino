@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 12. 3. 2026 (v2.51.39)
+> Aktualizováno: 13. 3. 2026 (v2.51.40)
 
 ---
 
@@ -460,7 +460,7 @@ interface DashboardLayoutProps {
 | bugs/page.tsx | Hlášení chyb |
 | admin/page.tsx | Admin |
 | app-settings/page.tsx | Nastavení aplikace |
-| app-changes/page.tsx | Úpravy aplikace |
+| app-changes/_components/AppChangesContent.tsx | Úpravy aplikace |
 | profile/page.tsx | Profil |
 | notes/page.tsx | Poznámky |
 | subordinates/page.tsx | Podřízení |
@@ -652,6 +652,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
 | v2.51.28 | 11. 3. 2026 | Notebook – FolderTree: odstraněny desktop individuální tlačítka, nahrazeny třemi tečkami (⋮) zobrazující se na hover na desktopu + vždy viditelné na mobilu; NoteEditor: paste handler strippuje background-* CSS vlastnosti a bgcolor atribut z vkládaného HTML (žádná změna barvy pozadí z externích nástrojů) |
+| v2.51.40 | 13. 3. 2026 | Refaktoring: app-changes/page.tsx (818 ř.) rozdělen na 6 souborů v _components/ (types.ts, utils.ts, useAppChanges.ts, AppChangeFormModal.tsx, AppChangeItem.tsx, AppChangesContent.tsx); page.tsx redukován na ~10 řádků |
 | v2.51.39 | 12. 3. 2026 | Error Boundaries – izolace selhání modulů: ErrorBoundary.tsx (React class component, moduleName prop, timerFallback varianta), DashboardLayout obaluje children + TimerBar, 39 stránek s moduleName, globální error.tsx (root + dashboard segment), konzistentní logování |
 | v2.51.38 | 12. 3. 2026 | Refaktoring: vacation/page.tsx (925 ř.) rozdělen na 11 souborů v _components/ (types.ts, utils.ts, useVacation.ts, VacationStats.tsx, VacationForm.tsx, VacationRecordsTab.tsx, VacationRequestsTab.tsx, VacationArchiveTab.tsx, RejectModal.tsx, VacationContent.tsx); page.tsx redukován na ~23 řádků |
 | v2.51.37 | 12. 3. 2026 | Refaktoring: prompts/page.tsx (1001 ř.) rozdělen na 10 souborů v _components/ (types.ts, utils.ts, RichEditor.tsx, FolderTree.tsx, usePrompts.ts, PromptCard.tsx, PromptModals.tsx, PromptsLeftPanel.tsx, PromptsContent.tsx); page.tsx redukován na ~15 řádků |
@@ -2769,7 +2770,7 @@ CREATE POLICY "Auth full" ON trackino_task_board_members
 | `/profile` | `profile/page.tsx` | Profil uživatele |
 | `/admin` | `admin/page.tsx` | Master admin panel |
 | `/app-settings` | `app-settings/page.tsx` | Nastavení modulů dle tarifu (admin) |
-| `/app-changes` | `app-changes/page.tsx` | Úpravy aplikace |
+| `/app-changes` | `app-changes/page.tsx` (entry point) + `_components/AppChangesContent.tsx` (orchestrátor) + `_components/` (5 souborů: types.ts, utils.ts, useAppChanges.ts, AppChangeFormModal.tsx, AppChangeItem.tsx) | Úpravy aplikace |
 | `/bugs` | `bugs/page.tsx` | Hlášení chyb |
 | `/changelog` | `changelog/page.tsx` | Changelog verzí |
 | `/help` | `help/page.tsx` | Nápověda |
