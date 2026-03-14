@@ -20,7 +20,6 @@ export async function GET(req: NextRequest) {
     const order  = searchParams.get('order');
 
     const query = new URLSearchParams({ limit, offset });
-    query.set('with_additional_data', '1');
     if (status) query.set('status', status);
     if (order)  query.set('order_by', order);
 

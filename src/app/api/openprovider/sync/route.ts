@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     const allDomains: Record<string, unknown>[] = [];
 
     while (true) {
-      const res  = await openproviderFetch(`/domains?limit=${LIMIT}&offset=${offset}&with_additional_data=1`);
+      const res  = await openproviderFetch(`/domains?limit=${LIMIT}&offset=${offset}`);
       const data = await res.json();
 
       if (data.code !== 0) throw new Error(data.desc ?? 'Chyba Openprovider API');
