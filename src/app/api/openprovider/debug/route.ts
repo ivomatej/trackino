@@ -11,40 +11,57 @@ export async function GET() {
     return NextResponse.json({ error: 'Chybí env vars', hasUsername: !!username, hasPassword: !!password });
   }
 
-  // 1. Pokus o přihlášení
-  let loginData: Record<string, unknown>;
+  // 1. Login
+  let token: string | null = null;
   try {
     const loginRes = await fetch(`${baseUrl}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
     });
-    loginData = await loginRes.json() as Record<string, unknown>;
+    const loginData = await loginRes.json() as { code: number; data?: { token?: string }; desc?: string };
+    if (loginData.code !== 0) {
+      return NextResponse.json({ step: 'login_failed', response: loginData });
+    }
+    token = loginData.data?.token ?? null;
   } catch (err) {
-    return NextResponse.json({ step: 'login', error: String(err) });
+    return NextResponse.json({ step: 'login_error', error: String(err) });
   }
 
-  if ((loginData as { code?: number }).code !== 0) {
-    return NextResponse.json({ step: 'login_failed', openprovider_response: loginData });
-  }
+  const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
 
-  const token = (loginData as { data?: { token?: string } }).data?.token;
+  // 2. Zkus různé variace GET /domains
+  const variants: Record<string, unknown> = {};
 
-  // 2. Pokus o seznam domén
-  let domainsData: Record<string, unknown>;
+  // Varianta A: bez parametrů
   try {
-    const domainsRes = await fetch(`${baseUrl}/domains?limit=5&with_additional_data=0`, {
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    });
-    domainsData = await domainsRes.json() as Record<string, unknown>;
-  } catch (err) {
-    return NextResponse.json({ step: 'domains', login: 'ok', error: String(err) });
-  }
+    const r = await fetch(`${baseUrl}/domains`, { headers });
+    variants['a_no_params'] = await r.json();
+  } catch (e) { variants['a_no_params'] = String(e); }
 
-  return NextResponse.json({
-    login: 'ok',
-    token_preview: token ? token.slice(0, 20) + '...' : null,
-    domains_response: domainsData,
-  });
+  // Varianta B: jen limit
+  try {
+    const r = await fetch(`${baseUrl}/domains?limit=5`, { headers });
+    variants['b_limit_only'] = await r.json();
+  } catch (e) { variants['b_limit_only'] = String(e); }
+
+  // Varianta C: s offset
+  try {
+    const r = await fetch(`${baseUrl}/domains?limit=5&offset=0`, { headers });
+    variants['c_limit_offset'] = await r.json();
+  } catch (e) { variants['c_limit_offset'] = String(e); }
+
+  // Varianta D: account info
+  try {
+    const r = await fetch(`${baseUrl}/customers/me`, { headers });
+    variants['d_customers_me'] = await r.json();
+  } catch (e) { variants['d_customers_me'] = String(e); }
+
+  // Varianta E: resellers/me (pro info)
+  try {
+    const r = await fetch(`${baseUrl}/resellers/me`, { headers });
+    variants['e_resellers_me'] = await r.json();
+  } catch (e) { variants['e_resellers_me'] = String(e); }
+
+  return NextResponse.json({ login: 'ok', token_preview: token?.slice(0, 20) + '...', variants });
 }
-
