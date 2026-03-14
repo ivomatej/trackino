@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 14. 3. 2026 (v2.51.60)
+> Aktualizováno: 14. 3. 2026 (v2.51.61)
 
 ---
 
@@ -349,6 +349,11 @@ ANALÝZA
   Analýza kategorií (/category-report)
   Podřízení (/subordinates)
   Poznámky (/notes)
+RESEARCH (jen Pro/Max)
+  Domény (/research/domains)
+  Konkurence (/research/competition)
+  GEOs (/research/geos)
+  SEO (/research/seo)
 NÁSTROJE
   Úkoly (/tasks)
   Převodník textu (/text-converter)
@@ -361,11 +366,6 @@ SPRÁVA
   Tým (/team)
   Nastavení (/settings)
   Audit log (/audit)
-RESEARCH (jen Pro/Max)
-  Domény (/research/domains)
-  Konkurence (/research/competition)
-  GEOs (/research/geos)
-  SEO (/research/seo)
 ─────────────────────────
 [bottom items]
   Nápověda (/help)
@@ -668,6 +668,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
 | v2.51.28 | 11. 3. 2026 | Notebook – FolderTree: odstraněny desktop individuální tlačítka, nahrazeny třemi tečkami (⋮) zobrazující se na hover na desktopu + vždy viditelné na mobilu; NoteEditor: paste handler strippuje background-* CSS vlastnosti a bgcolor atribut z vkládaného HTML (žádná změna barvy pozadí z externích nástrojů) |
+| v2.51.61 | 14. 3. 2026 | Sidebar: sekce RESEARCH přesunuta pod ANALÝZA (dříve byla za SPOLEČNOST) |
 | v2.51.60 | 14. 3. 2026 | Nový modul Research (research, RESEARCH, Pro+Max) – 4 placeholder záložky: Domény (/research/domains), Konkurence (/research/competition), GEOs (/research/geos), SEO (/research/seo); nová sekce RESEARCH v sidebaru; ModuleId 'research' přidán do typů a TARIFF_MODULES |
 | v2.51.59 | 14. 3. 2026 | UX: chytré otevírání dropdown nabídek – všechny dropdowny v aplikaci automaticky detekují dostupné místo pod tlačítkem a pokud nestačí, otevřou se nahoru; opraveno v 9 souborech (TimerBar pickery, TagPicker, NoteEditor, FolderTree pro Prompty/Záložky/Dokumenty, RichEditor toolbar, Správa projektů) |
 | v2.51.58 | 14. 3. 2026 | Monitoring domén – přidány intervaly Měsíčně (s výběrem dne 1–28) a Ročně; trackino_domain_monitoring.frequency rozšířeno + monthly_day sloupec; GEOs – nové pole Oficiální název státu (name_official), katalog zemí trackino_country_catalog (globální číselník 127 zemí s kódy a jazyky), picker v modálu pro předvyplnění |
