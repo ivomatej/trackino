@@ -18,6 +18,8 @@ interface Props {
   canManage: boolean;
   onNewRegistrar: () => void;
   geos: GeoEntry[];
+  projects: { id: string; name: string }[];
+  billingCompanies: string[];
 }
 
 // ─── Picker zemí pro blokaci ────────────────────────────────────────────────
@@ -116,7 +118,7 @@ export function DomainFormModal({
   modal, editing, saving, form, setForm,
   onClose, onSave,
   registrars, subscriptions, hasSubscriptionsModule, canManage,
-  onNewRegistrar, geos,
+  onNewRegistrar, geos, projects, billingCompanies,
 }: Props) {
   if (!modal) return null;
 
@@ -241,13 +243,43 @@ export function DomainFormModal({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--text-muted)' }}>Projekt</label>
-              <input type="text" value={form.project_name} onChange={e => setForm(f => ({ ...f, project_name: e.target.value }))}
-                className={inputCls} style={inputStyle} />
+              {projects.length > 0 ? (
+                <div className="relative">
+                  <select
+                    value={form.project_name}
+                    onChange={e => setForm(f => ({ ...f, project_name: e.target.value }))}
+                    className={`${inputCls} appearance-none pr-8 cursor-pointer`}
+                    style={inputStyle}
+                  >
+                    <option value="">– vyberte projekt –</option>
+                    {projects.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+                  </select>
+                  <span className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">{ICONS.chevronDown}</span>
+                </div>
+              ) : (
+                <input type="text" value={form.project_name} onChange={e => setForm(f => ({ ...f, project_name: e.target.value }))}
+                  placeholder="Název projektu" className={inputCls} style={inputStyle} />
+              )}
             </div>
             <div>
               <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--text-muted)' }}>Firma</label>
-              <input type="text" value={form.company_name} onChange={e => setForm(f => ({ ...f, company_name: e.target.value }))}
-                className={inputCls} style={inputStyle} />
+              {billingCompanies.length > 0 ? (
+                <div className="relative">
+                  <select
+                    value={form.company_name}
+                    onChange={e => setForm(f => ({ ...f, company_name: e.target.value }))}
+                    className={`${inputCls} appearance-none pr-8 cursor-pointer`}
+                    style={inputStyle}
+                  >
+                    <option value="">– vyberte firmu –</option>
+                    {billingCompanies.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <span className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">{ICONS.chevronDown}</span>
+                </div>
+              ) : (
+                <input type="text" value={form.company_name} onChange={e => setForm(f => ({ ...f, company_name: e.target.value }))}
+                  placeholder="Název firmy" className={inputCls} style={inputStyle} />
+              )}
             </div>
           </div>
 

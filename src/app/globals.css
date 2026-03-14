@@ -178,6 +178,14 @@ html.is-scrolling::-webkit-scrollbar-thumb {
   background-color: var(--border-hover);
 }
 
+/* Tabs scrollbar – zcela skrytý (záložky v Evidence domén apod.) */
+.tabs-scroll {
+  scrollbar-width: none;
+}
+.tabs-scroll::-webkit-scrollbar {
+  display: none;
+}
+
 /* Kanban scrollbar – skrytý, zobrazí se až při hoveru (horizontální) */
 .kanban-scroll {
   scrollbar-width: thin;

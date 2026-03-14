@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useRouter } from 'next/navigation';
-import type { Domain, DomainStatus, DomainRegistrar, Subscription, DomainMonitoring, DomainCheckHistory, DomainCheckResult, GeoEntry } from '@/types/database';
+import type { Domain, DomainStatus, DomainRegistrar, Subscription, DomainMonitoring, DomainCheckHistory, DomainCheckResult, GeoEntry, Project } from '@/types/database';
 import type {
   DisplayStatus, SortField, SortDir, TabType,
   DomainFormState, RegFormState, DomainStats,
@@ -39,6 +39,8 @@ export function useDomains() {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [registrars, setRegistrars] = useState<DomainRegistrar[]>([]);
   const [geos, setGeos] = useState<GeoEntry[]>([]);
+  const [projects, setProjects] = useState<Pick<Project, 'id' | 'name'>[]>([]);
+  const [billingCompanies, setBillingCompanies] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>('domains');
 
@@ -91,18 +93,27 @@ export function useDomains() {
   const fetchAll = useCallback(async () => {
     if (!wsId) return;
     setLoading(true);
-    const [dRes, sRes, rRes, gRes] = await Promise.all([
+    const [dRes, sRes, rRes, gRes, pRes, bRes] = await Promise.all([
       supabase.from('trackino_domains').select('*').eq('workspace_id', wsId).order('name'),
       hasModule('subscriptions')
         ? supabase.from('trackino_subscriptions').select('id,name,website_url').eq('workspace_id', wsId).eq('status', 'active').order('name')
         : Promise.resolve({ data: [], error: null }),
       supabase.from('trackino_domain_registrars').select('*').eq('workspace_id', wsId).order('name'),
       supabase.from('trackino_geos').select('*').eq('workspace_id', wsId).order('name_en'),
+      supabase.from('trackino_projects').select('id,name').eq('workspace_id', wsId).order('name'),
+      supabase.from('trackino_workspace_billing').select('company_name').eq('workspace_id', wsId).order('is_default', { ascending: false }),
     ]);
     if (dRes.data) setDomains(dRes.data);
     if (sRes.data) setSubscriptions(sRes.data as Subscription[]);
     if (rRes.data) setRegistrars(rRes.data as DomainRegistrar[]);
     if (gRes.data) setGeos(gRes.data as GeoEntry[]);
+    if (pRes.data) setProjects(pRes.data as Pick<Project, 'id' | 'name'>[]);
+    if (bRes.data) {
+      const names = bRes.data
+        .map((r: { company_name: string }) => r.company_name)
+        .filter((n: string) => n && n.trim());
+      setBillingCompanies(names);
+    }
     setLoading(false);
   }, [wsId, hasModule]);
 
@@ -472,7 +483,7 @@ export function useDomains() {
 
   return {
     /* data */
-    domains, subscriptions, registrars, geos, loading, wsLoading,
+    domains, subscriptions, registrars, geos, projects, billingCompanies, loading, wsLoading,
     filteredDomains, stats, companies, registrarNames,
     /* tabs */
     activeTab, setActiveTab,

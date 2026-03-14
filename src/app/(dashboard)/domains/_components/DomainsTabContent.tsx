@@ -158,6 +158,7 @@ export function DomainsTabContent({
                   <th className="text-left px-4 py-3 font-semibold cursor-pointer select-none" style={{ color: 'var(--text-muted)' }} onClick={() => toggleSort('status')}>
                     Stav <SortArrow field="status" sortField={sortField} sortDir={sortDir} />
                   </th>
+                  <th className="text-left px-4 py-3 font-semibold" style={{ color: 'var(--text-muted)' }}>Blokace</th>
                   <th className="text-left px-4 py-3 font-semibold" style={{ color: 'var(--text-muted)' }}>Firma</th>
                   {canManage && <th className="text-right px-4 py-3 font-semibold" style={{ color: 'var(--text-muted)' }}>Akce</th>}
                 </tr>
@@ -200,6 +201,20 @@ export function DomainsTabContent({
                           style={{ background: sc.bg, color: sc.text }}>
                           {sc.label}
                         </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        {d.is_blocked && d.blocked_geo_codes && d.blocked_geo_codes.length > 0 ? (
+                          <span className="flex flex-wrap gap-1">
+                            {d.blocked_geo_codes.map(code => (
+                              <span key={code} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold"
+                                style={{ background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca' }}>
+                                {code}
+                              </span>
+                            ))}
+                          </span>
+                        ) : (
+                          <span style={{ color: 'var(--text-muted)' }}>–</span>
+                        )}
                       </td>
                       <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>{d.company_name || '–'}</td>
                       {canManage && (
@@ -264,6 +279,16 @@ export function DomainsTabContent({
                       </span>
                     )}
                     {d.company_name && <span>{d.company_name}</span>}
+                    {d.is_blocked && d.blocked_geo_codes && d.blocked_geo_codes.length > 0 && (
+                      <span className="flex flex-wrap gap-1">
+                        {d.blocked_geo_codes.map(code => (
+                          <span key={code} className="inline-flex items-center px-1 py-0.5 rounded text-[10px] font-semibold"
+                            style={{ background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca' }}>
+                            {code}
+                          </span>
+                        ))}
+                      </span>
+                    )}
                   </div>
                   {canManage && (
                     <div className="flex items-center gap-1 mt-2" onClick={e => e.stopPropagation()}>

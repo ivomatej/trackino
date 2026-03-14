@@ -120,7 +120,7 @@ function LangPicker({ selected, onChange }: { selected: string[]; onChange: (v: 
 
       {/* Dropdown */}
       {open && (
-        <div className="absolute z-50 mt-1 w-full rounded-xl border shadow-xl overflow-hidden"
+        <div className="absolute z-50 bottom-full mb-1 w-full rounded-xl border shadow-xl overflow-hidden"
           style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
           <div className="p-2 border-b" style={{ borderColor: 'var(--border)' }}>
             <input

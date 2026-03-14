@@ -38,7 +38,7 @@ const SyncIcon = () => (
 export function DomainsContent() {
   const {
     loading, wsLoading,
-    domains, registrars, subscriptions,
+    domains, registrars, subscriptions, projects, billingCompanies,
     activeTab, setActiveTab,
     searchQ, setSearchQ,
     filterStatus, setFilterStatus,
@@ -146,7 +146,7 @@ export function DomainsContent() {
         </div>
 
         {/* ── Záložky ── */}
-        <div className="flex gap-1 border-b overflow-x-auto" style={{ borderColor: 'var(--border)' }}>
+        <div className="flex gap-1 border-b overflow-x-auto tabs-scroll" style={{ borderColor: 'var(--border)' }}>
           {TABS.map(tab => (
             <button
               key={tab.id}
@@ -364,6 +364,8 @@ export function DomainsContent() {
         canManage={canManage}
         onNewRegistrar={() => { setModal(false); openNewReg(); }}
         geos={geos}
+        projects={projects}
+        billingCompanies={billingCompanies}
       />
 
       <RegistrarFormModal
