@@ -58,11 +58,23 @@ export interface GeoEntry {
   workspace_id: string;
   name_en: string;
   name_cs: string;
+  name_official: string;
   code: string;
   languages: string[];
   sort_order: number;
   created_at: string;
   updated_at: string;
+}
+
+/** Globální číselník zemí (bez workspace_id) */
+export interface CountryCatalogEntry {
+  id: string;
+  code: string;
+  name_en: string;
+  name_official: string;
+  default_languages: string[];
+  sort_order: number;
+  created_at: string;
 }
 
 export interface Domain {
@@ -104,7 +116,8 @@ export interface DomainMonitoring {
   id: string;
   workspace_id: string;
   domain_name: string;
-  frequency: 'daily' | 'weekly';
+  frequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
+  monthly_day: number | null;
   last_checked_at: string | null;
   last_status: string | null;
   notify_on_change: boolean;

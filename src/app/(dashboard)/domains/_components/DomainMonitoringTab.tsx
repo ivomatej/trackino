@@ -92,7 +92,7 @@ interface Props {
   canManage: boolean;
   openproviderConfigured: boolean | null;
   onFetchMonitoring: () => void;
-  onAddToMonitoring: (domainName: string, frequency: 'daily' | 'weekly') => void;
+  onAddToMonitoring: (domainName: string, frequency: 'daily' | 'weekly' | 'monthly' | 'yearly', monthlyDay?: number | null) => void;
   onDeleteMonitoring: (id: string) => void;
   onCheckNow: (item: DomainMonitoring) => void;
   onDeleteHistoryEntry: (id: string) => void;
@@ -124,7 +124,12 @@ export function DomainMonitoringTab({
 
   // Modal přidání
   const [addModal, setAddModal] = useState(false);
-  const [addForm, setAddForm] = useState({ domain_name: '', frequency: 'daily' as 'daily' | 'weekly', notes: '' });
+  const [addForm, setAddForm] = useState({
+    domain_name: '',
+    frequency: 'daily' as 'daily' | 'weekly' | 'monthly' | 'yearly',
+    monthly_day: 1,
+    notes: '',
+  });
   const [addError, setAddError] = useState('');
 
   // Načtení monitoringu při prvním zobrazení záložky
@@ -144,9 +149,10 @@ export function DomainMonitoringTab({
     if (!trimmed) { setAddError('Zadejte doménové jméno'); return; }
     if (!trimmed.includes('.')) { setAddError('Doména musí obsahovat alespoň jednu tečku (např. example.cz)'); return; }
     setAddError('');
-    await onAddToMonitoring(trimmed, addForm.frequency);
+    const monthlyDay = addForm.frequency === 'monthly' ? addForm.monthly_day : null;
+    await onAddToMonitoring(trimmed, addForm.frequency, monthlyDay);
     setAddModal(false);
-    setAddForm({ domain_name: '', frequency: 'daily', notes: '' });
+    setAddForm({ domain_name: '', frequency: 'daily', monthly_day: 1, notes: '' });
   };
 
   const filteredHistory = historyFilter
@@ -155,7 +161,13 @@ export function DomainMonitoringTab({
 
   const historyDomains = Array.from(new Set(checkHistory.map(h => h.domain_name))).sort();
 
-  const freqLabel = (f: string) => f === 'daily' ? 'Denně' : 'Týdně';
+  const freqLabel = (item: DomainMonitoring) => {
+    if (item.frequency === 'daily') return 'Denně';
+    if (item.frequency === 'weekly') return 'Týdně';
+    if (item.frequency === 'monthly') return `Měsíčně (${item.monthly_day ?? 1}. v měs.)`;
+    if (item.frequency === 'yearly') return 'Ročně';
+    return item.frequency;
+  };
 
   const fmtDate = (iso: string | null) => {
     if (!iso) return '—';
@@ -281,7 +293,7 @@ export function DomainMonitoringTab({
                       {item.domain_name}
                     </td>
                     <td className="px-4 py-3" style={{ color: 'var(--text-muted)' }}>
-                      {freqLabel(item.frequency)}
+                      {freqLabel(item)}
                     </td>
                     <td className="px-4 py-3 text-xs" style={{ color: 'var(--text-muted)' }}>
                       {fmtDate(item.last_checked_at)}
@@ -335,7 +347,7 @@ export function DomainMonitoringTab({
                   <div className="min-w-0">
                     <p className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>{item.domain_name}</p>
                     <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                      {freqLabel(item.frequency)} · {fmtDate(item.last_checked_at)}
+                      {freqLabel(item)} · {fmtDate(item.last_checked_at)}
                     </p>
                     <div className="mt-2"><AvailabilityBadge status={item.last_status} /></div>
                   </div>
@@ -651,12 +663,14 @@ export function DomainMonitoringTab({
                 <div className="relative">
                   <select
                     value={addForm.frequency}
-                    onChange={e => setAddForm(f => ({ ...f, frequency: e.target.value as 'daily' | 'weekly' }))}
+                    onChange={e => setAddForm(f => ({ ...f, frequency: e.target.value as 'daily' | 'weekly' | 'monthly' | 'yearly' }))}
                     className={inputCls + ' appearance-none pr-8'}
                     style={inputStyle}
                   >
                     <option value="daily">Denně</option>
                     <option value="weekly">Týdně</option>
+                    <option value="monthly">Měsíčně</option>
+                    <option value="yearly">Ročně</option>
                   </select>
                   <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -665,6 +679,35 @@ export function DomainMonitoringTab({
                   </span>
                 </div>
               </div>
+
+              {/* Den v měsíci – zobrazí se jen pro monthly */}
+              {addForm.frequency === 'monthly' && (
+                <div>
+                  <label className="text-sm font-medium block mb-1" style={{ color: 'var(--text-primary)' }}>
+                    Den v měsíci
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={addForm.monthly_day}
+                      onChange={e => setAddForm(f => ({ ...f, monthly_day: Number(e.target.value) }))}
+                      className={inputCls + ' appearance-none pr-8'}
+                      style={inputStyle}
+                    >
+                      {Array.from({ length: 28 }, (_, i) => i + 1).map(d => (
+                        <option key={d} value={d}>{d}. v měsíci</option>
+                      ))}
+                    </select>
+                    <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <polyline points="6 9 12 15 18 9" />
+                      </svg>
+                    </span>
+                  </div>
+                  <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                    Rozsah 1–28 zajišťuje kompatibilitu s únorem a kratšími měsíci.
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="flex gap-3 pt-2">

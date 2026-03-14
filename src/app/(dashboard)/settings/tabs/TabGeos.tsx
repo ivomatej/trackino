@@ -4,54 +4,92 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { INPUT_CLS, INPUT_STYLE, LABEL_CLS } from '../constants';
-import type { GeoEntry } from '@/types/database';
+import type { GeoEntry, CountryCatalogEntry } from '@/types/database';
 
 /* ─── Předefinovaný seznam jazyků ─────────────────────────────────────────── */
 export const LANGUAGES: { code: string; label: string }[] = [
-  { code: 'cs', label: 'Čeština' },
-  { code: 'sk', label: 'Slovenština' },
-  { code: 'en', label: 'Angličtina' },
-  { code: 'de', label: 'Němčina' },
-  { code: 'fr', label: 'Francouzština' },
-  { code: 'es', label: 'Španělština' },
-  { code: 'it', label: 'Italština' },
-  { code: 'pl', label: 'Polština' },
-  { code: 'ru', label: 'Ruština' },
-  { code: 'uk', label: 'Ukrajinština' },
-  { code: 'ro', label: 'Rumunština' },
-  { code: 'hu', label: 'Maďarština' },
-  { code: 'hr', label: 'Chorvatština' },
-  { code: 'sr', label: 'Srbština' },
-  { code: 'bg', label: 'Bulharština' },
-  { code: 'nl', label: 'Nizozemština' },
-  { code: 'pt', label: 'Portugalština' },
-  { code: 'sv', label: 'Švédština' },
-  { code: 'da', label: 'Dánština' },
-  { code: 'fi', label: 'Finština' },
-  { code: 'no', label: 'Norština' },
-  { code: 'el', label: 'Řečtina' },
-  { code: 'tr', label: 'Turečtina' },
+  { code: 'af', label: 'Afrikánština' },
+  { code: 'ak', label: 'Akanština' },
+  { code: 'sq', label: 'Albánština' },
+  { code: 'am', label: 'Amharština' },
   { code: 'ar', label: 'Arabština' },
+  { code: 'hy', label: 'Arménština' },
+  { code: 'az', label: 'Ázerbájdžánština' },
+  { code: 'my', label: 'Barmština' },
+  { code: 'be', label: 'Běloruština' },
+  { code: 'bn', label: 'Bengálština' },
+  { code: 'bs', label: 'Bosňanština' },
+  { code: 'bg', label: 'Bulharština' },
+  { code: 'ca', label: 'Katalánština' },
+  { code: 'cs', label: 'Čeština' },
   { code: 'zh', label: 'Čínština' },
-  { code: 'ja', label: 'Japonština' },
-  { code: 'ko', label: 'Korejština' },
+  { code: 'da', label: 'Dánština' },
+  { code: 'en', label: 'Angličtina' },
+  { code: 'et', label: 'Estonština' },
+  { code: 'fa', label: 'Perština' },
+  { code: 'fi', label: 'Finština' },
+  { code: 'fr', label: 'Francouzština' },
+  { code: 'ka', label: 'Gruzínština' },
+  { code: 'el', label: 'Řečtina' },
+  { code: 'ht', label: 'Haitská kreolština' },
+  { code: 'ha', label: 'Hauština' },
+  { code: 'he', label: 'Hebrejština' },
   { code: 'hi', label: 'Hindština' },
+  { code: 'hr', label: 'Chorvatština' },
+  { code: 'hu', label: 'Maďarština' },
+  { code: 'is', label: 'Islandština' },
+  { code: 'id', label: 'Indonéština' },
+  { code: 'ga', label: 'Irština' },
+  { code: 'it', label: 'Italština' },
+  { code: 'ja', label: 'Japonština' },
+  { code: 'kk', label: 'Kazaština' },
+  { code: 'km', label: 'Khmerština' },
+  { code: 'rw', label: 'Kinyarwanda' },
+  { code: 'ko', label: 'Korejština' },
+  { code: 'ky', label: 'Kyrgyzština' },
+  { code: 'lo', label: 'Laoština' },
   { code: 'lv', label: 'Lotyština' },
   { code: 'lt', label: 'Litevština' },
-  { code: 'et', label: 'Estonština' },
-  { code: 'sl', label: 'Slovinština' },
+  { code: 'lb', label: 'Lucemburština' },
   { code: 'mk', label: 'Makedonština' },
-  { code: 'bs', label: 'Bosňanština' },
-  { code: 'sq', label: 'Albánština' },
-  { code: 'ka', label: 'Gruzínština' },
-  { code: 'hy', label: 'Arménština' },
-  { code: 'be', label: 'Běloruština' },
-  { code: 'he', label: 'Hebrejština' },
-  { code: 'fa', label: 'Perština' },
-  { code: 'th', label: 'Thajština' },
-  { code: 'vi', label: 'Vietnamština' },
-  { code: 'id', label: 'Indonéština' },
   { code: 'ms', label: 'Malajština' },
+  { code: 'mt', label: 'Maltézština' },
+  { code: 'mi', label: 'Maorština' },
+  { code: 'mn', label: 'Mongolština' },
+  { code: 'de', label: 'Němčina' },
+  { code: 'ne', label: 'Nepálština' },
+  { code: 'nl', label: 'Nizozemština' },
+  { code: 'no', label: 'Norština' },
+  { code: 'ny', label: 'Chichewa' },
+  { code: 'pl', label: 'Polština' },
+  { code: 'pt', label: 'Portugalština' },
+  { code: 'ro', label: 'Rumunština' },
+  { code: 'ru', label: 'Ruština' },
+  { code: 'sm', label: 'Samoanština' },
+  { code: 'sk', label: 'Slovenština' },
+  { code: 'sl', label: 'Slovinština' },
+  { code: 'so', label: 'Somálština' },
+  { code: 'sr', label: 'Srbština' },
+  { code: 'st', label: 'Sesotho' },
+  { code: 'sv', label: 'Švédština' },
+  { code: 'sw', label: 'Svahilština' },
+  { code: 'tg', label: 'Tádžičtina' },
+  { code: 'tl', label: 'Tagalog' },
+  { code: 'ta', label: 'Tamilština' },
+  { code: 'th', label: 'Thajština' },
+  { code: 'ti', label: 'Tigriňština' },
+  { code: 'tn', label: 'Setswana' },
+  { code: 'tk', label: 'Turkmenština' },
+  { code: 'tr', label: 'Turečtina' },
+  { code: 'uk', label: 'Ukrajinština' },
+  { code: 'ur', label: 'Urdština' },
+  { code: 'uz', label: 'Uzbečtina' },
+  { code: 'vi', label: 'Vietnamština' },
+  { code: 'xh', label: 'Xhoština' },
+  { code: 'sn', label: 'Shona' },
+  { code: 'es', label: 'Španělština' },
+  { code: 'si', label: 'Sinhálština' },
+  { code: 'zu', label: 'Zulujština' },
 ];
 
 function getLangLabel(code: string): string {
@@ -65,7 +103,7 @@ interface Props {
 }
 
 /* ─── Prázdný formulář ────────────────────────────────────────────────────── */
-const EMPTY_FORM = { name_en: '', name_cs: '', code: '', languages: [] as string[] };
+const EMPTY_FORM = { name_en: '', name_cs: '', name_official: '', code: '', languages: [] as string[] };
 
 /* ─── Multi-select jazyk picker ───────────────────────────────────────────── */
 function LangPicker({ selected, onChange }: { selected: string[]; onChange: (v: string[]) => void }) {
@@ -118,7 +156,7 @@ function LangPicker({ selected, onChange }: { selected: string[]; onChange: (v: 
         </span>
       </div>
 
-      {/* Dropdown */}
+      {/* Dropdown – otevírá se nahoru */}
       {open && (
         <div className="absolute z-50 bottom-full mb-1 w-full rounded-xl border shadow-xl overflow-hidden"
           style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
@@ -167,7 +205,7 @@ function LangPicker({ selected, onChange }: { selected: string[]; onChange: (v: 
 
 /* ─── Modální formulář GEO ────────────────────────────────────────────────── */
 function GeoModal({
-  open, editing, saving, form, setForm, onClose, onSave,
+  open, editing, saving, form, setForm, onClose, onSave, catalog,
 }: {
   open: boolean;
   editing: GeoEntry | null;
@@ -176,10 +214,25 @@ function GeoModal({
   setForm: React.Dispatch<React.SetStateAction<typeof EMPTY_FORM>>;
   onClose: () => void;
   onSave: () => void;
+  catalog: CountryCatalogEntry[];
 }) {
   if (!open) return null;
 
   const codeInvalid = form.code.trim().length > 0 && form.code.trim().length !== 2;
+
+  const handleCatalogSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const code = e.target.value;
+    if (!code) return;
+    const entry = catalog.find(c => c.code === code);
+    if (!entry) return;
+    setForm(f => ({
+      ...f,
+      name_en: entry.name_en,
+      name_official: entry.name_official,
+      code: entry.code,
+      languages: entry.default_languages ?? [],
+    }));
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -202,6 +255,38 @@ function GeoModal({
           </button>
         </div>
 
+        {/* Rychlé vyplnění ze číselníku */}
+        {catalog.length > 0 && (
+          <div className="mb-5 pb-5 border-b" style={{ borderColor: 'var(--border)' }}>
+            <label className={LABEL_CLS} style={{ color: 'var(--text-muted)' }}>
+              Vyplnit ze seznamu zemí
+            </label>
+            <div className="relative">
+              <select
+                defaultValue=""
+                onChange={handleCatalogSelect}
+                className={INPUT_CLS + ' appearance-none pr-8 text-base sm:text-sm'}
+                style={INPUT_STYLE}
+              >
+                <option value="">– vyberte zemi –</option>
+                {catalog.map(c => (
+                  <option key={c.code} value={c.code}>
+                    {c.name_en} ({c.code})
+                  </option>
+                ))}
+              </select>
+              <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </span>
+            </div>
+            <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+              Výběrem se předvyplní anglický název, oficiální název, kód a jazyky. Český název doplňte ručně.
+            </p>
+          </div>
+        )}
+
         <div className="space-y-4 mb-6">
           {/* Anglický název */}
           <div>
@@ -209,7 +294,7 @@ function GeoModal({
             <input type="text" value={form.name_en}
               onChange={e => setForm(f => ({ ...f, name_en: e.target.value }))}
               placeholder="Germany"
-              className={INPUT_CLS} style={INPUT_STYLE} />
+              className={INPUT_CLS + ' text-base sm:text-sm'} style={INPUT_STYLE} />
           </div>
 
           {/* Český název */}
@@ -218,7 +303,16 @@ function GeoModal({
             <input type="text" value={form.name_cs}
               onChange={e => setForm(f => ({ ...f, name_cs: e.target.value }))}
               placeholder="Německo"
-              className={INPUT_CLS} style={INPUT_STYLE} />
+              className={INPUT_CLS + ' text-base sm:text-sm'} style={INPUT_STYLE} />
+          </div>
+
+          {/* Oficiální název státu */}
+          <div>
+            <label className={LABEL_CLS} style={{ color: 'var(--text-muted)' }}>Oficiální název státu</label>
+            <input type="text" value={form.name_official}
+              onChange={e => setForm(f => ({ ...f, name_official: e.target.value }))}
+              placeholder="Federal Republic of Germany"
+              className={INPUT_CLS + ' text-base sm:text-sm'} style={INPUT_STYLE} />
           </div>
 
           {/* Kód */}
@@ -228,7 +322,7 @@ function GeoModal({
               onChange={e => setForm(f => ({ ...f, code: e.target.value.toUpperCase().slice(0, 2) }))}
               placeholder="DE"
               maxLength={2}
-              className={INPUT_CLS}
+              className={INPUT_CLS + ' text-base sm:text-sm'}
               style={{
                 ...INPUT_STYLE,
                 borderColor: codeInvalid ? 'var(--danger)' : 'var(--border)',
@@ -271,6 +365,7 @@ export default function TabGeos({ workspaceId, onMessage }: Props) {
   const { user } = useAuth();
 
   const [geos, setGeos] = useState<GeoEntry[]>([]);
+  const [catalog, setCatalog] = useState<CountryCatalogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
   const [editing, setEditing] = useState<GeoEntry | null>(null);
@@ -289,7 +384,18 @@ export default function TabGeos({ workspaceId, onMessage }: Props) {
     setLoading(false);
   }, [workspaceId]);
 
-  useEffect(() => { fetchGeos(); }, [fetchGeos]);
+  const fetchCatalog = useCallback(async () => {
+    const { data } = await supabase
+      .from('trackino_country_catalog')
+      .select('*')
+      .order('name_en');
+    if (data) setCatalog(data as CountryCatalogEntry[]);
+  }, []);
+
+  useEffect(() => {
+    fetchGeos();
+    fetchCatalog();
+  }, [fetchGeos, fetchCatalog]);
 
   const openNew = () => {
     setEditing(null);
@@ -299,7 +405,13 @@ export default function TabGeos({ workspaceId, onMessage }: Props) {
 
   const openEdit = (g: GeoEntry) => {
     setEditing(g);
-    setForm({ name_en: g.name_en, name_cs: g.name_cs, code: g.code, languages: g.languages ?? [] });
+    setForm({
+      name_en: g.name_en,
+      name_cs: g.name_cs,
+      name_official: g.name_official ?? '',
+      code: g.code,
+      languages: g.languages ?? [],
+    });
     setModal(true);
   };
 
@@ -310,6 +422,7 @@ export default function TabGeos({ workspaceId, onMessage }: Props) {
       workspace_id: workspaceId,
       name_en: form.name_en.trim(),
       name_cs: form.name_cs.trim(),
+      name_official: form.name_official.trim(),
       code: form.code.trim().toUpperCase(),
       languages: form.languages,
     };
@@ -407,6 +520,7 @@ export default function TabGeos({ workspaceId, onMessage }: Props) {
                   <th className="px-4 py-2.5 text-left text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Zkratka</th>
                   <th className="px-4 py-2.5 text-left text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Anglický název</th>
                   <th className="px-4 py-2.5 text-left text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Český název</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Oficiální název</th>
                   <th className="px-4 py-2.5 text-left text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Jazyky</th>
                   <th className="px-4 py-2.5" />
                 </tr>
@@ -423,6 +537,7 @@ export default function TabGeos({ workspaceId, onMessage }: Props) {
                     </td>
                     <td className="px-4 py-3 font-medium" style={{ color: 'var(--text-primary)' }}>{g.name_en}</td>
                     <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>{g.name_cs || '–'}</td>
+                    <td className="px-4 py-3 text-xs" style={{ color: 'var(--text-muted)' }}>{g.name_official || '–'}</td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1">
                         {(g.languages ?? []).length === 0 ? (
@@ -483,6 +598,7 @@ export default function TabGeos({ workspaceId, onMessage }: Props) {
                     <div>
                       <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{g.name_en}</p>
                       {g.name_cs && <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{g.name_cs}</p>}
+                      {g.name_official && <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{g.name_official}</p>}
                     </div>
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
@@ -536,6 +652,7 @@ export default function TabGeos({ workspaceId, onMessage }: Props) {
         setForm={setForm}
         onClose={() => setModal(false)}
         onSave={saveGeo}
+        catalog={catalog}
       />
     </div>
   );

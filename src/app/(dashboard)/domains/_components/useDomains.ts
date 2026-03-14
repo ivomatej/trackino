@@ -347,12 +347,13 @@ export function useDomains() {
     setLoadingMonitoring(false);
   }, [wsId]);
 
-  const addToMonitoring = useCallback(async (domainName: string, frequency: 'daily' | 'weekly' = 'daily') => {
+  const addToMonitoring = useCallback(async (domainName: string, frequency: 'daily' | 'weekly' | 'monthly' | 'yearly' = 'daily', monthlyDay?: number | null) => {
     if (!wsId || !userId) return;
     const { error } = await supabase.from('trackino_domain_monitoring').insert({
       workspace_id: wsId,
       domain_name: domainName.toLowerCase().trim(),
       frequency,
+      monthly_day: frequency === 'monthly' ? (monthlyDay ?? 1) : null,
       notify_on_change: true,
       notes: '',
       created_by: userId,
