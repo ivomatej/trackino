@@ -1,6 +1,17 @@
 export const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.51.59 – 14. 3. 2026</h3>
+<ul>
+  <li><strong>UX: Chytré otevírání dropdown nabídek nahoru u spodního okraje</strong>:
+    <ul>
+      <li>Všechny dropdown nabídky v aplikaci nyní automaticky zjišťují dostupné místo pod tlačítkem a pokud je místo nedostatečné, otevřou se nahoru místo dolů</li>
+      <li>Opraveno v: Výběr projektu v TimerBaru, Výběr kategorie/úkolu v TimerBaru, Výběr klienta ve Správě projektů, TagPicker, Výběr složky v NoteEditoru, FolderTree dropdowny (Prompty, Záložky, Dokumenty), toolbar Odkaz/@/Stránka ve RichEditoru (Znalostní báze)</li>
+      <li>Funguje správně jak na desktopu, tak na mobilních zařízeních</li>
+    </ul>
+  </li>
+</ul>
+
 <h3>v2.51.57 – 14. 3. 2026</h3>
 <ul>
   <li><strong>Subreg.cz jako záložní zdroj ověření dostupnosti domén</strong>:

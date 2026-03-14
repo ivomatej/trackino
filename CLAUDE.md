@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 14. 3. 2026 (v2.51.57)
+> Aktualizováno: 14. 3. 2026 (v2.51.59)
 
 ---
 
@@ -155,6 +155,11 @@ Výchozí policy: `CREATE POLICY "Auth full" ... FOR ALL TO authenticated USING 
 | `trackino_task_folders` | id, workspace_id, name, color, sort_order, parent_id (self-ref), created_by, is_shared, created_at, updated_at | Složky pro organizaci projektů/nástěnek |
 | `trackino_task_folder_shares` | id, folder_id, workspace_id, user_id (nullable), shared_by, created_at | Sdílení složek úkolů (user_id=null = celý workspace) |
 | `trackino_task_board_members` | id, board_id, workspace_id, user_id, can_edit (bool), created_at | Sdílení nástěnky s konkrétními členy (UNIQUE board_id+user_id) |
+
+### Nové sloupce (v2.51.58)
+- `trackino_domain_monitoring.monthly_day integer CHECK (monthly_day BETWEEN 1 AND 28)` – den v měsíci pro měsíční interval (nullable)
+- `trackino_geos.name_official text NOT NULL DEFAULT ''` – officiální název státu
+- Nová globální tabulka `trackino_country_catalog` – číselník 127 zemí (code UNIQUE, name_en, name_official, default_languages text[], sort_order); RLS: SELECT pro všechny authenticated, zápis jen service_role
 
 ### Nové sloupce (v2.51.3)
 - `trackino_task_items.reviewer_id uuid REFERENCES auth.users(id)` – Zadavatel/Kontrolor úkolu (nullable)
@@ -644,6 +649,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 | Chybějící borderBottom na některých buňkách v Plánovači | Gap buňky před prvním proužkem v strip lane neměly `borderBottom` | Přidat `borderBottom` i na leading gap `<th>` buňky |
 | iOS Safari automaticky zoomuje při focusu na input | Font-size inputu je menší než 16px | Použít `text-base sm:text-sm` na všech inputech a textareách |
 | Day group header má ostré rohy (šedé pozadí přesahuje zaoblenění karty) | Div s `background` uvnitř `rounded-xl` containeru chybí `rounded-t-xl` | Přidat `rounded-t-xl` na header div uvnitř rounded karty |
+| Dropdown nabídka se otevírá dolů a přesahuje spodní okraj obrazovky | Dropdown nemá smart flip logiku | Použít `spaceBelow = window.innerHeight - rect.bottom`, pokud `spaceBelow < threshold` → `bottom: window.innerHeight - rect.top + 4` (otevřít nahoru), jinak `top: rect.bottom + 4`; pro `position:fixed` dropdowny; pro `position:absolute` dropdowny použít Tailwind třídy `bottom-full mb-1` / `top-full mt-1` |
 
 ---
 
@@ -652,6 +658,8 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
 | v2.51.28 | 11. 3. 2026 | Notebook – FolderTree: odstraněny desktop individuální tlačítka, nahrazeny třemi tečkami (⋮) zobrazující se na hover na desktopu + vždy viditelné na mobilu; NoteEditor: paste handler strippuje background-* CSS vlastnosti a bgcolor atribut z vkládaného HTML (žádná změna barvy pozadí z externích nástrojů) |
+| v2.51.59 | 14. 3. 2026 | UX: chytré otevírání dropdown nabídek – všechny dropdowny v aplikaci automaticky detekují dostupné místo pod tlačítkem a pokud nestačí, otevřou se nahoru; opraveno v 9 souborech (TimerBar pickery, TagPicker, NoteEditor, FolderTree pro Prompty/Záložky/Dokumenty, RichEditor toolbar, Správa projektů) |
+| v2.51.58 | 14. 3. 2026 | Monitoring domén – přidány intervaly Měsíčně (s výběrem dne 1–28) a Ročně; trackino_domain_monitoring.frequency rozšířeno + monthly_day sloupec; GEOs – nové pole Oficiální název státu (name_official), katalog zemí trackino_country_catalog (globální číselník 127 zemí s kódy a jazyky), picker v modálu pro předvyplnění |
 | v2.51.57 | 14. 3. 2026 | Subreg.cz jako záložní zdroj ověření dostupnosti domén: src/lib/subreg.ts (SOAP klient, ssid cache 20 min), GET /api/subreg/status, trojitá validace (Openprovider + RDAP + Subreg paralelně), sloupec Subreg v tabulce výsledků (podmíněný), Subreg sekce v záložce Registrátoři, rateLimitSubreg (30/min/IP) |
 | v2.51.56 | 14. 3. 2026 | Openprovider API integrace Session 2 – kontrola dostupnosti a monitoring: záložka Kontrola dostupnosti (jednoduchý/hromadný režim, TLD picker, dávkování po 50, CSV export), záložka Monitoring (sledování dostupnosti, ruční kontrola, collapsible historie); API routes /api/openprovider/check + /status; DB tabulky trackino_domain_monitoring + trackino_domain_check_history; Openprovider sekce v záložce Registrátoři (stav připojení, sync) |
 | v2.51.55 | 13. 3. 2026 | Openprovider API integrace – Session 1 (infrastruktura): src/lib/openprovider.ts (Bearer token cache 47h, auto-refresh), API routes /api/openprovider/domains, /domains/[id], /balance, /sync; rateLimitOpenprovider (30/min/IP); DB typy DomainSettings/DomainCache/DomainNotification; SQL migrace 3 nových tabulek (trackino_domain_settings, trackino_domain_cache, trackino_domain_notifications) s RLS workspace izolací |
