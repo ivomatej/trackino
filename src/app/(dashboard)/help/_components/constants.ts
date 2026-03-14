@@ -300,11 +300,13 @@ export const DEFAULT_HELP_CONTENT = `
 </ul>
 
 <h4>Kontrola dostupnosti domén</h4>
-<p>Záložka <strong>Kontrola dostupnosti</strong> umožňuje ověřit, zda jsou domény volné k registraci. Vyžaduje napojení na Openprovider API (konfigurace přes env proměnné na serveru).</p>
+<p>Záložka <strong>Kontrola dostupnosti</strong> umožňuje ověřit, zda jsou domény volné k registraci. Vyžaduje napojení na Openprovider API (konfigurace přes env proměnné na serveru). Volitelně lze nakonfigurovat také <strong>Subreg.cz</strong> jako záložní zdroj ověření.</p>
 <ul>
   <li><strong>Jednoduchý režim</strong> – zadejte název domény (bez přípony) a vyberte přípony (TLD) z nabídky. Standardně jsou předvoleny .cz, .com a .net. Výsledky zobrazí stav každé kombinace: Volná / Obsazená / Rezervovaná / Chyba</li>
   <li><strong>Hromadný režim</strong> – vložte seznam plných názvů domén (každá na novém řádku nebo oddělená čárkou). Při větším počtu probíhá kontrola po dávkách 50 s průběhovým pruhem.</li>
   <li><strong>Výsledky</strong> – volné domény jsou zvýrazněny zeleně. Výsledky lze exportovat jako CSV. Volnou doménu lze jedním klikem přidat do monitoringu.</li>
+  <li><strong>Dvojitá validace (Openprovider + RDAP)</strong> – každá doména se ověřuje nezávisle přes Openprovider API i přímým dotazem na RDAP registry. Pokud se oba zdroje shodují, výsledek je označen jako <em>ověřeno</em>. Při neshodě má přednost RDAP jako přímý zdroj pravdy.</li>
+  <li><strong>Subreg.cz jako třetí zdroj</strong> – pokud jsou nakonfigurovány env proměnné <code>SUBREG_LOGIN</code> a <code>SUBREG_PASSWORD</code>, probíhá kontrola také přes Subreg.cz SOAP API paralelně. V tabulce výsledků se zobrazí extra sloupec <em>Subreg</em> s výsledkem z tohoto zdroje (Volná / Obsazená / Neznámý stav).</li>
 </ul>
 
 <h4>Monitoring domén</h4>

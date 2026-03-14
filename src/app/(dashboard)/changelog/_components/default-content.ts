@@ -1,6 +1,21 @@
 export const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.51.57 – 14. 3. 2026</h3>
+<ul>
+  <li><strong>Subreg.cz jako záložní zdroj ověření dostupnosti domén</strong>:
+    <ul>
+      <li>Nová knihovna <code>src/lib/subreg.ts</code> – SOAP klient pro Subreg.cz API; ssid session token cachován 20 min; auto-refresh při expirace; <code>subregCheckDomain()</code>, <code>hasSubregCredentials()</code></li>
+      <li>Nový API endpoint <code>GET /api/subreg/status</code> – ověření konfigurace a připojení Subreg.cz</li>
+      <li>Kontrola dostupnosti nyní probíhá ze <strong>tří zdrojů paralelně</strong>: Openprovider API + RDAP (přímý dotaz na registry) + Subreg.cz SOAP</li>
+      <li>Výsledky zobrazují stav z Openprovider, RDAP i Subreg zvlášť – sloupec Subreg se zobrazí jen pokud jsou k dispozici data ze Subreg</li>
+      <li>Záložka Registrátoři rozšířena o sekci <strong>Subreg.cz API</strong> (stav připojení, tlačítko Testovat připojení)</li>
+      <li>Rate limit pro Subreg: 30 req/min/IP (Upstash Redis)</li>
+      <li>Konfigurace přes env proměnné: <code>SUBREG_LOGIN</code>, <code>SUBREG_PASSWORD</code></li>
+    </ul>
+  </li>
+</ul>
+
 <h3>v2.51.56 – 14. 3. 2026</h3>
 <ul>
   <li><strong>Openprovider API integrace Session 2 – Kontrola dostupnosti a monitoring domén</strong>:

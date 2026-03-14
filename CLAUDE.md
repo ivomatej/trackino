@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 14. 3. 2026 (v2.51.56)
+> Aktualizováno: 14. 3. 2026 (v2.51.57)
 
 ---
 
@@ -652,6 +652,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
 | v2.51.28 | 11. 3. 2026 | Notebook – FolderTree: odstraněny desktop individuální tlačítka, nahrazeny třemi tečkami (⋮) zobrazující se na hover na desktopu + vždy viditelné na mobilu; NoteEditor: paste handler strippuje background-* CSS vlastnosti a bgcolor atribut z vkládaného HTML (žádná změna barvy pozadí z externích nástrojů) |
+| v2.51.57 | 14. 3. 2026 | Subreg.cz jako záložní zdroj ověření dostupnosti domén: src/lib/subreg.ts (SOAP klient, ssid cache 20 min), GET /api/subreg/status, trojitá validace (Openprovider + RDAP + Subreg paralelně), sloupec Subreg v tabulce výsledků (podmíněný), Subreg sekce v záložce Registrátoři, rateLimitSubreg (30/min/IP) |
 | v2.51.56 | 14. 3. 2026 | Openprovider API integrace Session 2 – kontrola dostupnosti a monitoring: záložka Kontrola dostupnosti (jednoduchý/hromadný režim, TLD picker, dávkování po 50, CSV export), záložka Monitoring (sledování dostupnosti, ruční kontrola, collapsible historie); API routes /api/openprovider/check + /status; DB tabulky trackino_domain_monitoring + trackino_domain_check_history; Openprovider sekce v záložce Registrátoři (stav připojení, sync) |
 | v2.51.55 | 13. 3. 2026 | Openprovider API integrace – Session 1 (infrastruktura): src/lib/openprovider.ts (Bearer token cache 47h, auto-refresh), API routes /api/openprovider/domains, /domains/[id], /balance, /sync; rateLimitOpenprovider (30/min/IP); DB typy DomainSettings/DomainCache/DomainNotification; SQL migrace 3 nových tabulek (trackino_domain_settings, trackino_domain_cache, trackino_domain_notifications) s RLS workspace izolací |
 | v2.51.54 | 13. 3. 2026 | Refaktoring: types/database.ts (1160 ř.) rozdělen na 13 souborů v db/ (core.ts, tracking.ts, vacation.ts, invoices.ts, calendar.ts, requests.ts, documents.ts, knowledge.ts, content.ts, subscriptions.ts, domains.ts, tasks.ts, ai.ts); database.ts redukován na 14 řádků orchestrátoru (re-exporty); existující importy beze změny |
@@ -3011,6 +3012,9 @@ Openprovider je registrátor domén s REST API v1beta. Trackino ho integruje do 
 OPENPROVIDER_USERNAME=info@marketixy.com
 OPENPROVIDER_PASSWORD=...
 OPENPROVIDER_BASE_URL=https://api.openprovider.eu/v1beta
+# Subreg.cz – volitelný záložní zdroj ověření dostupnosti domén
+SUBREG_LOGIN=...
+SUBREG_PASSWORD=...
 ```
 Sandbox (pro vývoj): `https://api.sandbox.openprovider.nl:8480/v1beta`
 
@@ -3056,6 +3060,7 @@ GET  /resellers/me             → stav kreditu a info o reselleru
 |---------|--------|
 | 1 ✅ | openprovider.ts + API routes (domains, balance, sync) + SQL migrace |
 | 2 ✅ | Záložka Kontrola dostupnosti (DomainCheckerTab) + Záložka Monitoring (DomainMonitoringTab) + API routes check/status + DB tabulky domain_monitoring/check_history + Openprovider sekce v Registrátorech |
+| 2b ✅ | Subreg.cz jako záložní zdroj ověření dostupnosti + subreg.ts + /api/subreg/status + Subreg sekce v Registrátorech |
 | 3 | Záložka DNS: DnsRecordsList + DnsRecordForm + API route dns |
 | 4 | Záložka SSL certifikáty + API route ssl |
 | 5 | Záložka Finance (balance + transakce) |
@@ -3064,6 +3069,61 @@ GET  /resellers/me             → stav kreditu a info o reselleru
 
 ---
 
-*Soubor spravuje Claude. Aktualizuj při každé větší změně architektury nebo přidání nových funkcí.*
+## 38. Subreg.cz integrace – architektura (v2.51.57)
+
+### Co je Subreg.cz
+Subreg.cz je český registrátor domén s SOAP API. V Trackinu slouží jako **záložní (třetí) zdroj** pro ověření dostupnosti domén – paralelně s Openprovider API a RDAP přímým dotazem na registry.
+
+### Env proměnné (volitelné – přidat do Vercel + .env.local)
+```
+SUBREG_LOGIN=...
+SUBREG_PASSWORD=...
+```
+Pokud tyto proměnné nejsou nastaveny, Subreg se tiše přeskočí – kontrola probíhá jen přes Openprovider + RDAP.
+
+### Soubory
+| Soubor | Popis |
+|--------|-------|
+| `src/lib/subreg.ts` | SOAP klient – `getSubregSsid()` (cache 20 min), `subregCheckDomain(name, ext)`, `hasSubregCredentials()`, `resetSubregSsid()` |
+| `src/app/api/subreg/status/route.ts` | GET – `{ configured: boolean; connected?: boolean; error?: string }` |
+| `src/app/api/openprovider/check/route.ts` | Rozšířeno o Subreg jako 3. paralelní zdroj |
+
+### SOAP API
+- URL: `https://soap.subreg.cz/cmd.php`
+- Auth: `Login` command → `ssid` token (cachován 20 min v Node.js paměti)
+- Check: `Check_Domain` command → `avail: 1` = volná, `avail: 0` = obsazená
+- **Manuální XML building** – `DOMParser` je Browser-only API; používáme regex `extractXmlTag()`
+- Timeout: `AbortSignal.timeout(10000)` (10 s)
+- Každé volání ověřuje jen 1 doménu → `Promise.allSettled` pro batch
+
+### `SubregAvailability` typ
+```typescript
+type SubregAvailability = 'free' | 'active' | 'error' | 'unknown';
+```
+
+### Integrace do /api/openprovider/check
+```typescript
+const subregAvailable = hasSubregCredentials();
+const [opRes, rdapResults, subregResults] = await Promise.all([
+  openproviderFetch('/domains/check', { method: 'POST', body: JSON.stringify({ domains }) }),
+  Promise.allSettled(domains.map(d => rdapCheck(`${d.name}.${d.extension}`))),
+  subregAvailable
+    ? Promise.allSettled(domains.map(d => subregCheckDomain(d.name, d.extension)))
+    : Promise.resolve(null),
+]);
+// každý výsledek: ...(subregStatus !== null ? { subreg_status: subregStatus } : {})
+```
+Pole `subreg_status` je v result objektu přítomno **pouze** pokud Subreg vrátil data (pole chybí = Subreg není nakonfigurován).
+
+### UI – sloupec Subreg v tabulce výsledků
+- `hasSubregData = checkerResults.some(r => r.subreg_status !== undefined && r.subreg_status !== null)`
+- Sloupec se zobrazí v desktop tabulce **pouze** pokud `hasSubregData === true`
+- `SubregBadge` komponenta: free=zelená, active=červená, unknown=žlutá, error=šedá
+
+### Rate limiting
+- `rateLimitSubreg` – 30 req/min/IP, prefix `trackino:subreg`
+- Definováno v `src/lib/rate-limit.ts`
+
+---
 
 *Soubor spravuje Claude. Aktualizuj při každé větší změně architektury nebo přidání nových funkcí.*
