@@ -32,3 +32,10 @@ export const rateLimitOpenprovider = new Ratelimit({
   limiter: Ratelimit.slidingWindow(30, '1 m'),
   prefix: 'trackino:openprovider',
 });
+
+// Subreg.cz SOAP API proxy: max 30 požadavků za 1 minutu na IP / uživatele
+export const rateLimitSubreg = new Ratelimit({
+  redis: Redis.fromEnv(),
+  limiter: Ratelimit.slidingWindow(30, '1 m'),
+  prefix: 'trackino:subreg',
+});

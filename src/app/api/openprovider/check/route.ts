@@ -1,11 +1,12 @@
 // Trackino – Openprovider kontrola dostupnosti domén
 // POST /api/openprovider/check
 // Body: { domains: { name: string; extension: string }[] }
-// Response: { results: { domain: string; status: string; premium?: boolean; validated?: boolean }[] }
+// Response: { results: { domain: string; status: string; premium?: boolean; validated?: boolean; rdap_status?: string; openprovider_status?: string; subreg_status?: string }[] }
 
 import { NextRequest, NextResponse } from 'next/server';
 import { openproviderFetch, hasOpenproviderCredentials } from '@/lib/openprovider';
 import { rateLimitOpenprovider } from '@/lib/rate-limit';
+import { hasSubregCredentials, subregCheckDomain } from '@/lib/subreg';
 
 // ─── RDAP helper ─────────────────────────────────────────────────────────────
 // Vrátí 'registered' | 'free' | 'unknown'
@@ -66,9 +67,11 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const subregAvailable = hasSubregCredentials();
+
   try {
-    // Openprovider + RDAP paralelně
-    const [opRes, rdapResults] = await Promise.all([
+    // Openprovider + RDAP + Subreg paralelně
+    const [opRes, rdapResults, subregResults] = await Promise.all([
       openproviderFetch('/domains/check', {
         method: 'POST',
         body: JSON.stringify({ domains }),
@@ -76,6 +79,9 @@ export async function POST(req: NextRequest) {
       Promise.allSettled(
         domains.map(d => rdapCheck(`${d.name}.${d.extension}`)),
       ),
+      subregAvailable
+        ? Promise.allSettled(domains.map(d => subregCheckDomain(d.name, d.extension)))
+        : Promise.resolve(null),
     ]);
 
     const data = await opRes.json();
@@ -97,6 +103,13 @@ export async function POST(req: NextRequest) {
       // RDAP výsledek
       const rdap = rdapResults[idx];
       const rdapStatus = rdap?.status === 'fulfilled' ? rdap.value : 'unknown';
+
+      // Subreg výsledek
+      let subregStatus: string | null = null;
+      if (subregResults !== null) {
+        const sr = (subregResults as PromiseSettledResult<string>[])[idx];
+        subregStatus = sr?.status === 'fulfilled' ? sr.value : 'error';
+      }
 
       // Porovnání zdrojů → výsledný status
       let finalStatus: 'free' | 'active' | 'unverified' | 'error';
@@ -133,6 +146,9 @@ export async function POST(req: NextRequest) {
         premium: r.premium ?? false,
         price: r.price ?? null,
         validated,
+        openprovider_status: opStatus,
+        rdap_status: rdapStatus,
+        ...(subregStatus !== null ? { subreg_status: subregStatus } : {}),
       };
     });
 

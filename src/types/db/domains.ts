@@ -118,4 +118,10 @@ export interface DomainCheckResult {
   premium?: boolean;
   /** true = potvrzeno oběma zdroji (Openprovider + RDAP) */
   validated?: boolean;
+  /** Surový status z Openprovider API */
+  openprovider_status?: string;
+  /** Status z RDAP (přímý dotaz na registry): free | registered | unknown */
+  rdap_status?: string;
+  /** Status ze Subreg.cz SOAP API: free | active | unknown | error */
+  subreg_status?: string | null;
 }

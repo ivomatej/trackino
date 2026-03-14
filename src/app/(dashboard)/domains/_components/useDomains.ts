@@ -74,6 +74,9 @@ export function useDomains() {
   /* ── Openprovider status ── */
   const [openproviderConfigured, setOpenproviderConfigured] = useState<boolean | null>(null);
 
+  /* ── Subreg status ── */
+  const [subregConfigured, setSubregConfigured] = useState<boolean | null>(null);
+
   /* ── Message ── */
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
@@ -300,6 +303,17 @@ export function useDomains() {
     }
   }, []);
 
+  /* ── Subreg status fetch ── */
+  const fetchSubregStatus = useCallback(async () => {
+    try {
+      const res = await fetch('/api/subreg/status');
+      const data = await res.json();
+      setSubregConfigured(data.configured ?? false);
+    } catch {
+      setSubregConfigured(false);
+    }
+  }, []);
+
   /* ── Monitoring CRUD ── */
   const fetchMonitoring = useCallback(async () => {
     if (!wsId) return;
@@ -475,6 +489,8 @@ export function useDomains() {
     checkerResults, setCheckerResults, checkDomains,
     /* openprovider */
     openproviderConfigured, fetchOpenproviderStatus,
+    /* subreg */
+    subregConfigured, fetchSubregStatus,
     /* misc */
     canManage, message,
     hasSubscriptionsModule: hasModule('subscriptions'),

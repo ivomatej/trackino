@@ -72,6 +72,31 @@ function StatusBadge({ status, validated }: { status: string; validated?: boolea
   );
 }
 
+// ─── Subreg status badge ───────────────────────────────────────────────────────
+function SubregBadge({ status }: { status: string | null | undefined }) {
+  if (status === null || status === undefined) return null;
+  let label: string;
+  let bg: string;
+  let color: string;
+
+  if (status === 'free') {
+    label = 'Volná'; bg = '#dcfce7'; color = '#166534';
+  } else if (status === 'active') {
+    label = 'Obsazená'; bg = '#fee2e2'; color = '#991b1b';
+  } else if (status === 'unknown') {
+    label = '?'; bg = '#fef9c3'; color = '#854d0e';
+  } else {
+    label = '—'; bg = 'var(--bg-hover)'; color = 'var(--text-muted)';
+  }
+
+  return (
+    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
+      style={{ background: bg, color }}>
+      {label}
+    </span>
+  );
+}
+
 // ─── TLD výběr ────────────────────────────────────────────────────────────────
 const DEFAULT_TLDS = ['cz', 'com', 'net', 'org', 'eu', 'de', 'pl', 'sk', 'at', 'co.uk'];
 const DEFAULT_CHECKED_TLDS = new Set(['cz', 'com', 'net']);
@@ -91,6 +116,7 @@ function parseDomain(raw: string): { name: string; extension: string } | null {
 // ─── Props ────────────────────────────────────────────────────────────────────
 interface Props {
   openproviderConfigured: boolean | null;
+  subregConfigured?: boolean | null;
   checkerResults: DomainCheckResult[];
   setCheckerResults: (r: DomainCheckResult[]) => void;
   checkDomains: (
@@ -104,6 +130,7 @@ interface Props {
 
 export function DomainCheckerTab({
   openproviderConfigured,
+  subregConfigured = null,
   checkerResults,
   setCheckerResults,
   checkDomains,
@@ -240,6 +267,9 @@ export function DomainCheckerTab({
   };
 
   const monitoringNames = new Set(monitoringList.map(m => m.domain_name));
+
+  // Zda výsledky obsahují Subreg data
+  const hasSubregData = checkerResults.some(r => r.subreg_status !== undefined && r.subreg_status !== null);
 
   // Pokud openprovider není nakonfigurován
   if (openproviderConfigured === false) {
@@ -521,6 +551,11 @@ export function DomainCheckerTab({
                   {selectMode && <th className="px-4 py-2.5 w-10" />}
                   <th className="text-left px-4 py-2.5 font-medium" style={{ color: 'var(--text-muted)' }}>Doména</th>
                   <th className="text-left px-4 py-2.5 font-medium" style={{ color: 'var(--text-muted)' }}>Status</th>
+                  {hasSubregData && (
+                    <th className="text-left px-4 py-2.5 font-medium" style={{ color: 'var(--text-muted)' }}>
+                      Subreg
+                    </th>
+                  )}
                   <th className="text-right px-4 py-2.5 font-medium" style={{ color: 'var(--text-muted)' }}>Akce</th>
                 </tr>
               </thead>
@@ -563,6 +598,11 @@ export function DomainCheckerTab({
                         </span>
                       )}
                     </td>
+                    {hasSubregData && (
+                      <td className="px-4 py-3">
+                        <SubregBadge status={r.subreg_status} />
+                      </td>
+                    )}
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-2">
                         {r.status === 'free' && !monitoringNames.has(r.domain) && !selectMode && (
@@ -627,7 +667,13 @@ export function DomainCheckerTab({
                 )}
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-sm truncate" style={{ color: 'var(--text-primary)' }}>{r.domain}</p>
-                  <div className="mt-1"><StatusBadge status={r.status} validated={r.validated} /></div>
+                  <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                    <StatusBadge status={r.status} validated={r.validated} />
+                    {r.subreg_status !== undefined && r.subreg_status !== null && (
+                      <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Subreg:</span>
+                    )}
+                    <SubregBadge status={r.subreg_status} />
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   {r.status === 'free' && !monitoringNames.has(r.domain) && !selectMode && (

@@ -64,12 +64,15 @@ export function DomainsContent() {
     checkerResults, setCheckerResults, checkDomains,
     // openprovider
     openproviderConfigured, fetchOpenproviderStatus,
+    // subreg
+    subregConfigured, fetchSubregStatus,
   } = useDomains();
 
-  // Načíst Openprovider status při prvním renderu
+  // Načíst Openprovider + Subreg status při prvním renderu
   useEffect(() => {
     fetchOpenproviderStatus();
-  }, [fetchOpenproviderStatus]);
+    fetchSubregStatus();
+  }, [fetchOpenproviderStatus, fetchSubregStatus]);
 
   // Synchronizace domén z Openprovider
   const handleSync = async () => {
@@ -265,6 +268,49 @@ export function DomainsContent() {
                 )}
               </div>
             </div>
+
+            {/* ── Subreg.cz API sekce ── */}
+            <div className="rounded-xl border p-5 space-y-4"
+              style={{ borderColor: 'var(--border)', background: 'var(--bg-card)' }}>
+              <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                Subreg.cz API
+              </h3>
+
+              {/* Status */}
+              <div className="flex items-center gap-2 text-sm">
+                {subregConfigured === null && (
+                  <span className="w-4 h-4 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin inline-block" />
+                )}
+                {subregConfigured === true && (
+                  <>
+                    <span style={{ color: '#22c55e' }}><CheckCircleIcon /></span>
+                    <span style={{ color: '#166534' }}>Připojeno</span>
+                  </>
+                )}
+                {subregConfigured === false && (
+                  <>
+                    <span style={{ color: '#ef4444' }}><XCircleIcon /></span>
+                    <span style={{ color: '#991b1b' }}>Nepřipojeno</span>
+                  </>
+                )}
+              </div>
+
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                Záložní zdroj pro ověření dostupnosti domén. Přihlašovací údaje jsou konfigurovány přes prostředí serveru (env vars: SUBREG_LOGIN, SUBREG_PASSWORD).
+              </p>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={fetchSubregStatus}
+                  className="px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors flex items-center gap-2"
+                  style={{ borderColor: 'var(--border)', color: 'var(--text-muted)', background: 'var(--bg-card)' }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-card)'}
+                >
+                  <SyncIcon /> Testovat připojení
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -272,6 +318,7 @@ export function DomainsContent() {
         {activeTab === 'checker' && (
           <DomainCheckerTab
             openproviderConfigured={openproviderConfigured}
+            subregConfigured={subregConfigured}
             checkerResults={checkerResults}
             setCheckerResults={setCheckerResults}
             checkDomains={checkDomains}
