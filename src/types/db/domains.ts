@@ -53,6 +53,18 @@ export interface DomainNotification {
   sent_at: string;
 }
 
+export interface GeoEntry {
+  id: string;
+  workspace_id: string;
+  name_en: string;
+  name_cs: string;
+  code: string;
+  languages: string[];
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Domain {
   id: string;
   workspace_id: string;
@@ -66,6 +78,8 @@ export interface Domain {
   target_url: string;
   project_name: string;
   company_name: string;
+  is_blocked: boolean;
+  blocked_geo_codes: string[];
   created_by: string;
   created_at: string;
   updated_at: string;

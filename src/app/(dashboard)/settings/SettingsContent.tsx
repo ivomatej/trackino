@@ -16,11 +16,12 @@ import TabCooperation from './tabs/TabCooperation';
 import TabModules from './tabs/TabModules';
 import TabAI from './tabs/TabAI';
 import TabAutomation from './tabs/TabAutomation';
+import TabGeos from './tabs/TabGeos';
 
 type SettingsTab =
   | 'general' | 'society' | 'subscription' | 'billing'
   | 'fields' | 'vacation' | 'cooperation' | 'modules'
-  | 'ai' | 'automation';
+  | 'ai' | 'automation' | 'geos';
 
 export default function SettingsContent() {
   const { currentWorkspace, currentMembership, loading, refreshWorkspace, hasModule } = useWorkspace();
@@ -61,6 +62,7 @@ export default function SettingsContent() {
     { id: 'modules' as const, label: 'Moduly' },
     { id: 'ai' as const, label: 'AI asistent' },
     ...(hasModule('automation') ? [{ id: 'automation' as const, label: 'Automatizace' }] : []),
+    { id: 'geos' as const, label: 'GEOs' },
   ];
 
   return (
@@ -178,6 +180,13 @@ export default function SettingsContent() {
 
             {activeTab === 'automation' && (
               <TabAutomation
+                workspaceId={currentWorkspace.id}
+                onMessage={setMessage}
+              />
+            )}
+
+            {activeTab === 'geos' && (
+              <TabGeos
                 workspaceId={currentWorkspace.id}
                 onMessage={setMessage}
               />

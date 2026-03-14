@@ -66,6 +66,8 @@ export function DomainsContent() {
     openproviderConfigured, fetchOpenproviderStatus,
     // subreg
     subregConfigured, fetchSubregStatus,
+    // geos
+    geos,
   } = useDomains();
 
   // Načíst Openprovider + Subreg status při prvním renderu
@@ -361,6 +363,7 @@ export function DomainsContent() {
         hasSubscriptionsModule={hasSubscriptionsModule}
         canManage={canManage}
         onNewRegistrar={() => { setModal(false); openNewReg(); }}
+        geos={geos}
       />
 
       <RegistrarFormModal
@@ -379,6 +382,7 @@ export function DomainsContent() {
         onEdit={openEdit}
         canManage={canManage}
         getSubName={getSubName}
+        geos={geos}
       />
     </DashboardLayout>
   );

@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useRouter } from 'next/navigation';
-import type { Domain, DomainStatus, DomainRegistrar, Subscription, DomainMonitoring, DomainCheckHistory, DomainCheckResult } from '@/types/database';
+import type { Domain, DomainStatus, DomainRegistrar, Subscription, DomainMonitoring, DomainCheckHistory, DomainCheckResult, GeoEntry } from '@/types/database';
 import type {
   DisplayStatus, SortField, SortDir, TabType,
   DomainFormState, RegFormState, DomainStats,
@@ -17,6 +17,7 @@ const EMPTY_DOMAIN_FORM: DomainFormState = {
   name: '', registrar: '', subscription_id: null, registration_date: '',
   expiration_date: '', status: 'active', notes: '', target_url: '',
   project_name: '', company_name: '',
+  is_blocked: false, blocked_geo_codes: [],
 };
 
 export function useDomains() {
@@ -37,6 +38,7 @@ export function useDomains() {
   const [domains, setDomains] = useState<Domain[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [registrars, setRegistrars] = useState<DomainRegistrar[]>([]);
+  const [geos, setGeos] = useState<GeoEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>('domains');
 
@@ -89,16 +91,18 @@ export function useDomains() {
   const fetchAll = useCallback(async () => {
     if (!wsId) return;
     setLoading(true);
-    const [dRes, sRes, rRes] = await Promise.all([
+    const [dRes, sRes, rRes, gRes] = await Promise.all([
       supabase.from('trackino_domains').select('*').eq('workspace_id', wsId).order('name'),
       hasModule('subscriptions')
         ? supabase.from('trackino_subscriptions').select('id,name,website_url').eq('workspace_id', wsId).eq('status', 'active').order('name')
         : Promise.resolve({ data: [], error: null }),
       supabase.from('trackino_domain_registrars').select('*').eq('workspace_id', wsId).order('name'),
+      supabase.from('trackino_geos').select('*').eq('workspace_id', wsId).order('name_en'),
     ]);
     if (dRes.data) setDomains(dRes.data);
     if (sRes.data) setSubscriptions(sRes.data as Subscription[]);
     if (rRes.data) setRegistrars(rRes.data as DomainRegistrar[]);
+    if (gRes.data) setGeos(gRes.data as GeoEntry[]);
     setLoading(false);
   }, [wsId, hasModule]);
 
@@ -203,6 +207,8 @@ export function useDomains() {
       target_url: d.target_url,
       project_name: d.project_name,
       company_name: d.company_name,
+      is_blocked: d.is_blocked ?? false,
+      blocked_geo_codes: d.blocked_geo_codes ?? [],
     });
     setModal(true);
   };
@@ -222,6 +228,8 @@ export function useDomains() {
       target_url: form.target_url.trim(),
       project_name: form.project_name.trim(),
       company_name: form.company_name.trim(),
+      is_blocked: form.is_blocked,
+      blocked_geo_codes: form.is_blocked ? form.blocked_geo_codes : [],
     };
     if (editing) {
       const { error } = await supabase.from('trackino_domains').update({ ...payload, updated_at: new Date().toISOString() }).eq('id', editing.id);
@@ -464,7 +472,7 @@ export function useDomains() {
 
   return {
     /* data */
-    domains, subscriptions, registrars, loading, wsLoading,
+    domains, subscriptions, registrars, geos, loading, wsLoading,
     filteredDomains, stats, companies, registrarNames,
     /* tabs */
     activeTab, setActiveTab,

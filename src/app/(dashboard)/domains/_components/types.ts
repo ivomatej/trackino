@@ -1,4 +1,4 @@
-import type { Domain, DomainStatus, DomainRegistrar, Subscription } from '@/types/database';
+import type { Domain, DomainStatus, DomainRegistrar, Subscription, GeoEntry } from '@/types/database';
 
 export type DisplayStatus = DomainStatus | 'expiring';
 export type SortField = 'name' | 'expiration_date' | 'registrar' | 'status';
@@ -16,6 +16,8 @@ export interface DomainFormState {
   target_url: string;
   project_name: string;
   company_name: string;
+  is_blocked: boolean;
+  blocked_geo_codes: string[];
 }
 
 export interface RegFormState {
@@ -33,5 +35,5 @@ export interface DomainStats {
   expired: number;
 }
 
-export type { Domain, DomainStatus, DomainRegistrar, Subscription };
+export type { Domain, DomainStatus, DomainRegistrar, Subscription, GeoEntry };
 export type { DomainMonitoring, DomainCheckHistory, DomainCheckResult } from '@/types/database';

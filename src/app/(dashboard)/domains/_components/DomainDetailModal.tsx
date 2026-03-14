@@ -2,7 +2,7 @@
 
 import { ICONS, STATUS_CONFIG } from './constants';
 import { daysUntilExpiration, getDisplayStatus, fmtDate } from './utils';
-import type { Domain } from './types';
+import type { Domain, GeoEntry } from './types';
 
 interface Props {
   detailDomain: Domain | null;
@@ -10,9 +10,10 @@ interface Props {
   onEdit: (domain: Domain) => void;
   canManage: boolean;
   getSubName: (id: string | null) => string | null;
+  geos: GeoEntry[];
 }
 
-export function DomainDetailModal({ detailDomain, onClose, onEdit, canManage, getSubName }: Props) {
+export function DomainDetailModal({ detailDomain, onClose, onEdit, canManage, getSubName, geos }: Props) {
   if (!detailDomain) return null;
 
   const ds = getDisplayStatus(detailDomain);
@@ -90,6 +91,34 @@ export function DomainDetailModal({ detailDomain, onClose, onEdit, canManage, ge
                 style={{ color: 'var(--primary)' }}>
                 {detailDomain.target_url} {ICONS.link}
               </a>
+            </div>
+          )}
+
+          {/* Blokace */}
+          <div className="flex justify-between py-1.5" style={{ borderBottom: '1px solid var(--border)' }}>
+            <span style={{ color: 'var(--text-muted)' }}>Blokace GEO</span>
+            <span className="font-medium" style={{ color: detailDomain.is_blocked ? '#ef4444' : 'var(--text-primary)' }}>
+              {detailDomain.is_blocked ? 'Blokovaná' : 'Neblokovaná'}
+            </span>
+          </div>
+
+          {/* Blokované země */}
+          {detailDomain.is_blocked && detailDomain.blocked_geo_codes && detailDomain.blocked_geo_codes.length > 0 && (
+            <div className="py-2">
+              <p className="text-xs font-medium mb-2" style={{ color: 'var(--text-muted)' }}>Blokované země</p>
+              <div className="flex flex-wrap gap-1.5">
+                {detailDomain.blocked_geo_codes.map(code => {
+                  const geo = geos.find(g => g.code === code);
+                  return (
+                    <span key={code} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
+                      style={{ background: '#fee2e2', color: '#991b1b' }}
+                      title={geo ? `${geo.name_cs} / ${geo.name_en}` : code}>
+                      <span className="font-mono font-bold">{code}</span>
+                      {geo && <span>{geo.name_cs}</span>}
+                    </span>
+                  );
+                })}
+              </div>
             </div>
           )}
 
