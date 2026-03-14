@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { WorkspaceProvider } from '@/contexts/WorkspaceContext';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
 import {
@@ -106,7 +107,7 @@ const ChartTooltip = ({ active, payload, label }: { active?: boolean; payload?: 
 
 // ─── Hlavní komponenta ────────────────────────────────────────────────────────
 
-export default function MonitoringPage() {
+function MonitoringContent() {
   const { profile, loading: authLoading } = useAuth();
   const router = useRouter();
 
@@ -674,5 +675,13 @@ export default function MonitoringPage() {
         <div className="h-4" />
       </div>
     </DashboardLayout>
+  );
+}
+
+export default function MonitoringPage() {
+  return (
+    <WorkspaceProvider>
+      <MonitoringContent />
+    </WorkspaceProvider>
   );
 }
