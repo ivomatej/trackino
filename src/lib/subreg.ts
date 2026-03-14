@@ -56,9 +56,12 @@ async function subregFetch(command: string, data: Record<string, string>): Promi
 
 // ─── Veřejné utility funkce ──────────────────────────────────────────────────
 
-/** Vrátí true pokud jsou env vars SUBREG_LOGIN + SUBREG_PASSWORD nastaveny */
+/** Vrátí true pokud jsou env vars pro Subreg nastaveny (API token nebo login+heslo) */
 export function hasSubregCredentials(): boolean {
-  return !!(process.env.SUBREG_LOGIN && process.env.SUBREG_PASSWORD);
+  return !!(
+    (process.env.SUBREG_LOGIN && process.env.SUBREG_API_TOKEN) ||
+    (process.env.SUBREG_LOGIN && process.env.SUBREG_PASSWORD)
+  );
 }
 
 /** Reset ssid cache – volat při chybě autentizace (expired ssid) */
@@ -76,7 +79,8 @@ export async function getSubregSsid(): Promise<string | null> {
   if (_cachedSsid && Date.now() < _ssidExpiry) return _cachedSsid;
 
   const login = process.env.SUBREG_LOGIN;
-  const password = process.env.SUBREG_PASSWORD;
+  // Preferuj API token před heslem (pokud je nastaven)
+  const password = process.env.SUBREG_API_TOKEN || process.env.SUBREG_PASSWORD;
   if (!login || !password) return null;
 
   try {
