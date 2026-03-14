@@ -72,9 +72,28 @@ function StatusBadge({ status, validated }: { status: string; validated?: boolea
   );
 }
 
+// TLD, která Subreg ověřuje
+const SUBREG_SUPPORTED_TLDS = new Set(['cz', 'sk']);
+
+function getExtension(domain: string): string {
+  const parts = domain.toLowerCase().split('.');
+  return parts.length >= 2 ? parts[parts.length - 1] : '';
+}
+
 // ─── Subreg status badge ───────────────────────────────────────────────────────
-function SubregBadge({ status }: { status: string | null | undefined }) {
+function SubregBadge({ status, domain }: { status: string | null | undefined; domain: string }) {
   if (status === null || status === undefined) return null;
+
+  // Pro nepodporované TLD zobrazíme "Neověřuji"
+  if (!SUBREG_SUPPORTED_TLDS.has(getExtension(domain))) {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
+        style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>
+        Neověřuji
+      </span>
+    );
+  }
+
   let label: string;
   let bg: string;
   let color: string;
@@ -552,7 +571,7 @@ export function DomainCheckerTab({
                 <tr style={{ background: 'var(--bg-hover)', borderBottom: '1px solid var(--border)' }}>
                   {selectMode && <th className="px-4 py-2.5 w-10" />}
                   <th className="text-left px-4 py-2.5 font-medium" style={{ color: 'var(--text-muted)' }}>Doména</th>
-                  <th className="text-left px-4 py-2.5 font-medium" style={{ color: 'var(--text-muted)' }}>Status</th>
+                  <th className="text-left px-4 py-2.5 font-medium" style={{ color: 'var(--text-muted)' }}>OpenProvider</th>
                   {hasSubregData && (
                     <th className="text-left px-4 py-2.5 font-medium" style={{ color: 'var(--text-muted)' }}>
                       Subreg
@@ -602,7 +621,7 @@ export function DomainCheckerTab({
                     </td>
                     {hasSubregData && (
                       <td className="px-4 py-3">
-                        <SubregBadge status={r.subreg_status} />
+                        <SubregBadge status={r.subreg_status} domain={r.domain} />
                       </td>
                     )}
                     <td className="px-4 py-3">
@@ -674,7 +693,7 @@ export function DomainCheckerTab({
                     {r.subreg_status !== undefined && r.subreg_status !== null && (
                       <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Subreg:</span>
                     )}
-                    <SubregBadge status={r.subreg_status} />
+                    <SubregBadge status={r.subreg_status} domain={r.domain} />
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
