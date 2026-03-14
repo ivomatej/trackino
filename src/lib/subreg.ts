@@ -21,11 +21,22 @@ function escXml(v: string): string {
     .replace(/'/g, '&apos;');
 }
 
-/** Extrahuje hodnotu prvního XML tagu s daným názvem (case-insensitive, ignoruje atributy) */
+/**
+ * Extrahuje hodnotu z XML odpovědi Subreg.
+ * Podporuje dva formáty:
+ *  1. Přímý tag:    <status>ok</status>
+ *  2. Key-value Map: <key>status</key><value>ok</value>  (formát Subreg SOAP v2)
+ */
 function extractXmlTag(xml: string, tag: string): string | null {
-  const re = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i');
-  const m = xml.match(re);
-  return m ? m[1].trim() : null;
+  // Formát 1: přímý tag <tag>hodnota</tag>
+  const directRe = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i');
+  const directM = xml.match(directRe);
+  if (directM) return directM[1].trim();
+
+  // Formát 2: <key...>tag</key><value...>hodnota</value>
+  const mapRe = new RegExp(`<key[^>]*>${tag}<\\/key>\\s*<value[^>]*>([^<]*)<\\/value>`, 'i');
+  const mapM = xml.match(mapRe);
+  return mapM ? mapM[1].trim() : null;
 }
 
 function buildSoapXml(command: string, data: Record<string, string>): string {
