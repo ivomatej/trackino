@@ -276,6 +276,7 @@ export function DomainsContent() {
             checkDomains={checkDomains}
             onAddToMonitoring={name => addToMonitoring(name, 'daily')}
             monitoringList={monitoringList}
+            canManage={canManage}
           />
         )}
 

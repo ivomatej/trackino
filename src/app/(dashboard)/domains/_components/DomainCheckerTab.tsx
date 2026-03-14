@@ -4,6 +4,16 @@ import { useState, useRef } from 'react';
 import type { DomainCheckResult, DomainMonitoring } from '@/types/database';
 import { inputCls, inputStyle, ICONS } from './constants';
 
+// ─── Ikona koše ────────────────────────────────────────────────────────────────
+const TrashIcon = ({ size = 14 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="3 6 5 6 21 6" />
+    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+    <path d="M10 11v6M14 11v6" />
+    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+  </svg>
+);
+
 // ─── Ikony pro checker ────────────────────────────────────────────────────────
 const CheckIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -89,6 +99,7 @@ interface Props {
   ) => Promise<DomainCheckResult[]>;
   onAddToMonitoring: (domainName: string) => void;
   monitoringList: DomainMonitoring[];
+  canManage?: boolean;
 }
 
 export function DomainCheckerTab({
@@ -98,6 +109,7 @@ export function DomainCheckerTab({
   checkDomains,
   onAddToMonitoring,
   monitoringList,
+  canManage = false,
 }: Props) {
   // Režim
   const [mode, setMode] = useState<'single' | 'bulk'>('single');
@@ -113,7 +125,37 @@ export function DomainCheckerTab({
   const [bulkLoading, setBulkLoading] = useState(false);
   const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null);
 
+  // Výběr řádků pro mazání
+  const [selectedDomains, setSelectedDomains] = useState<Set<string>>(new Set());
+  const [selectMode, setSelectMode] = useState(false);
+
   const abortRef = useRef(false);
+
+  /* ── Helpers pro výběr ── */
+  const toggleSelectMode = () => {
+    setSelectMode(v => !v);
+    setSelectedDomains(new Set());
+  };
+  const toggleDomain = (domain: string) => {
+    setSelectedDomains(prev => {
+      const next = new Set(prev);
+      if (next.has(domain)) next.delete(domain);
+      else next.add(domain);
+      return next;
+    });
+  };
+  const selectAll = () => setSelectedDomains(new Set(checkerResults.map(r => r.domain)));
+  const deselectAll = () => setSelectedDomains(new Set());
+  const allSelected = checkerResults.length > 0 && selectedDomains.size === checkerResults.length;
+
+  const deleteSelected = () => {
+    setCheckerResults(checkerResults.filter(r => !selectedDomains.has(r.domain)));
+    setSelectedDomains(new Set());
+  };
+  const deleteSingle = (domain: string) => {
+    setCheckerResults(checkerResults.filter(r => r.domain !== domain));
+    setSelectedDomains(prev => { const n = new Set(prev); n.delete(domain); return n; });
+  };
 
   // Zda je zadaný vstup bez TLD (žádná tečka)
   const hasTld = singleInput.trim().includes('.');
@@ -385,20 +427,90 @@ export function DomainCheckerTab({
       {checkerResults.length > 0 && (
         <div className="rounded-xl border overflow-hidden"
           style={{ borderColor: 'var(--border)' }}>
-          <div className="flex items-center justify-between px-4 py-3 border-b"
+
+          {/* Hlavička */}
+          <div className="flex items-center justify-between px-4 py-3 border-b gap-3 flex-wrap"
             style={{ borderColor: 'var(--border)', background: 'var(--bg-card)' }}>
             <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
               Výsledky ({checkerResults.length})
             </h3>
-            <button
-              onClick={() => setCheckerResults([])}
-              className="text-xs px-2 py-1 rounded transition-colors"
-              style={{ color: 'var(--text-muted)' }}
-              onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
-              onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
-            >
-              Vymazat
-            </button>
+            <div className="flex items-center gap-2">
+              {/* Admin akce */}
+              {canManage && (
+                <>
+                  {selectMode ? (
+                    <>
+                      {/* Označit vše / zrušit */}
+                      <button
+                        onClick={allSelected ? deselectAll : selectAll}
+                        className="text-xs px-2.5 py-1.5 rounded-lg border transition-colors"
+                        style={{ borderColor: 'var(--border)', color: 'var(--text-muted)', background: 'var(--bg-card)' }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-card)'}
+                      >
+                        {allSelected ? 'Zrušit výběr' : 'Označit vše'}
+                      </button>
+                      {/* Smazat označené */}
+                      {selectedDomains.size > 0 && (
+                        <button
+                          onClick={deleteSelected}
+                          className="text-xs px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors font-medium"
+                          style={{ background: '#fee2e2', color: '#991b1b' }}
+                          onMouseEnter={e => (e.currentTarget.style.background = '#fecaca')}
+                          onMouseLeave={e => (e.currentTarget.style.background = '#fee2e2')}
+                        >
+                          <TrashIcon /> Smazat ({selectedDomains.size})
+                        </button>
+                      )}
+                      {/* Zrušit výběr */}
+                      <button
+                        onClick={toggleSelectMode}
+                        className="text-xs px-2.5 py-1.5 rounded-lg border transition-colors"
+                        style={{ borderColor: 'var(--border)', color: 'var(--text-muted)', background: 'var(--bg-card)' }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-card)'}
+                      >
+                        Zrušit
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={toggleSelectMode}
+                      className="text-xs px-2.5 py-1.5 rounded-lg border transition-colors"
+                      style={{ borderColor: 'var(--border)', color: 'var(--text-muted)', background: 'var(--bg-card)' }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-card)'}
+                    >
+                      Vybrat
+                    </button>
+                  )}
+                  {/* Smazat vše */}
+                  {!selectMode && (
+                    <button
+                      onClick={() => { setCheckerResults([]); setSelectedDomains(new Set()); }}
+                      className="text-xs px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 border transition-colors"
+                      style={{ borderColor: '#fecaca', color: '#991b1b', background: '#fff5f5' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = '#fee2e2')}
+                      onMouseLeave={e => (e.currentTarget.style.background = '#fff5f5')}
+                    >
+                      <TrashIcon /> Smazat vše
+                    </button>
+                  )}
+                </>
+              )}
+              {/* Vymazat pro non-admin */}
+              {!canManage && (
+                <button
+                  onClick={() => setCheckerResults([])}
+                  className="text-xs px-2 py-1 rounded transition-colors"
+                  style={{ color: 'var(--text-muted)' }}
+                  onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+                  onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+                >
+                  Vymazat
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Desktop tabulka */}
@@ -406,6 +518,7 @@ export function DomainCheckerTab({
             <table className="w-full text-sm">
               <thead>
                 <tr style={{ background: 'var(--bg-hover)', borderBottom: '1px solid var(--border)' }}>
+                  {selectMode && <th className="px-4 py-2.5 w-10" />}
                   <th className="text-left px-4 py-2.5 font-medium" style={{ color: 'var(--text-muted)' }}>Doména</th>
                   <th className="text-left px-4 py-2.5 font-medium" style={{ color: 'var(--text-muted)' }}>Status</th>
                   <th className="text-right px-4 py-2.5 font-medium" style={{ color: 'var(--text-muted)' }}>Akce</th>
@@ -415,11 +528,29 @@ export function DomainCheckerTab({
                 {checkerResults.map((r, i) => (
                   <tr
                     key={r.domain}
+                    onClick={selectMode ? () => toggleDomain(r.domain) : undefined}
                     style={{
                       borderBottom: i < checkerResults.length - 1 ? '1px solid var(--border)' : undefined,
-                      background: r.status === 'free' ? '#f0fdf4' : r.status === 'active' ? '#fff8f8' : undefined,
+                      background: selectMode && selectedDomains.has(r.domain)
+                        ? 'color-mix(in srgb, var(--primary) 8%, transparent)'
+                        : r.status === 'free' ? '#f0fdf4'
+                        : r.status === 'active' ? '#fff8f8'
+                        : undefined,
+                      cursor: selectMode ? 'pointer' : undefined,
                     }}
                   >
+                    {selectMode && (
+                      <td className="px-4 py-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedDomains.has(r.domain)}
+                          onChange={() => toggleDomain(r.domain)}
+                          onClick={e => e.stopPropagation()}
+                          className="w-4 h-4 rounded"
+                          style={{ accentColor: 'var(--primary)' }}
+                        />
+                      </td>
+                    )}
                     <td className="px-4 py-3 font-medium" style={{ color: 'var(--text-primary)' }}>
                       {r.domain}
                     </td>
@@ -432,21 +563,35 @@ export function DomainCheckerTab({
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-right">
-                      {r.status === 'free' && !monitoringNames.has(r.domain) && (
-                        <button
-                          onClick={() => onAddToMonitoring(r.domain)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors"
-                          style={{ borderColor: 'var(--border)', color: 'var(--text-muted)', background: 'var(--bg-card)' }}
-                          onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
-                          onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-card)'}
-                        >
-                          <PlusIcon /> Monitoring
-                        </button>
-                      )}
-                      {monitoringNames.has(r.domain) && (
-                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>V monitoringu</span>
-                      )}
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-2">
+                        {r.status === 'free' && !monitoringNames.has(r.domain) && !selectMode && (
+                          <button
+                            onClick={() => onAddToMonitoring(r.domain)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors"
+                            style={{ borderColor: 'var(--border)', color: 'var(--text-muted)', background: 'var(--bg-card)' }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-card)'}
+                          >
+                            <PlusIcon /> Monitoring
+                          </button>
+                        )}
+                        {monitoringNames.has(r.domain) && !selectMode && (
+                          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>V monitoringu</span>
+                        )}
+                        {canManage && !selectMode && (
+                          <button
+                            onClick={() => deleteSingle(r.domain)}
+                            className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                            style={{ color: '#dc2626' }}
+                            title="Smazat z výsledků"
+                            onMouseEnter={e => (e.currentTarget.style.background = '#fee2e2')}
+                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                          >
+                            <TrashIcon />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -457,21 +602,56 @@ export function DomainCheckerTab({
           {/* Mobilní karty */}
           <div className="sm:hidden divide-y" style={{ borderColor: 'var(--border)' }}>
             {checkerResults.map(r => (
-              <div key={r.domain} className="px-4 py-3 flex items-center justify-between gap-3"
-                style={{ background: r.status === 'free' ? '#f0fdf4' : r.status === 'active' ? '#fff8f8' : 'var(--bg-card)' }}>
-                <div className="min-w-0">
+              <div
+                key={r.domain}
+                onClick={selectMode ? () => toggleDomain(r.domain) : undefined}
+                className="px-4 py-3 flex items-center gap-3"
+                style={{
+                  background: selectMode && selectedDomains.has(r.domain)
+                    ? 'color-mix(in srgb, var(--primary) 8%, transparent)'
+                    : r.status === 'free' ? '#f0fdf4'
+                    : r.status === 'active' ? '#fff8f8'
+                    : 'var(--bg-card)',
+                  cursor: selectMode ? 'pointer' : undefined,
+                }}
+              >
+                {selectMode && (
+                  <input
+                    type="checkbox"
+                    checked={selectedDomains.has(r.domain)}
+                    onChange={() => toggleDomain(r.domain)}
+                    onClick={e => e.stopPropagation()}
+                    className="w-5 h-5 flex-shrink-0 rounded"
+                    style={{ accentColor: 'var(--primary)' }}
+                  />
+                )}
+                <div className="min-w-0 flex-1">
                   <p className="font-medium text-sm truncate" style={{ color: 'var(--text-primary)' }}>{r.domain}</p>
                   <div className="mt-1"><StatusBadge status={r.status} validated={r.validated} /></div>
                 </div>
-                {r.status === 'free' && !monitoringNames.has(r.domain) && (
-                  <button
-                    onClick={() => onAddToMonitoring(r.domain)}
-                    className="flex-shrink-0 inline-flex items-center gap-1 px-3 py-2 rounded-lg border text-xs font-medium"
-                    style={{ borderColor: 'var(--border)', color: 'var(--text-muted)', background: 'var(--bg-card)', minHeight: 44 }}
-                  >
-                    <PlusIcon /> Monitoring
-                  </button>
-                )}
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {r.status === 'free' && !monitoringNames.has(r.domain) && !selectMode && (
+                    <button
+                      onClick={() => onAddToMonitoring(r.domain)}
+                      className="inline-flex items-center gap-1 px-3 py-2 rounded-lg border text-xs font-medium"
+                      style={{ borderColor: 'var(--border)', color: 'var(--text-muted)', background: 'var(--bg-card)', minHeight: 44 }}
+                    >
+                      <PlusIcon /> Monitoring
+                    </button>
+                  )}
+                  {canManage && !selectMode && (
+                    <button
+                      onClick={e => { e.stopPropagation(); deleteSingle(r.domain); }}
+                      className="p-2.5 rounded-lg"
+                      style={{ color: '#dc2626', minHeight: 44, minWidth: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      title="Smazat z výsledků"
+                      onMouseEnter={e => (e.currentTarget.style.background = '#fee2e2')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      <TrashIcon size={16} />
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
