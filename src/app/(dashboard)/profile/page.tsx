@@ -9,7 +9,10 @@ import { WorkspaceProvider } from '@/contexts/WorkspaceContext';
 import { useTheme } from '@/components/ThemeProvider';
 import { normalizePhone } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
+import QRCode from 'qrcode';
 import type { Profile } from '@/types/database';
+
+const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? 'Trackino';
 
 const AVATAR_COLORS = [
   '#2563eb', '#dc2626', '#16a34a', '#ca8a04', '#9333ea',
@@ -57,8 +60,12 @@ function MfaSection({ mfaSetupRequired }: { mfaSetupRequired: boolean }) {
     const { data, error: err } = await supabase.auth.mfa.enroll({ factorType: 'totp' });
     if (err || !data) { setError(err?.message ?? 'Chyba enrollmentu'); setActionLoading(false); return; }
     setFactorId(data.id);
-    setQrUri(data.totp.qr_code);
-    setSecret(data.totp.secret);
+    const secret = data.totp.secret;
+    const email = user?.email ?? '';
+    const otpauthUri = `otpauth://totp/${encodeURIComponent(APP_NAME)}:${encodeURIComponent(email)}?secret=${secret}&issuer=${encodeURIComponent(APP_NAME)}`;
+    const qrDataUri = await QRCode.toDataURL(otpauthUri, { width: 200, margin: 1 });
+    setQrUri(qrDataUri);
+    setSecret(secret);
     setCode('');
     setStep('enroll_qr');
     setActionLoading(false);
