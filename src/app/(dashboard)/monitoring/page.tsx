@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { WorkspaceProvider } from '@/contexts/WorkspaceContext';
 import { useRouter } from 'next/navigation';
@@ -56,6 +56,70 @@ interface StatusCard {
   value: string;
   sub?: string;
   status: 'ok' | 'warning' | 'critical' | 'unknown';
+}
+
+interface MonitoringSettings {
+  resendConfigured: boolean;
+  resendFrom: string;
+  cronJobApiConfigured: boolean;
+  cronSecretConfigured: boolean;
+  alertEmail: string;
+  alertEmailSource: 'env' | 'master_admin' | 'none';
+  appUrl: string;
+}
+
+interface CronJobSchedule {
+  minutes: number[];
+  hours: number[];
+  wdays: number[];
+  mdays: number[];
+  months: number[];
+  timezone: string;
+  expiresAt: number;
+}
+
+interface CronJob {
+  jobId: number;
+  title: string;
+  url: string;
+  enabled: boolean;
+  schedule: CronJobSchedule;
+}
+
+// Definice monitorovacích šablon (collect + weekly-report)
+const MONITORING_CRON_TEMPLATES = [
+  {
+    id: 'monitoring-collect',
+    title: 'Trackino – Sběr DB metrik',
+    urlPath: '/api/monitoring/collect',
+    defaultSchedule: {
+      minutes: [0], hours: [3], wdays: [-1], mdays: [-1], months: [-1],
+      timezone: 'Europe/Prague', expiresAt: 0,
+    } as CronJobSchedule,
+    description: 'Sbírá metriky databáze (velikost, počty tabulek/řádků). Doporučeno: každou noc ve 3:00.',
+    defaultLabel: 'každý den ve 3:00',
+  },
+  {
+    id: 'monitoring-weekly-report',
+    title: 'Trackino – Týdenní email report',
+    urlPath: '/api/monitoring/weekly-report',
+    defaultSchedule: {
+      minutes: [0], hours: [8], wdays: [1], mdays: [-1], months: [-1],
+      timezone: 'Europe/Prague', expiresAt: 0,
+    } as CronJobSchedule,
+    description: 'Odesílá týdenní souhrnný email na ALERT_EMAIL. Doporučeno: každé pondělí v 8:00.',
+    defaultLabel: 'každé pondělí v 8:00',
+  },
+] as const;
+
+function scheduleToLabel(s: CronJobSchedule): string {
+  const hour = s.hours[0] ?? 0;
+  const min = s.minutes[0] ?? 0;
+  const timeStr = `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+  const wdayNames = ['Ne', 'Po', 'Út', 'St', 'Čt', 'Pá', 'So'];
+  if (s.wdays.includes(-1)) return `každý den v ${timeStr}`;
+  const days = s.wdays.map(d => wdayNames[d] ?? d).join(', ');
+  return `každý ${days} v ${timeStr}`;
 }
 
 // ─── Pomocné funkce ──────────────────────────────────────────────────────────
@@ -125,6 +189,26 @@ function MonitoringContent() {
   const [collectMsg, setCollectMsg] = useState('');
   const [lastCollected, setLastCollected] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
+
+  // ── Nastavení – stav ──────────────────────────────────────────────────────
+  const [settings, setSettings] = useState<MonitoringSettings | null>(null);
+  const [settingsLoading, setSettingsLoading] = useState(false);
+  const [cronJobs, setCronJobs] = useState<CronJob[]>([]);
+  const [cronLoading, setCronLoading] = useState(false);
+  const [cronMsg, setCronMsg] = useState('');
+  const [cronMsgType, setCronMsgType] = useState<'ok' | 'error'>('ok');
+  const [testEmailRunning, setTestEmailRunning] = useState(false);
+  const [testEmailMsg, setTestEmailMsg] = useState('');
+  const [testEmailType, setTestEmailType] = useState<'ok' | 'error'>('ok');
+
+  // Modal pro editaci rozvrhu
+  const [editModal, setEditModal] = useState<{
+    jobId?: number;   // undefined = nový job
+    templateId: string;
+    schedule: CronJobSchedule;
+  } | null>(null);
+
+  const settingsFetched = useRef(false);
 
   // ── Auth guard ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -292,6 +376,56 @@ function MonitoringContent() {
     }
   }, [authLoading, profile, fetchData]);
 
+  // ── Fetch nastavení + cron jobs ─────────────────────────────────────────
+  const fetchSettings = useCallback(async () => {
+    setSettingsLoading(true);
+    try {
+      const secret = process.env.NEXT_PUBLIC_MONITORING_SECRET ?? '';
+      const res = await fetch('/api/monitoring/settings', {
+        headers: { Authorization: `Bearer ${secret}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSettings(data as MonitoringSettings);
+      }
+    } catch {
+      // tiše ignorovat
+    } finally {
+      setSettingsLoading(false);
+    }
+  }, []);
+
+  const fetchCronJobs = useCallback(async () => {
+    setCronLoading(true);
+    try {
+      const res = await fetch('/api/cron-jobs');
+      if (res.ok) {
+        const data = await res.json();
+        // cron-job.org vrací { jobs: [...] }
+        const jobs: CronJob[] = (data.jobs ?? []);
+        // Filtrujeme jen monitoring joby (podle URL)
+        const monitoringJobs = jobs.filter((j: CronJob) =>
+          j.url?.includes('/api/monitoring/collect') ||
+          j.url?.includes('/api/monitoring/weekly-report'),
+        );
+        setCronJobs(monitoringJobs);
+      }
+    } catch {
+      // Pokud CRON_JOB_API_KEY není nastaven, ignore
+    } finally {
+      setCronLoading(false);
+    }
+  }, []);
+
+  // Jednorázový fetch nastavení a cron jobů při načtení stránky
+  useEffect(() => {
+    if (!authLoading && profile?.is_master_admin && !settingsFetched.current) {
+      settingsFetched.current = true;
+      fetchSettings();
+      fetchCronJobs();
+    }
+  }, [authLoading, profile, fetchSettings, fetchCronJobs]);
+
   // ── Ruční spuštění collect ──────────────────────────────────────────────────
   const runCollect = async () => {
     setCollectRunning(true);
@@ -313,6 +447,147 @@ function MonitoringContent() {
       setCollectMsg(`Síťová chyba: ${err}`);
     }
     setCollectRunning(false);
+  };
+
+  // ── Cron job akce ────────────────────────────────────────────────────────
+  const createCronJob = async (templateId: string, schedule: CronJobSchedule) => {
+    const tmpl = MONITORING_CRON_TEMPLATES.find(t => t.id === templateId);
+    if (!tmpl) return;
+    setCronLoading(true);
+    setCronMsg('');
+    try {
+      const res = await fetch('/api/cron-jobs', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: tmpl.title,
+          url: tmpl.urlPath,
+          schedule,
+          extendedData: {
+            body: JSON.stringify({ workspace_id: 'all' }),
+          },
+        }),
+      });
+      if (res.ok) {
+        setCronMsg('Cron job byl úspěšně vytvořen.');
+        setCronMsgType('ok');
+        await fetchCronJobs();
+      } else {
+        const err = await res.text();
+        setCronMsg(`Chyba při vytváření: ${err}`);
+        setCronMsgType('error');
+      }
+    } catch (err) {
+      setCronMsg(`Síťová chyba: ${err}`);
+      setCronMsgType('error');
+    }
+    setCronLoading(false);
+  };
+
+  const toggleCronJob = async (jobId: number, enabled: boolean) => {
+    setCronLoading(true);
+    setCronMsg('');
+    try {
+      const res = await fetch(`/api/cron-jobs/${jobId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled }),
+      });
+      if (res.ok) {
+        setCronMsg(`Cron job byl ${enabled ? 'aktivován' : 'pozastaven'}.`);
+        setCronMsgType('ok');
+        await fetchCronJobs();
+      } else {
+        const err = await res.text();
+        setCronMsg(`Chyba: ${err}`);
+        setCronMsgType('error');
+      }
+    } catch (err) {
+      setCronMsg(`Síťová chyba: ${err}`);
+      setCronMsgType('error');
+    }
+    setCronLoading(false);
+  };
+
+  const deleteCronJob = async (jobId: number) => {
+    if (!confirm('Opravdu smazat tento cron job?')) return;
+    setCronLoading(true);
+    setCronMsg('');
+    try {
+      const res = await fetch(`/api/cron-jobs/${jobId}`, { method: 'DELETE' });
+      if (res.ok) {
+        setCronMsg('Cron job byl smazán.');
+        setCronMsgType('ok');
+        await fetchCronJobs();
+      } else {
+        const err = await res.text();
+        setCronMsg(`Chyba: ${err}`);
+        setCronMsgType('error');
+      }
+    } catch (err) {
+      setCronMsg(`Síťová chyba: ${err}`);
+      setCronMsgType('error');
+    }
+    setCronLoading(false);
+  };
+
+  const saveEditSchedule = async () => {
+    if (!editModal) return;
+    setCronMsg('');
+    if (editModal.jobId !== undefined) {
+      // Aktualizace existujícího jobu
+      setCronLoading(true);
+      try {
+        const res = await fetch(`/api/cron-jobs/${editModal.jobId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ schedule: editModal.schedule }),
+        });
+        if (res.ok) {
+          setCronMsg('Rozvrh byl aktualizován.');
+          setCronMsgType('ok');
+          setEditModal(null);
+          await fetchCronJobs();
+        } else {
+          const err = await res.text();
+          setCronMsg(`Chyba: ${err}`);
+          setCronMsgType('error');
+        }
+      } catch (err) {
+        setCronMsg(`Síťová chyba: ${err}`);
+        setCronMsgType('error');
+      }
+      setCronLoading(false);
+    } else {
+      // Nový job
+      setEditModal(null);
+      await createCronJob(editModal.templateId, editModal.schedule);
+    }
+  };
+
+  // ── Testovací email ──────────────────────────────────────────────────────
+  const sendTestEmail = async () => {
+    setTestEmailRunning(true);
+    setTestEmailMsg('');
+    try {
+      const secret = process.env.NEXT_PUBLIC_MONITORING_SECRET ?? '';
+      const res = await fetch('/api/monitoring/test-email', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${secret}` },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setTestEmailMsg(`Testovací email byl odeslán na ${data.sentTo}.`);
+        setTestEmailType('ok');
+      } else {
+        setTestEmailMsg(data.error ?? `Chyba ${res.status}`);
+        setTestEmailType('error');
+      }
+    } catch (err) {
+      setTestEmailMsg(`Síťová chyba: ${err}`);
+      setTestEmailType('error');
+    }
+    setTestEmailRunning(false);
   };
 
   // ── Status karty ────────────────────────────────────────────────────────────
@@ -670,6 +945,354 @@ function MonitoringContent() {
             Thresholdy jsou definovány v <code className="font-mono">src/lib/monitoring/thresholds.ts</code>.
           </p>
         </div>
+
+        {/* ── Sekce: Nastavení ────────────────────────────────────────────── */}
+        <div className="rounded-xl border" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+          <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
+            <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+              Nastavení automatizace
+            </h2>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+              Správa naplánovaných úloh a emailových alertů přes cron-job.org
+            </p>
+          </div>
+
+          <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
+
+            {/* ── Cron joby ─────────────────────────────────────────────── */}
+            <div className="px-4 py-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                  Naplánované úlohy (cron-job.org)
+                </h3>
+                <button
+                  onClick={() => { fetchCronJobs(); fetchSettings(); }}
+                  disabled={cronLoading || settingsLoading}
+                  className="text-xs px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-50"
+                  style={{ borderColor: 'var(--border)', color: 'var(--text-muted)', background: 'transparent' }}
+                >
+                  Obnovit
+                </button>
+              </div>
+
+              {/* Stav API klíče */}
+              {settingsLoading ? (
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Načítám...</p>
+              ) : settings && !settings.cronJobApiConfigured ? (
+                <div className="rounded-lg px-3 py-2.5 mb-4 text-xs" style={{ background: '#f59e0b18', border: '1px solid #f59e0b44', color: '#b45309' }}>
+                  <strong>CRON_JOB_API_KEY</strong> není nastaven v env proměnných. Nastavte ho pro správu cron jobů z tohoto rozhraní.
+                </div>
+              ) : null}
+
+              {cronMsg && (
+                <div className={`rounded-lg px-3 py-2 mb-3 text-xs`} style={{
+                  background: cronMsgType === 'ok' ? '#22c55e18' : '#ef444418',
+                  border: `1px solid ${cronMsgType === 'ok' ? '#22c55e44' : '#ef444444'}`,
+                  color: cronMsgType === 'ok' ? '#166534' : '#b91c1c',
+                }}>
+                  {cronMsg}
+                </div>
+              )}
+
+              {/* Šablony */}
+              <div className="space-y-3">
+                {MONITORING_CRON_TEMPLATES.map((tmpl) => {
+                  const existingJob = cronJobs.find(j =>
+                    j.url?.includes(tmpl.urlPath),
+                  );
+
+                  return (
+                    <div key={tmpl.id} className="rounded-lg border p-3" style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)' }}>
+                      <div className="flex flex-wrap items-start gap-2 justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                              {tmpl.title.replace('Trackino – ', '')}
+                            </span>
+                            {existingJob ? (
+                              <span
+                                className="text-xs px-2 py-0.5 rounded-full font-medium"
+                                style={{
+                                  background: existingJob.enabled ? '#22c55e18' : '#6b728018',
+                                  color: existingJob.enabled ? '#166534' : '#6b7280',
+                                }}
+                              >
+                                {existingJob.enabled ? 'Aktivní' : 'Pozastaveno'}
+                              </span>
+                            ) : (
+                              <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: '#f59e0b18', color: '#b45309' }}>
+                                Není nastaven
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                            {tmpl.description}
+                          </p>
+                          {existingJob && (
+                            <p className="text-xs mt-1 font-mono" style={{ color: 'var(--text-muted)' }}>
+                              Rozvrh: {scheduleToLabel(existingJob.schedule)}
+                            </p>
+                          )}
+                          {!existingJob && (
+                            <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                              Výchozí rozvrh: {tmpl.defaultLabel}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Akce */}
+                        <div className="flex gap-2 flex-shrink-0">
+                          {existingJob ? (
+                            <>
+                              {/* Editace rozvrhu */}
+                              <button
+                                onClick={() => setEditModal({
+                                  jobId: existingJob.jobId,
+                                  templateId: tmpl.id,
+                                  schedule: { ...existingJob.schedule },
+                                })}
+                                disabled={cronLoading || !settings?.cronJobApiConfigured}
+                                className="text-xs px-2.5 py-1.5 rounded-lg border transition-colors disabled:opacity-40"
+                                style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)', background: 'var(--bg-card)' }}
+                                title="Upravit rozvrh"
+                              >
+                                Rozvrh
+                              </button>
+                              {/* Toggle enable/disable */}
+                              <button
+                                onClick={() => toggleCronJob(existingJob.jobId, !existingJob.enabled)}
+                                disabled={cronLoading || !settings?.cronJobApiConfigured}
+                                className="text-xs px-2.5 py-1.5 rounded-lg border transition-colors disabled:opacity-40"
+                                style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)', background: 'var(--bg-card)' }}
+                              >
+                                {existingJob.enabled ? 'Pozastavit' : 'Aktivovat'}
+                              </button>
+                              {/* Smazat */}
+                              <button
+                                onClick={() => deleteCronJob(existingJob.jobId)}
+                                disabled={cronLoading || !settings?.cronJobApiConfigured}
+                                className="text-xs px-2.5 py-1.5 rounded-lg border transition-colors disabled:opacity-40"
+                                style={{ borderColor: '#ef444440', color: '#ef4444', background: 'var(--bg-card)' }}
+                              >
+                                Smazat
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              {/* Vytvořit s výchozím rozvrhem */}
+                              <button
+                                onClick={() => setEditModal({
+                                  templateId: tmpl.id,
+                                  schedule: { ...tmpl.defaultSchedule },
+                                })}
+                                disabled={cronLoading || !settings?.cronJobApiConfigured}
+                                className="text-xs px-3 py-1.5 rounded-lg font-medium text-white transition-opacity disabled:opacity-40"
+                                style={{ background: 'var(--primary)' }}
+                              >
+                                Nastavit
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* ── Email nastavení ───────────────────────────────────────── */}
+            <div className="px-4 py-4">
+              <h3 className="text-sm font-medium mb-3" style={{ color: 'var(--text-primary)' }}>
+                Email (Resend API)
+              </h3>
+
+              {settingsLoading ? (
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Načítám...</p>
+              ) : settings ? (
+                <div className="space-y-3">
+                  {/* Status řádky */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* RESEND_API_KEY */}
+                    <div className="flex items-center justify-between px-3 py-2.5 rounded-lg" style={{ background: 'var(--bg-hover)' }}>
+                      <div>
+                        <div className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>RESEND_API_KEY</div>
+                        <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                          Odesílatel: {settings.resendFrom}
+                        </div>
+                      </div>
+                      <span
+                        className="text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0"
+                        style={{
+                          background: settings.resendConfigured ? '#22c55e18' : '#ef444418',
+                          color: settings.resendConfigured ? '#166534' : '#b91c1c',
+                        }}
+                      >
+                        {settings.resendConfigured ? 'Nastaven' : 'Chybí'}
+                      </span>
+                    </div>
+
+                    {/* Alert email příjemce */}
+                    <div className="flex items-center justify-between px-3 py-2.5 rounded-lg" style={{ background: 'var(--bg-hover)' }}>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>Příjemce alertů</div>
+                        <div className="text-xs mt-0.5 truncate" style={{ color: 'var(--text-muted)' }}>
+                          {settings.alertEmail || '–'}
+                        </div>
+                      </div>
+                      <span
+                        className="text-xs ml-2 px-2 py-0.5 rounded-full flex-shrink-0"
+                        style={{
+                          background: settings.alertEmailSource === 'none' ? '#ef444418' : '#22c55e18',
+                          color: settings.alertEmailSource === 'none' ? '#b91c1c' : '#166534',
+                        }}
+                      >
+                        {settings.alertEmailSource === 'env' ? 'ALERT_EMAIL' :
+                         settings.alertEmailSource === 'master_admin' ? 'Master Admin' : 'Nenastaven'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Anti-spam info */}
+                  <div className="text-xs px-3 py-2 rounded-lg" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>
+                    Anti-spam: stejný typ alertu se odesílá max. 1× za 4 hodiny. Alerty se ukládají do DB i bez Resend API.
+                  </div>
+
+                  {/* Testovací email */}
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <button
+                      onClick={sendTestEmail}
+                      disabled={testEmailRunning || !settings.resendConfigured || settings.alertEmailSource === 'none'}
+                      className="text-sm px-4 py-2 rounded-lg font-medium text-white transition-opacity disabled:opacity-40"
+                      style={{ background: 'var(--primary)' }}
+                      title={!settings.resendConfigured ? 'RESEND_API_KEY není nastaven' : settings.alertEmailSource === 'none' ? 'Žádný příjemce' : 'Odeslat testovací email'}
+                    >
+                      {testEmailRunning ? 'Odesílám...' : 'Odeslat testovací email'}
+                    </button>
+                    {testEmailMsg && (
+                      <span
+                        className="text-xs px-3 py-1.5 rounded-lg"
+                        style={{
+                          background: testEmailType === 'ok' ? '#22c55e18' : '#ef444418',
+                          color: testEmailType === 'ok' ? '#166534' : '#b91c1c',
+                        }}
+                      >
+                        {testEmailMsg}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+          </div>
+        </div>
+
+        {/* ── Modal: editace rozvrhu ─────────────────────────────────────────── */}
+        {editModal && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: 'rgba(0,0,0,0.5)' }}
+            onClick={(e) => { if (e.target === e.currentTarget) setEditModal(null); }}
+          >
+            <div className="rounded-xl border w-full max-w-md shadow-xl" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+              <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--border)' }}>
+                <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                  {editModal.jobId !== undefined ? 'Upravit rozvrh' : 'Nastavit cron job'}
+                </h3>
+                <button onClick={() => setEditModal(null)} className="text-lg leading-none" style={{ color: 'var(--text-muted)' }}>×</button>
+              </div>
+              <div className="px-5 py-4 space-y-4">
+                {/* Hodina */}
+                <div>
+                  <label className="text-xs font-medium block mb-1.5" style={{ color: 'var(--text-muted)' }}>Hodina</label>
+                  <select
+                    value={editModal.schedule.hours[0] ?? 3}
+                    onChange={e => setEditModal(m => m && ({ ...m, schedule: { ...m.schedule, hours: [parseInt(e.target.value)] } }))}
+                    className="w-full rounded-lg px-3 py-2 text-sm text-base"
+                    style={inputStyle}
+                  >
+                    {Array.from({ length: 24 }, (_, i) => (
+                      <option key={i} value={i}>{String(i).padStart(2, '0')}:xx</option>
+                    ))}
+                  </select>
+                </div>
+                {/* Minuta */}
+                <div>
+                  <label className="text-xs font-medium block mb-1.5" style={{ color: 'var(--text-muted)' }}>Minuta</label>
+                  <select
+                    value={editModal.schedule.minutes[0] ?? 0}
+                    onChange={e => setEditModal(m => m && ({ ...m, schedule: { ...m.schedule, minutes: [parseInt(e.target.value)] } }))}
+                    className="w-full rounded-lg px-3 py-2 text-sm text-base"
+                    style={inputStyle}
+                  >
+                    {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map(v => (
+                      <option key={v} value={v}>:{String(v).padStart(2, '0')}</option>
+                    ))}
+                  </select>
+                </div>
+                {/* Dny v týdnu */}
+                <div>
+                  <label className="text-xs font-medium block mb-1.5" style={{ color: 'var(--text-muted)' }}>Dny v týdnu</label>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {(['–1 každý', '0 Ne', '1 Po', '2 Út', '3 St', '4 Čt', '5 Pá', '6 So'] as const).map((item) => {
+                      const val = parseInt(item.toString().split(' ')[0]);
+                      const label = item.toString().split(' ').slice(1).join(' ') || 'Každý';
+                      const isEvery = editModal.schedule.wdays.includes(-1);
+                      const isSelected = val === -1 ? isEvery : (!isEvery && editModal.schedule.wdays.includes(val));
+                      return (
+                        <button
+                          key={val}
+                          onClick={() => {
+                            if (val === -1) {
+                              setEditModal(m => m && ({ ...m, schedule: { ...m.schedule, wdays: [-1] } }));
+                            } else {
+                              setEditModal(m => {
+                                if (!m) return m;
+                                const cur = m.schedule.wdays.filter(d => d !== -1);
+                                const next = cur.includes(val) ? cur.filter(d => d !== val) : [...cur, val];
+                                return { ...m, schedule: { ...m.schedule, wdays: next.length === 0 ? [-1] : next } };
+                              });
+                            }
+                          }}
+                          className="text-xs px-2.5 py-1 rounded-lg border font-medium transition-colors"
+                          style={{
+                            background: isSelected ? 'var(--primary)' : 'var(--bg-hover)',
+                            color: isSelected ? 'white' : 'var(--text-secondary)',
+                            borderColor: isSelected ? 'var(--primary)' : 'var(--border)',
+                          }}
+                        >
+                          {val === -1 ? 'Každý den' : label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                {/* Náhled */}
+                <div className="text-xs px-3 py-2 rounded-lg" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>
+                  Spustí se: <strong style={{ color: 'var(--text-primary)' }}>{scheduleToLabel(editModal.schedule)}</strong>
+                </div>
+              </div>
+              <div className="px-5 py-3 border-t flex gap-2 justify-end" style={{ borderColor: 'var(--border)' }}>
+                <button
+                  onClick={() => setEditModal(null)}
+                  className="text-sm px-4 py-2 rounded-lg border"
+                  style={{ borderColor: 'var(--border)', color: 'var(--text-muted)', background: 'transparent' }}
+                >
+                  Zrušit
+                </button>
+                <button
+                  onClick={saveEditSchedule}
+                  disabled={cronLoading}
+                  className="text-sm px-4 py-2 rounded-lg font-medium text-white disabled:opacity-50"
+                  style={{ background: 'var(--primary)' }}
+                >
+                  {editModal.jobId !== undefined ? 'Uložit' : 'Vytvořit'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Spodní padding */}
         <div className="h-4" />
