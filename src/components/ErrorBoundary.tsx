@@ -2,8 +2,6 @@
 
 import React from 'react';
 
-// TODO: napojit na error tracking službu (Sentry/LogRocket)
-
 interface Props {
   children: React.ReactNode;
   moduleName?: string;
@@ -39,8 +37,19 @@ class ErrorBoundaryClass extends React.Component<
       componentStack: errorInfo.componentStack,
       timestamp: new Date().toISOString(),
     });
-    // TODO: napojit na error tracking službu (Sentry/LogRocket)
-    // Např: Sentry.captureException(error, { extra: { moduleName, componentStack: errorInfo.componentStack } });
+
+    // Odeslat chybu do monitoring systému (fire-and-forget)
+    fetch('/api/monitoring/error', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: error.message,
+        stack: error.stack,
+        moduleName,
+        componentStack: errorInfo.componentStack,
+        url: typeof window !== 'undefined' ? window.location.pathname : null,
+      }),
+    }).catch(() => { /* silent fail – monitoring nesmí ovlivnit UX */ });
   }
 
   handleReset = () => {

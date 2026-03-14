@@ -12,6 +12,7 @@ const PUBLIC_PATHS = [
 
 const AUTH_API_PREFIX = '/api/auth';
 const API_PREFIX = '/api/';
+const MONITORING_PREFIX = '/api/monitoring/';
 
 function isPublicPath(pathname: string): boolean {
   if (pathname.startsWith(AUTH_API_PREFIX)) return true;
@@ -19,11 +20,51 @@ function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some(p => pathname.startsWith(p));
 }
 
+// ─── Monitoring: fire-and-forget request tracking ───────────────────────────
+// Zaznamená každý API request do trackino_metrics (asynchronně, neblokuje response).
+// Přeskočí /api/monitoring/ aby nedošlo k rekurzi.
+
+function trackApiRequest(pathname: string): void {
+  if (pathname.startsWith(MONITORING_PREFIX)) return;
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceKey) return;
+
+  // Volitelný sampling (výchozí 100 %)
+  const sampleRate = parseFloat(process.env.METRICS_SAMPLE_RATE ?? '1.0');
+  if (sampleRate < 1 && Math.random() > sampleRate) return;
+
+  // Zkrátit cestu na skupinu (bez dynamických segmentů) pro smysluplné agregace
+  const pathGroup = pathname.replace(/\/[0-9a-f-]{36}/gi, '/:id').replace(/\/\d+/g, '/:n');
+
+  fetch(`${supabaseUrl}/rest/v1/trackino_metrics`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: serviceKey,
+      Authorization: `Bearer ${serviceKey}`,
+      Prefer: 'return=minimal',
+    },
+    body: JSON.stringify({
+      metric_name: 'request_count',
+      metric_value: 1,
+      metric_unit: 'requests',
+      tags: { path: pathGroup },
+    }),
+  }).catch(err => console.error('[Monitoring] request tracking failed:', err));
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Vždy propustit public cesty
+  // Vždy propustit public cesty; zároveň zaznamenat API requesty pro monitoring
   if (isPublicPath(pathname)) {
+    if (pathname.startsWith(API_PREFIX)) {
+      trackApiRequest(pathname);
+    }
     return NextResponse.next();
   }
 

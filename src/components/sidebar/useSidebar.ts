@@ -313,6 +313,7 @@ export function useSidebar(): UseSidebarReturn {
         items: [
           { label: 'Správa workspace', href: '/admin', icon: ICONS.admin },
           { label: 'Nastavení aplikace', href: '/app-settings', icon: ICONS.appSettings },
+          { label: 'Monitoring', href: '/monitoring', icon: ICONS.monitoring },
         ],
       });
     }
