@@ -103,7 +103,7 @@ interface Props {
 }
 
 /* ─── Prázdný formulář ────────────────────────────────────────────────────── */
-const EMPTY_FORM = { name_en: '', name_cs: '', name_official: '', code: '', languages: [] as string[] };
+const EMPTY_FORM = { name_en: '', name_official: '', code: '', languages: [] as string[] };
 
 /* ─── Multi-select jazyk picker ───────────────────────────────────────────── */
 function LangPicker({ selected, onChange }: { selected: string[]; onChange: (v: string[]) => void }) {
@@ -282,7 +282,7 @@ function GeoModal({
               </span>
             </div>
             <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-              Výběrem se předvyplní anglický název, oficiální název, kód a jazyky. Český název doplňte ručně.
+              Výběrem se předvyplní anglický název, oficiální název, kód a jazyky.
             </p>
           </div>
         )}
@@ -294,15 +294,6 @@ function GeoModal({
             <input type="text" value={form.name_en}
               onChange={e => setForm(f => ({ ...f, name_en: e.target.value }))}
               placeholder="Germany"
-              className={INPUT_CLS + ' text-base sm:text-sm'} style={INPUT_STYLE} />
-          </div>
-
-          {/* Český název */}
-          <div>
-            <label className={LABEL_CLS} style={{ color: 'var(--text-muted)' }}>Český název</label>
-            <input type="text" value={form.name_cs}
-              onChange={e => setForm(f => ({ ...f, name_cs: e.target.value }))}
-              placeholder="Německo"
               className={INPUT_CLS + ' text-base sm:text-sm'} style={INPUT_STYLE} />
           </div>
 
@@ -407,7 +398,6 @@ export default function TabGeos({ workspaceId, onMessage }: Props) {
     setEditing(g);
     setForm({
       name_en: g.name_en,
-      name_cs: g.name_cs,
       name_official: g.name_official ?? '',
       code: g.code,
       languages: g.languages ?? [],
@@ -421,7 +411,6 @@ export default function TabGeos({ workspaceId, onMessage }: Props) {
     const payload = {
       workspace_id: workspaceId,
       name_en: form.name_en.trim(),
-      name_cs: form.name_cs.trim(),
       name_official: form.name_official.trim(),
       code: form.code.trim().toUpperCase(),
       languages: form.languages,
@@ -452,7 +441,7 @@ export default function TabGeos({ workspaceId, onMessage }: Props) {
 
   const filtered = geos.filter(g => {
     const q = search.toLowerCase();
-    return !q || g.name_en.toLowerCase().includes(q) || g.name_cs.toLowerCase().includes(q) || g.code.toLowerCase().includes(q);
+    return !q || g.name_en.toLowerCase().includes(q) || g.code.toLowerCase().includes(q);
   });
 
   return (
@@ -519,7 +508,6 @@ export default function TabGeos({ workspaceId, onMessage }: Props) {
                 <tr style={{ background: 'var(--bg-hover)', borderBottom: '1px solid var(--border)' }}>
                   <th className="px-4 py-2.5 text-left text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Zkratka</th>
                   <th className="px-4 py-2.5 text-left text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Anglický název</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Český název</th>
                   <th className="px-4 py-2.5 text-left text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Oficiální název</th>
                   <th className="px-4 py-2.5 text-left text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Jazyky</th>
                   <th className="px-4 py-2.5" />
@@ -536,7 +524,6 @@ export default function TabGeos({ workspaceId, onMessage }: Props) {
                         style={{ background: 'var(--primary)', color: '#fff' }}>{g.code}</span>
                     </td>
                     <td className="px-4 py-3 font-medium" style={{ color: 'var(--text-primary)' }}>{g.name_en}</td>
-                    <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>{g.name_cs || '–'}</td>
                     <td className="px-4 py-3 text-xs" style={{ color: 'var(--text-muted)' }}>{g.name_official || '–'}</td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1">
@@ -597,7 +584,6 @@ export default function TabGeos({ workspaceId, onMessage }: Props) {
                       style={{ background: 'var(--primary)', color: '#fff' }}>{g.code}</span>
                     <div>
                       <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{g.name_en}</p>
-                      {g.name_cs && <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{g.name_cs}</p>}
                       {g.name_official && <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{g.name_official}</p>}
                     </div>
                   </div>

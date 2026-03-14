@@ -112,9 +112,9 @@ export function DomainDetailModal({ detailDomain, onClose, onEdit, canManage, ge
                   return (
                     <span key={code} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
                       style={{ background: '#fee2e2', color: '#991b1b' }}
-                      title={geo ? `${geo.name_cs} / ${geo.name_en}` : code}>
+                      title={geo ? geo.name_en : code}>
                       <span className="font-mono font-bold">{code}</span>
-                      {geo && <span>{geo.name_cs}</span>}
+                      {geo && <span>{geo.name_en}</span>}
                     </span>
                   );
                 })}

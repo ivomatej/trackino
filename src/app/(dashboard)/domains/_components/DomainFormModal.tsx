@@ -41,7 +41,6 @@ function GeoPicker({ selected, onChange, geos }: {
   }, []);
 
   const filtered = geos.filter(g =>
-    g.name_cs.toLowerCase().includes(search.toLowerCase()) ||
     g.name_en.toLowerCase().includes(search.toLowerCase()) ||
     g.code.toLowerCase().includes(search.toLowerCase())
   );
@@ -102,8 +101,7 @@ function GeoPicker({ selected, onChange, geos }: {
                     className="accent-[var(--primary)]" />
                   <span className="font-mono text-[11px] font-semibold px-1.5 py-0.5 rounded"
                     style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>{g.code}</span>
-                  <span style={{ color: 'var(--text-primary)' }}>{g.name_cs}</span>
-                  <span className="ml-auto text-xs" style={{ color: 'var(--text-muted)' }}>{g.name_en}</span>
+                  <span style={{ color: 'var(--text-primary)' }}>{g.name_en}</span>
                 </label>
               ))
             }
