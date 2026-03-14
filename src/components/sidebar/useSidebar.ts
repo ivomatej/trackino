@@ -268,6 +268,18 @@ export function useSidebar(): UseSidebarReturn {
     if (analyzeItems.length > 0) {
       groups.push({ title: 'ANALÝZA', items: analyzeItems });
     }
+
+    const researchItems: NavItem[] = [];
+    if (hasModule('research')) {
+      researchItems.push({ label: 'Domény', href: '/research/domains', icon: ICONS.researchDomains });
+      researchItems.push({ label: 'Konkurence', href: '/research/competition', icon: ICONS.researchCompetition });
+      researchItems.push({ label: 'GEOs', href: '/research/geos', icon: ICONS.researchGeos });
+      researchItems.push({ label: 'SEO', href: '/research/seo', icon: ICONS.researchSeo });
+    }
+    if (researchItems.length > 0) {
+      groups.push({ title: 'RESEARCH', items: researchItems });
+    }
+
     if (nastrojeItems.length > 0) {
       groups.push({ title: 'NÁSTROJE', items: nastrojeItems });
     }
@@ -293,17 +305,6 @@ export function useSidebar(): UseSidebarReturn {
     }
     if (spolecnostItems.length > 0) {
       groups.push({ title: 'SPOLEČNOST', items: spolecnostItems });
-    }
-
-    const researchItems: NavItem[] = [];
-    if (hasModule('research')) {
-      researchItems.push({ label: 'Domény', href: '/research/domains', icon: ICONS.researchDomains });
-      researchItems.push({ label: 'Konkurence', href: '/research/competition', icon: ICONS.researchCompetition });
-      researchItems.push({ label: 'GEOs', href: '/research/geos', icon: ICONS.researchGeos });
-      researchItems.push({ label: 'SEO', href: '/research/seo', icon: ICONS.researchSeo });
-    }
-    if (researchItems.length > 0) {
-      groups.push({ title: 'RESEARCH', items: researchItems });
     }
 
     if (masterAdmin) {
