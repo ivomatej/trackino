@@ -139,12 +139,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
-    } catch {
-      // Ignorovat chybu při odhlášení
+    } catch (err) {
+      console.error('[AuthContext] signOut chyba:', err);
+      // Pokračujeme – lokální state vyčistíme i při selhání Supabase API
     }
     setProfile(null);
     setUser(null);
     setSession(null);
+    // Tvrdé přesměrování zaručí vyčištění stavu i při selhání API
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login';
+    }
   };
 
   const updateProfile = async (updates: Partial<Profile>) => {
