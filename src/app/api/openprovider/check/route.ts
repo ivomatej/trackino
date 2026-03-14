@@ -64,14 +64,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Normalizujeme odpověď
+    // Normalizujeme odpověď – fallback na vstupní domains pokud API nevrátí domain.name/extension
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const results = (data.data?.results ?? []).map((r: any) => ({
-      domain: `${r.domain?.name ?? ''}.${r.domain?.extension ?? ''}`,
-      status: r.status ?? 'error',
-      premium: r.premium ?? false,
-      price: r.price ?? null,
-    }));
+    const results = (data.data?.results ?? []).map((r: any, idx: number) => {
+      const inputDomain = domains[idx];
+      const name = r.domain?.name || r.name || inputDomain?.name || '';
+      const extension = r.domain?.extension || r.extension || inputDomain?.extension || '';
+      return {
+        domain: name && extension ? `${name}.${extension}` : (name || extension || ''),
+        status: r.status ?? 'error',
+        premium: r.premium ?? false,
+        price: r.price ?? null,
+      };
+    });
 
     return NextResponse.json({ results });
   } catch (err) {
