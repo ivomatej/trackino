@@ -58,7 +58,7 @@ export function useDomains() {
   const [regModal, setRegModal] = useState(false);
   const [editingReg, setEditingReg] = useState<DomainRegistrar | null>(null);
   const [savingReg, setSavingReg] = useState(false);
-  const [regForm, setRegForm] = useState<RegFormState>({ name: '', website_url: '', notes: '' });
+  const [regForm, setRegForm] = useState<RegFormState>({ name: '', website_url: '', login_url: '', notes: '' });
 
   /* ── Detail modal ── */
   const [detailDomain, setDetailDomain] = useState<Domain | null>(null);
@@ -252,13 +252,13 @@ export function useDomains() {
   /* ── Registrar CRUD ── */
   const openNewReg = () => {
     setEditingReg(null);
-    setRegForm({ name: '', website_url: '', notes: '' });
+    setRegForm({ name: '', website_url: '', login_url: '', notes: '' });
     setRegModal(true);
   };
 
   const openEditReg = (r: DomainRegistrar) => {
     setEditingReg(r);
-    setRegForm({ name: r.name, website_url: r.website_url, notes: r.notes });
+    setRegForm({ name: r.name, website_url: r.website_url, login_url: r.login_url ?? '', notes: r.notes });
     setRegModal(true);
   };
 
@@ -269,6 +269,7 @@ export function useDomains() {
       workspace_id: wsId,
       name: regForm.name.trim(),
       website_url: regForm.website_url.trim(),
+      login_url: regForm.login_url.trim(),
       notes: regForm.notes.trim(),
     };
     if (editingReg) {

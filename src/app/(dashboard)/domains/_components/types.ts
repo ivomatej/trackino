@@ -21,6 +21,7 @@ export interface DomainFormState {
 export interface RegFormState {
   name: string;
   website_url: string;
+  login_url: string;
   notes: string;
 }
 

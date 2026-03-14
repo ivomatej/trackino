@@ -52,6 +52,11 @@ export function RegistrarFormModal({
               placeholder="https://www.wedos.cz" className={inputCls} style={inputStyle} />
           </div>
           <div>
+            <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--text-muted)' }}>Login stránka</label>
+            <input type="text" value={regForm.login_url} onChange={e => setRegForm(f => ({ ...f, login_url: e.target.value }))}
+              placeholder="https://client.wedos.com/login" className={inputCls} style={inputStyle} />
+          </div>
+          <div>
             <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--text-muted)' }}>Poznámky</label>
             <textarea rows={2} value={regForm.notes} onChange={e => setRegForm(f => ({ ...f, notes: e.target.value }))}
               placeholder="Další informace..." className={inputCls} style={inputStyle} />

@@ -42,6 +42,7 @@ export function RegistrarsTabContent({ registrars, domains, canManage, onNewReg,
                 <tr style={{ borderBottom: '1px solid var(--border)' }}>
                   <th className="text-left px-4 py-3 font-semibold" style={{ color: 'var(--text-muted)' }}>Název</th>
                   <th className="text-left px-4 py-3 font-semibold" style={{ color: 'var(--text-muted)' }}>Web</th>
+                  <th className="text-left px-4 py-3 font-semibold" style={{ color: 'var(--text-muted)' }}>Login</th>
                   <th className="text-left px-4 py-3 font-semibold" style={{ color: 'var(--text-muted)' }}>Počet domén</th>
                   <th className="text-left px-4 py-3 font-semibold" style={{ color: 'var(--text-muted)' }}>Poznámky</th>
                   {canManage && <th className="text-right px-4 py-3 font-semibold" style={{ color: 'var(--text-muted)' }}>Akce</th>}
@@ -65,6 +66,18 @@ export function RegistrarsTabContent({ registrars, domains, canManage, onNewReg,
                             className="flex items-center gap-1 text-sm"
                             style={{ color: 'var(--primary)' }}>
                             {r.website_url.replace(/^https?:\/\//, '')} {ICONS.link}
+                          </a>
+                        ) : (
+                          <span style={{ color: 'var(--text-muted)' }}>–</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {r.login_url ? (
+                          <a href={r.login_url.startsWith('http') ? r.login_url : `https://${r.login_url}`}
+                            target="_blank" rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-sm"
+                            style={{ color: 'var(--primary)' }}>
+                            Přihlásit se {ICONS.link}
                           </a>
                         ) : (
                           <span style={{ color: 'var(--text-muted)' }}>–</span>
@@ -130,6 +143,14 @@ export function RegistrarsTabContent({ registrars, domains, canManage, onNewReg,
                       className="text-xs flex items-center gap-1 mb-1"
                       style={{ color: 'var(--primary)' }}>
                       {r.website_url.replace(/^https?:\/\//, '')} {ICONS.link}
+                    </a>
+                  )}
+                  {r.login_url && (
+                    <a href={r.login_url.startsWith('http') ? r.login_url : `https://${r.login_url}`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="text-xs flex items-center gap-1 mb-1"
+                      style={{ color: 'var(--primary)' }}>
+                      Přihlásit se {ICONS.link}
                     </a>
                   )}
                   {r.notes && <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{r.notes}</p>}

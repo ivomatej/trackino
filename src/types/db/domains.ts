@@ -76,6 +76,7 @@ export interface DomainRegistrar {
   workspace_id: string;
   name: string;
   website_url: string;
+  login_url: string;
   notes: string;
   created_by: string;
   created_at: string;
