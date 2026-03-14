@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 14. 3. 2026 (v2.51.59)
+> Aktualizováno: 14. 3. 2026 (v2.51.60)
 
 ---
 
@@ -54,6 +54,11 @@ src/
       domains/        – Evidence domén (tarif Pro a Max)
       app-settings/   – Nastavení modulů dle tarifu (admin)
       app-changes/    – Úpravy aplikace (admin)
+      research/
+        domains/      – Research – Domény (placeholder, tarif Pro a Max)
+        competition/  – Research – Konkurence (placeholder, tarif Pro a Max)
+        geos/         – Research – GEOs (placeholder, tarif Pro a Max)
+        seo/          – Research – SEO (placeholder, tarif Pro a Max)
       bugs/           – Hlášení chyb
       admin/          – Master admin panel
       profile/        – Profil uživatele
@@ -356,6 +361,11 @@ SPRÁVA
   Tým (/team)
   Nastavení (/settings)
   Audit log (/audit)
+RESEARCH (jen Pro/Max)
+  Domény (/research/domains)
+  Konkurence (/research/competition)
+  GEOs (/research/geos)
+  SEO (/research/seo)
 ─────────────────────────
 [bottom items]
   Nápověda (/help)
@@ -658,6 +668,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
 | v2.51.28 | 11. 3. 2026 | Notebook – FolderTree: odstraněny desktop individuální tlačítka, nahrazeny třemi tečkami (⋮) zobrazující se na hover na desktopu + vždy viditelné na mobilu; NoteEditor: paste handler strippuje background-* CSS vlastnosti a bgcolor atribut z vkládaného HTML (žádná změna barvy pozadí z externích nástrojů) |
+| v2.51.60 | 14. 3. 2026 | Nový modul Research (research, RESEARCH, Pro+Max) – 4 placeholder záložky: Domény (/research/domains), Konkurence (/research/competition), GEOs (/research/geos), SEO (/research/seo); nová sekce RESEARCH v sidebaru; ModuleId 'research' přidán do typů a TARIFF_MODULES |
 | v2.51.59 | 14. 3. 2026 | UX: chytré otevírání dropdown nabídek – všechny dropdowny v aplikaci automaticky detekují dostupné místo pod tlačítkem a pokud nestačí, otevřou se nahoru; opraveno v 9 souborech (TimerBar pickery, TagPicker, NoteEditor, FolderTree pro Prompty/Záložky/Dokumenty, RichEditor toolbar, Správa projektů) |
 | v2.51.58 | 14. 3. 2026 | Monitoring domén – přidány intervaly Měsíčně (s výběrem dne 1–28) a Ročně; trackino_domain_monitoring.frequency rozšířeno + monthly_day sloupec; GEOs – nové pole Oficiální název státu (name_official), katalog zemí trackino_country_catalog (globální číselník 127 zemí s kódy a jazyky), picker v modálu pro předvyplnění |
 | v2.51.57 | 14. 3. 2026 | Subreg.cz jako záložní zdroj ověření dostupnosti domén: src/lib/subreg.ts (SOAP klient, ssid cache 20 min), GET /api/subreg/status, trojitá validace (Openprovider + RDAP + Subreg paralelně), sloupec Subreg v tabulce výsledků (podmíněný), Subreg sekce v záložce Registrátoři, rateLimitSubreg (30/min/IP) |
@@ -2825,6 +2836,10 @@ CREATE POLICY "Auth full" ON trackino_task_board_members
 | `/changelog` | `changelog/page.tsx` | Changelog verzí |
 | `/help` | `help/page.tsx` (auth guard ~20 ř.) + `_components/HelpContent.tsx` (orchestrátor) + `_components/` (constants.ts, useHelp.ts, HelpToolbar.tsx) | Nápověda |
 | `/notebook` | `notebook/page.tsx` (auth guard ~15 ř.) + `_components/NotebookContent.tsx` (orchestrátor) + `_components/` (types.ts, utils.ts, FolderTree.tsx, NoteEditor.tsx, CalEventNoteEditor.tsx) | Notebook |
+| `/research/domains` | `research/domains/page.tsx` | Research – Domény (placeholder, Pro+) |
+| `/research/competition` | `research/competition/page.tsx` | Research – Konkurence (placeholder, Pro+) |
+| `/research/geos` | `research/geos/page.tsx` | Research – GEOs (placeholder, Pro+) |
+| `/research/seo` | `research/seo/page.tsx` | Research – SEO (placeholder, Pro+) |
 | `/dashboard` | `dashboard/page.tsx` | Redirect na `/` |
 
 ### Kalendář – modul (src/app/(dashboard)/calendar/)

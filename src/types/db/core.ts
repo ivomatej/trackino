@@ -37,7 +37,8 @@ export type ModuleId =
   | 'automation'
   | 'subscriptions'
   | 'domains'
-  | 'tasks';
+  | 'tasks'
+  | 'research';
 
 /** Per-uživatelský override modulu (nad rámec tarifu nebo zakázání) */
 export interface UserModuleOverride {

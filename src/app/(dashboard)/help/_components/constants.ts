@@ -317,6 +317,15 @@ export const DEFAULT_HELP_CONTENT = `
   <li><strong>Historie kontrol</strong> – rozbalitelná sekce s posledními 50 záznamy (datum, výsledek, zdroj)</li>
 </ul>
 
+<h3>Research</h3>
+<p>Sekce <strong>Research</strong> (sekce <strong>RESEARCH</strong> v levém menu, tarif Pro a Max) je sada analytických a výzkumných nástrojů. Sekce se aktuálně připravuje — níže naleznete přehled plánovaných modulů:</p>
+<ul>
+  <li><strong>Domény</strong> – monitoring a vytipovávání domén k potenciálnímu nákupu; sledování dostupnosti, WHOIS informace o vlastníkovi a evidence doménových příležitostí</li>
+  <li><strong>Konkurence</strong> – detailní karty konkurentů: domény, vlastníci, cílená GEO území, monitoring dostupnosti a expirací, sledování publikovaného obsahu</li>
+  <li><strong>GEOs</strong> – detailní informace o státech: legislativa, business potenciál, ekonomické metriky, zvyky obyvatel a svátky; rozšíření dat ze stávajícího modulu Nastavení → GEOs</li>
+  <li><strong>SEO</strong> – evidence klíčových slov, pozic a výkonnosti; API integrace s nástroji bude upřesněna</li>
+</ul>
+
 <h3>Úkoly</h3>
 <p>Modul <strong>Úkoly</strong> (sekce <strong>NÁSTROJE</strong>, tarif Pro a Max) poskytuje kompletní správu úkolů s kanban nástěnkou, složkami a projekty.</p>
 <ul>
@@ -368,7 +377,7 @@ export const DEFAULT_HELP_CONTENT = `
 <p>Aplikace je rozdělena do <strong>modulů</strong>, které lze zapnout nebo vypnout. Výchozí sada modulů závisí na tarifu workspace:</p>
 <ul>
   <li><strong>Free</strong> – Měřič, Reporty, Projekty, Klienti, Štítky, Tým</li>
-  <li><strong>Pro</strong> – Free + Plánovač, Dovolená, Fakturace, Přehled hodin, Analýza kategorií, Podřízení, Poznámky manažera, Nastavení, Převodník textu, Důležité dny, Žádosti, <strong>Prompty</strong>, <strong>Záložky</strong>, <strong>Předplatná</strong>, <strong>Evidence domén</strong>, <strong>Úkoly</strong>, sekce Společnost (Znalostní báze, Dokumenty, Firemní pravidla, Pravidla v kanceláři, Připomínky) + funkce <strong>Oblíbené</strong> v levém menu</li>
+  <li><strong>Pro</strong> – Free + Plánovač, Dovolená, Fakturace, Přehled hodin, Analýza kategorií, Podřízení, Poznámky manažera, Nastavení, Převodník textu, Důležité dny, Žádosti, <strong>Prompty</strong>, <strong>Záložky</strong>, <strong>Předplatná</strong>, <strong>Evidence domén</strong>, <strong>Úkoly</strong>, sekce Společnost (Znalostní báze, Dokumenty, Firemní pravidla, Pravidla v kanceláři, Připomínky), sekce <strong>Research</strong> (Domény, Konkurence, GEOs, SEO) + funkce <strong>Oblíbené</strong> v levém menu</li>
   <li><strong>Max</strong> – Pro + Audit log + Kalendář + <strong>AI asistent</strong></li>
 </ul>
 <p>Admin může v <strong>Nastavení → Moduly</strong> nastavit výjimky pro jednotlivé uživatele – přidat modul, který není v tarifu, nebo zakázat modul, který v tarifu je. Výjimky mají vždy přednost před výchozím tarifem. Moduly, které uživatel nemá povoleny, se nezobrazují v levém menu.</p>

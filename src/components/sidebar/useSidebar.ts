@@ -295,6 +295,17 @@ export function useSidebar(): UseSidebarReturn {
       groups.push({ title: 'SPOLEČNOST', items: spolecnostItems });
     }
 
+    const researchItems: NavItem[] = [];
+    if (hasModule('research')) {
+      researchItems.push({ label: 'Domény', href: '/research/domains', icon: ICONS.researchDomains });
+      researchItems.push({ label: 'Konkurence', href: '/research/competition', icon: ICONS.researchCompetition });
+      researchItems.push({ label: 'GEOs', href: '/research/geos', icon: ICONS.researchGeos });
+      researchItems.push({ label: 'SEO', href: '/research/seo', icon: ICONS.researchSeo });
+    }
+    if (researchItems.length > 0) {
+      groups.push({ title: 'RESEARCH', items: researchItems });
+    }
+
     if (masterAdmin) {
       groups.push({
         title: 'SYSTÉM',
