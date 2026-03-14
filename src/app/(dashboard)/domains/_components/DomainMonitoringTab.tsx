@@ -95,6 +95,9 @@ interface Props {
   onAddToMonitoring: (domainName: string, frequency: 'daily' | 'weekly') => void;
   onDeleteMonitoring: (id: string) => void;
   onCheckNow: (item: DomainMonitoring) => void;
+  onDeleteHistoryEntry: (id: string) => void;
+  onDeleteHistoryEntries: (ids: string[]) => void;
+  onClearHistory: (domainName?: string) => void;
 }
 
 export function DomainMonitoringTab({
@@ -107,10 +110,17 @@ export function DomainMonitoringTab({
   onAddToMonitoring,
   onDeleteMonitoring,
   onCheckNow,
+  onDeleteHistoryEntry,
+  onDeleteHistoryEntries,
+  onClearHistory,
 }: Props) {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyFilter, setHistoryFilter] = useState('');
   const [checkingId, setCheckingId] = useState<string | null>(null);
+
+  // Výběr záznamů v historii
+  const [historySelectMode, setHistorySelectMode] = useState(false);
+  const [historySelectedIds, setHistorySelectedIds] = useState<Set<string>>(new Set());
 
   // Modal přidání
   const [addModal, setAddModal] = useState(false);
@@ -152,6 +162,45 @@ export function DomainMonitoringTab({
     const d = new Date(iso);
     return d.toLocaleDateString('cs-CZ', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
+
+  // ── Výběr v historii ──────────────────────────────────────────────────────
+  const toggleHistoryItem = (id: string) => {
+    setHistorySelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAllHistory = () => {
+    setHistorySelectedIds(new Set(filteredHistory.map(h => h.id)));
+  };
+
+  const deselectAllHistory = () => {
+    setHistorySelectedIds(new Set());
+  };
+
+  const exitSelectMode = () => {
+    setHistorySelectMode(false);
+    setHistorySelectedIds(new Set());
+  };
+
+  const handleDeleteSelected = async () => {
+    if (historySelectedIds.size === 0) return;
+    await onDeleteHistoryEntries(Array.from(historySelectedIds));
+    exitSelectMode();
+  };
+
+  const handleDeleteSingle = async (id: string) => {
+    await onDeleteHistoryEntry(id);
+  };
+
+  const handleClearHistory = async () => {
+    await onClearHistory(historyFilter || undefined);
+    exitSelectMode();
+  };
+
+  const allFilteredSelected = filteredHistory.length > 0 && filteredHistory.every(h => historySelectedIds.has(h.id));
 
   return (
     <div className="space-y-6">
@@ -344,13 +393,16 @@ export function DomainMonitoringTab({
 
         {historyOpen && (
           <div style={{ borderTop: '1px solid var(--border)' }}>
-            {/* Filtr domény */}
-            {historyDomains.length > 1 && (
-              <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--border)', background: 'var(--bg-card)' }}>
-                <div className="relative max-w-xs">
+            {/* Toolbar filtru + akcí */}
+            <div className="px-4 py-3 border-b flex flex-col sm:flex-row sm:items-center gap-2"
+              style={{ borderColor: 'var(--border)', background: 'var(--bg-card)' }}>
+
+              {/* Filtr domény */}
+              {historyDomains.length > 1 && (
+                <div className="relative max-w-xs flex-shrink-0">
                   <select
                     value={historyFilter}
-                    onChange={e => setHistoryFilter(e.target.value)}
+                    onChange={e => { setHistoryFilter(e.target.value); deselectAllHistory(); }}
                     className={inputCls + ' appearance-none pr-8'}
                     style={inputStyle}
                   >
@@ -365,54 +417,200 @@ export function DomainMonitoringTab({
                     </svg>
                   </span>
                 </div>
-              </div>
-            )}
+              )}
+
+              {/* Akce pro admina */}
+              {canManage && filteredHistory.length > 0 && (
+                <div className="flex items-center gap-2 sm:ml-auto flex-wrap">
+                  {historySelectMode ? (
+                    <>
+                      {/* Označit vše / Zrušit označení */}
+                      <button
+                        onClick={allFilteredSelected ? deselectAllHistory : selectAllHistory}
+                        className="px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors"
+                        style={{ borderColor: 'var(--border)', color: 'var(--text-muted)', background: 'var(--bg-card)' }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-card)'}
+                      >
+                        {allFilteredSelected ? 'Zrušit označení' : 'Označit vše'}
+                      </button>
+
+                      {/* Smazat vybrané */}
+                      {historySelectedIds.size > 0 && (
+                        <button
+                          onClick={handleDeleteSelected}
+                          className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"
+                          style={{ background: '#fee2e2', color: '#991b1b' }}
+                          onMouseEnter={e => e.currentTarget.style.background = '#fecaca'}
+                          onMouseLeave={e => e.currentTarget.style.background = '#fee2e2'}
+                        >
+                          <TrashIcon /> Smazat ({historySelectedIds.size})
+                        </button>
+                      )}
+
+                      {/* Zrušit výběr */}
+                      <button
+                        onClick={exitSelectMode}
+                        className="px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors"
+                        style={{ borderColor: 'var(--border)', color: 'var(--text-muted)', background: 'var(--bg-card)' }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-card)'}
+                      >
+                        Zrušit
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      {/* Vybrat */}
+                      <button
+                        onClick={() => setHistorySelectMode(true)}
+                        className="px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors"
+                        style={{ borderColor: 'var(--border)', color: 'var(--text-muted)', background: 'var(--bg-card)' }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-card)'}
+                      >
+                        Vybrat
+                      </button>
+
+                      {/* Smazat vše (filtrované) */}
+                      <button
+                        onClick={handleClearHistory}
+                        className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"
+                        style={{ background: '#fee2e2', color: '#991b1b' }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#fecaca'}
+                        onMouseLeave={e => e.currentTarget.style.background = '#fee2e2'}
+                      >
+                        <TrashIcon />
+                        {historyFilter ? `Smazat vše (${filteredHistory.length})` : 'Smazat celou historii'}
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
 
             {filteredHistory.length === 0 ? (
               <div className="px-4 py-6 text-center text-sm" style={{ color: 'var(--text-muted)', background: 'var(--bg-card)' }}>
                 Žádné záznamy v historii
               </div>
             ) : (
-              <div className="hidden sm:block">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr style={{ background: 'var(--bg-hover)', borderBottom: '1px solid var(--border)' }}>
-                      <th className="text-left px-4 py-2 font-medium" style={{ color: 'var(--text-muted)' }}>Doména</th>
-                      <th className="text-left px-4 py-2 font-medium" style={{ color: 'var(--text-muted)' }}>Status</th>
-                      <th className="text-left px-4 py-2 font-medium" style={{ color: 'var(--text-muted)' }}>Datum</th>
-                      <th className="text-left px-4 py-2 font-medium" style={{ color: 'var(--text-muted)' }}>Zdroj</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredHistory.map((h, i) => (
-                      <tr key={h.id} style={{ borderBottom: i < filteredHistory.length - 1 ? '1px solid var(--border)' : undefined, background: 'var(--bg-card)' }}>
-                        <td className="px-4 py-2.5 font-medium text-sm" style={{ color: 'var(--text-primary)' }}>{h.domain_name}</td>
-                        <td className="px-4 py-2.5"><AvailabilityBadge status={h.status} /></td>
-                        <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--text-muted)' }}>{fmtDate(h.checked_at)}</td>
-                        <td className="px-4 py-2.5"><SourceBadge source={h.source} /></td>
+              <>
+                {/* Desktop tabulka */}
+                <div className="hidden sm:block">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr style={{ background: 'var(--bg-hover)', borderBottom: '1px solid var(--border)' }}>
+                        {historySelectMode && (
+                          <th className="px-4 py-2 w-10">
+                            <input
+                              type="checkbox"
+                              checked={allFilteredSelected}
+                              onChange={allFilteredSelected ? deselectAllHistory : selectAllHistory}
+                              className="rounded"
+                              style={{ accentColor: 'var(--primary)', width: 15, height: 15 }}
+                            />
+                          </th>
+                        )}
+                        <th className="text-left px-4 py-2 font-medium" style={{ color: 'var(--text-muted)' }}>Doména</th>
+                        <th className="text-left px-4 py-2 font-medium" style={{ color: 'var(--text-muted)' }}>Status</th>
+                        <th className="text-left px-4 py-2 font-medium" style={{ color: 'var(--text-muted)' }}>Datum</th>
+                        <th className="text-left px-4 py-2 font-medium" style={{ color: 'var(--text-muted)' }}>Zdroj</th>
+                        {canManage && !historySelectMode && (
+                          <th className="px-4 py-2 w-10" />
+                        )}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                    </thead>
+                    <tbody>
+                      {filteredHistory.map((h, i) => (
+                        <tr key={h.id}
+                          style={{
+                            borderBottom: i < filteredHistory.length - 1 ? '1px solid var(--border)' : undefined,
+                            background: historySelectMode && historySelectedIds.has(h.id) ? 'var(--bg-hover)' : 'var(--bg-card)',
+                            cursor: historySelectMode ? 'pointer' : undefined,
+                          }}
+                          onClick={historySelectMode ? () => toggleHistoryItem(h.id) : undefined}
+                        >
+                          {historySelectMode && (
+                            <td className="px-4 py-2.5">
+                              <input
+                                type="checkbox"
+                                checked={historySelectedIds.has(h.id)}
+                                onChange={() => toggleHistoryItem(h.id)}
+                                onClick={e => e.stopPropagation()}
+                                className="rounded"
+                                style={{ accentColor: 'var(--primary)', width: 15, height: 15 }}
+                              />
+                            </td>
+                          )}
+                          <td className="px-4 py-2.5 font-medium text-sm" style={{ color: 'var(--text-primary)' }}>{h.domain_name}</td>
+                          <td className="px-4 py-2.5"><AvailabilityBadge status={h.status} /></td>
+                          <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--text-muted)' }}>{fmtDate(h.checked_at)}</td>
+                          <td className="px-4 py-2.5"><SourceBadge source={h.source} /></td>
+                          {canManage && !historySelectMode && (
+                            <td className="px-4 py-2.5">
+                              <button
+                                onClick={() => handleDeleteSingle(h.id)}
+                                className="p-1.5 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                                style={{ color: '#ef4444' }}
+                                onMouseEnter={e => { e.currentTarget.style.background = '#fee2e2'; e.currentTarget.style.opacity = '1'; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.opacity = ''; }}
+                                title="Smazat záznam"
+                              >
+                                <TrashIcon />
+                              </button>
+                            </td>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
 
-            {/* Mobilní historie */}
-            {filteredHistory.length > 0 && (
-              <div className="sm:hidden divide-y" style={{ borderColor: 'var(--border)' }}>
-                {filteredHistory.map(h => (
-                  <div key={h.id} className="px-4 py-3 flex items-center justify-between gap-2" style={{ background: 'var(--bg-card)' }}>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{h.domain_name}</p>
-                      <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{fmtDate(h.checked_at)}</p>
+                {/* Mobilní karty */}
+                <div className="sm:hidden divide-y" style={{ borderColor: 'var(--border)' }}>
+                  {filteredHistory.map(h => (
+                    <div
+                      key={h.id}
+                      className="px-4 py-3 flex items-center gap-3"
+                      style={{
+                        background: historySelectMode && historySelectedIds.has(h.id) ? 'var(--bg-hover)' : 'var(--bg-card)',
+                        cursor: historySelectMode ? 'pointer' : undefined,
+                      }}
+                      onClick={historySelectMode ? () => toggleHistoryItem(h.id) : undefined}
+                    >
+                      {historySelectMode && (
+                        <input
+                          type="checkbox"
+                          checked={historySelectedIds.has(h.id)}
+                          onChange={() => toggleHistoryItem(h.id)}
+                          onClick={e => e.stopPropagation()}
+                          style={{ accentColor: 'var(--primary)', width: 18, height: 18, flexShrink: 0 }}
+                        />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{h.domain_name}</p>
+                        <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{fmtDate(h.checked_at)}</p>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <AvailabilityBadge status={h.status} />
+                        <SourceBadge source={h.source} />
+                        {canManage && !historySelectMode && (
+                          <button
+                            onClick={e => { e.stopPropagation(); handleDeleteSingle(h.id); }}
+                            className="p-2 rounded-lg"
+                            style={{ color: '#ef4444', minWidth: 36, minHeight: 36 }}
+                            onMouseEnter={e => e.currentTarget.style.background = '#fee2e2'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                            title="Smazat záznam"
+                          >
+                            <TrashIcon />
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <AvailabilityBadge status={h.status} />
-                      <SourceBadge source={h.source} />
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         )}

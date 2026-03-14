@@ -415,6 +415,27 @@ export function useDomains() {
     return results;
   }, [wsId]);
 
+  /* ── Mazání historie kontrol ── */
+  const deleteHistoryEntry = useCallback(async (id: string) => {
+    if (!wsId) return;
+    await supabase.from('trackino_domain_check_history').delete().eq('id', id).eq('workspace_id', wsId);
+    setCheckHistory(prev => prev.filter(h => h.id !== id));
+  }, [wsId]);
+
+  const deleteHistoryEntries = useCallback(async (ids: string[]) => {
+    if (!wsId || ids.length === 0) return;
+    await supabase.from('trackino_domain_check_history').delete().in('id', ids).eq('workspace_id', wsId);
+    setCheckHistory(prev => prev.filter(h => !ids.includes(h.id)));
+  }, [wsId]);
+
+  const clearHistory = useCallback(async (domainName?: string) => {
+    if (!wsId) return;
+    let query = supabase.from('trackino_domain_check_history').delete().eq('workspace_id', wsId);
+    if (domainName) query = query.eq('domain_name', domainName);
+    await query;
+    setCheckHistory(prev => domainName ? prev.filter(h => h.domain_name !== domainName) : []);
+  }, [wsId]);
+
   /* ── Sort toggle ── */
   const toggleSort = (field: SortField) => {
     if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -449,6 +470,7 @@ export function useDomains() {
     /* monitoring */
     monitoringList, checkHistory, loadingMonitoring,
     fetchMonitoring, addToMonitoring, deleteMonitoring, checkMonitoringNow,
+    deleteHistoryEntry, deleteHistoryEntries, clearHistory,
     /* checker */
     checkerResults, setCheckerResults, checkDomains,
     /* openprovider */

@@ -59,6 +59,7 @@ export function DomainsContent() {
     // monitoring
     monitoringList, checkHistory, loadingMonitoring,
     fetchMonitoring, addToMonitoring, deleteMonitoring, checkMonitoringNow,
+    deleteHistoryEntry, deleteHistoryEntries, clearHistory,
     // checker
     checkerResults, setCheckerResults, checkDomains,
     // openprovider
@@ -292,6 +293,9 @@ export function DomainsContent() {
             onAddToMonitoring={addToMonitoring}
             onDeleteMonitoring={deleteMonitoring}
             onCheckNow={checkMonitoringNow}
+            onDeleteHistoryEntry={deleteHistoryEntry}
+            onDeleteHistoryEntries={deleteHistoryEntries}
+            onClearHistory={clearHistory}
           />
         )}
       </div>
