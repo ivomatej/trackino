@@ -78,7 +78,8 @@ export async function POST(req: NextRequest) {
       };
     });
 
-    return NextResponse.json({ results });
+    // Dočasně vrátíme i raw response pro diagnostiku – odstraň po odladění
+    return NextResponse.json({ results, _debug_raw: data.data?.results ?? null });
   } catch (err) {
     console.error('[openprovider/check]', err);
     return NextResponse.json(
