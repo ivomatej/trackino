@@ -85,6 +85,8 @@ function SubregBadge({ status }: { status: string | null | undefined }) {
     label = 'Obsazená'; bg = '#fee2e2'; color = '#991b1b';
   } else if (status === 'unknown') {
     label = '?'; bg = '#fef9c3'; color = '#854d0e';
+  } else if (status === 'error') {
+    label = 'Chyba'; bg = 'var(--bg-hover)'; color = 'var(--text-muted)';
   } else {
     label = '—'; bg = 'var(--bg-hover)'; color = 'var(--text-muted)';
   }
