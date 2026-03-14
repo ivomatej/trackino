@@ -123,6 +123,7 @@ export default function MonitoringPage() {
   const [collectRunning, setCollectRunning] = useState(false);
   const [collectMsg, setCollectMsg] = useState('');
   const [lastCollected, setLastCollected] = useState<string | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   // ── Auth guard ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -134,10 +135,12 @@ export default function MonitoringPage() {
   // ── Načtení dat ─────────────────────────────────────────────────────────────
   const fetchData = useCallback(async () => {
     setLoading(true);
+    setFetchError(null);
 
     const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const since7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
+    try {
     // Paralelní dotazy
     const [
       dbSizeRes,
@@ -267,7 +270,19 @@ export default function MonitoringPage() {
       setUserCount((userCountRes.data[0] as { metric_value: number }).metric_value);
     }
 
-    setLoading(false);
+    // Zkontroluj chyby z DB dotazů
+    const firstError = [dbSizeRes, tableSizeRes, requestRes, errorRes, alertsRes, wsCountRes, userCountRes]
+      .find(r => r.error);
+    if (firstError?.error) {
+      setFetchError(`Chyba DB: ${firstError.error.message} (kód: ${firstError.error.code})`);
+    }
+
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setFetchError(`Neočekávaná chyba: ${msg}`);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -398,6 +413,12 @@ export default function MonitoringPage() {
             </button>
           </div>
         </div>
+
+        {fetchError && (
+          <div className="rounded-lg px-4 py-3 text-sm font-medium" style={{ background: '#ef444420', color: '#ef4444', border: '1px solid #ef444440' }}>
+            {fetchError}
+          </div>
+        )}
 
         {collectMsg && (
           <div className="rounded-lg px-4 py-3 text-sm" style={{ background: 'var(--bg-hover)', color: 'var(--text-primary)' }}>
