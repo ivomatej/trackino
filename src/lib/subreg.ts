@@ -42,12 +42,18 @@ function buildSoapXml(command: string, data: Record<string, string>): string {
 
 async function subregFetch(command: string, data: Record<string, string>): Promise<string> {
   const body = buildSoapXml(command, data);
+  const headers: Record<string, string> = {
+    'Content-Type': 'text/xml; charset=utf-8',
+    'SOAPAction': `"${command}"`,
+  };
+  // Bearer token se posílá jako HTTP Authorization header při každém požadavku
+  const apiToken = process.env.SUBREG_API_TOKEN;
+  if (apiToken) {
+    headers['Authorization'] = `Bearer ${apiToken}`;
+  }
   const res = await fetch(SUBREG_ENDPOINT, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'text/xml; charset=utf-8',
-      'SOAPAction': `"${command}"`,
-    },
+    headers,
     body,
     signal: AbortSignal.timeout(10000),
   });
@@ -79,8 +85,7 @@ export async function getSubregSsid(): Promise<string | null> {
   if (_cachedSsid && Date.now() < _ssidExpiry) return _cachedSsid;
 
   const login = process.env.SUBREG_LOGIN;
-  // Preferuj API token před heslem (pokud je nastaven)
-  const password = process.env.SUBREG_API_TOKEN || process.env.SUBREG_PASSWORD;
+  const password = process.env.SUBREG_PASSWORD;
   if (!login || !password) return null;
 
   try {
