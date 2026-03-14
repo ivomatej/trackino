@@ -1153,6 +1153,22 @@ function MonitoringContent() {
                     </div>
                   </div>
 
+                  {/* Varování: neověřená odesílatelská doména */}
+                  {settings.resendConfigured && settings.resendFrom && !settings.resendFrom.endsWith('@resend.dev') && (
+                    <div className="flex items-start gap-2 px-3 py-2.5 rounded-lg text-xs" style={{ background: '#f59e0b18', border: '1px solid #f59e0b44', color: '#92400e' }}>
+                      <svg className="flex-shrink-0 mt-0.5" width="14" height="14" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                      </svg>
+                      <span>
+                        Odesílatelská doména <strong>{settings.resendFrom.split('@')[1]}</strong> musí být ověřena v Resend.{' '}
+                        <a href="https://resend.com/domains" target="_blank" rel="noopener noreferrer" className="underline font-medium">
+                          Ověřit doménu →
+                        </a>
+                        {' '}nebo nastavte <code className="px-1 rounded" style={{ background: '#f59e0b22' }}>MONITORING_EMAIL_FROM=onboarding@resend.dev</code> pro testování.
+                      </span>
+                    </div>
+                  )}
+
                   {/* Anti-spam info */}
                   <div className="text-xs px-3 py-2 rounded-lg" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>
                     Anti-spam: stejný typ alertu se odesílá max. 1× za 4 hodiny. Alerty se ukládají do DB i bez Resend API.
@@ -1203,33 +1219,34 @@ function MonitoringContent() {
                 <button onClick={() => setEditModal(null)} className="text-lg leading-none" style={{ color: 'var(--text-muted)' }}>×</button>
               </div>
               <div className="px-5 py-4 space-y-4">
-                {/* Hodina */}
-                <div>
-                  <label className="text-xs font-medium block mb-1.5" style={{ color: 'var(--text-muted)' }}>Hodina</label>
-                  <select
-                    value={editModal.schedule.hours[0] ?? 3}
-                    onChange={e => setEditModal(m => m && ({ ...m, schedule: { ...m.schedule, hours: [parseInt(e.target.value)] } }))}
-                    className="w-full rounded-lg px-3 py-2 text-sm text-base"
-                    style={inputStyle}
-                  >
-                    {Array.from({ length: 24 }, (_, i) => (
-                      <option key={i} value={i}>{String(i).padStart(2, '0')}:xx</option>
-                    ))}
-                  </select>
-                </div>
-                {/* Minuta */}
-                <div>
-                  <label className="text-xs font-medium block mb-1.5" style={{ color: 'var(--text-muted)' }}>Minuta</label>
-                  <select
-                    value={editModal.schedule.minutes[0] ?? 0}
-                    onChange={e => setEditModal(m => m && ({ ...m, schedule: { ...m.schedule, minutes: [parseInt(e.target.value)] } }))}
-                    className="w-full rounded-lg px-3 py-2 text-sm text-base"
-                    style={inputStyle}
-                  >
-                    {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map(v => (
-                      <option key={v} value={v}>:{String(v).padStart(2, '0')}</option>
-                    ))}
-                  </select>
+                {/* Hodina + Minuta vedle sebe */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-medium block mb-1.5" style={{ color: 'var(--text-muted)' }}>Hodina</label>
+                    <select
+                      value={editModal.schedule.hours[0] ?? 3}
+                      onChange={e => setEditModal(m => m && ({ ...m, schedule: { ...m.schedule, hours: [parseInt(e.target.value)] } }))}
+                      className="w-full rounded-lg px-3 py-2 text-sm"
+                      style={inputStyle}
+                    >
+                      {Array.from({ length: 24 }, (_, i) => (
+                        <option key={i} value={i}>{String(i).padStart(2, '0')}:xx</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium block mb-1.5" style={{ color: 'var(--text-muted)' }}>Minuta</label>
+                    <select
+                      value={editModal.schedule.minutes[0] ?? 0}
+                      onChange={e => setEditModal(m => m && ({ ...m, schedule: { ...m.schedule, minutes: [parseInt(e.target.value)] } }))}
+                      className="w-full rounded-lg px-3 py-2 text-sm"
+                      style={inputStyle}
+                    >
+                      {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map(v => (
+                        <option key={v} value={v}>:{String(v).padStart(2, '0')}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
                 {/* Dny v týdnu */}
                 <div>

@@ -129,6 +129,16 @@ export async function POST(req: NextRequest) {
 
     if (!res.ok) {
       const err = await res.text();
+      // Speciální hlášení pro 403 – nejčastěji neověřená odesílatelská doména
+      if (res.status === 403) {
+        const domain = fromAddress.includes('@') ? fromAddress.split('@')[1] : fromAddress;
+        return NextResponse.json(
+          {
+            error: `Odesílatelská doména "${domain}" není ověřena v Resend. Ověřte doménu na https://resend.com/domains, nebo nastavte MONITORING_EMAIL_FROM=onboarding@resend.dev pro testování.`,
+          },
+          { status: 502 },
+        );
+      }
       return NextResponse.json(
         { error: `Resend API vrátilo chybu ${res.status}: ${err}` },
         { status: 502 },
