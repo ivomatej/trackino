@@ -68,7 +68,12 @@ export async function GET() {
     const r = await fetch(`${baseUrl}/domains/check`, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ domains: [{ name: 'test', extension: 'cz' }] }),
+      body: JSON.stringify({ domains: [
+        { name: 'recenzer', extension: 'cz' },
+        { name: 'recenzer', extension: 'com' },
+        { name: 'recenzer', extension: 'de' },
+        { name: 'recenzer', extension: 'pl' },
+      ] }),
     });
     variants['f_domain_check'] = await r.json();
   } catch (e) { variants['f_domain_check'] = String(e); }
