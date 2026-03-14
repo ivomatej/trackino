@@ -12,12 +12,18 @@ export default function RichEditor({ value, onChange, members, pages }: {
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const savedRange = useRef<Range | null>(null);
+  const linkBtnRef = useRef<HTMLDivElement>(null);
+  const mentionBtnRef = useRef<HTMLDivElement>(null);
+  const pageBtnRef = useRef<HTMLDivElement>(null);
   const [selectionPopup, setSelectionPopup] = useState<{ x: number; y: number } | null>(null);
   const [showLinkModal, setShowLinkModal] = useState(false);
+  const [linkOpenUpward, setLinkOpenUpward] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
   const [linkText, setLinkText] = useState('');
   const [showMentionPicker, setShowMentionPicker] = useState(false);
+  const [mentionOpenUpward, setMentionOpenUpward] = useState(false);
   const [showPagePicker, setShowPagePicker] = useState(false);
+  const [pagePickerOpenUpward, setPagePickerOpenUpward] = useState(false);
   const [pickerSearch, setPickerSearch] = useState('');
   const [calloutPicker, setCalloutPicker] = useState<{ el: HTMLElement; right: number; top: number } | null>(null);
 
@@ -177,13 +183,13 @@ export default function RichEditor({ value, onChange, members, pages }: {
             Kód
           </TBtn>
           {/* Odkaz */}
-          <div className="relative">
-            <TBtn onClick={() => { saveRange(); setShowLinkModal(v => !v); setShowMentionPicker(false); setShowPagePicker(false); }} title="Vložit odkaz" active={showLinkModal}>
+          <div className="relative" ref={linkBtnRef}>
+            <TBtn onClick={() => { saveRange(); if (linkBtnRef.current) { const r = linkBtnRef.current.getBoundingClientRect(); setLinkOpenUpward(window.innerHeight - r.bottom < 160); } setShowLinkModal(v => !v); setShowMentionPicker(false); setShowPagePicker(false); }} title="Vložit odkaz" active={showLinkModal}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
               Odkaz
             </TBtn>
             {showLinkModal && (
-              <div className="absolute left-0 top-full mt-1 z-50 rounded-lg border shadow-lg p-3 min-w-[260px]" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+              <div className={`absolute left-0 ${linkOpenUpward ? 'bottom-full mb-1' : 'top-full mt-1'} z-50 rounded-lg border shadow-lg p-3 min-w-[260px]`} style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
                 <input value={linkText} onChange={e => setLinkText(e.target.value)} placeholder="Text odkazu (volitelné)"
                   className="w-full px-3 py-1.5 rounded border text-sm mb-2 text-base sm:text-sm" style={{ background: 'var(--bg-hover)', borderColor: 'var(--border)', color: 'var(--text-primary)' }} />
                 <input value={linkUrl} onChange={e => setLinkUrl(e.target.value)} placeholder="URL (https://...)"
@@ -196,13 +202,13 @@ export default function RichEditor({ value, onChange, members, pages }: {
             )}
           </div>
           {/* Zmínky */}
-          <div className="relative">
-            <TBtn onClick={() => { saveRange(); setShowMentionPicker(v => !v); setShowPagePicker(false); setShowLinkModal(false); setPickerSearch(''); }} title="Zmínit uživatele" active={showMentionPicker}>
+          <div className="relative" ref={mentionBtnRef}>
+            <TBtn onClick={() => { saveRange(); if (mentionBtnRef.current) { const r = mentionBtnRef.current.getBoundingClientRect(); setMentionOpenUpward(window.innerHeight - r.bottom < 240); } setShowMentionPicker(v => !v); setShowPagePicker(false); setShowLinkModal(false); setPickerSearch(''); }} title="Zmínit uživatele" active={showMentionPicker}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94"/></svg>
               Zmínky
             </TBtn>
             {showMentionPicker && (
-              <div className="absolute left-0 top-full mt-1 z-50 rounded-lg border shadow-lg min-w-[200px] max-h-[220px] overflow-y-auto" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+              <div className={`absolute left-0 ${mentionOpenUpward ? 'bottom-full mb-1' : 'top-full mt-1'} z-50 rounded-lg border shadow-lg min-w-[200px] max-h-[220px] overflow-y-auto`} style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
                 <div className="p-2 border-b" style={{ borderColor: 'var(--border)' }}>
                   <input value={pickerSearch} onChange={e => setPickerSearch(e.target.value)} placeholder="Hledat..." autoFocus
                     className="w-full px-2 py-1 rounded text-sm text-base sm:text-sm" style={{ background: 'var(--bg-hover)', color: 'var(--text-primary)' }} />
@@ -219,13 +225,13 @@ export default function RichEditor({ value, onChange, members, pages }: {
             )}
           </div>
           {/* Stránka */}
-          <div className="relative">
-            <TBtn onClick={() => { saveRange(); setShowPagePicker(v => !v); setShowMentionPicker(false); setShowLinkModal(false); setPickerSearch(''); }} title="Odkaz na stránku" active={showPagePicker}>
+          <div className="relative" ref={pageBtnRef}>
+            <TBtn onClick={() => { saveRange(); if (pageBtnRef.current) { const r = pageBtnRef.current.getBoundingClientRect(); setPagePickerOpenUpward(window.innerHeight - r.bottom < 240); } setShowPagePicker(v => !v); setShowMentionPicker(false); setShowLinkModal(false); setPickerSearch(''); }} title="Odkaz na stránku" active={showPagePicker}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
               Stránka
             </TBtn>
             {showPagePicker && (
-              <div className="absolute left-0 top-full mt-1 z-50 rounded-lg border shadow-lg min-w-[220px] max-h-[220px] overflow-y-auto" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+              <div className={`absolute left-0 ${pagePickerOpenUpward ? 'bottom-full mb-1' : 'top-full mt-1'} z-50 rounded-lg border shadow-lg min-w-[220px] max-h-[220px] overflow-y-auto`} style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
                 <div className="p-2 border-b" style={{ borderColor: 'var(--border)' }}>
                   <input value={pickerSearch} onChange={e => setPickerSearch(e.target.value)} placeholder="Hledat stránku..." autoFocus
                     className="w-full px-2 py-1 rounded text-sm text-base sm:text-sm" style={{ background: 'var(--bg-hover)', color: 'var(--text-primary)' }} />

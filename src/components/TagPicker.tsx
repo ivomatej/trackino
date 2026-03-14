@@ -14,6 +14,7 @@ export default function TagPicker({ selectedTagIds, onChange }: TagPickerProps) 
   const { currentWorkspace, currentMembership } = useWorkspace();
   const [tags, setTags] = useState<Tag[]>([]);
   const [showPicker, setShowPicker] = useState(false);
+  const [pickerPos, setPickerPos] = useState<{ top?: number; bottom?: number; right?: number } | null>(null);
   const [search, setSearch] = useState('');
   const ref = useRef<HTMLDivElement>(null);
 
@@ -63,7 +64,19 @@ export default function TagPicker({ selectedTagIds, onChange }: TagPickerProps) 
   return (
     <div className="relative hidden sm:block" ref={ref}>
       <button
-        onClick={() => { setShowPicker(!showPicker); setSearch(''); }}
+        onClick={(e) => {
+          if (showPicker) { setShowPicker(false); setSearch(''); return; }
+          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+          const spaceBelow = window.innerHeight - rect.bottom;
+          const openUpward = spaceBelow < 290;
+          setPickerPos({
+            top: openUpward ? undefined : rect.bottom + 4,
+            bottom: openUpward ? window.innerHeight - rect.top + 4 : undefined,
+            right: window.innerWidth - rect.right,
+          });
+          setShowPicker(true);
+          setSearch('');
+        }}
         className="p-2 rounded-lg transition-colors relative"
         style={{ color: hasSelection ? 'var(--primary)' : 'var(--text-muted)' }}
         onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
@@ -84,10 +97,10 @@ export default function TagPicker({ selectedTagIds, onChange }: TagPickerProps) 
         )}
       </button>
 
-      {showPicker && (
+      {showPicker && pickerPos && (
         <div
-          className="absolute top-full right-0 mt-1 rounded-lg border shadow-lg z-50 max-h-72 overflow-hidden flex flex-col"
-          style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', width: '280px' }}
+          className="fixed rounded-lg border shadow-lg z-[9999] max-h-72 overflow-hidden flex flex-col"
+          style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', width: '280px', top: pickerPos.top, bottom: pickerPos.bottom, right: pickerPos.right }}
         >
           {/* Vyhledávání */}
           <div className="p-2 border-b" style={{ borderColor: 'var(--border)' }}>

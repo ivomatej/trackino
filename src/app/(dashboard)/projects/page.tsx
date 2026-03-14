@@ -29,6 +29,7 @@ function ProjectsContent() {
   const [color, setColor] = useState(PROJECT_COLORS[0]);
   const [saving, setSaving] = useState(false);
   const [showClientPicker, setShowClientPicker] = useState(false);
+  const [clientPickerPos, setClientPickerPos] = useState<{ top?: number; bottom?: number; left: number; width: number } | null>(null);
 
   const isAdmin = userRole === 'owner' || userRole === 'admin' || userRole === 'manager';
 
@@ -204,7 +205,19 @@ function ProjectsContent() {
                 </label>
                 <button
                   type="button"
-                  onClick={() => setShowClientPicker(!showClientPicker)}
+                  onClick={(e) => {
+                    if (showClientPicker) { setShowClientPicker(false); return; }
+                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                    const spaceBelow = window.innerHeight - rect.bottom;
+                    const openUpward = spaceBelow < 200;
+                    setClientPickerPos({
+                      top: openUpward ? undefined : rect.bottom + 4,
+                      bottom: openUpward ? window.innerHeight - rect.top + 4 : undefined,
+                      left: rect.left,
+                      width: rect.width,
+                    });
+                    setShowClientPicker(true);
+                  }}
                   className="w-full px-3 py-2.5 rounded-lg border text-sm text-left focus:outline-none focus:ring-2 focus:ring-[var(--primary)] flex items-center justify-between"
                   style={{ borderColor: 'var(--border)', background: 'var(--bg-hover)', color: selectedClients.length > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}
                 >
@@ -217,10 +230,10 @@ function ProjectsContent() {
                     <polyline points="6 9 12 15 18 9" />
                   </svg>
                 </button>
-                {showClientPicker && (
+                {showClientPicker && clientPickerPos && (
                   <div
-                    className="absolute top-full left-0 right-0 mt-1 rounded-lg border shadow-lg z-50 max-h-48 overflow-y-auto py-1"
-                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}
+                    className="fixed rounded-lg border shadow-lg z-[9999] max-h-48 overflow-y-auto py-1"
+                    style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', top: clientPickerPos.top, bottom: clientPickerPos.bottom, left: clientPickerPos.left, width: clientPickerPos.width }}
                   >
                     <button
                       onClick={() => { setSelectedClients([]); setShowClientPicker(false); }}

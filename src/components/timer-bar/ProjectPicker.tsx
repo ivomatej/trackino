@@ -11,7 +11,7 @@ interface ProjectPickerProps {
   projectPickerRef: RefObject<HTMLDivElement | null>;
   projectDropdownRef: RefObject<HTMLDivElement | null>;
   showProjectPicker: boolean;
-  projectPickerPos: { top: number; left: number; width: number } | null;
+  projectPickerPos: { top?: number; bottom?: number; left: number; width: number } | null;
   projectSearch: string;
   sortedClientEntries: [string, Project[]][];
   filteredProjects: Project[];
@@ -19,7 +19,7 @@ interface ProjectPickerProps {
   setSelectedProject: (id: string) => void;
   setShowProjectPicker: (show: boolean) => void;
   setProjectSearch: (search: string) => void;
-  setProjectPickerPos: (pos: { top: number; left: number; width: number } | null) => void;
+  setProjectPickerPos: (pos: { top?: number; bottom?: number; left: number; width: number } | null) => void;
   setShowTaskPicker: (show: boolean) => void;
   setTaskSearch: (search: string) => void;
 }
@@ -40,7 +40,14 @@ export function ProjectPicker({
           if (showProjectPicker) { setShowProjectPicker(false); setProjectSearch(''); return; }
           const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
           const w = Math.min(320, window.innerWidth - 16);
-          setProjectPickerPos({ top: isBottomBar ? Math.max(8, rect.top - 324) : rect.bottom + 4, left: Math.max(8, Math.min(rect.left, window.innerWidth - w - 8)), width: w });
+          const spaceBelow = window.innerHeight - rect.bottom;
+          const openUpward = isBottomBar || spaceBelow < 324;
+          setProjectPickerPos({
+            top: openUpward ? undefined : rect.bottom + 4,
+            bottom: openUpward ? window.innerHeight - rect.top + 4 : undefined,
+            left: Math.max(8, Math.min(rect.left, window.innerWidth - w - 8)),
+            width: w,
+          });
           setShowTaskPicker(false); setTaskSearch(''); setProjectSearch('');
           setShowProjectPicker(true);
         }}
@@ -75,7 +82,7 @@ export function ProjectPicker({
         <div
           ref={projectDropdownRef}
           className="fixed rounded-lg border shadow-lg z-[9999] max-h-80 overflow-hidden flex flex-col"
-          style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', top: projectPickerPos?.top ?? 0, left: projectPickerPos?.left ?? 0, width: projectPickerPos?.width ?? 320 }}
+          style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', top: projectPickerPos.top, bottom: projectPickerPos.bottom, left: projectPickerPos.left, width: projectPickerPos.width }}
         >
           {/* Vyhledávání */}
           <div className="p-2 border-b" style={{ borderColor: 'var(--border)' }}>

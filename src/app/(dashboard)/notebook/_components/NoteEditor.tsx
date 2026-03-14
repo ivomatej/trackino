@@ -26,6 +26,7 @@ export function NoteEditor({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [showMoveMenu, setShowMoveMenu] = useState(false);
+  const [moveMenuPos, setMoveMenuPos] = useState<{ top?: number; bottom?: number; right?: number } | null>(null);
   const [copyDone, setCopyDone] = useState(false);
   const editorRef = useRef<HTMLDivElement>(null);
   const taskRefs = useRef<Map<string, HTMLInputElement>>(new Map());
@@ -368,7 +369,18 @@ export function NoteEditor({
         {/* Move to folder button */}
         {onMove && folders && (
           <div className="relative" ref={moveMenuRef}>
-            <button onClick={() => setShowMoveMenu(v => !v)}
+            <button onClick={(e) => {
+                if (showMoveMenu) { setShowMoveMenu(false); return; }
+                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                const spaceBelow = window.innerHeight - rect.bottom;
+                const openUpward = spaceBelow < 250;
+                setMoveMenuPos({
+                  top: openUpward ? undefined : rect.bottom + 4,
+                  bottom: openUpward ? window.innerHeight - rect.top + 4 : undefined,
+                  right: window.innerWidth - rect.right,
+                });
+                setShowMoveMenu(true);
+              }}
               className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors"
               style={{ color: 'var(--text-muted)' }} title="Přesunout do složky"
               onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
@@ -377,9 +389,9 @@ export function NoteEditor({
                 <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
               </svg>
             </button>
-            {showMoveMenu && (
-              <div className="absolute right-0 top-full mt-1 w-48 rounded-xl border shadow-lg z-50 py-1 overflow-hidden"
-                style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+            {showMoveMenu && moveMenuPos && (
+              <div className="fixed z-[9999] w-48 rounded-xl border shadow-lg py-1 overflow-hidden"
+                style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', top: moveMenuPos.top, bottom: moveMenuPos.bottom, right: moveMenuPos.right }}>
                 <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Přesunout do</div>
                 <button onClick={async () => { await onMove(note!.id, null); setShowMoveMenu(false); }}
                   className="w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 transition-colors"

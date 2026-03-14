@@ -12,7 +12,7 @@ interface CategoryTaskPickerProps {
   taskPickerRef: RefObject<HTMLDivElement | null>;
   taskDropdownRef: RefObject<HTMLDivElement | null>;
   showTaskPicker: boolean;
-  taskPickerPos: { top: number; left: number; width: number } | null;
+  taskPickerPos: { top?: number; bottom?: number; left: number; width: number } | null;
   taskSearch: string;
   taskStructure: (Category & { matchedTasks: Task[] })[];
   orphanTasks: Task[];
@@ -22,7 +22,7 @@ interface CategoryTaskPickerProps {
   setSelectedTask: (id: string) => void;
   setShowTaskPicker: (show: boolean) => void;
   setTaskSearch: (search: string) => void;
-  setTaskPickerPos: (pos: { top: number; left: number; width: number } | null) => void;
+  setTaskPickerPos: (pos: { top?: number; bottom?: number; left: number; width: number } | null) => void;
   setShowProjectPicker: (show: boolean) => void;
   setProjectSearch: (search: string) => void;
 }
@@ -44,7 +44,14 @@ export function CategoryTaskPicker({
           if (showTaskPicker) { setShowTaskPicker(false); setTaskSearch(''); return; }
           const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
           const w = Math.min(280, window.innerWidth - 16);
-          setTaskPickerPos({ top: isBottomBar ? Math.max(8, rect.top - 324) : rect.bottom + 4, left: Math.max(8, Math.min(rect.left, window.innerWidth - w - 8)), width: w });
+          const spaceBelow = window.innerHeight - rect.bottom;
+          const openUpward = isBottomBar || spaceBelow < 324;
+          setTaskPickerPos({
+            top: openUpward ? undefined : rect.bottom + 4,
+            bottom: openUpward ? window.innerHeight - rect.top + 4 : undefined,
+            left: Math.max(8, Math.min(rect.left, window.innerWidth - w - 8)),
+            width: w,
+          });
           setShowProjectPicker(false); setProjectSearch(''); setTaskSearch('');
           setShowTaskPicker(true);
         }}
@@ -86,7 +93,7 @@ export function CategoryTaskPicker({
         <div
           ref={taskDropdownRef}
           className="fixed rounded-lg border shadow-lg z-[9999] max-h-80 overflow-hidden flex flex-col"
-          style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', top: taskPickerPos?.top ?? 0, left: taskPickerPos?.left ?? 0, width: taskPickerPos?.width ?? 280 }}
+          style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', top: taskPickerPos.top, bottom: taskPickerPos.bottom, left: taskPickerPos.left, width: taskPickerPos.width }}
         >
           {/* Vyhledávání */}
           <div className="p-2 border-b" style={{ borderColor: 'var(--border)' }}>

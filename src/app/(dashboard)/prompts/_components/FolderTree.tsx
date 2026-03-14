@@ -23,7 +23,7 @@ export function FolderTree({
   folders, selectedId, expanded, onSelect, onToggle, onAddSub, onEdit, onDelete, onShare, userId, items, depth = 0, parentId = null,
 }: FolderTreeProps) {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
-  const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
+  const [menuPos, setMenuPos] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
   const children = folders.filter(f => f.parent_id === parentId);
   if (children.length === 0) return null;
   return (
@@ -65,7 +65,13 @@ export function FolderTree({
                     if (openMenu === folder.id) { setOpenMenu(null); setMenuPos(null); }
                     else {
                       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                      setMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+                      const spaceBelow = window.innerHeight - rect.bottom;
+                      const openUpward = spaceBelow < 180;
+                      setMenuPos({
+                        top: openUpward ? undefined : rect.bottom + 4,
+                        bottom: openUpward ? window.innerHeight - rect.top + 4 : undefined,
+                        right: window.innerWidth - rect.right,
+                      });
                       setOpenMenu(folder.id);
                     }
                   }}
@@ -75,7 +81,7 @@ export function FolderTree({
                 </button>
                 {openMenu === folder.id && menuPos && (
                   <div className="fixed z-[9999] rounded-lg border shadow-lg py-1 min-w-[160px]"
-                    style={{ top: menuPos.top, right: menuPos.right, background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+                    style={{ top: menuPos.top, bottom: menuPos.bottom, right: menuPos.right, background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
                     {depth < MAX_DEPTH - 1 && (
                       <button type="button"
                         className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left hover:bg-[var(--bg-hover)]"

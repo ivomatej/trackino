@@ -41,8 +41,8 @@ export function useTimerBar({ onEntryChanged, playData }: UseTimerBarOptions) {
   const [taskSearch, setTaskSearch] = useState('');
   const projectPickerRef = useRef<HTMLDivElement>(null);
   const taskPickerRef = useRef<HTMLDivElement>(null);
-  const [projectPickerPos, setProjectPickerPos] = useState<{ top: number; left: number; width: number } | null>(null);
-  const [taskPickerPos, setTaskPickerPos] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [projectPickerPos, setProjectPickerPos] = useState<{ top?: number; bottom?: number; left: number; width: number } | null>(null);
+  const [taskPickerPos, setTaskPickerPos] = useState<{ top?: number; bottom?: number; left: number; width: number } | null>(null);
   const projectDropdownRef = useRef<HTMLDivElement>(null);
   const taskDropdownRef = useRef<HTMLDivElement>(null);
 
