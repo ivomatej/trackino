@@ -32,27 +32,32 @@ const InfoIcon = () => (
 );
 
 // ─── Status badge ─────────────────────────────────────────────────────────────
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status, validated }: { status: string; validated?: boolean }) {
+  let label: string;
+  let bg: string;
+  let color: string;
+
   if (status === 'free') {
-    return (
-      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold"
-        style={{ background: '#dcfce7', color: '#166534' }}>
-        Volná
-      </span>
-    );
+    label = 'Volná'; bg = '#dcfce7'; color = '#166534';
+  } else if (status === 'active') {
+    label = 'Obsazená'; bg = '#fee2e2'; color = '#991b1b';
+  } else if (status === 'unverified') {
+    label = 'Neověřeno'; bg = '#fef9c3'; color = '#854d0e';
+  } else {
+    label = 'Chyba'; bg = 'var(--bg-hover)'; color = 'var(--text-muted)';
   }
-  if (status === 'active') {
-    return (
-      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold"
-        style={{ background: '#fee2e2', color: '#991b1b' }}>
-        Obsazená
-      </span>
-    );
-  }
+
   return (
-    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold"
-      style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>
-      Neznámý
+    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold"
+      style={{ background: bg, color }}>
+      {label}
+      {validated && (
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"
+          strokeLinecap="round" strokeLinejoin="round">
+          <title>Ověřeno dvěma zdroji</title>
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+      )}
     </span>
   );
 }
@@ -419,7 +424,7 @@ export function DomainCheckerTab({
                       {r.domain}
                     </td>
                     <td className="px-4 py-3">
-                      <StatusBadge status={r.status} />
+                      <StatusBadge status={r.status} validated={r.validated} />
                       {r.premium && (
                         <span className="ml-2 text-xs px-1.5 py-0.5 rounded"
                           style={{ background: '#fef3c7', color: '#92400e' }}>
@@ -456,7 +461,7 @@ export function DomainCheckerTab({
                 style={{ background: r.status === 'free' ? '#f0fdf4' : r.status === 'active' ? '#fff8f8' : 'var(--bg-card)' }}>
                 <div className="min-w-0">
                   <p className="font-medium text-sm truncate" style={{ color: 'var(--text-primary)' }}>{r.domain}</p>
-                  <div className="mt-1"><StatusBadge status={r.status} /></div>
+                  <div className="mt-1"><StatusBadge status={r.status} validated={r.validated} /></div>
                 </div>
                 {r.status === 'free' && !monitoringNames.has(r.domain) && (
                   <button

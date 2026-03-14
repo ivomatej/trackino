@@ -113,6 +113,9 @@ export interface DomainCheckHistory {
 /** Výsledek jedné kontroly dostupnosti domény */
 export interface DomainCheckResult {
   domain: string;
-  status: 'free' | 'active' | 'reserved' | 'error';
+  /** free = volná, active = obsazená, unverified = zdroje se neshodly, error = chyba */
+  status: 'free' | 'active' | 'reserved' | 'unverified' | 'error';
   premium?: boolean;
+  /** true = potvrzeno oběma zdroji (Openprovider + RDAP) */
+  validated?: boolean;
 }

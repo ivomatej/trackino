@@ -1,11 +1,28 @@
 // Trackino – Openprovider kontrola dostupnosti domén
 // POST /api/openprovider/check
 // Body: { domains: { name: string; extension: string }[] }
-// Response: { results: { domain: string; status: string; premium?: boolean }[] }
+// Response: { results: { domain: string; status: string; premium?: boolean; validated?: boolean }[] }
 
 import { NextRequest, NextResponse } from 'next/server';
 import { openproviderFetch, hasOpenproviderCredentials } from '@/lib/openprovider';
 import { rateLimitOpenprovider } from '@/lib/rate-limit';
+
+// ─── RDAP helper ─────────────────────────────────────────────────────────────
+// Vrátí 'registered' | 'free' | 'unknown'
+// RDAP: HTTP 200 = doména existuje (obsazená), HTTP 404 = volná, jinak neznámý stav
+async function rdapCheck(domain: string): Promise<'registered' | 'free' | 'unknown'> {
+  try {
+    const res = await fetch(`https://rdap.org/domain/${domain}`, {
+      signal: AbortSignal.timeout(6000),
+      headers: { Accept: 'application/rdap+json' },
+    });
+    if (res.status === 200) return 'registered';
+    if (res.status === 404) return 'free';
+    return 'unknown';
+  } catch {
+    return 'unknown';
+  }
+}
 
 export async function POST(req: NextRequest) {
   // Rate limit
@@ -50,12 +67,18 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const res = await openproviderFetch('/domains/check', {
-      method: 'POST',
-      body: JSON.stringify({ domains }),
-    });
+    // Openprovider + RDAP paralelně
+    const [opRes, rdapResults] = await Promise.all([
+      openproviderFetch('/domains/check', {
+        method: 'POST',
+        body: JSON.stringify({ domains }),
+      }),
+      Promise.allSettled(
+        domains.map(d => rdapCheck(`${d.name}.${d.extension}`)),
+      ),
+    ]);
 
-    const data = await res.json();
+    const data = await opRes.json();
 
     if (data.code !== 0) {
       return NextResponse.json(
@@ -64,17 +87,52 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Normalizujeme odpověď – fallback na vstupní domains pokud API nevrátí domain.name/extension
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const results = (data.data?.results ?? []).map((r: any, idx: number) => {
       const inputDomain = domains[idx];
       const name = r.domain?.name || r.name || inputDomain?.name || '';
       const extension = r.domain?.extension || r.extension || inputDomain?.extension || '';
+      const opStatus: string = r.status ?? 'error';
+
+      // RDAP výsledek
+      const rdap = rdapResults[idx];
+      const rdapStatus = rdap?.status === 'fulfilled' ? rdap.value : 'unknown';
+
+      // Porovnání zdrojů → výsledný status
+      let finalStatus: 'free' | 'active' | 'unverified' | 'error';
+      let validated = false;
+
+      if (opStatus === 'error') {
+        // Openprovider selhal – použijeme RDAP
+        if (rdapStatus === 'free') { finalStatus = 'free'; }
+        else if (rdapStatus === 'registered') { finalStatus = 'active'; }
+        else { finalStatus = 'error'; }
+      } else {
+        const opIsFree = opStatus === 'free';
+        const opIsActive = opStatus === 'active';
+
+        if (rdapStatus === 'unknown') {
+          // RDAP nedostupný – věřím Openprovider, ale nevalidováno
+          finalStatus = opIsFree ? 'free' : opIsActive ? 'active' : 'unverified';
+        } else {
+          const rdapIsFree = rdapStatus === 'free';
+          const rdapIsActive = rdapStatus === 'registered';
+
+          if (opIsFree && rdapIsFree) { finalStatus = 'free'; validated = true; }
+          else if (opIsActive && rdapIsActive) { finalStatus = 'active'; validated = true; }
+          else {
+            // Neshoda – preferujeme RDAP (přímý dotaz na registry)
+            finalStatus = rdapIsFree ? 'free' : rdapIsActive ? 'active' : 'unverified';
+          }
+        }
+      }
+
       return {
         domain: name && extension ? `${name}.${extension}` : (name || extension || ''),
-        status: r.status ?? 'error',
+        status: finalStatus,
         premium: r.premium ?? false,
         price: r.price ?? null,
+        validated,
       };
     });
 
