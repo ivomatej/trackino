@@ -19,7 +19,7 @@ import {
   ERROR_COUNT_CLIENT_WARNING,
   ERROR_COUNT_CLIENT_CRITICAL,
 } from '@/lib/monitoring/thresholds';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase';
 
 // ─── Typy ────────────────────────────────────────────────────────────────────
 
@@ -55,15 +55,6 @@ interface StatusCard {
   value: string;
   sub?: string;
   status: 'ok' | 'warning' | 'critical' | 'unknown';
-}
-
-// ─── Supabase klient pro čtení dat ───────────────────────────────────────────
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
 }
 
 // ─── Pomocné funkce ──────────────────────────────────────────────────────────
@@ -142,7 +133,6 @@ export default function MonitoringPage() {
 
   // ── Načtení dat ─────────────────────────────────────────────────────────────
   const fetchData = useCallback(async () => {
-    const supabase = getSupabase();
     setLoading(true);
 
     const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
