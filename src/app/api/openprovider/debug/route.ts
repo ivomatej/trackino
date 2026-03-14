@@ -63,5 +63,15 @@ export async function GET() {
     variants['e_resellers_me'] = await r.json();
   } catch (e) { variants['e_resellers_me'] = String(e); }
 
+  // Varianta F: kontrola dostupnosti domény
+  try {
+    const r = await fetch(`${baseUrl}/domains/check`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ domains: [{ name: 'test', extension: 'cz' }] }),
+    });
+    variants['f_domain_check'] = await r.json();
+  } catch (e) { variants['f_domain_check'] = String(e); }
+
   return NextResponse.json({ login: 'ok', token_preview: token?.slice(0, 20) + '...', variants });
 }
