@@ -3,7 +3,7 @@ import type { Domain, DomainStatus, DomainRegistrar, Subscription } from '@/type
 export type DisplayStatus = DomainStatus | 'expiring';
 export type SortField = 'name' | 'expiration_date' | 'registrar' | 'status';
 export type SortDir = 'asc' | 'desc';
-export type TabType = 'domains' | 'registrars';
+export type TabType = 'domains' | 'registrars' | 'checker' | 'monitoring';
 
 export interface DomainFormState {
   name: string;
@@ -33,3 +33,4 @@ export interface DomainStats {
 }
 
 export type { Domain, DomainStatus, DomainRegistrar, Subscription };
+export type { DomainMonitoring, DomainCheckHistory, DomainCheckResult } from '@/types/database';

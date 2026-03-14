@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 13. 3. 2026 (v2.51.55)
+> Aktualizováno: 14. 3. 2026 (v2.51.56)
 
 ---
 
@@ -652,6 +652,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
 | v2.51.28 | 11. 3. 2026 | Notebook – FolderTree: odstraněny desktop individuální tlačítka, nahrazeny třemi tečkami (⋮) zobrazující se na hover na desktopu + vždy viditelné na mobilu; NoteEditor: paste handler strippuje background-* CSS vlastnosti a bgcolor atribut z vkládaného HTML (žádná změna barvy pozadí z externích nástrojů) |
+| v2.51.56 | 14. 3. 2026 | Openprovider API integrace Session 2 – kontrola dostupnosti a monitoring: záložka Kontrola dostupnosti (jednoduchý/hromadný režim, TLD picker, dávkování po 50, CSV export), záložka Monitoring (sledování dostupnosti, ruční kontrola, collapsible historie); API routes /api/openprovider/check + /status; DB tabulky trackino_domain_monitoring + trackino_domain_check_history; Openprovider sekce v záložce Registrátoři (stav připojení, sync) |
 | v2.51.55 | 13. 3. 2026 | Openprovider API integrace – Session 1 (infrastruktura): src/lib/openprovider.ts (Bearer token cache 47h, auto-refresh), API routes /api/openprovider/domains, /domains/[id], /balance, /sync; rateLimitOpenprovider (30/min/IP); DB typy DomainSettings/DomainCache/DomainNotification; SQL migrace 3 nových tabulek (trackino_domain_settings, trackino_domain_cache, trackino_domain_notifications) s RLS workspace izolací |
 | v2.51.54 | 13. 3. 2026 | Refaktoring: types/database.ts (1160 ř.) rozdělen na 13 souborů v db/ (core.ts, tracking.ts, vacation.ts, invoices.ts, calendar.ts, requests.ts, documents.ts, knowledge.ts, content.ts, subscriptions.ts, domains.ts, tasks.ts, ai.ts); database.ts redukován na 14 řádků orchestrátoru (re-exporty); existující importy beze změny |
 | v2.51.53 | 13. 3. 2026 | Refaktoring: tasks/page.tsx (1622 ř.) rozdělen na 4 hooky v _hooks/ (useTasksData.ts, useCrossWorkspace.ts, useTasksCrud.ts, useTasksDetail.ts); page.tsx redukován na ~530 řádků orchestrátoru |
@@ -2792,7 +2793,7 @@ CREATE POLICY "Auth full" ON trackino_task_board_members
 | `/team` | `team/page.tsx` (orchestrátor) + `_components/types.tsx`, `useTeam.ts`, `MembersTab.tsx`, `StructureTab.tsx`, `ManagersTab.tsx`, `EditMemberModal.tsx` | Správa týmu + sazby (Free+) |
 | `/tasks` | `tasks/page.tsx` (orchestrátor ~530 ř.) + `_hooks/useTasksData.ts`, `_hooks/useCrossWorkspace.ts`, `_hooks/useTasksCrud.ts`, `_hooks/useTasksDetail.ts` | Úkoly + Kanban (Pro+) – hooky od v2.51.53 |
 | `/subscriptions` | `subscriptions/page.tsx` (auth guard) + `_components/SubscriptionsContent.tsx` (orchestrátor) + `_components/` (18 souborů: types, constants, utils, useSubscriptions, StarRating, StatsDashboard, SubsTabContent, CategoriesTabContent, AccessByServiceView, AccessByUserView, AccessSummaryView, AccessTabContent, DetailModal, SubFormModal, AccessModal, ExtUserModal, CatFormModal) | Evidence předplatných (Pro+) |
-| `/domains` | `domains/page.tsx` (auth guard) + `_components/DomainsContent.tsx` (orchestrátor) + `_components/` (10 souborů: types.ts, constants.tsx, utils.ts, useDomains.ts, StatsDashboard.tsx, DomainsTabContent.tsx, RegistrarsTabContent.tsx, DomainFormModal.tsx, RegistrarFormModal.tsx, DomainDetailModal.tsx) | Evidence domén (Pro+) |
+| `/domains` | `domains/page.tsx` (auth guard) + `_components/DomainsContent.tsx` (orchestrátor) + `_components/` (12 souborů: types.ts, constants.tsx, utils.ts, useDomains.ts, StatsDashboard.tsx, DomainsTabContent.tsx, RegistrarsTabContent.tsx, DomainCheckerTab.tsx, DomainMonitoringTab.tsx, DomainFormModal.tsx, RegistrarFormModal.tsx, DomainDetailModal.tsx) | Evidence domén + Openprovider (Pro+) |
 | `/important-days` | `important-days/page.tsx` (auth guard ~25 ř.) + `_components/ImportantDaysContent.tsx` (orchestrátor) + `_components/` (constants.ts, utils.ts, useImportantDays.ts, ImportantDayItem.tsx, ImportantDayForm.tsx) | Důležité dny (Pro+) |
 | `/requests` | `requests/page.tsx` (auth guard ~20 ř.) + `_components/RequestsContent.tsx` (orchestrátor) + `_components/` (types.ts, utils.ts, useRequests.ts, StatusBadge.tsx, RequestFormModal.tsx, RejectModal.tsx) | Žádosti zaměstnanců (Pro+) |
 | `/feedback` | `feedback/page.tsx` | Anonymní připomínky (Pro+) |
@@ -3038,7 +3039,7 @@ Sandbox (pro vývoj): `https://api.sandbox.openprovider.nl:8480/v1beta`
 ```
 GET  /domains                  → seznam domén (limit, offset, status, with_additional_data)
 GET  /domains/{id}             → detail domény
-POST /domains/check            → kontrola dostupnosti (budoucí session)
+POST /domains/check            → kontrola dostupnosti domén (implementováno v Session 2)
 GET  /dns/zones/{name}         → DNS záznamy (budoucí session)
 PUT  /dns/zones/{name}         → aktualizace DNS (budoucí session)
 GET  /ssl/certificates         → SSL certifikáty (budoucí session)
@@ -3054,15 +3055,12 @@ GET  /resellers/me             → stav kreditu a info o reselleru
 | Session | Rozsah |
 |---------|--------|
 | 1 ✅ | openprovider.ts + API routes (domains, balance, sync) + SQL migrace |
-| 2 | Frontend: DomainsContent refaktoring – nové záložky (Domény/DNS/SSL/Finance/Nastavení) |
-| 3 | Záložka Domény: DomainStatsDashboard + DomainListTable + filtry |
-| 4 | DomainDetailModal + DomainCheckForm (kontrola dostupnosti) |
-| 5 | Záložka DNS: DnsRecordsList + DnsRecordForm + API route dns |
-| 6 | Záložka SSL certifikáty + API route ssl |
-| 7 | Záložka Finance (balance + transakce) |
-| 8 | Záložka Nastavení (API credentials + test spojení + notifikace pravidla) |
-| 9 | Cron joby (domain-sync + domain-expiry-check) + notifikace |
-| 10 | CSV export + oprávnění audit + finální testy |
+| 2 ✅ | Záložka Kontrola dostupnosti (DomainCheckerTab) + Záložka Monitoring (DomainMonitoringTab) + API routes check/status + DB tabulky domain_monitoring/check_history + Openprovider sekce v Registrátorech |
+| 3 | Záložka DNS: DnsRecordsList + DnsRecordForm + API route dns |
+| 4 | Záložka SSL certifikáty + API route ssl |
+| 5 | Záložka Finance (balance + transakce) |
+| 6 | Záložka Nastavení (API credentials + test spojení + notifikace pravidla) |
+| 7 | Cron joby (domain-sync + domain-expiry-check) + notifikace |
 
 ---
 

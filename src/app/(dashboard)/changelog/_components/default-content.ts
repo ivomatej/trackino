@@ -1,6 +1,32 @@
 export const DEFAULT_CHANGELOG = `
 <h2>Trackino – Historie verzí</h2>
 
+<h3>v2.51.56 – 14. 3. 2026</h3>
+<ul>
+  <li><strong>Openprovider API integrace Session 2 – Kontrola dostupnosti a monitoring domén</strong>:
+    <ul>
+      <li>Nová záložka <strong>Kontrola dostupnosti</strong> – ověření volnosti domén přes Openprovider API; jednoduchý režim (název + výběr TLD) i hromadný (seznam plných názvů); dávkování po 50 s průběhovým pruhem; export výsledků do CSV</li>
+      <li>Nová záložka <strong>Monitoring</strong> – sledování dostupnosti domén v čase; frekvence denně / týdně; ruční kontrola jedním klikem; rozbalitelná historie posledních 50 kontrol s filtrem domény</li>
+      <li>Nový API endpoint <code>POST /api/openprovider/check</code> – kontrola dostupnosti domén (max 50 najednou), rate limit 30 req/min</li>
+      <li>Nový API endpoint <code>GET /api/openprovider/status</code> – ověření konfigurace a připojení Openprovider</li>
+      <li>Nové DB tabulky: <code>trackino_domain_monitoring</code>, <code>trackino_domain_check_history</code></li>
+      <li>Záložka Registrátoři rozšířena o sekci Openprovider API (stav připojení, tlačítko Testovat připojení, synchronizace domén do cache)</li>
+    </ul>
+  </li>
+</ul>
+
+<h3>v2.51.55 – 13. 3. 2026</h3>
+<ul>
+  <li><strong>Openprovider API integrace Session 1 – Infrastruktura</strong>:
+    <ul>
+      <li>Nová knihovna <code>src/lib/openprovider.ts</code> – Bearer token cache 47h, auto-refresh při 401, <code>openproviderFetch()</code>, <code>hasOpenproviderCredentials()</code>, <code>formatDomainName()</code></li>
+      <li>API routes: <code>/api/openprovider/domains</code>, <code>/domains/[id]</code>, <code>/balance</code>, <code>/sync</code></li>
+      <li>Rate limit pro Openprovider: 30 req/min/IP (Upstash Redis)</li>
+      <li>DB typy <code>DomainSettings</code>, <code>DomainCache</code>, <code>DomainNotification</code>; SQL migrace 3 nových tabulek s RLS workspace izolací</li>
+    </ul>
+  </li>
+</ul>
+
 <h3>v2.51.54 – 13. 3. 2026</h3>
 <ul>
   <li><strong>Refaktoring: Databázové typy</strong>:

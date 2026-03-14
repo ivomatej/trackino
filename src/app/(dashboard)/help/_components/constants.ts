@@ -299,6 +299,22 @@ export const DEFAULT_HELP_CONTENT = `
   <li><strong>Oprávnění</strong> – přidávat, upravovat a mazat domény mohou admini, vlastník workspace a členové s oprávněním „Spravuje domény" (nastavitelné v sekci Tým)</li>
 </ul>
 
+<h4>Kontrola dostupnosti domén</h4>
+<p>Záložka <strong>Kontrola dostupnosti</strong> umožňuje ověřit, zda jsou domény volné k registraci. Vyžaduje napojení na Openprovider API (konfigurace přes env proměnné na serveru).</p>
+<ul>
+  <li><strong>Jednoduchý režim</strong> – zadejte název domény (bez přípony) a vyberte přípony (TLD) z nabídky. Standardně jsou předvoleny .cz, .com a .net. Výsledky zobrazí stav každé kombinace: Volná / Obsazená / Rezervovaná / Chyba</li>
+  <li><strong>Hromadný režim</strong> – vložte seznam plných názvů domén (každá na novém řádku nebo oddělená čárkou). Při větším počtu probíhá kontrola po dávkách 50 s průběhovým pruhem.</li>
+  <li><strong>Výsledky</strong> – volné domény jsou zvýrazněny zeleně. Výsledky lze exportovat jako CSV. Volnou doménu lze jedním klikem přidat do monitoringu.</li>
+</ul>
+
+<h4>Monitoring domén</h4>
+<p>Záložka <strong>Monitoring</strong> slouží ke sledování dostupnosti domén v čase.</p>
+<ul>
+  <li><strong>Přidání domény</strong> – zadejte plný název domény (např. mojefirma.cz) a zvolte frekvenci: denně nebo týdně</li>
+  <li><strong>Ruční kontrola</strong> – tlačítko Zkontrolovat spustí okamžitou ověření dostupnosti</li>
+  <li><strong>Historie kontrol</strong> – rozbalitelná sekce s posledními 50 záznamy (datum, výsledek, zdroj)</li>
+</ul>
+
 <h3>Úkoly</h3>
 <p>Modul <strong>Úkoly</strong> (sekce <strong>NÁSTROJE</strong>, tarif Pro a Max) poskytuje kompletní správu úkolů s kanban nástěnkou, složkami a projekty.</p>
 <ul>

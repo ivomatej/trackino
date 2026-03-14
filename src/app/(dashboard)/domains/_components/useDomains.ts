@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useRouter } from 'next/navigation';
-import type { Domain, DomainStatus, DomainRegistrar, Subscription } from '@/types/database';
+import type { Domain, DomainStatus, DomainRegistrar, Subscription, DomainMonitoring, DomainCheckHistory, DomainCheckResult } from '@/types/database';
 import type {
   DisplayStatus, SortField, SortDir, TabType,
   DomainFormState, RegFormState, DomainStats,
@@ -62,6 +62,17 @@ export function useDomains() {
 
   /* ── Detail modal ── */
   const [detailDomain, setDetailDomain] = useState<Domain | null>(null);
+
+  /* ── Monitoring state ── */
+  const [monitoringList, setMonitoringList] = useState<DomainMonitoring[]>([]);
+  const [checkHistory, setCheckHistory] = useState<DomainCheckHistory[]>([]);
+  const [loadingMonitoring, setLoadingMonitoring] = useState(false);
+
+  /* ── Checker state (přetrvává v session) ── */
+  const [checkerResults, setCheckerResults] = useState<DomainCheckResult[]>([]);
+
+  /* ── Openprovider status ── */
+  const [openproviderConfigured, setOpenproviderConfigured] = useState<boolean | null>(null);
 
   /* ── Message ── */
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
@@ -278,6 +289,132 @@ export function useDomains() {
     fetchAll();
   };
 
+  /* ── Openprovider status fetch ── */
+  const fetchOpenproviderStatus = useCallback(async () => {
+    try {
+      const res = await fetch('/api/openprovider/status');
+      const data = await res.json();
+      setOpenproviderConfigured(data.configured ?? false);
+    } catch {
+      setOpenproviderConfigured(false);
+    }
+  }, []);
+
+  /* ── Monitoring CRUD ── */
+  const fetchMonitoring = useCallback(async () => {
+    if (!wsId) return;
+    setLoadingMonitoring(true);
+    const [mRes, hRes] = await Promise.all([
+      supabase.from('trackino_domain_monitoring').select('*').eq('workspace_id', wsId).order('domain_name'),
+      supabase.from('trackino_domain_check_history').select('*').eq('workspace_id', wsId).order('checked_at', { ascending: false }).limit(50),
+    ]);
+    if (mRes.data) setMonitoringList(mRes.data as DomainMonitoring[]);
+    if (hRes.data) setCheckHistory(hRes.data as DomainCheckHistory[]);
+    setLoadingMonitoring(false);
+  }, [wsId]);
+
+  const addToMonitoring = useCallback(async (domainName: string, frequency: 'daily' | 'weekly' = 'daily') => {
+    if (!wsId || !userId) return;
+    const { error } = await supabase.from('trackino_domain_monitoring').insert({
+      workspace_id: wsId,
+      domain_name: domainName.toLowerCase().trim(),
+      frequency,
+      notify_on_change: true,
+      notes: '',
+      created_by: userId,
+    });
+    if (error) {
+      setMessage({ text: 'Chyba při přidávání do monitoringu', type: 'error' });
+    } else {
+      setMessage({ text: `${domainName} přidána do monitoringu`, type: 'success' });
+      fetchMonitoring();
+    }
+  }, [wsId, userId, fetchMonitoring]);
+
+  const deleteMonitoring = useCallback(async (id: string) => {
+    if (!confirm('Odebrat doménu z monitoringu?')) return;
+    await supabase.from('trackino_domain_monitoring').delete().eq('id', id);
+    setMessage({ text: 'Záznam odebrán', type: 'success' });
+    fetchMonitoring();
+  }, [fetchMonitoring]);
+
+  const checkMonitoringNow = useCallback(async (item: DomainMonitoring) => {
+    if (!wsId) return;
+    // Parsuje "example.cz" → name="example", extension="cz"
+    const lastDot = item.domain_name.lastIndexOf('.');
+    if (lastDot < 1) {
+      setMessage({ text: 'Neplatný formát domény', type: 'error' });
+      return;
+    }
+    const name = item.domain_name.slice(0, lastDot);
+    const extension = item.domain_name.slice(lastDot + 1);
+
+    try {
+      const res = await fetch('/api/openprovider/check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domains: [{ name, extension }] }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setMessage({ text: data.error ?? 'Chyba kontroly', type: 'error' });
+        return;
+      }
+      const status = data.results?.[0]?.status ?? 'error';
+      // Uložit do history
+      await supabase.from('trackino_domain_check_history').insert({
+        workspace_id: wsId,
+        domain_name: item.domain_name,
+        status,
+        source: 'monitoring',
+        monitoring_id: item.id,
+      });
+      // Update záznamu
+      await supabase.from('trackino_domain_monitoring').update({
+        last_checked_at: new Date().toISOString(),
+        last_status: status,
+        updated_at: new Date().toISOString(),
+      }).eq('id', item.id);
+      setMessage({ text: `${item.domain_name}: ${status}`, type: 'success' });
+      fetchMonitoring();
+    } catch {
+      setMessage({ text: 'Chyba při kontrole', type: 'error' });
+    }
+  }, [wsId, fetchMonitoring]);
+
+  /* ── Check domains (pro Checker záložku) ── */
+  const checkDomains = useCallback(async (
+    domains: { name: string; extension: string }[],
+    source: 'manual' | 'bulk' = 'manual',
+  ): Promise<DomainCheckResult[]> => {
+    if (!wsId) return [];
+    const res = await fetch('/api/openprovider/check', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ domains }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setMessage({ text: data.error ?? 'Chyba kontroly', type: 'error' });
+      return [];
+    }
+    const results: DomainCheckResult[] = data.results ?? [];
+    setCheckerResults(results);
+
+    // Uložit do history
+    if (results.length > 0) {
+      const historyRows = results.map(r => ({
+        workspace_id: wsId,
+        domain_name: r.domain,
+        status: r.status,
+        source,
+        monitoring_id: null,
+      }));
+      await supabase.from('trackino_domain_check_history').insert(historyRows);
+    }
+    return results;
+  }, [wsId]);
+
   /* ── Sort toggle ── */
   const toggleSort = (field: SortField) => {
     if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -309,8 +446,16 @@ export function useDomains() {
     openNewReg, openEditReg, saveRegistrar, deleteRegistrar,
     /* detail modal */
     detailDomain, setDetailDomain,
+    /* monitoring */
+    monitoringList, checkHistory, loadingMonitoring,
+    fetchMonitoring, addToMonitoring, deleteMonitoring, checkMonitoringNow,
+    /* checker */
+    checkerResults, setCheckerResults, checkDomains,
+    /* openprovider */
+    openproviderConfigured, fetchOpenproviderStatus,
     /* misc */
     canManage, message,
     hasSubscriptionsModule: hasModule('subscriptions'),
+    wsId,
   };
 }

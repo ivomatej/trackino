@@ -81,3 +81,38 @@ export interface DomainRegistrar {
   created_at: string;
   updated_at: string;
 }
+
+// ─── Monitoring dostupnosti ─────────────────────────────────────────────────
+
+/** Záznamy domén sledovaných v monitoringu dostupnosti */
+export interface DomainMonitoring {
+  id: string;
+  workspace_id: string;
+  domain_name: string;
+  frequency: 'daily' | 'weekly';
+  last_checked_at: string | null;
+  last_status: string | null;
+  notify_on_change: boolean;
+  notes: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Jeden záznam v historii kontrol dostupnosti */
+export interface DomainCheckHistory {
+  id: string;
+  workspace_id: string;
+  domain_name: string;
+  status: string;
+  checked_at: string;
+  source: 'manual' | 'monitoring' | 'bulk';
+  monitoring_id: string | null;
+}
+
+/** Výsledek jedné kontroly dostupnosti domény */
+export interface DomainCheckResult {
+  domain: string;
+  status: 'free' | 'active' | 'reserved' | 'error';
+  premium?: boolean;
+}
