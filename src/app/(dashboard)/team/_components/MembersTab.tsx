@@ -1,13 +1,15 @@
 'use client';
 
+import { useState } from 'react';
 import type { CooperationType, UserRole } from '@/types/database';
 import { formatPhone } from '@/lib/utils';
 import type { MemberWithProfile } from './types';
 import { ROLE_LABELS, ROLE_ORDER, TrashIcon, inputStyle } from './types';
+import { supabase } from '@/lib/supabase';
 
 interface Props {
   isWorkspaceAdmin: boolean;
-  currentWorkspace: { join_code?: string | null; currency?: string | null };
+  currentWorkspace: { id: string; join_code?: string | null; currency?: string | null };
   members: MemberWithProfile[];
   loading: boolean;
   memberSearch: string;
@@ -46,6 +48,34 @@ export default function MembersTab({
   openEditMember, removeMember, updateMemberRole, approveMember, rejectMember,
   user,
 }: Props) {
+  const [resettingMfaId, setResettingMfaId] = useState<string | null>(null);
+  const [mfaResetMsg, setMfaResetMsg] = useState<{ userId: string; text: string; ok: boolean } | null>(null);
+
+  async function resetMfa(userId: string, name: string) {
+    if (!confirm(`Opravdu chcete resetovat MFA pro ${name}? Uživatel bude muset MFA nastavit znovu.`)) return;
+    setResettingMfaId(userId);
+    setMfaResetMsg(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token ?? '';
+      const res = await fetch('/api/mfa/admin-reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ targetUserId: userId, workspaceId: currentWorkspace.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setMfaResetMsg({ userId, text: data.error ?? 'Chyba při resetu MFA', ok: false });
+      } else {
+        setMfaResetMsg({ userId, text: 'MFA bylo úspěšně resetováno.', ok: true });
+        setTimeout(() => setMfaResetMsg(null), 3000);
+      }
+    } catch {
+      setMfaResetMsg({ userId, text: 'Chyba při resetu MFA', ok: false });
+    } finally {
+      setResettingMfaId(null);
+    }
+  }
 
   const approvedMembers = members.filter(
     m => m.approved && (isMasterAdmin || !m.profile?.is_master_admin)
@@ -369,6 +399,36 @@ export default function MembersTab({
                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                       </svg>
                     </button>
+                  )}
+
+                  {isWorkspaceAdmin && !isCurrentUser && (
+                    <button
+                      onClick={() => resetMfa(member.user_id, p?.display_name ?? 'uživatele')}
+                      disabled={resettingMfaId === member.user_id}
+                      className="p-1.5 rounded transition-colors flex-shrink-0 disabled:opacity-50"
+                      style={{ color: 'var(--text-muted)' }}
+                      onMouseEnter={(e) => e.currentTarget.style.color = 'var(--primary)'}
+                      onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+                      title="Resetovat MFA"
+                    >
+                      {resettingMfaId === member.user_id ? (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-spin">
+                          <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                        </svg>
+                      ) : (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                          <line x1="12" y1="8" x2="12" y2="16" />
+                          <line x1="8" y1="12" x2="16" y2="12" />
+                        </svg>
+                      )}
+                    </button>
+                  )}
+
+                  {mfaResetMsg?.userId === member.user_id && (
+                    <span className="text-[10px] flex-shrink-0 max-w-[100px]" style={{ color: mfaResetMsg.ok ? 'var(--success)' : 'var(--danger)' }}>
+                      {mfaResetMsg.text}
+                    </span>
                   )}
 
                   {isWorkspaceAdmin && !isCurrentUser && member.role !== 'owner' && (

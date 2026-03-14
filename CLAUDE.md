@@ -1,7 +1,7 @@
 # CLAUDE.md – Trackino dokumentace
 
 > Kompletní dokumentace projektu pro AI asistenta (Claude). Vždy komunikuj česky.
-> Aktualizováno: 14. 3. 2026 (v2.51.61)
+> Aktualizováno: 14. 3. 2026 (v2.52.0)
 
 ---
 
@@ -668,6 +668,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 | Verze | Datum | Klíčové změny |
 |-------|-------|---------------|
 | v2.51.28 | 11. 3. 2026 | Notebook – FolderTree: odstraněny desktop individuální tlačítka, nahrazeny třemi tečkami (⋮) zobrazující se na hover na desktopu + vždy viditelné na mobilu; NoteEditor: paste handler strippuje background-* CSS vlastnosti a bgcolor atribut z vkládaného HTML (žádná změna barvy pozadí z externích nástrojů) |
+| v2.52.0 | 14. 3. 2026 | MFA (TOTP) autentizace: middleware.ts (AAL2 + workspace mfa_required guard), Nastavení → záložka Bezpečnost (toggle mfa_required), Tým → Resetovat MFA tlačítko; nové API routes: /api/mfa/recovery-codes/generate, /api/mfa/recovery-codes/use, /api/mfa/admin-reset, /api/workspaces/[id]/mfa; Login inline MFA verify + záchranné kódy; Profil MFA enrollment wizard (QR + verify + recovery kódy); DB tabulka trackino_mfa_recovery_codes |
 | v2.51.61 | 14. 3. 2026 | Sidebar: sekce RESEARCH přesunuta pod ANALÝZA (dříve byla za SPOLEČNOST) |
 | v2.51.60 | 14. 3. 2026 | Nový modul Research (research, RESEARCH, Pro+Max) – 4 placeholder záložky: Domény (/research/domains), Konkurence (/research/competition), GEOs (/research/geos), SEO (/research/seo); nová sekce RESEARCH v sidebaru; ModuleId 'research' přidán do typů a TARIFF_MODULES |
 | v2.51.59 | 14. 3. 2026 | UX: chytré otevírání dropdown nabídek – všechny dropdowny v aplikaci automaticky detekují dostupné místo pod tlačítkem a pokud nestačí, otevřou se nahoru; opraveno v 9 souborech (TimerBar pickery, TagPicker, NoteEditor, FolderTree pro Prompty/Záložky/Dokumenty, RichEditor toolbar, Správa projektů) |
@@ -3111,6 +3112,11 @@ Pokud tyto proměnné nejsou nastaveny, Subreg se tiše přeskočí – kontrola
 | `src/lib/subreg.ts` | SOAP klient – `getSubregSsid()` (cache 20 min), `subregCheckDomain(name, ext)`, `hasSubregCredentials()`, `resetSubregSsid()` |
 | `src/app/api/subreg/status/route.ts` | GET – `{ configured: boolean; connected?: boolean; error?: string }` |
 | `src/app/api/openprovider/check/route.ts` | Rozšířeno o Subreg jako 3. paralelní zdroj |
+| `src/app/api/mfa/recovery-codes/generate/route.ts` | POST – generuje 8 záchranných kódů (bcrypt hash), smaže staré, vrátí plaintextové kódy jednorázově |
+| `src/app/api/mfa/recovery-codes/use/route.ts` | POST – ověří záchranný kód (bcrypt compare), označí jako použitý (used_at) |
+| `src/app/api/mfa/admin-reset/route.ts` | POST – admin reset MFA pro člena workspace: smaže TOTP faktory přes admin API + recovery kódy z DB |
+| `src/app/api/workspaces/[id]/mfa/route.ts` | PATCH – toggle mfa_required na workspace (jen owner/admin) |
+| `middleware.ts` | Next.js middleware – AAL2 guard (přesměruje na /login pokud session není aal2 a uživatel má MFA), workspace mfa_required guard (přesměruje na /profile?mfa_setup=required) |
 
 ### SOAP API
 - URL: `https://soap.subreg.cz/cmd.php`
@@ -3147,6 +3153,95 @@ Pole `subreg_status` je v result objektu přítomno **pouze** pokud Subreg vrát
 ### Rate limiting
 - `rateLimitSubreg` – 30 req/min/IP, prefix `trackino:subreg`
 - Definováno v `src/lib/rate-limit.ts`
+
+---
+
+## 39. MFA (TOTP) autentizace – architektura (v2.52.0)
+
+### Přehled
+Supabase nativní MFA (TOTP) podpora. Každý uživatel si MFA nastavuje individuálně ve svém profilu. Workspace admini mohou MFA vynucovat pro všechny členy.
+
+### DB změny (nutno spustit v Supabase)
+```sql
+-- Vyžadování MFA na workspace
+ALTER TABLE trackino_workspaces
+  ADD COLUMN IF NOT EXISTS mfa_required boolean NOT NULL DEFAULT false;
+
+-- Záchranné kódy (bcrypt hash)
+CREATE TABLE IF NOT EXISTS trackino_mfa_recovery_codes (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  code_hash text NOT NULL,
+  used_at timestamptz,
+  created_at timestamptz DEFAULT now()
+);
+ALTER TABLE trackino_mfa_recovery_codes ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Vlastní recovery kódy" ON trackino_mfa_recovery_codes
+  FOR ALL TO authenticated USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+```
+
+### Soubory
+| Soubor | Popis |
+|--------|-------|
+| `middleware.ts` | AAL2 guard + workspace mfa_required guard |
+| `src/app/api/mfa/recovery-codes/generate/route.ts` | Generování 8 záchranných kódů (format `XXXX-XXXX-XXXX`) |
+| `src/app/api/mfa/recovery-codes/use/route.ts` | Ověření záchranného kódu při přihlášení |
+| `src/app/api/mfa/admin-reset/route.ts` | Admin reset MFA pro člena workspace |
+| `src/app/api/workspaces/[id]/mfa/route.ts` | PATCH toggle mfa_required |
+| `src/app/(auth)/login/page.tsx` | Inline MFA verify krok po přihlášení |
+| `src/app/(dashboard)/profile/page.tsx` | MFA enrollment wizard (6 stavů: idle/enroll_qr/enroll_verify/recovery_show/active/unenroll_confirm) |
+| `src/app/(dashboard)/settings/tabs/TabSecurity.tsx` | Záložka Bezpečnost – toggle mfa_required |
+| `src/app/(dashboard)/settings/SettingsContent.tsx` | Přidána záložka 'security' |
+| `src/app/(dashboard)/team/_components/MembersTab.tsx` | Tlačítko Resetovat MFA v řádku člena |
+
+### AAL úrovně (Authenticator Assurance Level)
+- `aal1` – přihlášen pouze heslem
+- `aal2` – přihlášen heslem + ověřen MFA kód
+
+### Login flow s MFA
+1. `signIn(email, password)` → úspěch (aal1)
+2. `supabase.auth.mfa.getAuthenticatorAssuranceLevel()` → pokud `nextLevel === 'aal2'` a `nextLevel !== currentLevel`
+3. `supabase.auth.mfa.listFactors()` → najdi TOTP faktor
+4. Zobraz inline MFA verify UI s 6-místným kódem
+5. `supabase.auth.mfa.challengeAndVerify({ factorId, code })` → aal2 session
+6. Nebo záchranný kód: POST `/api/mfa/recovery-codes/use` s `Authorization: Bearer {accessToken}`
+
+### Profil – MFA enrollment wizard (6 stavů)
+| Stav | Popis |
+|------|-------|
+| `idle` | MFA není nastaveno – tlačítko "Zapnout MFA" |
+| `enroll_qr` | QR kód + manuální secret (ze `supabase.auth.mfa.enroll()`) |
+| `enroll_verify` | 6-místný kód k ověření – `challengeAndVerify()` |
+| `recovery_show` | 8 záchranných kódů + tlačítko stažení jako .txt |
+| `active` | MFA je aktivní – "Regenerovat záchranné kódy" + "Vypnout MFA" |
+| `unenroll_confirm` | Potvrzení vypnutí – `supabase.auth.mfa.unenroll()` |
+
+### Záchranné kódy
+- Formát: `XXXX-XXXX-XXXX` (3 segmenty × 4 znaky ze safe charset `ABCDEFGHJKLMNPQRSTUVWXYZ23456789`)
+- Uloženy jako bcrypt hash (10 salt rounds) v `trackino_mfa_recovery_codes`
+- 8 kódů per uživatel, při regeneraci se staré smažou
+- Každý kód lze použít jen jednou (označen `used_at`)
+- Lze stáhnout jako `.txt` soubor (Blob URL download)
+
+### Middleware logika
+```
+1. Vynechej: /api/*, /login, /register, /invite/*, /kb/*, /_next/*, statické soubory
+2. Pokud uživatel není přihlášen: propusť
+3. Zkontroluj AAL: pokud nextLevel === 'aal2' && currentLevel !== 'aal2' → /login
+4. Pokud currentLevel === 'aal1':
+   a. Načti profil (is_master_admin) → master admin vynechej
+   b. Načti workspace membership
+   c. Zkontroluj zda workspace.mfa_required = true
+   d. Pokud ANO a uživatel nemá verified TOTP faktor → /profile?mfa_setup=required
+5. Propusť
+```
+
+### Admin reset MFA (`/api/mfa/admin-reset`)
+- Ověří, že volající je admin/master_admin daného workspace
+- `adminClient.auth.admin.mfa.listFactors({ userId })` → smaže všechny TOTP faktory
+- Smaže záchranné kódy z DB
+- Zapíše audit log (tarif Max)
+- Uživatel musí MFA znovu nastavit
 
 ---
 

@@ -17,11 +17,12 @@ import TabModules from './tabs/TabModules';
 import TabAI from './tabs/TabAI';
 import TabAutomation from './tabs/TabAutomation';
 import TabGeos from './tabs/TabGeos';
+import TabSecurity from './tabs/TabSecurity';
 
 type SettingsTab =
   | 'general' | 'society' | 'subscription' | 'billing'
   | 'fields' | 'vacation' | 'cooperation' | 'modules'
-  | 'ai' | 'automation' | 'geos';
+  | 'ai' | 'automation' | 'geos' | 'security';
 
 export default function SettingsContent() {
   const { currentWorkspace, currentMembership, loading, refreshWorkspace, hasModule } = useWorkspace();
@@ -63,6 +64,7 @@ export default function SettingsContent() {
     { id: 'ai' as const, label: 'AI asistent' },
     ...(hasModule('automation') ? [{ id: 'automation' as const, label: 'Automatizace' }] : []),
     { id: 'geos' as const, label: 'GEOs' },
+    { id: 'security' as const, label: 'Bezpečnost' },
   ];
 
   return (
@@ -189,6 +191,14 @@ export default function SettingsContent() {
               <TabGeos
                 workspaceId={currentWorkspace.id}
                 onMessage={setMessage}
+              />
+            )}
+
+            {activeTab === 'security' && (
+              <TabSecurity
+                currentWorkspace={currentWorkspace}
+                onMessage={setMessage}
+                refreshWorkspace={refreshWorkspace}
               />
             )}
           </div>{/* /Pravý obsah */}

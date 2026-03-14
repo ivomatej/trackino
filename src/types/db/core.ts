@@ -76,9 +76,19 @@ export interface Workspace {
   color: string | null;
   timezone: string; // IANA timezone, např. 'Europe/Prague'
   society_modules_enabled: Record<string, boolean>; // per-workspace zapnutí Společnost modulů
+  mfa_required: boolean; // vynucení MFA pro všechny členy workspace
   created_at: string;
   archived_at: string | null;
   deleted_at: string | null;
+}
+
+/** Recovery kódy pro MFA (hashed bcrypt) */
+export interface MfaRecoveryCode {
+  id: string;
+  user_id: string;
+  code_hash: string;
+  used_at: string | null;
+  created_at: string;
 }
 
 export interface WorkspaceSubscription {
